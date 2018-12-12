@@ -4,14 +4,14 @@ from ..fhdl import *
 __all__ = ["MultiReg"]
 
 
-class MultiReg(Module):
+class MultiReg:
     def __init__(self, i, o, odomain="sys", n=2, reset=0):
         self.i = i
         self.o = o
         self.odomain = odomain
 
         self._regs = [Signal(self.i.bits_sign(), name="cdc{}".format(i),
-                             reset=reset, reset_less=True)#, attrs=("no_retiming",))
+                             reset=reset, reset_less=True, attrs={"no_retiming": True})
                       for i in range(n)]
 
     def get_fragment(self, platform):

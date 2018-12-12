@@ -62,6 +62,12 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self._append("end\n")
         self.rtlil._buffer.write(str(self))
 
+    def attribute(self, name, value):
+        if isinstance(value, str):
+            self._append("attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
+        else:
+            self._append("attribute \\{} {}\n", name, int(value))
+
     def wire(self, width, port_id=None, port_kind=None, name=None, src=""):
         self._src(src)
         name = self._make_name(name, local=False)
@@ -260,6 +266,8 @@ class _ValueTransformer(xfrm.ValueTransformer):
                 wire_name = "{}_{}".format(self.sub_name, node.name)
             else:
                 wire_name = node.name
+            for attr_name, attr_value in node.attrs.items():
+                self.rtlil.attribute(attr_name, attr_value)
             wire_curr = self.rtlil.wire(width=node.nbits, name=wire_name,
                                         port_id=port_id, port_kind=port_kind)
             if node in self.driven:

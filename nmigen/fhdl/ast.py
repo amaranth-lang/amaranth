@@ -502,6 +502,8 @@ class Signal(Value, DUID):
         If `bits_sign` is `None`, the signal bit width and signedness are
         determined by the integer range given by `min` (inclusive,
         defaults to 0) and `max` (exclusive, defaults to 2).
+    attrs : dict
+        Dictionary of synthesis attributes.
 
     Attributes
     ----------
@@ -509,9 +511,12 @@ class Signal(Value, DUID):
     signed : bool
     name : str
     reset : int
+    reset_less : bool
+    attrs : dict
     """
 
-    def __init__(self, bits_sign=None, name=None, reset=0, reset_less=False, min=None, max=None):
+    def __init__(self, bits_sign=None, name=None, reset=0, reset_less=False, min=None, max=None,
+                 attrs=None):
         super().__init__()
 
         if name is None:
@@ -545,6 +550,8 @@ class Signal(Value, DUID):
             raise TypeError("Width must be a positive integer, not {!r}".format(self.nbits))
         self.reset = reset
         self.reset_less = reset_less
+
+        self.attrs = OrderedDict(() if attrs is None else attrs)
 
     def bits_sign(self):
         return self.nbits, self.signed
