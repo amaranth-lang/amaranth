@@ -553,6 +553,21 @@ class Signal(Value, DUID):
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
+    @classmethod
+    def like(cls, other, **kwargs):
+        """Create Signal based on another.
+
+        Parameters
+        ----------
+        other : Value
+            Object to base this Signal on.
+        """
+        kw = dict(bits_sign=cls.wrap(other).bits_sign())
+        if isinstance(other, cls):
+            kw.update(reset=other.reset.value, reset_less=other.reset_less, attrs=other.attrs)
+        kw.update(kwargs)
+        return cls(**kw)
+
     def bits_sign(self):
         return self.nbits, self.signed
 
