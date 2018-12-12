@@ -66,7 +66,7 @@ class Fragment:
             subfrag, sub_ins, sub_outs = subfrag.prepare(ports=self_used | ports,
                                                          clock_domains=clock_domains)
             frag.subfragments[n] = (subfrag, name)
-            ins  |= sub_ins - self_driven
+            ins  -= sub_outs
             outs |= ports & sub_outs
 
         frag.add_ports(ins, outs)

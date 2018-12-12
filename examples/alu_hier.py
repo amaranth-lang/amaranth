@@ -56,4 +56,4 @@ class ALU:
 alu  = ALU(width=16)
 frag = alu.get_fragment(platform=None)
 # print(rtlil.convert(frag, ports=[alu.op, alu.a, alu.b, alu.o]))
-print(verilog.convert(frag, ports=[alu.op, alu.a, alu.b, alu.o, alu.add.o, alu.sub.o]))
+print(verilog.convert(frag, ports=[alu.op, alu.a, alu.b, alu.o]))
