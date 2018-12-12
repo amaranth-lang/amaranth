@@ -505,7 +505,10 @@ class Signal(Value, DUID):
         super().__init__()
 
         if name is None:
-            name = tracer.get_var_name()
+            try:
+                name = tracer.get_var_name()
+            except tracer.NameNotFound:
+                name = "$signal"
         self.name = name
 
         if isinstance(bits_sign, int):
