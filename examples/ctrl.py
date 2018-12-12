@@ -9,14 +9,14 @@ class ClockDivisor:
         self.ce = Signal()
 
     def get_fragment(self, platform):
-        f = Module()
-        f.sync += self.v.eq(self.v + 1)
-        f.comb += self.o.eq(self.v[-1])
-        return CEInserter(self.ce)(f.lower())
+        m = Module()
+        m.d.sync += self.v.eq(self.v + 1)
+        m.d.comb += self.o.eq(self.v[-1])
+        return CEInserter(self.ce)(m.lower(platform))
 
 
-sys  = ClockDomain()
+sync = ClockDomain()
 ctr  = ClockDivisor(factor=16)
 frag = ctr.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[sys.clk, ctr.o, ctr.ce], clock_domains={"sys": sys}))
-print(verilog.convert(frag, ports=[sys.clk, ctr.o, ctr.ce], clock_domains={"sys": sys}))
+# print(rtlil.convert(frag, ports=[sync.clk, ctr.o, ctr.ce], clock_domains={"sync": sync}))
+print(verilog.convert(frag, ports=[sync.clk, ctr.o, ctr.ce], clock_domains={"sync": sync}))

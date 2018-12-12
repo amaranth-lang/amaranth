@@ -11,16 +11,16 @@ class ParMux:
         self.o = Signal(width)
 
     def get_fragment(self, platform):
-        f = Module()
-        with f.Case(self.s, "--1"):
-            f.comb += self.o.eq(self.a)
-        with f.Case(self.s, "-1-"):
-            f.comb += self.o.eq(self.b)
-        with f.Case(self.s, "1--"):
-            f.comb += self.o.eq(self.c)
-        with f.Case(self.s):
-            f.comb += self.o.eq(0)
-        return f.lower(platform)
+        m = Module()
+        with m.Case(self.s, "--1"):
+            m.d.comb += self.o.eq(self.a)
+        with m.Case(self.s, "-1-"):
+            m.d.comb += self.o.eq(self.b)
+        with m.Case(self.s, "1--"):
+            m.d.comb += self.o.eq(self.c)
+        with m.Case(self.s):
+            m.d.comb += self.o.eq(0)
+        return m.lower(platform)
 
 
 pmux = ParMux(width=16)

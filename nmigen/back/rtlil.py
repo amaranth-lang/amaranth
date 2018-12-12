@@ -449,11 +449,13 @@ def convert_fragment(builder, fragment, name, clock_domains):
                 triggers = []
                 if cd_name is None:
                     triggers.append(("always",))
-                else:
+                elif cd_name in clock_domains:
                     cd = clock_domains[cd_name]
                     triggers.append(("posedge", xformer(cd.clk)))
                     if cd.async_reset:
                         triggers.append(("posedge", xformer(cd.reset)))
+                else:
+                    raise ValueError("Clock domain {} not found in design".format(cd_name))
 
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:

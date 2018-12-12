@@ -15,8 +15,11 @@ class MultiReg:
                       for i in range(n)]
 
     def get_fragment(self, platform):
-        f = Module()
+        if hasattr(platform, "get_multi_reg"):
+            return platform.get_multi_reg(self)
+
+        m = Module()
         for i, o in zip((self.i, *self._regs), self._regs):
-            f.sync[self.odomain] += o.eq(i)
-        f.comb += self.o.eq(self._regs[-1])
-        return f.lower(platform)
+            m.d[self.odomain] += o.eq(i)
+        m.d.comb += self.o.eq(self._regs[-1])
+        return m.lower(platform)

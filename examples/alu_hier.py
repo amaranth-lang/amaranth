@@ -9,9 +9,9 @@ class Adder:
         self.o   = Signal(width)
 
     def get_fragment(self, platform):
-        f = Module()
-        f.comb += self.o.eq(self.a + self.b)
-        return f.lower(platform)
+        m = Module()
+        m.d.comb += self.o.eq(self.a + self.b)
+        return m.lower(platform)
 
 
 class Subtractor:
@@ -21,9 +21,9 @@ class Subtractor:
         self.o   = Signal(width)
 
     def get_fragment(self, platform):
-        f = Module()
-        f.comb += self.o.eq(self.a - self.b)
-        return f.lower(platform)
+        m = Module()
+        m.d.comb += self.o.eq(self.a - self.b)
+        return m.lower(platform)
 
 
 class ALU:
@@ -37,20 +37,20 @@ class ALU:
         self.sub = Subtractor(width)
 
     def get_fragment(self, platform):
-        f = Module()
-        f.submodules.add = self.add
-        f.submodules.sub = self.sub
-        f.comb += [
+        m = Module()
+        m.submodules.add = self.add
+        m.submodules.sub = self.sub
+        m.d.comb += [
             self.add.a.eq(self.a),
             self.sub.a.eq(self.a),
             self.add.b.eq(self.b),
             self.sub.b.eq(self.b),
         ]
-        with f.If(self.op):
-            f.comb += self.o.eq(self.sub.o)
-        with f.Else():
-            f.comb += self.o.eq(self.add.o)
-        return f.lower(platform)
+        with m.If(self.op):
+            m.d.comb += self.o.eq(self.sub.o)
+        with m.Else():
+            m.d.comb += self.o.eq(self.add.o)
+        return m.lower(platform)
 
 
 alu  = ALU(width=16)

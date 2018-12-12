@@ -14,36 +14,30 @@ class _ModuleBuilderProxy:
         object.__setattr__(self, "_depth", depth)
 
 
-class _ModuleBuilderComb(_ModuleBuilderProxy):
-    def __iadd__(self, assigns):
-        self._builder._add_statement(assigns, cd=None, depth=self._depth)
-        return self
-
-
-class _ModuleBuilderSyncCD(_ModuleBuilderProxy):
-    def __init__(self, builder, depth, cd):
+class _ModuleBuilderDomain(_ModuleBuilderProxy):
+    def __init__(self, builder, depth, cd_name):
         super().__init__(builder, depth)
-        self._cd = cd
+        self._cd_name = cd_name
 
     def __iadd__(self, assigns):
-        self._builder._add_statement(assigns, cd=self._cd, depth=self._depth)
+        self._builder._add_statement(assigns, cd_name=self._cd_name, depth=self._depth)
         return self
 
 
-class _ModuleBuilderSync(_ModuleBuilderProxy):
-    def __iadd__(self, assigns):
-        self._builder._add_statement(assigns, cd="sys", depth=self._depth)
-        return self
-
+class _ModuleBuilderDomains(_ModuleBuilderProxy):
     def __getattr__(self, name):
-        return _ModuleBuilderSyncCD(self._builder, self._depth, name)
+        if name == "comb":
+            cd_name = None
+        else:
+            cd_name = name
+        return _ModuleBuilderDomain(self._builder, self._depth, cd_name)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
 
     def __setattr__(self, name, value):
-        if not isinstance(value, _ModuleBuilderSyncCD):
-            raise AttributeError("Cannot assign sync.{} attribute - use += instead"
+        if not isinstance(value, _ModuleBuilderDomain):
+            raise AttributeError("Cannot assign d.{} attribute - use += instead"
                                  .format(name))
 
     def __setitem__(self, name, value):
@@ -53,15 +47,12 @@ class _ModuleBuilderSync(_ModuleBuilderProxy):
 class _ModuleBuilderRoot:
     def __init__(self, builder, depth):
         self._builder = builder
-        self.comb = _ModuleBuilderComb(builder, depth)
-        self.sync = _ModuleBuilderSync(builder, depth)
+        self.domain = self.d = _ModuleBuilderDomains(builder, depth)
 
-    def __setattr__(self, name, value):
-        if name == "comb" and not isinstance(value, _ModuleBuilderComb):
-            raise AttributeError("Cannot assign comb attribute - use += instead")
-        if name == "sync" and not isinstance(value, _ModuleBuilderSync):
-            raise AttributeError("Cannot assign sync attribute - use += instead")
-        super().__setattr__(name, value)
+    def __getattr__(self, name):
+        if name in ("comb", "sync"):
+            raise AttributeError("'{}' object has no attribute '{}'; did you mean 'd.{}'?"
+                                 .format(type(self).__name__, name, name))
 
 
 class _ModuleBuilderIf(_ModuleBuilderRoot):
@@ -201,12 +192,12 @@ class Module(_ModuleBuilderRoot):
         self._stmt_switch_test  = None
         self._stmt_switch_cases = OrderedDict()
 
-    def _add_statement(self, assigns, cd, depth):
-        def cd_name(cd):
-            if cd is None:
+    def _add_statement(self, assigns, cd_name, depth):
+        def cd_human_name(cd_name):
+            if cd_name is None:
                 return "comb"
             else:
-                return "sync.{}".format(cd)
+                return cd_name
 
         if depth < self._stmt_depth:
             self._flush()
@@ -218,12 +209,12 @@ class Module(_ModuleBuilderRoot):
 
             for signal in assign.lhs._lhs_signals():
                 if signal not in self._driving:
-                    self._driving[signal] = cd
-                elif self._driving[signal] != cd:
+                    self._driving[signal] = cd_name
+                elif self._driving[signal] != cd_name:
                     cd_curr = self._driving[signal]
-                    raise ValueError("Driver-driver conflict: trying to drive {!r} from {}, but "
-                                     "it is already driven from {}"
-                                     .format(signal, self.cd_name(cd), self.cd_name(cd_curr)))
+                    raise ValueError("Driver-driver conflict: trying to drive {!r} from d.{}, but "
+                                     "it is already driven from d.{}"
+                                     .format(signal, cd_human_name(cd), cd_human_name(cd_curr)))
 
             self._statements.append(assign)
 

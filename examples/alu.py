@@ -11,16 +11,16 @@ class ALU:
         self.co  = Signal()
 
     def get_fragment(self, platform):
-        f = Module()
-        with f.If(self.sel == 0b00):
-            f.comb += self.o.eq(self.a | self.b)
-        with f.Elif(self.sel == 0b01):
-            f.comb += self.o.eq(self.a & self.b)
-        with f.Elif(self.sel == 0b10):
-            f.comb += self.o.eq(self.a ^ self.b)
-        with f.Else():
-            f.comb += Cat(self.o, self.co).eq(self.a - self.b)
-        return f.lower(platform)
+        m = Module()
+        with m.If(self.sel == 0b00):
+            m.d.comb += self.o.eq(self.a | self.b)
+        with m.Elif(self.sel == 0b01):
+            m.d.comb += self.o.eq(self.a & self.b)
+        with m.Elif(self.sel == 0b10):
+            m.d.comb += self.o.eq(self.a ^ self.b)
+        with m.Else():
+            m.d.comb += Cat(self.o, self.co).eq(self.a - self.b)
+        return m.lower(platform)
 
 
 alu  = ALU(width=16)
