@@ -44,11 +44,11 @@ def bits_for(n, require_sign_bit=False):
     return r
 
 
-def deprecated(message):
+def deprecated(message, stacklevel=2):
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            warnings.warn(message, DeprecationWarning, stacklevel=2)
+            warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
             return f(*args, **kwargs)
         return wrapper
     return decorator

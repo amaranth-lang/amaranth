@@ -1,5 +1,5 @@
-# from .fhdl.structure import *
-# from .fhdl.module import *
+from .fhdl.structure import *
+from .fhdl.module import *
 # from .fhdl.specials import *
 from .fhdl.bitcontainer import *
 # from .fhdl.decorators import *

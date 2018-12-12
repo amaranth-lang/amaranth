@@ -192,7 +192,7 @@ class Module(_ModuleBuilderRoot):
         self._stmt_switch_test  = None
         self._stmt_switch_cases = OrderedDict()
 
-    def _add_statement(self, assigns, cd_name, depth):
+    def _add_statement(self, assigns, cd_name, depth, compat_mode=False):
         def cd_human_name(cd_name):
             if cd_name is None:
                 return "comb"
@@ -204,17 +204,19 @@ class Module(_ModuleBuilderRoot):
         self._stmt_depth = depth
 
         for assign in Statement.wrap(assigns):
-            if not isinstance(assign, Assign):
-                raise TypeError("Only assignments can be appended to {}".format(self.cd_name(cd)))
+            if not compat_mode and not isinstance(assign, Assign):
+                raise TypeError("Only assignments can be appended to {}"
+                                .format(cd_human_name(cd_name)))
 
-            for signal in assign.lhs._lhs_signals():
+            for signal in assign._lhs_signals():
                 if signal not in self._driving:
                     self._driving[signal] = cd_name
                 elif self._driving[signal] != cd_name:
                     cd_curr = self._driving[signal]
                     raise ValueError("Driver-driver conflict: trying to drive {!r} from d.{}, but "
                                      "it is already driven from d.{}"
-                                     .format(signal, cd_human_name(cd), cd_human_name(cd_curr)))
+                                     .format(signal, cd_human_name(cd_name),
+                                             cd_human_name(cd_curr)))
 
             self._statements.append(assign)
 
