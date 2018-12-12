@@ -114,7 +114,7 @@ class _ControlInserter:
 
 class ResetInserter(_ControlInserter):
     def _wrap_control(self, fragment, cd_name, signals):
-        stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals]
+        stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals if not s.reset_less]
         fragment.add_statements(Switch(self.controls[cd_name], {1: stmts}))
 
 

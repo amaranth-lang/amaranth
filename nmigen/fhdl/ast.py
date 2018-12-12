@@ -492,6 +492,10 @@ class Signal(Value, DUID):
         domain is reset, the ``Signal`` assumes the given value. When this ``Signal`` is unassigned
         in combinatorial context (due to conditional assignments not being taken), the ``Signal``
         assumes its ``reset`` value. Defaults to 0.
+    reset_less : bool
+        If ``True``, do not generate reset logic for this ``Signal`` in synchronous statements.
+        The ``reset`` value is only used as a combinatorial default or as the initial value.
+        Defaults to ``False``.
 
     Attributes
     ----------
@@ -501,7 +505,7 @@ class Signal(Value, DUID):
     reset : int
     """
 
-    def __init__(self, bits_sign=1, reset=0, name=None):
+    def __init__(self, bits_sign=1, name=None, reset=0, reset_less=False):
         super().__init__()
 
         if name is None:
@@ -517,6 +521,7 @@ class Signal(Value, DUID):
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer")
         self.reset = reset
+        self.reset_less = reset_less
 
     def bits_sign(self):
         return self.nbits, self.signed
