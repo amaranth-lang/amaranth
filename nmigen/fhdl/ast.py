@@ -541,7 +541,7 @@ class Signal(Value, DUID):
         elif isinstance(bits_sign, int):
             if not (min is None or max is None):
                 raise ValueError("Only one of bits/signedness or bounds may be specified")
-            self.nbits, self.signed = 1, False
+            self.nbits, self.signed = bits_sign, False
 
         else:
             self.nbits, self.signed = bits_sign
