@@ -1,7 +1,9 @@
 from collections import Iterable
+import functools
+import warnings
 
 
-__all__ = ["flatten", "union", "log2_int", "bits_for"]
+__all__ = ["flatten", "union", "log2_int", "bits_for", "deprecated"]
 
 
 def flatten(i):
@@ -40,3 +42,13 @@ def bits_for(n, require_sign_bit=False):
     if require_sign_bit:
         r += 1
     return r
+
+
+def deprecated(message):
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
