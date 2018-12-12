@@ -38,10 +38,16 @@ class _ModuleBuilderSync(_ModuleBuilderProxy):
     def __getattr__(self, name):
         return _ModuleBuilderSyncCD(self._builder, self._depth, name)
 
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
     def __setattr__(self, name, value):
         if not isinstance(value, _ModuleBuilderSyncCD):
             raise AttributeError("Cannot assign sync.{} attribute - use += instead"
                                  .format(name))
+
+    def __setitem__(self, name, value):
+        return self.__setattr__(name, value)
 
 
 class _ModuleBuilderRoot:
