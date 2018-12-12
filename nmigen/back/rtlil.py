@@ -445,7 +445,7 @@ def convert_fragment(builder, fragment, name, clock_domains):
                     cd = clock_domains[cd_name]
                     triggers.append(("posedge", xformer(cd.clk)))
                     if cd.async_reset:
-                        triggers.append(("posedge", xformer(cd.rst)))
+                        triggers.append(("posedge", xformer(cd.reset)))
 
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:

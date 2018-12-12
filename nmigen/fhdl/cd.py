@@ -27,7 +27,7 @@ class ClockDomain:
     clk : Signal, inout
         The clock for this domain. Can be driven or used to drive other signals (preferably
         in combinatorial context).
-    rst : Signal or None, inout
+    reset : Signal or None, inout
         Reset signal for this domain. Can be driven or used to drive.
     """
     def __init__(self, name=None, reset_less=False, async_reset=False):
@@ -41,8 +41,8 @@ class ClockDomain:
 
         self.clk = Signal(name=self.name + "_clk")
         if reset_less:
-            self.rst = None
+            self.reset = None
         else:
-            self.rst = Signal(name=self.name + "_rst")
+            self.reset = Signal(name=self.name + "_reset")
 
         self.async_reset = async_reset

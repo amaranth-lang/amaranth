@@ -53,7 +53,7 @@ class Fragment:
     def prepare(self, ports, clock_domains):
         from .xfrm import ResetInserter
 
-        resets = {cd.name: cd.rst for cd in clock_domains.values() if cd.rst is not None}
+        resets = {cd.name: cd.reset for cd in clock_domains.values() if cd.reset is not None}
         frag   = ResetInserter(resets)(self)
 
         self_driven = union(s._lhs_signals() for s in self.statements)
