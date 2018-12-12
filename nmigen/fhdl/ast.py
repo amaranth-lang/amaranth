@@ -1,3 +1,4 @@
+import builtins
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet
 
@@ -496,6 +497,11 @@ class Signal(Value, DUID):
         If ``True``, do not generate reset logic for this ``Signal`` in synchronous statements.
         The ``reset`` value is only used as a combinatorial default or as the initial value.
         Defaults to ``False``.
+    min : int or None
+    max : int or None
+        If `bits_sign` is `None`, the signal bit width and signedness are
+        determined by the integer range given by `min` (inclusive,
+        defaults to 0) and `max` (exclusive, defaults to 2).
 
     Attributes
     ----------
@@ -505,7 +511,7 @@ class Signal(Value, DUID):
     reset : int
     """
 
-    def __init__(self, bits_sign=1, name=None, reset=0, reset_less=False):
+    def __init__(self, bits_sign=None, name=None, reset=0, reset_less=False, min=None, max=None):
         super().__init__()
 
         if name is None:
@@ -515,11 +521,28 @@ class Signal(Value, DUID):
                 name = "$signal"
         self.name = name
 
-        if isinstance(bits_sign, int):
-            bits_sign = bits_sign, False
-        self.nbits, self.signed = bits_sign
+        if bits_sign is None:
+            if min is None:
+                min = 0
+            if max is None:
+                max = 2
+            max -= 1  # make both bounds inclusive
+            if not min < max:
+                raise ValueError("Lower bound {!r} should be less than higher bound {!r}"
+                                 .format(min, max))
+            self.signed = min < 0 or max < 0
+            self.nbits  = builtins.max(bits_for(min, self.signed), bits_for(max, self.signed))
+
+        elif isinstance(bits_sign, int):
+            if not (min is None or max is None):
+                raise ValueError("Only one of bits/signedness or bounds may be specified")
+            self.nbits, self.signed = 1, False
+
+        else:
+            self.nbits, self.signed = bits_sign
+
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a positive integer")
+            raise TypeError("Width must be a positive integer, not {!r}".format(self.nbits))
         self.reset = reset
         self.reset_less = reset_less
 
