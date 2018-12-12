@@ -10,13 +10,13 @@ class MultiReg(Module):
         self.o = o
         self.odomain = odomain
 
-        self.regs = [Signal(self.i.bits_sign(), name="cdc{}".format(i),
-                            reset=reset, reset_less=True)#, attrs=("no_retiming",))
-                     for i in range(n)]
+        self._regs = [Signal(self.i.bits_sign(), name="cdc{}".format(i),
+                             reset=reset, reset_less=True)#, attrs=("no_retiming",))
+                      for i in range(n)]
 
     def get_fragment(self, platform):
         f = Module()
-        for i, o in zip((self.i, *self.regs), self.regs):
+        for i, o in zip((self.i, *self._regs), self._regs):
             f.sync[self.odomain] += o.eq(i)
-        f.comb += self.o.eq(self.regs[-1])
+        f.comb += self.o.eq(self._regs[-1])
         return f.lower(platform)
