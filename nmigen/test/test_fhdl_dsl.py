@@ -26,6 +26,7 @@ class DSLTestCase(unittest.TestCase):
             self.assertEqual(str(cm.exception), msg)
 
     def assertRepr(self, obj, repr_str):
+        obj = Statement.wrap(obj)
         repr_str = re.sub(r"\s+",   " ",  repr_str)
         repr_str = re.sub(r"\( (?=\()", "(", repr_str)
         repr_str = re.sub(r"\) (?=\))", ")", repr_str)
@@ -345,3 +346,35 @@ class DSLTestCase(unittest.TestCase):
         with self.assertRaises(TypeError,
                 msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
             m.submodules += 1
+
+    def test_lower(self):
+        m1 = Module()
+        m1.d.comb += self.c1.eq(self.s1)
+        m2 = Module()
+        m2.d.comb += self.c2.eq(self.s2)
+        m2.d.sync += self.c3.eq(self.s3)
+        m1.submodules.foo = m2
+
+        f1 = m1.lower(platform=None)
+        self.assertRepr(f1.statements, """
+        (
+            (eq (sig c1) (sig s1))
+        )
+        """)
+        self.assertEqual(f1.drivers, {
+            None: ValueSet((self.c1,))
+        })
+        self.assertEqual(len(f1.subfragments), 1)
+        (f2, f2_name), = f1.subfragments
+        self.assertEqual(f2_name, "foo")
+        self.assertRepr(f2.statements, """
+        (
+            (eq (sig c2) (sig s2))
+            (eq (sig c3) (sig s3))
+        )
+        """)
+        self.assertEqual(f2.drivers, {
+            None: ValueSet((self.c2,)),
+            "sync": ValueSet((self.c3,))
+        })
+        self.assertEqual(len(f2.subfragments), 0)
