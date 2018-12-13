@@ -212,19 +212,19 @@ class _ValueTransformer(xfrm.ValueTransformer):
     def __init__(self, rtlil):
         self.rtlil  = rtlil
         self.wires  = ast.ValueDict()
-        self.ports  = ast.ValueDict()
         self.driven = ast.ValueDict()
+        self.ports  = ast.ValueDict()
         self.is_lhs   = False
         self.sub_name = None
+
+    def add_driven(self, signal, sync):
+        self.driven[signal] = sync
 
     def add_port(self, signal, kind=None):
         if signal in self.driven:
             self.ports[signal] = (len(self.ports), "output")
         else:
             self.ports[signal] = (len(self.ports), "input")
-
-    def add_driven(self, signal, sync):
-        self.driven[signal] = sync
 
     @contextmanager
     def lhs(self):
@@ -394,19 +394,26 @@ def convert_fragment(builder, fragment, name, clock_domains):
     with builder.module(name) as module:
         xformer = _ValueTransformer(module)
 
+        # Register all signals driven in the current fragment. This must be done first, as it
+        # affects further codegen; e.g. whether sig$next signals will be generated and used.
         for cd_name, signal in fragment.iter_drivers():
             xformer.add_driven(signal, sync=cd_name is not None)
 
+        # Register all signals used as ports in the current fragment. The wires are lazily
+        # generated, so registering ports eagerly ensures they get correct direction qualifiers.
         for signal in fragment.ports:
             xformer.add_port(signal)
 
-        # Make sure clocks and resets get sensible names, by eagerly converting them outside
-        # of any hierarchy.
+        # Transform all clocks clocks and resets eagerly and outside of any hierarchy, to make
+        # sure they get sensible (non-prefixed) names. This does not affect semantics.
         for cd_name, _ in fragment.iter_sync():
             cd = clock_domains[cd_name]
             xformer(cd.clk)
             xformer(cd.reset)
 
+        # Transform all subfragments to their respective cells. Transforming signals connected
+        # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
+        # name) names.
         for subfragment, sub_name in fragment.subfragments:
             sub_name, sub_port_map = \
                 convert_fragment(builder, subfragment, sub_name, clock_domains)
@@ -417,6 +424,8 @@ def convert_fragment(builder, fragment, name, clock_domains):
 
         with module.process() as process:
             with process.case() as case:
+                # For every signal in comb domain, assign \sig$next to the reset value.
+                # For every signal in sync domains, assign \sig$next to the current value (\sig).
                 for cd_name, signal in fragment.iter_drivers():
                     if cd_name is None:
                         prev_value = xformer(ast.Const(signal.reset, signal.nbits))
@@ -425,6 +434,7 @@ def convert_fragment(builder, fragment, name, clock_domains):
                     with xformer.lhs():
                         case.assign(xformer(signal), prev_value)
 
+                # Convert statements into decision trees.
                 def _convert_stmts(case, stmts):
                     for stmt in stmts:
                         if isinstance(stmt, ast.Assign):
@@ -433,6 +443,7 @@ def convert_fragment(builder, fragment, name, clock_domains):
                             if lhs_bits == rhs_bits:
                                 rhs_sigspec = xformer(stmt.rhs)
                             else:
+                                # In RTLIL, LHS and RHS of assignment must have exactly same width.
                                 rhs_sigspec = xformer.match_shape(
                                     stmt.rhs, lhs_bits, rhs_sign)
                             with xformer.lhs():
@@ -450,11 +461,18 @@ def convert_fragment(builder, fragment, name, clock_domains):
 
                 _convert_stmts(case, fragment.statements)
 
+            # For every signal in the sync domain, assign \sig's initial value (which will end up
+            # as the \init reg attribute) to the reset value. Note that this assigns \sig,
+            # not \sig$next.
             with process.sync("init") as sync:
                 for cd_name, signal in fragment.iter_sync():
                     sync.update(xformer(signal),
                                 xformer(ast.Const(signal.reset, signal.nbits)))
 
+            # For every signal in every domain, assign \sig to \sig$next. The sensitivity list,
+            # however, differs between domains: for comb domains, it is `always`, for sync domains
+            # with sync reset, it is `posedge clk`, for sync domains with async rest it is
+            # `posedge clk or posedge rst`.
             for cd_name, signals in fragment.iter_domains():
                 triggers = []
                 if cd_name is None:
@@ -470,10 +488,13 @@ def convert_fragment(builder, fragment, name, clock_domains):
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:
                         for signal in signals:
-                            xformer(signal)
-                            wire_curr, wire_next = xformer.wires[signal]
-                            sync.update(wire_curr, wire_next)
+                            rhs_sigspec = xformer(signal)
+                            with xformer.lhs():
+                                sync.update(xformer(signal), rhs_sigspec)
 
+    # Finally, collect the names we've given to our ports in RTLIL, and correlate these with
+    # the signals represented by these ports. If we are a submodule, this will be necessary
+    # to create a cell for us in the parent module.
     port_map = OrderedDict()
     for signal in fragment.ports:
         port_map[xformer(signal)] = signal
