@@ -1,5 +1,5 @@
 from nmigen.fhdl import *
-from nmigen.back import rtlil, verilog
+from nmigen.back import rtlil, verilog, pysim
 
 
 class ClockDivisor:
@@ -16,5 +16,10 @@ class ClockDivisor:
 
 ctr  = ClockDivisor(factor=16)
 frag = ctr.get_fragment(platform=None)
+
 # print(rtlil.convert(frag, ports=[ctr.o]))
 print(verilog.convert(frag, ports=[ctr.o]))
+
+sim = pysim.Simulator(frag, vcd_file=open("clkdiv.vcd", "w"))
+sim.add_clock("sync", 1e-6)
+with sim: sim.run_until(100e-6, run_passive=True)

@@ -13,5 +13,11 @@ setup(
     description="Python toolbox for building complex digital hardware",
     #long_description="""TODO""",
     license="BSD",
+    install_requires=["pyvcd"],
     packages=find_packages(),
+    project_urls={
+        #"Documentation": "https://glasgow.readthedocs.io/",
+        "Source Code": "https://github.com/m-labs/nmigen",
+        "Bug Tracker": "https://github.com/m-labs/nmigen/issues",
+    }
 )

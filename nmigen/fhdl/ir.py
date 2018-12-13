@@ -52,6 +52,11 @@ class Fragment:
         signals = ValueSet()
         signals |= self.ports.keys()
         for domain, domain_signals in self.drivers.items():
+            if domain is not None:
+                cd = self.domains[domain]
+                signals.add(cd.clk)
+                if cd.rst is not None:
+                    signals.add(cd.rst)
             signals |= domain_signals
         return signals
 

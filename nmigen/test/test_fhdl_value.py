@@ -59,10 +59,10 @@ class ValueTestCase(FHDLTestCase):
 
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):
-        self.assertEqual(Const(0).shape(),   (0, False))
+        self.assertEqual(Const(0).shape(),   (1, False))
         self.assertEqual(Const(1).shape(),   (1, False))
         self.assertEqual(Const(10).shape(),  (4, False))
-        self.assertEqual(Const(-10).shape(), (4, True))
+        self.assertEqual(Const(-10).shape(), (5, True))
 
         self.assertEqual(Const(1, 4).shape(),         (4, False))
         self.assertEqual(Const(1, (4, True)).shape(), (4, True))
@@ -70,12 +70,15 @@ class ConstTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             Const(1, -1)
 
+    def test_normalization(self):
+        self.assertEqual(Const(0b10110, (5, True)).value, -10)
+
     def test_value(self):
         self.assertEqual(Const(10).value, 10)
 
     def test_repr(self):
         self.assertEqual(repr(Const(10)),  "(const 4'd10)")
-        self.assertEqual(repr(Const(-10)), "(const 4'sd-10)")
+        self.assertEqual(repr(Const(-10)), "(const 5'sd-10)")
 
     def test_hash(self):
         with self.assertRaises(TypeError):
@@ -205,7 +208,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux(self):
         s  = Const(0)
         v1 = Mux(s, Const(0, (4, False)), Const(0, (6, False)))
-        self.assertEqual(repr(v1), "(m (const 0'd0) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v1), "(m (const 1'd0) (const 4'd0) (const 6'd0))")
         self.assertEqual(v1.shape(), (6, False))
         v2 = Mux(s, Const(0, (4, True)), Const(0, (6, True)))
         self.assertEqual(v2.shape(), (6, True))
@@ -216,7 +219,7 @@ class OperatorTestCase(FHDLTestCase):
 
     def test_bool(self):
         v = Const(0).bool()
-        self.assertEqual(repr(v), "(b (const 0'd0))")
+        self.assertEqual(repr(v), "(b (const 1'd0))")
         self.assertEqual(v.shape(), (1, False))
 
     def test_hash(self):
@@ -243,7 +246,7 @@ class CatTestCase(FHDLTestCase):
         c2 = Cat(Const(10), Const(1))
         self.assertEqual(c2.shape(), (5, False))
         c3 = Cat(Const(10), Const(1), Const(0))
-        self.assertEqual(c3.shape(), (5, False))
+        self.assertEqual(c3.shape(), (6, False))
 
     def test_repr(self):
         c1 = Cat(Const(10), Const(1))

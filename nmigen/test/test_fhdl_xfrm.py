@@ -32,7 +32,7 @@ class DomainRenamerTestCase(FHDLTestCase):
         (
             (eq (sig s1) (clk pix))
             (eq (rst pix) (sig s2))
-            (eq (sig s3) (const 0'd0))
+            (eq (sig s3) (const 1'd0))
             (eq (sig s4) (clk other))
             (eq (sig s5) (rst other))
         )
@@ -127,7 +127,7 @@ class ResetInserterTestCase(FHDLTestCase):
         self.assertRepr(f.statements, """
         (
             (eq (sig s1) (const 1'd1))
-            (eq (sig s2) (const 0'd0))
+            (eq (sig s2) (const 1'd0))
             (switch (sig c1)
                 (case 1 (eq (sig s2) (const 1'd1)))
             )
@@ -144,7 +144,7 @@ class ResetInserterTestCase(FHDLTestCase):
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements, """
         (
-            (eq (sig s2) (const 0'd0))
+            (eq (sig s2) (const 1'd0))
             (switch (sig c1)
                 (case 1 (eq (sig s2) (const 1'd1)))
             )
@@ -161,7 +161,7 @@ class ResetInserterTestCase(FHDLTestCase):
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements, """
         (
-            (eq (sig s3) (const 0'd0))
+            (eq (sig s3) (const 1'd0))
             (switch (sig c1)
                 (case 1 )
             )
@@ -206,7 +206,7 @@ class CEInserterTestCase(FHDLTestCase):
         self.assertRepr(f.statements, """
         (
             (eq (sig s1) (const 1'd1))
-            (eq (sig s2) (const 0'd0))
+            (eq (sig s2) (const 1'd0))
             (switch (sig c1)
                 (case 0 (eq (sig s2) (sig s2)))
             )

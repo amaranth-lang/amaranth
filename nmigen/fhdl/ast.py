@@ -10,7 +10,7 @@ from ..tools import *
 __all__ = [
     "Value", "Const", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Signal", "ClockSignal", "ResetSignal",
-    "Statement", "Assign", "Switch",
+    "Statement", "Assign", "Switch", "Delay", "Passive",
     "ValueKey", "ValueDict", "ValueSet",
 ]
 
@@ -216,16 +216,22 @@ class Const(Value):
     nbits : int
     signed : bool
     """
+    src_loc = None
+
     def __init__(self, value, shape=None):
-        super().__init__()
         self.value = int(value)
         if shape is None:
-            shape = self.value.bit_length(), self.value < 0
+            shape = bits_for(self.value), self.value < 0
         if isinstance(shape, int):
             shape = shape, self.value < 0
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer")
+
+        mask = (1 << self.nbits) - 1
+        self.value &= mask
+        if self.signed and self.value >> (self.nbits - 1):
+            self.value |= ~mask
 
     def shape(self):
         return self.nbits, self.signed
@@ -347,6 +353,8 @@ class Slice(Value):
             raise IndexError("Cannot end slice {} bits into {}-bit value".format(end, n))
         if end < 0:
             end += n
+        if start > end:
+            raise IndexError("Slice start {} must be less than slice end {}".format(start, end))
 
         super().__init__()
         self.value = Value.wrap(value)
@@ -678,6 +686,25 @@ class Switch(Statement):
         cases = ["(case {} {})".format(key, " ".join(map(repr, stmts)))
                  for key, stmts in self.cases.items()]
         return "(switch {!r} {})".format(self.test, " ".join(cases))
+
+
+class Delay(Statement):
+    def __init__(self, interval):
+        self.interval = float(interval)
+
+    def _rhs_signals(self):
+        return ValueSet()
+
+    def __repr__(self):
+        return "(delay {:.3}us)".format(self.interval * 10e6)
+
+
+class Passive(Statement):
+    def _rhs_signals(self):
+        return ValueSet()
+
+    def __repr__(self):
+        return "(passive)"
 
 
 class ValueKey:
