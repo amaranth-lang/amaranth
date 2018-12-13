@@ -503,7 +503,11 @@ def convert_fragment(builder, fragment, name, clock_domains):
 
 
 def convert(fragment, ports=[], clock_domains={}):
-    fragment, ins, outs = fragment.prepare(ports, clock_domains)
+    fragment = xfrm.ResetInserter({
+        cd.name: cd.reset for cd in clock_domains.values() if cd.reset is not None
+    })(fragment)
+
+    ins, outs = fragment._propagate_ports(ports, clock_domains)
 
     builder = _Builder()
     convert_fragment(builder, fragment, "top", clock_domains)

@@ -50,12 +50,9 @@ class Fragment:
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
 
-    def prepare(self, ports, clock_domains):
-        from .xfrm import ResetInserter
-
-        resets = {cd.name: cd.reset for cd in clock_domains.values() if cd.reset is not None}
-        frag   = ResetInserter(resets)(self)
-
+    def _propagate_ports(self, ports, clock_domains):
+        # Collect all signals we're driving (on LHS of statements), and signals we're using
+        # (on RHS of statements, or in clock domains).
         self_driven = union(s._lhs_signals() for s in self.statements)
         self_used   = union(s._rhs_signals() for s in self.statements)
         for cd_name, _ in self.iter_sync():
@@ -64,16 +61,27 @@ class Fragment:
             if cd.reset is not None:
                 self_used.add(cd.reset)
 
+        # Our input ports are all the signals we're using but not driving. This is an over-
+        # approximation: some of these signals may be driven by our subfragments.
         ins  = self_used - self_driven
+        # Our output ports are all the signals we're asked to provide that we're driving. This is
+        # an underapproximation: some of these signals may be driven by subfragments.
         outs = ports & self_driven
 
-        for n, (subfrag, name) in enumerate(frag.subfragments):
-            subfrag, sub_ins, sub_outs = subfrag.prepare(ports=self_used | ports,
+        # Go through subfragments and refine our approximation for ports.
+        for subfrag, name in self.subfragments:
+            # Always ask subfragments to provide all signals we're using and signals we're asked
+            # to provide. If the subfragment is not driving it, it will silently ignore it.
+            sub_ins, sub_outs = subfrag._propagate_ports(ports=self_used | ports,
                                                          clock_domains=clock_domains)
-            frag.subfragments[n] = (subfrag, name)
+            # Refine the input port approximation: if a subfragment is driving a signal,
+            # it is definitely not our input.
             ins  -= sub_outs
+            # Refine the output port approximation: if a subfragment is driving a signal,
+            # and we're asked to provide it, we can provide it now.
             outs |= ports & sub_outs
 
-        frag.add_ports(ins, outs)
+        # We've computed the precise set of input and output ports.
+        self.add_ports(ins, outs)
 
-        return frag, ins, outs
+        return ins, outs
