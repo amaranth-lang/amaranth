@@ -58,6 +58,11 @@ class Fragment:
 
         self_driven = union(s._lhs_signals() for s in self.statements)
         self_used   = union(s._rhs_signals() for s in self.statements)
+        for cd_name, _ in self.iter_sync():
+            cd = clock_domains[cd_name]
+            self_used.add(cd.clk)
+            if cd.reset is not None:
+                self_used.add(cd.reset)
 
         ins  = self_used - self_driven
         outs = ports & self_driven
