@@ -397,7 +397,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
 
 
 def convert_fragment(builder, fragment, name, top):
-    with builder.module(name, attrs={"top": 1} if top else {}) as module:
+    with builder.module(name or "anonymous", attrs={"top": 1} if top else {}) as module:
         xformer = _ValueTransformer(module)
 
         # Register all signals driven in the current fragment. This must be done first, as it
