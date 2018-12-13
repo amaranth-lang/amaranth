@@ -495,9 +495,9 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:
                         for signal in signals:
-                            rhs_sigspec = xformer(signal)
+                            lhs_sigspec = xformer(signal)
                             with xformer.lhs():
-                                sync.update(xformer(signal), rhs_sigspec)
+                                sync.update(lhs_sigspec, xformer(signal))
 
     # Finally, collect the names we've given to our ports in RTLIL, and correlate these with
     # the signals represented by these ports. If we are a submodule, this will be necessary
