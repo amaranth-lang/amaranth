@@ -19,6 +19,7 @@ def convert(*args, **kwargs):
         stderr=subprocess.PIPE,
         encoding="utf-8")
     verilog_text, error = popen.communicate("""
+# Convert nMigen's RTLIL to readable Verilog.
 read_ilang <<rtlil
 {}
 rtlil
@@ -27,6 +28,9 @@ proc_arst
 proc_dff
 proc_clean
 write_verilog
+# Make sure there are no undriven wires in generated RTLIL.
+proc
+select -assert-none w:* i:* %a %d c:* %co* %a %d n:$* %d
 """.format(il_text))
     if popen.returncode:
         raise YosysError(error.strip())
