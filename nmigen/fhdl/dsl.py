@@ -64,30 +64,6 @@ class _ModuleBuilderRoot:
                              .format(type(self).__name__, name))
 
 
-class _ModuleBuilderCase(_ModuleBuilderRoot):
-    def __init__(self, builder, depth, test, value):
-        super().__init__(builder, depth)
-        self._test  = test
-        self._value = value
-
-    def __enter__(self):
-        if self._value is None:
-            self._value = "-" * len(self._test)
-        if isinstance(self._value, str) and len(self._test) != len(self._value):
-            raise SyntaxError("Case value {} must have the same width as test {}"
-                              .format(self._value, self._test))
-        if self._builder._stmt_switch_test != ValueKey(self._test):
-            self._builder._flush()
-            self._builder._stmt_switch_test = ValueKey(self._test)
-        self._outer_case = self._builder._statements
-        self._builder._statements = []
-        return self
-
-    def __exit__(self, *args):
-        self._builder._stmt_switch_cases[self._value] = self._builder._statements
-        self._builder._statements = self._outer_case
-
-
 class _ModuleBuilderSubmodules:
     def __init__(self, builder):
         object.__setattr__(self, "_builder", builder)
@@ -106,86 +82,147 @@ class Module(_ModuleBuilderRoot):
         _ModuleBuilderRoot.__init__(self, self, depth=0)
         self.submodules = _ModuleBuilderSubmodules(self)
 
-        self._submodules        = []
-        self._driving           = ValueDict()
-        self._statements        = Statement.wrap([])
-        self._stmt_depth        = 0
+        self._submodules   = []
+        self._driving      = ValueDict()
+        self._statements   = Statement.wrap([])
+        self._ctrl_context = None
+        self._ctrl_stack   = []
         self._stmt_if_cond      = []
         self._stmt_if_bodies    = []
         self._stmt_switch_test  = None
         self._stmt_switch_cases = OrderedDict()
 
+    def _check_context(self, construct, context):
+        if self._ctrl_context != context:
+            if self._ctrl_context is None:
+                raise SyntaxError("{} is not permitted outside of {}"
+                                  .format(construct, context))
+            else:
+                raise SyntaxError("{} is not permitted inside of {}"
+                                  .format(construct, self._ctrl_context))
+
+    def _get_ctrl(self, name):
+        if self._ctrl_stack:
+            top_name, top_data = self._ctrl_stack[-1]
+            if top_name == name:
+                return top_data
+
+    def _flush_ctrl(self):
+        while len(self._ctrl_stack) > self.domain._depth:
+            self._pop_ctrl()
+
+    def _set_ctrl(self, name, data):
+        self._flush_ctrl()
+        self._ctrl_stack.append((name, data))
+        return data
+
     @contextmanager
     def If(self, cond):
-        self._flush()
+        self._check_context("If", context=None)
+        if_data = self._set_ctrl("If", {"tests": [], "bodies": []})
         try:
-            _outer_case = self._statements
-            self._statements = []
+            _outer_case, self._statements = self._statements, []
             self.domain._depth += 1
             yield
-            self._stmt_if_cond.append(cond)
-            self._stmt_if_bodies.append(self._statements)
+            self._flush_ctrl()
+            if_data["tests"].append(cond)
+            if_data["bodies"].append(self._statements)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
 
     @contextmanager
     def Elif(self, cond):
-        if not self._stmt_if_cond:
+        self._check_context("Elif", context=None)
+        if_data = self._get_ctrl("If")
+        if if_data is None:
             raise SyntaxError("Elif without preceding If")
         try:
-            _outer_case = self._statements
-            self._statements = []
+            _outer_case, self._statements = self._statements, []
             self.domain._depth += 1
             yield
-            self._stmt_if_cond.append(cond)
-            self._stmt_if_bodies.append(self._statements)
+            self._flush_ctrl()
+            if_data["tests"].append(cond)
+            if_data["bodies"].append(self._statements)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
 
     @contextmanager
     def Else(self):
-        if not self._stmt_if_cond:
+        self._check_context("Else", context=None)
+        if_data = self._get_ctrl("If")
+        if if_data is None:
             raise SyntaxError("Else without preceding If/Elif")
         try:
-            _outer_case = self._statements
-            self._statements = []
+            _outer_case, self._statements = self._statements, []
             self.domain._depth += 1
             yield
-            self._stmt_if_bodies.append(self._statements)
+            self._flush_ctrl()
+            if_data["bodies"].append(self._statements)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
-        self._flush()
+        self._pop_ctrl()
 
-    def Case(self, test, value=None):
-        return _ModuleBuilderCase(self, self._stmt_depth + 1, test, value)
+    @contextmanager
+    def Switch(self, test):
+        self._check_context("Switch", context=None)
+        switch_data = self._set_ctrl("Switch", {"test": test, "cases": OrderedDict()})
+        try:
+            self._ctrl_context = "Switch"
+            self.domain._depth += 1
+            yield
+        finally:
+            self.domain._depth -= 1
+            self._ctrl_context = None
+        self._pop_ctrl()
 
-    def _flush(self):
-        if self._stmt_if_cond:
+    @contextmanager
+    def Case(self, value=None):
+        self._check_context("Case", context="Switch")
+        switch_data = self._get_ctrl("Switch")
+        if value is None:
+            value = "-" * len(switch_data["test"])
+        if isinstance(value, str) and len(switch_data["test"]) != len(value):
+            raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
+                              .format(value, len(switch_data["test"])))
+        try:
+            _outer_case, self._statements = self._statements, []
+            self._ctrl_context = None
+            yield
+            self._flush_ctrl()
+            switch_data["cases"][value] = self._statements
+        finally:
+            self._ctrl_context = "Switch"
+            self._statements = _outer_case
+
+    def _pop_ctrl(self):
+        name, data = self._ctrl_stack.pop()
+
+        if name == "If":
+            if_tests, if_bodies = data["tests"], data["bodies"]
+
             tests, cases = [], OrderedDict()
-            for if_cond, if_case in zip(self._stmt_if_cond + [None], self._stmt_if_bodies):
-                if if_cond is not None:
-                    if_cond = Value.wrap(if_cond)
-                    if len(if_cond) != 1:
-                        if_cond = if_cond.bool()
-                    tests.append(if_cond)
+            for if_test, if_case in zip(if_tests + [None], if_bodies):
+                if if_test is not None:
+                    if_test = Value.wrap(if_test)
+                    if len(if_test) != 1:
+                        if_test = if_test.bool()
+                    tests.append(if_test)
 
-                if if_cond is not None:
-                    match = ("1" + "-" * (len(tests) - 1)).rjust(len(self._stmt_if_cond), "-")
+                if if_test is not None:
+                    match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
                 else:
                     match = "-" * len(tests)
                 cases[match] = if_case
+
             self._statements.append(Switch(Cat(tests), cases))
 
-        if self._stmt_switch_test:
-            self._statements.append(Switch(self._stmt_switch_test.value, self._stmt_switch_cases))
+        if name == "Switch":
+            switch_test, switch_cases = data["test"], data["cases"]
 
-        self._stmt_if_cond      = []
-        self._stmt_if_bodies    = []
-        self._stmt_switch_test  = None
-        self._stmt_switch_cases = OrderedDict()
+            self._statements.append(Switch(switch_test, switch_cases))
 
     def _add_statement(self, assigns, cd_name, depth, compat_mode=False):
         def cd_human_name(cd_name):
@@ -194,9 +231,8 @@ class Module(_ModuleBuilderRoot):
             else:
                 return cd_name
 
-        if depth < self._stmt_depth:
-            self._flush()
-        self._stmt_depth = depth
+        while len(self._ctrl_stack) > self.domain._depth:
+            self._pop_ctrl()
 
         for assign in Statement.wrap(assigns):
             if not compat_mode and not isinstance(assign, Assign):
@@ -221,6 +257,10 @@ class Module(_ModuleBuilderRoot):
             raise TypeError("Trying to add {!r}, which does not implement .get_fragment(), as "
                             "a submodule".format(submodule))
         self._submodules.append((submodule, name))
+
+    def _flush(self):
+        while self._ctrl_stack:
+            self._pop_ctrl()
 
     def lower(self, platform):
         self._flush()

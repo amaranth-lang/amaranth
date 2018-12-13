@@ -21,7 +21,7 @@ class DSLTestCase(unittest.TestCase):
     def assertRaises(self, exception, msg=None):
         with super().assertRaises(exception) as cm:
             yield
-        if msg:
+        if msg is not None:
             # WTF? unittest.assertRaises is completely broken.
             self.assertEqual(str(cm.exception), msg)
 
@@ -158,6 +158,68 @@ class DSLTestCase(unittest.TestCase):
         )
         """)
 
+    def test_If_If(self):
+        m = Module()
+        with m.If(self.s1):
+            m.d.comb += self.c1.eq(1)
+        with m.If(self.s2):
+            m.d.comb += self.c2.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (cat (sig s1))
+                (case 1 (eq (sig c1) (const 1'd1)))
+            )
+            (switch (cat (sig s2))
+                (case 1 (eq (sig c2) (const 1'd1)))
+            )
+        )
+        """)
+
+    def test_If_nested_If(self):
+        m = Module()
+        with m.If(self.s1):
+            m.d.comb += self.c1.eq(1)
+            with m.If(self.s2):
+                m.d.comb += self.c2.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (cat (sig s1))
+                (case 1 (eq (sig c1) (const 1'd1))
+                    (switch (cat (sig s2))
+                        (case 1 (eq (sig c2) (const 1'd1)))
+                    )
+                )
+            )
+        )
+        """)
+
+    def test_If_dangling_Else(self):
+        m = Module()
+        with m.If(self.s1):
+            m.d.comb += self.c1.eq(1)
+            with m.If(self.s2):
+                m.d.comb += self.c2.eq(1)
+        with m.Else():
+            m.d.comb += self.c3.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (cat (sig s1))
+                (case 1
+                    (eq (sig c1) (const 1'd1))
+                    (switch (cat (sig s2))
+                        (case 1 (eq (sig c2) (const 1'd1)))
+                    )
+                )
+                (case -
+                    (eq (sig c3) (const 1'd1))
+                )
+            )
+        )
+        """)
+
     def test_Elif_wrong(self):
         m = Module()
         with self.assertRaises(SyntaxError,
@@ -185,7 +247,64 @@ class DSLTestCase(unittest.TestCase):
         )
         """)
 
-    def test_auto_flush(self):
+    def test_Switch(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Case(3):
+                m.d.comb += self.c1.eq(1)
+            with m.Case("11--"):
+                m.d.comb += self.c2.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig w1)
+                (case 0011 (eq (sig c1) (const 1'd1)))
+                (case 11-- (eq (sig c2) (const 1'd1)))
+            )
+        )
+        """)
+
+    def test_Switch_default(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Case(3):
+                m.d.comb += self.c1.eq(1)
+            with m.Case():
+                m.d.comb += self.c2.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig w1)
+                (case 0011 (eq (sig c1) (const 1'd1)))
+                (case ---- (eq (sig c2) (const 1'd1)))
+            )
+        )
+        """)
+
+    def test_Case_width_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with self.assertRaises(SyntaxError,
+                    msg="Case value '--' must have the same width as test (which is 4)"):
+                with m.Case("--"):
+                    pass
+
+    def test_Case_outside_Switch_wrong(self):
+        m = Module()
+        with self.assertRaises(SyntaxError,
+                msg="Case is not permitted outside of Switch"):
+            with m.Case():
+                pass
+
+    def test_If_inside_Switch_wrong(self):
+        m = Module()
+        with m.Switch(self.s1):
+            with self.assertRaises(SyntaxError,
+                    msg="If is not permitted inside of Switch"):
+                with m.If(self.s2):
+                    pass
+
+    def test_auto_pop_ctrl(self):
         m = Module()
         with m.If(self.w1):
             m.d.comb += self.c1.eq(1)

@@ -12,14 +12,15 @@ class ParMux:
 
     def get_fragment(self, platform):
         m = Module()
-        with m.Case(self.s, "--1"):
-            m.d.comb += self.o.eq(self.a)
-        with m.Case(self.s, "-1-"):
-            m.d.comb += self.o.eq(self.b)
-        with m.Case(self.s, "1--"):
-            m.d.comb += self.o.eq(self.c)
-        with m.Case(self.s):
-            m.d.comb += self.o.eq(0)
+        with m.Switch(self.s):
+            with m.Case("--1"):
+                m.d.comb += self.o.eq(self.a)
+            with m.Case("-1-"):
+                m.d.comb += self.o.eq(self.b)
+            with m.Case("1--"):
+                m.d.comb += self.o.eq(self.c)
+            with m.Case():
+                m.d.comb += self.o.eq(0)
         return m.lower(platform)
 
 
