@@ -38,7 +38,7 @@ class _Bufferer:
 
     def _src(self, src):
         if src:
-            self._append("  attribute \\src {}", repr(src))
+            self._append("  attribute \\src \"{}\"\n", src.replace("\"", "\\\""))
 
 
 class _Builder(_Namer, _Bufferer):
@@ -70,9 +70,9 @@ class _ModuleBuilder(_Namer, _Bufferer):
 
     def attribute(self, name, value):
         if isinstance(value, str):
-            self._append("attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
+            self._append("  attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
         else:
-            self._append("attribute \\{} {}\n", name, int(value))
+            self._append("  attribute \\{} {}\n", name, int(value))
 
     def wire(self, width, port_id=None, port_kind=None, name=None, src=""):
         self._src(src)
@@ -190,6 +190,11 @@ class _SyncBuilder:
         self.rtlil._append("      update {} {}\n", lhs, rhs)
 
 
+def src(src_loc):
+    file, line = src_loc
+    return "{}:{}".format(file, line)
+
+
 class _ValueTransformer(xfrm.ValueTransformer):
     operator_map = {
         (1, "~"):    "$not",
@@ -275,9 +280,11 @@ class _ValueTransformer(xfrm.ValueTransformer):
             for attr_name, attr_value in node.attrs.items():
                 self.rtlil.attribute(attr_name, attr_value)
             wire_curr = self.rtlil.wire(width=node.nbits, name=wire_name,
-                                        port_id=port_id, port_kind=port_kind)
+                                        port_id=port_id, port_kind=port_kind,
+                                        src=src(node.src_loc))
             if node in self.driven:
-                wire_next = self.rtlil.wire(width=node.nbits, name=wire_curr + "$next")
+                wire_next = self.rtlil.wire(width=node.nbits, name=wire_curr + "$next",
+                                            src=src(node.src_loc))
             else:
                 wire_next = None
             self.wires[node] = (wire_curr, wire_next)
@@ -301,7 +308,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
             "A_SIGNED": arg_sign,
             "A_WIDTH": arg_bits,
             "Y_WIDTH": res_bits,
-        })
+        }, src=src(node.src_loc))
         return res
 
     def match_shape(self, node, new_bits, new_sign):
@@ -318,7 +325,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
                 "A_SIGNED": node_sign,
                 "A_WIDTH": node_bits,
                 "Y_WIDTH": new_bits,
-            })
+            }, src=src(node.src_loc))
             return res
         else:
             return "{} [{}:0]".format(self(node), new_bits - 1)
@@ -347,7 +354,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
             "B_SIGNED": rhs_sign,
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
-        })
+        }, src=src(node.src_loc))
         return res
 
     def on_Operator_mux(self, node):
@@ -366,7 +373,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
             "\\Y": res,
         }, params={
             "WIDTH": res_bits
-        })
+        }, src=src(node.src_loc))
         return res
 
     def on_Operator(self, node):

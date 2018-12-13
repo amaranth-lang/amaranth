@@ -38,25 +38,28 @@ class ValueTransformer:
 
     def on_value(self, value):
         if isinstance(value, Const):
-            return self.on_Const(value)
+            new_value = self.on_Const(value)
         elif isinstance(value, Signal):
-            return self.on_Signal(value)
+            new_value = self.on_Signal(value)
         elif isinstance(value, ClockSignal):
-            return self.on_ClockSignal(value)
+            new_value = self.on_ClockSignal(value)
         elif isinstance(value, ResetSignal):
-            return self.on_ResetSignal(value)
+            new_value = self.on_ResetSignal(value)
         elif isinstance(value, Operator):
-            return self.on_Operator(value)
+            new_value = self.on_Operator(value)
         elif isinstance(value, Slice):
-            return self.on_Slice(value)
+            new_value = self.on_Slice(value)
         elif isinstance(value, Part):
-            return self.on_Part(value)
+            new_value = self.on_Part(value)
         elif isinstance(value, Cat):
-            return self.on_Cat(value)
+            new_value = self.on_Cat(value)
         elif isinstance(value, Repl):
-            return self.on_Repl(value)
+            new_value = self.on_Repl(value)
         else:
             raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+        if isinstance(new_value, Value):
+            new_value.src_loc = value.src_loc
+        return new_value
 
     def __call__(self, value):
         return self.on_value(value)

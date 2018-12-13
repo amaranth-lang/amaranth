@@ -4,6 +4,8 @@ from nmigen.genlib.cdc import *
 
 
 i, o = Signal(name="i"), Signal(name="o")
-frag = MultiReg(i, o).get_fragment(platform=None)
+m = Module()
+m.submodules += MultiReg(i, o)
+frag = m.lower(platform=None)
 # print(rtlil.convert(frag, ports=[i, o]))
 print(verilog.convert(frag, ports=[i, o]))

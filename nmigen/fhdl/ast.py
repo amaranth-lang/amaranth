@@ -1,4 +1,5 @@
 import builtins
+import traceback
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet
 
@@ -34,6 +35,16 @@ class Value:
         else:
             raise TypeError("Object {} of type {} is not a Migen value"
                             .format(repr(obj), type(obj)))
+
+    def __init__(self, src_loc_at=0):
+        super().__init__()
+
+        src_loc_at += 3
+        tb = traceback.extract_stack(limit=src_loc_at)
+        if len(tb) < src_loc_at:
+            self.src_loc = None
+        else:
+            self.src_loc = (tb[0].filename, tb[0].lineno)
 
     def __bool__(self):
         raise TypeError("Attempted to convert Migen value to boolean")
@@ -206,6 +217,7 @@ class Const(Value):
     signed : bool
     """
     def __init__(self, value, shape=None):
+        super().__init__()
         self.value = int(value)
         if shape is None:
             shape = self.value.bit_length(), self.value < 0
@@ -229,8 +241,8 @@ C = Const  # shorthand
 
 
 class Operator(Value):
-    def __init__(self, op, operands):
-        super().__init__()
+    def __init__(self, op, operands, src_loc_at=0):
+        super().__init__(src_loc_at=1 + src_loc_at)
         self.op = op
         self.operands = [Value.wrap(o) for o in operands]
 
@@ -316,7 +328,7 @@ def Mux(sel, val1, val0):
     Value, out
         Output ``Value``. If ``sel`` is asserted, the Mux returns ``val1``, else ``val0``.
     """
-    return Operator("m", [sel, val1, val0])
+    return Operator("m", [sel, val1, val0], src_loc_at=1)
 
 
 class Slice(Value):
@@ -499,8 +511,8 @@ class Signal(Value, DUID):
     """
 
     def __init__(self, shape=None, name=None, reset=0, reset_less=False, min=None, max=None,
-                 attrs=None):
-        super().__init__()
+                 attrs=None, src_loc_at=0):
+        super().__init__(src_loc_at=src_loc_at)
 
         if name is None:
             try:
@@ -537,7 +549,7 @@ class Signal(Value, DUID):
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
     @classmethod
-    def like(cls, other, **kwargs):
+    def like(cls, other, src_loc_at=0, **kwargs):
         """Create Signal based on another.
 
         Parameters
@@ -549,7 +561,7 @@ class Signal(Value, DUID):
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
         kw.update(kwargs)
-        return cls(**kw)
+        return cls(**kw, src_loc_at=1 + src_loc_at)
 
     def shape(self):
         return self.nbits, self.signed

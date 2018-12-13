@@ -40,10 +40,10 @@ class ClockDomain:
             name = name[3:]
         self.name = name
 
-        self.clk = Signal(name=self.name + "_clk")
+        self.clk = Signal(name=self.name + "_clk", src_loc_at=1)
         if reset_less:
             self.rst = None
         else:
-            self.rst = Signal(name=self.name + "_rst")
+            self.rst = Signal(name=self.name + "_rst", src_loc_at=1)
 
         self.async_reset = async_reset
