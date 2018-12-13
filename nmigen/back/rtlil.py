@@ -400,6 +400,13 @@ def convert_fragment(builder, fragment, name, clock_domains):
         for signal in fragment.ports:
             xformer.add_port(signal)
 
+        # Make sure clocks and resets get sensible names, by eagerly converting them outside
+        # of any hierarchy.
+        for cd_name, _ in fragment.iter_sync():
+            cd = clock_domains[cd_name]
+            xformer(cd.clk)
+            xformer(cd.reset)
+
         for subfragment, sub_name in fragment.subfragments:
             sub_name, sub_port_map = \
                 convert_fragment(builder, subfragment, sub_name, clock_domains)
