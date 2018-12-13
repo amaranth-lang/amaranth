@@ -231,11 +231,15 @@ class _ValueTransformer(xfrm.ValueTransformer):
     def add_driven(self, signal, sync):
         self.driven[signal] = sync
 
-    def add_port(self, signal, kind=None):
-        if signal in self.driven:
-            self.ports[signal] = (len(self.ports), "output")
-        else:
-            self.ports[signal] = (len(self.ports), "input")
+    def add_port(self, signal, kind):
+        assert kind in ("i", "o", "io")
+        if kind == "i":
+            kind = "input"
+        elif kind == "o":
+            kind = "output"
+        elif kind == "io":
+            kind = "inout"
+        self.ports[signal] = (len(self.ports), kind)
 
     @contextmanager
     def lhs(self):
@@ -412,10 +416,11 @@ def convert_fragment(builder, fragment, name, top):
         for domain, signal in fragment.iter_drivers():
             xformer.add_driven(signal, sync=domain is not None)
 
-        # Register all signals used as ports in the current fragment. The wires are lazily
-        # generated, so registering ports eagerly ensures they get correct direction qualifiers.
+        # Transform all signals used as ports in the current fragment eagerly and outside of
+        # any hierarchy, to make sure they get sensible (non-prefixed) names.
         for signal in fragment.ports:
-            xformer.add_port(signal)
+            xformer.add_port(signal, fragment.ports[signal])
+            xformer(signal)
 
         # Transform all clocks clocks and resets eagerly and outside of any hierarchy, to make
         # sure they get sensible (non-prefixed) names. This does not affect semantics.

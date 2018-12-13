@@ -16,10 +16,8 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_empty(self):
         f = Fragment()
 
-        ins, outs = f._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet())
-        self.assertEqual(outs, ValueSet())
-        self.assertEqual(f.ports, ValueSet())
+        f._propagate_ports(ports=())
+        self.assertEqual(f.ports, ValueDict([]))
 
     def test_self_contained(self):
         f = Fragment()
@@ -28,10 +26,8 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.s1.eq(self.c1)
         )
 
-        ins, outs = f._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet())
-        self.assertEqual(outs, ValueSet())
-        self.assertEqual(f.ports, ValueSet())
+        f._propagate_ports(ports=())
+        self.assertEqual(f.ports, ValueDict([]))
 
     def test_infer_input(self):
         f = Fragment()
@@ -39,10 +35,10 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
 
-        ins, outs = f._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet((self.s1,)))
-        self.assertEqual(outs, ValueSet())
-        self.assertEqual(f.ports, ValueSet((self.s1,)))
+        f._propagate_ports(ports=())
+        self.assertEqual(f.ports, ValueDict([
+            (self.s1, "i")
+        ]))
 
     def test_request_output(self):
         f = Fragment()
@@ -50,10 +46,11 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
 
-        ins, outs = f._propagate_ports(ports=(self.c1,))
-        self.assertEqual(ins, ValueSet((self.s1,)))
-        self.assertEqual(outs, ValueSet((self.c1,)))
-        self.assertEqual(f.ports, ValueSet((self.s1, self.c1)))
+        f._propagate_ports(ports=(self.c1,))
+        self.assertEqual(f.ports, ValueDict([
+            (self.s1, "i"),
+            (self.c1, "o")
+        ]))
 
     def test_input_in_subfragment(self):
         f1 = Fragment()
@@ -65,11 +62,11 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.s1.eq(0)
         )
         f1.add_subfragment(f2)
-        ins, outs = f1._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet())
-        self.assertEqual(outs, ValueSet())
-        self.assertEqual(f1.ports, ValueSet())
-        self.assertEqual(f2.ports, ValueSet((self.s1,)))
+        f1._propagate_ports(ports=())
+        self.assertEqual(f1.ports, ValueDict())
+        self.assertEqual(f2.ports, ValueDict([
+            (self.s1, "o"),
+        ]))
 
     def test_input_only_in_subfragment(self):
         f1 = Fragment()
@@ -78,11 +75,13 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
         f1.add_subfragment(f2)
-        ins, outs = f1._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet((self.s1,)))
-        self.assertEqual(outs, ValueSet())
-        self.assertEqual(f1.ports, ValueSet((self.s1,)))
-        self.assertEqual(f2.ports, ValueSet((self.s1,)))
+        f1._propagate_ports(ports=())
+        self.assertEqual(f1.ports, ValueDict([
+            (self.s1, "i"),
+        ]))
+        self.assertEqual(f2.ports, ValueDict([
+            (self.s1, "i"),
+        ]))
 
     def test_output_from_subfragment(self):
         f1 = Fragment()
@@ -95,11 +94,13 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         f1.add_subfragment(f2)
 
-        ins, outs = f1._propagate_ports(ports=(self.c2,))
-        self.assertEqual(ins, ValueSet())
-        self.assertEqual(outs, ValueSet((self.c2,)))
-        self.assertEqual(f1.ports, ValueSet((self.c2,)))
-        self.assertEqual(f2.ports, ValueSet((self.c2,)))
+        f1._propagate_ports(ports=(self.c2,))
+        self.assertEqual(f1.ports, ValueDict([
+            (self.c2, "o"),
+        ]))
+        self.assertEqual(f2.ports, ValueDict([
+            (self.c2, "o"),
+        ]))
 
     def test_input_cd(self):
         sync = ClockDomain()
@@ -110,10 +111,12 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_domains(sync)
         f.drive(self.c1, "sync")
 
-        ins, outs = f._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet((self.s1, sync.clk, sync.rst)))
-        self.assertEqual(outs, ValueSet(()))
-        self.assertEqual(f.ports, ValueSet((self.s1, sync.clk, sync.rst)))
+        f._propagate_ports(ports=())
+        self.assertEqual(f.ports, ValueDict([
+            (self.s1,  "i"),
+            (sync.clk, "i"),
+            (sync.rst, "i"),
+        ]))
 
     def test_input_cd_reset_less(self):
         sync = ClockDomain(reset_less=True)
@@ -124,10 +127,11 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_domains(sync)
         f.drive(self.c1, "sync")
 
-        ins, outs = f._propagate_ports(ports=())
-        self.assertEqual(ins, ValueSet((self.s1, sync.clk)))
-        self.assertEqual(outs, ValueSet(()))
-        self.assertEqual(f.ports, ValueSet((self.s1, sync.clk)))
+        f._propagate_ports(ports=())
+        self.assertEqual(f.ports, ValueDict([
+            (self.s1,  "i"),
+            (sync.clk, "i"),
+        ]))
 
 
 class FragmentDomainsTestCase(FHDLTestCase):

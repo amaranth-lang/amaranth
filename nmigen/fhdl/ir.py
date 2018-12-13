@@ -14,17 +14,19 @@ class DomainError(Exception):
 
 class Fragment:
     def __init__(self):
-        self.ports = ValueSet()
+        self.ports = ValueDict()
         self.drivers = OrderedDict()
         self.statements = []
         self.domains = OrderedDict()
         self.subfragments = []
 
-    def add_ports(self, *ports):
-        self.ports.update(flatten(ports))
+    def add_ports(self, *ports, kind):
+        assert kind in ("i", "o", "io")
+        for port in flatten(ports):
+            self.ports[port] = kind
 
     def iter_ports(self):
-        yield from self.ports
+        yield from self.ports.keys()
 
     def drive(self, signal, domain=None):
         if domain not in self.drivers:
@@ -161,6 +163,7 @@ class Fragment:
             outs |= ports & sub_outs
 
         # We've computed the precise set of input and output ports.
-        self.add_ports(ins, outs)
+        self.add_ports(ins,  kind="i")
+        self.add_ports(outs, kind="o")
 
         return ins, outs

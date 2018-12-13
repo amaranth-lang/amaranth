@@ -516,7 +516,7 @@ class Signal(Value, DUID):
 
         if name is None:
             try:
-                name = tracer.get_var_name()
+                name = tracer.get_var_name(depth=2 + src_loc_at)
             except tracer.NameNotFound:
                 name = "$signal"
         self.name = name
@@ -557,7 +557,8 @@ class Signal(Value, DUID):
         other : Value
             Object to base this Signal on.
         """
-        kw = dict(shape=cls.wrap(other).shape(), name=tracer.get_var_name())
+        kw = dict(shape=cls.wrap(other).shape(),
+                  name=tracer.get_var_name(depth=2 + src_loc_at))
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
         kw.update(kwargs)
@@ -749,8 +750,24 @@ class ValueDict(MutableMapping):
     def __iter__(self):
         return map(lambda x: None if x is None else x.value, sorted(self._inner))
 
+    def __eq__(self, other):
+        if not isinstance(other, ValueDict):
+            return False
+        if len(self) != len(other):
+            return False
+        for ak, bk in zip(self, other):
+            if ValueKey(ak) != ValueKey(bk):
+                return False
+            if self[ak] != other[bk]:
+                return False
+        return True
+
     def __len__(self):
         return len(self._inner)
+
+    def __repr__(self):
+        pairs = ["({!r}, {!r})".format(k, v) for k, v in self.items()]
+        return "ValueDict([{}])".format(", ".join(pairs))
 
 
 class ValueSet(MutableSet):
