@@ -306,11 +306,14 @@ class Simulator:
                 self._vcd_writer.change(vcd_signal, self._timestamp * 1e10, new.value)
 
     def _handle_event(self):
+        handlers = set()
         while self._state.curr_dirty:
             signal = self._state.curr_dirty.pop()
             if signal in self._handlers:
-                for handler in self._handlers[signal]:
-                    handler(self._state)
+                handlers.update(self._handlers[signal])
+
+        for handler in handlers:
+            handler(self._state)
 
         for signal in self._state.next_dirty:
             if signal in self._comb_signals or signal in self._user_signals:
