@@ -71,6 +71,19 @@ class FragmentPortsTestCase(FHDLTestCase):
         self.assertEqual(f1.ports, ValueSet())
         self.assertEqual(f2.ports, ValueSet((self.s1,)))
 
+    def test_input_only_in_subfragment(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f2.add_statements(
+            self.c1.eq(self.s1)
+        )
+        f1.add_subfragment(f2)
+        ins, outs = f1._propagate_ports(ports=())
+        self.assertEqual(ins, ValueSet((self.s1,)))
+        self.assertEqual(outs, ValueSet())
+        self.assertEqual(f1.ports, ValueSet((self.s1,)))
+        self.assertEqual(f2.ports, ValueSet((self.s1,)))
+
     def test_output_from_subfragment(self):
         f1 = Fragment()
         f1.add_statements(

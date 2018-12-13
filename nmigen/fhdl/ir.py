@@ -152,8 +152,10 @@ class Fragment:
             # to provide. If the subfragment is not driving it, it will silently ignore it.
             sub_ins, sub_outs = subfrag._propagate_ports(ports=self_used | ports)
             # Refine the input port approximation: if a subfragment is driving a signal,
-            # it is definitely not our input.
+            # it is definitely not our input. But, if a subfragment requires a signal as an input,
+            # and we aren't driving it, it has to be our input as well.
             ins  -= sub_outs
+            ins  |= sub_ins - self_driven
             # Refine the output port approximation: if a subfragment is driving a signal,
             # and we're asked to provide it, we can provide it now.
             outs |= ports & sub_outs
