@@ -36,17 +36,6 @@ class Value:
                             .format(repr(obj), type(obj)))
 
     def __bool__(self):
-        # Special case: Consts and Signals are part of a set or used as
-        # dictionary keys, and Python needs to check for equality.
-        if isinstance(self, Operator) and self.op == "==":
-            a, b = self.operands
-            if isinstance(a, Const) and isinstance(b, Const):
-                return a.value == b.value
-            if isinstance(a, Signal) and isinstance(b, Signal):
-                return a is b
-            if (isinstance(a, Const) and isinstance(b, Signal)
-                    or isinstance(a, Signal) and isinstance(b, Const)):
-                return False
         raise TypeError("Attempted to convert Migen value to boolean")
 
     def __invert__(self):
@@ -187,13 +176,13 @@ class Value:
         >>> Value.bits_sign(C(0xaa))
         8, False
         """
-        raise TypeError("Cannot calculate bit length of {!r}".format(self))
+        raise NotImplementedError # :nocov:
 
     def _lhs_signals(self):
         raise TypeError("Value {!r} cannot be used in assignments".format(self))
 
     def _rhs_signals(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def __hash__(self):
         raise TypeError("Unhashable type: {}".format(type(self).__name__))
@@ -231,12 +220,6 @@ class Const(Value):
 
     def _rhs_signals(self):
         return ValueSet()
-
-    def __eq__(self, other):
-        return self.value == other.value
-
-    def __hash__(self):
-        return hash(self.value)
 
     def __repr__(self):
         return "(const {}'{}d{})".format(self.nbits, "s" if self.signed else "", self.value)
@@ -301,23 +284,20 @@ class Operator(Value):
         elif self.op == "&" or self.op == "^" or self.op == "|":
             return self._bitwise_binary_bits_sign(*obs)
         elif (self.op == "<" or self.op == "<=" or self.op == "==" or self.op == "!=" or
-              self.op == ">" or self.op == ">="):
+              self.op == ">" or self.op == ">=" or self.op == "b"):
             return 1, False
         elif self.op == "~":
             return obs[0]
         elif self.op == "m":
-            return _bitwise_binary_bits_sign(obs[1], obs[2])
+            return self._bitwise_binary_bits_sign(obs[1], obs[2])
         else:
-            raise TypeError
+            raise TypeError # :nocov:
 
     def _rhs_signals(self):
         return union(op._rhs_signals() for op in self.operands)
 
     def __repr__(self):
-        if len(self.operands) == 1:
-            return "({} {})".format(self.op, self.operands[0])
-        elif len(self.operands) == 2:
-            return "({} {} {})".format(self.op, self.operands[0], self.operands[1])
+        return "({} {})".format(self.op, " ".join(map(repr, self.operands)))
 
 
 def Mux(sel, val1, val0):
@@ -470,7 +450,10 @@ class Repl(Value):
         return len(self.value) * self.count, False
 
     def _rhs_signals(self):
-        return value._rhs_signals()
+        return self.value._rhs_signals()
+
+    def __repr__(self):
+        return "(repl {!r} {})".format(self.value, self.count)
 
 
 class Signal(Value, DUID):
@@ -538,18 +521,18 @@ class Signal(Value, DUID):
             self.signed = min < 0 or max < 0
             self.nbits  = builtins.max(bits_for(min, self.signed), bits_for(max, self.signed))
 
-        elif isinstance(bits_sign, int):
-            if not (min is None or max is None):
-                raise ValueError("Only one of bits/signedness or bounds may be specified")
-            self.nbits, self.signed = bits_sign, False
-
         else:
-            self.nbits, self.signed = bits_sign
+            if not (min is None and max is None):
+                raise ValueError("Only one of bits/signedness or bounds may be specified")
+            if isinstance(bits_sign, int):
+                self.nbits, self.signed = bits_sign, False
+            else:
+                self.nbits, self.signed = bits_sign
 
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer, not {!r}".format(self.nbits))
-        self.reset = reset
-        self.reset_less = reset_less
+        self.reset = int(reset)
+        self.reset_less = bool(reset_less)
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
@@ -564,7 +547,7 @@ class Signal(Value, DUID):
         """
         kw = dict(bits_sign=cls.wrap(other).bits_sign())
         if isinstance(other, cls):
-            kw.update(reset=other.reset.value, reset_less=other.reset_less, attrs=other.attrs)
+            kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
         kw.update(kwargs)
         return cls(**kw)
 
@@ -589,17 +572,17 @@ class ClockSignal(Value):
 
     Parameters
     ----------
-    cd : str
-        Clock domain to obtain a clock signal for. Defaults to `"sys"`.
+    domain : str
+        Clock domain to obtain a clock signal for. Defaults to `"sync"`.
     """
-    def __init__(self, cd="sys"):
+    def __init__(self, domain="sync"):
         super().__init__()
-        if not isinstance(cd, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(cd))
-        self.cd = cd
+        if not isinstance(domain, str):
+            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+        self.domain = domain
 
     def __repr__(self):
-        return "(clk {})".format(self.cd)
+        return "(clk {})".format(self.domain)
 
 
 class ResetSignal(Value):
@@ -610,17 +593,17 @@ class ResetSignal(Value):
 
     Parameters
     ----------
-    cd : str
-        Clock domain to obtain a reset signal for. Defaults to `"sys"`.
+    domain : str
+        Clock domain to obtain a reset signal for. Defaults to `"sync"`.
     """
-    def __init__(self, cd="sys"):
+    def __init__(self, domain="sync"):
         super().__init__()
-        if not isinstance(cd, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(cd))
-        self.cd = cd
+        if not isinstance(domain, str):
+            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+        self.domain = domain
 
     def __repr__(self):
-        return "(rst {})".format(self.cd)
+        return "(reset {})".format(self.domain)
 
 
 class Statement:
