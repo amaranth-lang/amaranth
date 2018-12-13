@@ -402,8 +402,8 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
 
         # Register all signals driven in the current fragment. This must be done first, as it
         # affects further codegen; e.g. whether sig$next signals will be generated and used.
-        for cd_name, signal in fragment.iter_drivers():
-            xformer.add_driven(signal, sync=cd_name is not None)
+        for domain, signal in fragment.iter_drivers():
+            xformer.add_driven(signal, sync=domain is not None)
 
         # Register all signals used as ports in the current fragment. The wires are lazily
         # generated, so registering ports eagerly ensures they get correct direction qualifiers.
@@ -412,8 +412,8 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
 
         # Transform all clocks clocks and resets eagerly and outside of any hierarchy, to make
         # sure they get sensible (non-prefixed) names. This does not affect semantics.
-        for cd_name, _ in fragment.iter_sync():
-            cd = clock_domains[cd_name]
+        for domain, _ in fragment.iter_sync():
+            cd = clock_domains[domain]
             xformer(cd.clk)
             xformer(cd.rst)
 
@@ -433,8 +433,8 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
             with process.case() as case:
                 # For every signal in comb domain, assign \sig$next to the reset value.
                 # For every signal in sync domains, assign \sig$next to the current value (\sig).
-                for cd_name, signal in fragment.iter_drivers():
-                    if cd_name is None:
+                for domain, signal in fragment.iter_drivers():
+                    if domain is None:
                         prev_value = xformer(ast.Const(signal.reset, signal.nbits))
                     else:
                         prev_value = xformer(signal)
@@ -472,7 +472,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
             # as the \init reg attribute) to the reset value. Note that this assigns \sig,
             # not \sig$next.
             with process.sync("init") as sync:
-                for cd_name, signal in fragment.iter_sync():
+                for domain, signal in fragment.iter_sync():
                     sync.update(xformer(signal),
                                 xformer(ast.Const(signal.reset, signal.nbits)))
 
@@ -480,17 +480,17 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
             # however, differs between domains: for comb domains, it is `always`, for sync domains
             # with sync reset, it is `posedge clk`, for sync domains with async rest it is
             # `posedge clk or posedge rst`.
-            for cd_name, signals in fragment.iter_domains():
+            for domain, signals in fragment.iter_domains():
                 triggers = []
-                if cd_name is None:
+                if domain is None:
                     triggers.append(("always",))
-                elif cd_name in clock_domains:
-                    cd = clock_domains[cd_name]
+                elif domain in clock_domains:
+                    cd = clock_domains[domain]
                     triggers.append(("posedge", xformer(cd.clk)))
                     if cd.async_reset:
                         triggers.append(("posedge", xformer(cd.rst)))
                 else:
-                    raise ValueError("Clock domain {} not found in design".format(cd_name))
+                    raise ValueError("Clock domain {} not found in design".format(domain))
 
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:

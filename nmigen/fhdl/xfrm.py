@@ -102,9 +102,9 @@ class FragmentTransformer:
             new_fragment.add_statements(fragment.statements)
 
     def map_drivers(self, fragment, new_fragment):
-        for cd_name, signals in fragment.iter_domains():
+        for domain, signals in fragment.iter_domains():
             for signal in signals:
-                new_fragment.drive(signal, cd_name)
+                new_fragment.drive(signal, domain)
 
     def on_fragment(self, fragment):
         new_fragment = Fragment()
@@ -134,11 +134,11 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
         return value
 
     def map_drivers(self, fragment, new_fragment):
-        for cd_name, signals in fragment.iter_domains():
-            if cd_name in self.domains:
-                cd_name = self.domains[cd_name]
+        for domain, signals in fragment.iter_domains():
+            if domain in self.domains:
+                domain = self.domains[domain]
             for signal in signals:
-                new_fragment.drive(signal, cd_name)
+                new_fragment.drive(signal, domain)
 
 
 class _ControlInserter(FragmentTransformer):
@@ -149,23 +149,23 @@ class _ControlInserter(FragmentTransformer):
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        for cd_name, signals in fragment.iter_domains():
-            if cd_name is None or cd_name not in self.controls:
+        for domain, signals in fragment.iter_domains():
+            if domain is None or domain not in self.controls:
                 continue
-            self._insert_control(new_fragment, cd_name, signals)
+            self._insert_control(new_fragment, domain, signals)
         return new_fragment
 
-    def _insert_control(self, fragment, cd_name, signals):
+    def _insert_control(self, fragment, domain, signals):
         raise NotImplementedError # :nocov:
 
 
 class ResetInserter(_ControlInserter):
-    def _insert_control(self, fragment, cd_name, signals):
+    def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals if not s.reset_less]
-        fragment.add_statements(Switch(self.controls[cd_name], {1: stmts}))
+        fragment.add_statements(Switch(self.controls[domain], {1: stmts}))
 
 
 class CEInserter(_ControlInserter):
-    def _insert_control(self, fragment, cd_name, signals):
+    def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(s) for s in signals]
-        fragment.add_statements(Switch(self.controls[cd_name], {0: stmts}))
+        fragment.add_statements(Switch(self.controls[domain], {0: stmts}))

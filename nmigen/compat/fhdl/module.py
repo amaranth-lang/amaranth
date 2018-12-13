@@ -29,7 +29,7 @@ class _CompatModuleProxy:
 class _CompatModuleComb(_CompatModuleProxy):
     @deprecated("instead of `self.comb +=`, use `m.d.comb +=`")
     def __iadd__(self, assigns):
-        self._cm._module._add_statement(assigns, cd_name=None, depth=0, compat_mode=True)
+        self._cm._module._add_statement(assigns, domain=None, depth=0, compat_mode=True)
         return self
 
 
@@ -40,14 +40,14 @@ class _CompatModuleSyncCD:
 
     @deprecated("instead of `self.sync.<domain> +=`, use `m.d.<domain> +=`")
     def __iadd__(self, assigns):
-        self._cm._module._add_statement(assigns, cd_name=self._cd, depth=0, compat_mode=True)
+        self._cm._module._add_statement(assigns, domain=self._cd, depth=0, compat_mode=True)
         return self
 
 
 class _CompatModuleSync(_CompatModuleProxy):
     @deprecated("instead of `self.sync +=`, use `m.d.sync +=`")
     def __iadd__(self, assigns):
-        self._cm._module._add_statement(assigns, cd_name="sync", depth=0, compat_mode=True)
+        self._cm._module._add_statement(assigns, domain="sync", depth=0, compat_mode=True)
         return self
 
     def __getattr__(self, name):

@@ -20,22 +20,22 @@ class _ModuleBuilderProxy:
 
 
 class _ModuleBuilderDomain(_ModuleBuilderProxy):
-    def __init__(self, builder, depth, cd_name):
+    def __init__(self, builder, depth, domain):
         super().__init__(builder, depth)
-        self._cd_name = cd_name
+        self._domain = domain
 
     def __iadd__(self, assigns):
-        self._builder._add_statement(assigns, cd_name=self._cd_name, depth=self._depth)
+        self._builder._add_statement(assigns, domain=self._domain, depth=self._depth)
         return self
 
 
 class _ModuleBuilderDomains(_ModuleBuilderProxy):
     def __getattr__(self, name):
         if name == "comb":
-            cd_name = None
+            domain = None
         else:
-            cd_name = name
-        return _ModuleBuilderDomain(self._builder, self._depth, cd_name)
+            domain = name
+        return _ModuleBuilderDomain(self._builder, self._depth, domain)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -228,12 +228,12 @@ class Module(_ModuleBuilderRoot):
 
             self._statements.append(Switch(switch_test, switch_cases))
 
-    def _add_statement(self, assigns, cd_name, depth, compat_mode=False):
-        def cd_human_name(cd_name):
-            if cd_name is None:
+    def _add_statement(self, assigns, domain, depth, compat_mode=False):
+        def domain_name(domain):
+            if domain is None:
                 return "comb"
             else:
-                return cd_name
+                return domain
 
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
@@ -242,17 +242,17 @@ class Module(_ModuleBuilderRoot):
             if not compat_mode and not isinstance(assign, Assign):
                 raise SyntaxError(
                     "Only assignments may be appended to d.{}"
-                    .format(cd_human_name(cd_name)))
+                    .format(domain_name(domain)))
 
             for signal in assign._lhs_signals():
                 if signal not in self._driving:
-                    self._driving[signal] = cd_name
-                elif self._driving[signal] != cd_name:
+                    self._driving[signal] = domain
+                elif self._driving[signal] != domain:
                     cd_curr = self._driving[signal]
                     raise SyntaxError(
                         "Driver-driver conflict: trying to drive {!r} from d.{}, but it is "
                         "already driven from d.{}"
-                        .format(signal, cd_human_name(cd_name), cd_human_name(cd_curr)))
+                        .format(signal, domain_name(domain), domain_name(cd_curr)))
 
             self._statements.append(assign)
 
@@ -273,8 +273,8 @@ class Module(_ModuleBuilderRoot):
         for submodule, name in self._submodules:
             fragment.add_subfragment(submodule.get_fragment(platform), name)
         fragment.add_statements(self._statements)
-        for signal, cd_name in self._driving.items():
-            fragment.drive(signal, cd_name)
+        for signal, domain in self._driving.items():
+            fragment.drive(signal, domain)
         return fragment
 
     get_fragment = lower

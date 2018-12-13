@@ -20,28 +20,28 @@ class Fragment:
     def iter_ports(self):
         yield from self.ports
 
-    def drive(self, signal, cd_name=None):
-        if cd_name not in self.drivers:
-            self.drivers[cd_name] = ValueSet()
-        self.drivers[cd_name].add(signal)
+    def drive(self, signal, domain=None):
+        if domain not in self.drivers:
+            self.drivers[domain] = ValueSet()
+        self.drivers[domain].add(signal)
 
     def iter_domains(self):
         yield from self.drivers.items()
 
     def iter_drivers(self):
-        for cd_name, signals in self.drivers.items():
+        for domain, signals in self.drivers.items():
             for signal in signals:
-                yield cd_name, signal
+                yield domain, signal
 
     def iter_comb(self):
         yield from self.drivers[None]
 
     def iter_sync(self):
-        for cd_name, signals in self.drivers.items():
-            if cd_name is None:
+        for domain, signals in self.drivers.items():
+            if domain is None:
                 continue
             for signal in signals:
-                yield cd_name, signal
+                yield domain, signal
 
     def add_statements(self, *stmts):
         self.statements += Statement.wrap(stmts)
@@ -55,8 +55,8 @@ class Fragment:
         # (on RHS of statements, or in clock domains).
         self_driven = union(s._lhs_signals() for s in self.statements)
         self_used   = union(s._rhs_signals() for s in self.statements)
-        for cd_name, _ in self.iter_sync():
-            cd = clock_domains[cd_name]
+        for domain, _ in self.iter_sync():
+            cd = clock_domains[domain]
             self_used.add(cd.clk)
             if cd.rst is not None:
                 self_used.add(cd.rst)
