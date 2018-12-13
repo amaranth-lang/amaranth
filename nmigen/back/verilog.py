@@ -30,7 +30,6 @@ proc_clean
 write_verilog
 # Make sure there are no undriven wires in generated RTLIL.
 proc
-write_ilang x.il
 select -assert-none w:* i:* %a %d o:* %a %ci* %d c:* %co* %a %d n:$* %d
 """.format(il_text))
     if popen.returncode:
