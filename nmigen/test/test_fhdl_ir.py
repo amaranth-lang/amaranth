@@ -13,6 +13,14 @@ class FragmentPortsTestCase(FHDLTestCase):
         self.c2 = Signal()
         self.c3 = Signal()
 
+    def test_empty(self):
+        f = Fragment()
+
+        ins, outs = f._propagate_ports(ports=())
+        self.assertEqual(ins, ValueSet())
+        self.assertEqual(outs, ValueSet())
+        self.assertEqual(f.ports, ValueSet())
+
     def test_self_contained(self):
         f = Fragment()
         f.add_statements(

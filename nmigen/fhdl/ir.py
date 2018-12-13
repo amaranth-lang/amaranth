@@ -131,8 +131,8 @@ class Fragment:
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        self_driven = union(s._lhs_signals() for s in self.statements)
-        self_used   = union(s._rhs_signals() for s in self.statements)
+        self_driven = union(s._lhs_signals() for s in self.statements) or ValueSet()
+        self_used   = union(s._rhs_signals() for s in self.statements) or ValueSet()
         for domain, _ in self.iter_sync():
             cd = self.domains[domain]
             self_used.add(cd.clk)
