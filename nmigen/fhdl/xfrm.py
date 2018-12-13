@@ -4,7 +4,8 @@ from .ast import *
 from .ir import *
 
 
-__all__ = ["ValueTransformer", "StatementTransformer", "ResetInserter", "CEInserter"]
+__all__ = ["ValueTransformer", "StatementTransformer", "FragmentTransformer",
+           "DomainRenamer", "ResetInserter", "CEInserter"]
 
 
 class ValueTransformer:
@@ -114,6 +115,30 @@ class FragmentTransformer:
 
     def __call__(self, value):
         return self.on_fragment(value)
+
+
+class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer):
+    def __init__(self, domains):
+        if isinstance(domains, str):
+            domains = {"sync": domains}
+        self.domains = OrderedDict(domains)
+
+    def on_ClockSignal(self, value):
+        if value.domain in self.domains:
+            return ClockSignal(self.domains[value.domain])
+        return value
+
+    def on_ResetSignal(self, value):
+        if value.domain in self.domains:
+            return ResetSignal(self.domains[value.domain])
+        return value
+
+    def map_drivers(self, fragment, new_fragment):
+        for cd_name, signals in fragment.iter_domains():
+            if cd_name in self.domains:
+                cd_name = self.domains[cd_name]
+            for signal in signals:
+                new_fragment.drive(signal, cd_name)
 
 
 class _ControlInserter(FragmentTransformer):

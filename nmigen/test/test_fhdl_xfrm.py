@@ -1,24 +1,71 @@
 import re
 import unittest
 
-from nmigen.fhdl.ast import *
-from nmigen.fhdl.ir import *
-from nmigen.fhdl.xfrm import *
+from ..fhdl.ast import *
+from ..fhdl.ir import *
+from ..fhdl.xfrm import *
+from .tools import *
 
 
-class ResetInserterTestCase(unittest.TestCase):
+class DomainRenamerTestCase(FHDLTestCase):
+    def setUp(self):
+        self.s1 = Signal()
+        self.s2 = Signal()
+        self.s3 = Signal()
+        self.s4 = Signal()
+        self.s5 = Signal()
+        self.c1 = Signal()
+
+    def test_rename_signals(self):
+        f = Fragment()
+        f.add_statements(
+            self.s1.eq(ClockSignal()),
+            ResetSignal().eq(self.s2),
+            self.s3.eq(0),
+            self.s4.eq(ClockSignal("other")),
+            self.s5.eq(ResetSignal("other")),
+        )
+        f.drive(self.s1, None)
+        f.drive(self.s2, None)
+        f.drive(self.s3, "sync")
+
+        f = DomainRenamer("pix")(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig s1) (clk pix))
+            (eq (rst pix) (sig s2))
+            (eq (sig s3) (const 0'd0))
+            (eq (sig s4) (clk other))
+            (eq (sig s5) (rst other))
+        )
+        """)
+        self.assertEqual(f.drivers, {
+            None: ValueSet((self.s1, self.s2)),
+            "pix": ValueSet((self.s3,)),
+        })
+
+    def test_rename_multi(self):
+        f = Fragment()
+        f.add_statements(
+            self.s1.eq(ClockSignal()),
+            self.s2.eq(ResetSignal("other")),
+        )
+
+        f = DomainRenamer({"sync": "pix", "other": "pix2"})(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig s1) (clk pix))
+            (eq (sig s2) (rst pix2))
+        )
+        """)
+
+
+class ResetInserterTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
         self.s2 = Signal(reset=1)
         self.s3 = Signal(reset=1, reset_less=True)
         self.c1 = Signal()
-
-    def assertRepr(self, obj, repr_str):
-        obj = Statement.wrap(obj)
-        repr_str = re.sub(r"\s+",   " ",  repr_str)
-        repr_str = re.sub(r"\( (?=\()", "(", repr_str)
-        repr_str = re.sub(r"\) (?=\))", ")", repr_str)
-        self.assertEqual(repr(obj), repr_str.strip())
 
     def test_reset_default(self):
         f = Fragment()
@@ -92,19 +139,12 @@ class ResetInserterTestCase(unittest.TestCase):
         """)
 
 
-class CEInserterTestCase(unittest.TestCase):
+class CEInserterTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
         self.s2 = Signal()
         self.s3 = Signal()
         self.c1 = Signal()
-
-    def assertRepr(self, obj, repr_str):
-        obj = Statement.wrap(obj)
-        repr_str = re.sub(r"\s+",   " ",  repr_str)
-        repr_str = re.sub(r"\( (?=\()", "(", repr_str)
-        repr_str = re.sub(r"\) (?=\))", ")", repr_str)
-        self.assertEqual(repr(obj), repr_str.strip())
 
     def test_ce_default(self):
         f = Fragment()

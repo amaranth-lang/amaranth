@@ -573,7 +573,7 @@ class ClockSignal(Value):
     Parameters
     ----------
     domain : str
-        Clock domain to obtain a clock signal for. Defaults to `"sync"`.
+        Clock domain to obtain a clock signal for. Defaults to ``"sync"``.
     """
     def __init__(self, domain="sync"):
         super().__init__()
@@ -588,13 +588,13 @@ class ClockSignal(Value):
 class ResetSignal(Value):
     """Reset signal for a given clock domain
 
-    `ResetSignal` s for a given clock domain can be retrieved multiple
+    ``ResetSignal`` s for a given clock domain can be retrieved multiple
     times. They all ultimately refer to the same signal.
 
     Parameters
     ----------
     domain : str
-        Clock domain to obtain a reset signal for. Defaults to `"sync"`.
+        Clock domain to obtain a reset signal for. Defaults to ``"sync"``.
     """
     def __init__(self, domain="sync"):
         super().__init__()
@@ -603,7 +603,7 @@ class ResetSignal(Value):
         self.domain = domain
 
     def __repr__(self):
-        return "(reset {})".format(self.domain)
+        return "(rst {})".format(self.domain)
 
 
 class _StatementList(list):

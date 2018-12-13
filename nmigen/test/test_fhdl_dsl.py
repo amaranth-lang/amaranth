@@ -1,12 +1,12 @@
-import re
 import unittest
 from contextlib import contextmanager
 
-from nmigen.fhdl.ast import *
-from nmigen.fhdl.dsl import *
+from ..fhdl.ast import *
+from ..fhdl.dsl import *
+from .tools import *
 
 
-class DSLTestCase(unittest.TestCase):
+class DSLTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
         self.s2 = Signal()
@@ -23,13 +23,6 @@ class DSLTestCase(unittest.TestCase):
         if msg is not None:
             # WTF? unittest.assertRaises is completely broken.
             self.assertEqual(str(cm.exception), msg)
-
-    def assertRepr(self, obj, repr_str):
-        obj = Statement.wrap(obj)
-        repr_str = re.sub(r"\s+",   " ",  repr_str)
-        repr_str = re.sub(r"\( (?=\()", "(", repr_str)
-        repr_str = re.sub(r"\) (?=\))", ")", repr_str)
-        self.assertEqual(repr(obj), repr_str.strip())
 
     def test_d_comb(self):
         m = Module()

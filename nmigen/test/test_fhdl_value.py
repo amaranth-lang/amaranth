@@ -355,4 +355,4 @@ class ResetSignalTestCase(unittest.TestCase):
 
     def test_repr(self):
         s1 = ResetSignal()
-        self.assertEqual(repr(s1), "(reset sync)")
+        self.assertEqual(repr(s1), "(rst sync)")
