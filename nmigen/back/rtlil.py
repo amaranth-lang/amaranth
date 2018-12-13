@@ -510,6 +510,8 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
 
 
 def convert(fragment, ports=[], clock_domains={}):
+    # Clock domain reset always takes priority over all other logic. To ensure this, insert
+    # decision trees for clock domain reset as the very last step before synthesis.
     fragment = xfrm.ResetInserter({
         cd.name: cd.reset for cd in clock_domains.values() if cd.reset is not None
     })(fragment)
