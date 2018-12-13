@@ -59,14 +59,14 @@ class ValueTestCase(unittest.TestCase):
 
 
 class ConstTestCase(unittest.TestCase):
-    def test_bits_sign(self):
-        self.assertEqual(Const(0).bits_sign(),   (0, False))
-        self.assertEqual(Const(1).bits_sign(),   (1, False))
-        self.assertEqual(Const(10).bits_sign(),  (4, False))
-        self.assertEqual(Const(-10).bits_sign(), (4, True))
+    def test_shape(self):
+        self.assertEqual(Const(0).shape(),   (0, False))
+        self.assertEqual(Const(1).shape(),   (1, False))
+        self.assertEqual(Const(10).shape(),  (4, False))
+        self.assertEqual(Const(-10).shape(), (4, True))
 
-        self.assertEqual(Const(1, 4).bits_sign(),         (4, False))
-        self.assertEqual(Const(1, (4, True)).bits_sign(), (4, True))
+        self.assertEqual(Const(1, 4).shape(),         (4, False))
+        self.assertEqual(Const(1, (4, True)).shape(), (4, True))
 
         with self.assertRaises(TypeError):
             Const(1, -1)
@@ -87,138 +87,138 @@ class OperatorTestCase(unittest.TestCase):
     def test_invert(self):
         v = ~Const(0, 4)
         self.assertEqual(repr(v), "(~ (const 4'd0))")
-        self.assertEqual(v.bits_sign(), (4, False))
+        self.assertEqual(v.shape(), (4, False))
 
     def test_neg(self):
         v1 = -Const(0, (4, False))
         self.assertEqual(repr(v1), "(- (const 4'd0))")
-        self.assertEqual(v1.bits_sign(), (5, True))
+        self.assertEqual(v1.shape(), (5, True))
         v2 = -Const(0, (4, True))
         self.assertEqual(repr(v2), "(- (const 4'sd0))")
-        self.assertEqual(v2.bits_sign(), (4, True))
+        self.assertEqual(v2.shape(), (4, True))
 
     def test_add(self):
         v1 = Const(0, (4, False)) + Const(0, (6, False))
         self.assertEqual(repr(v1), "(+ (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (7, False))
+        self.assertEqual(v1.shape(), (7, False))
         v2 = Const(0, (4, True)) + Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (7, True))
+        self.assertEqual(v2.shape(), (7, True))
         v3 = Const(0, (4, True)) + Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (6, True))
+        self.assertEqual(v3.shape(), (6, True))
         v4 = Const(0, (4, False)) + Const(0, (4, True))
-        self.assertEqual(v4.bits_sign(), (6, True))
+        self.assertEqual(v4.shape(), (6, True))
         v5 = 10 + Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (5, False))
+        self.assertEqual(v5.shape(), (5, False))
 
     def test_sub(self):
         v1 = Const(0, (4, False)) - Const(0, (6, False))
         self.assertEqual(repr(v1), "(- (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (7, False))
+        self.assertEqual(v1.shape(), (7, False))
         v2 = Const(0, (4, True)) - Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (7, True))
+        self.assertEqual(v2.shape(), (7, True))
         v3 = Const(0, (4, True)) - Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (6, True))
+        self.assertEqual(v3.shape(), (6, True))
         v4 = Const(0, (4, False)) - Const(0, (4, True))
-        self.assertEqual(v4.bits_sign(), (6, True))
+        self.assertEqual(v4.shape(), (6, True))
         v5 = 10 - Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (5, False))
+        self.assertEqual(v5.shape(), (5, False))
 
     def test_mul(self):
         v1 = Const(0, (4, False)) * Const(0, (6, False))
         self.assertEqual(repr(v1), "(* (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (10, False))
+        self.assertEqual(v1.shape(), (10, False))
         v2 = Const(0, (4, True)) * Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (9, True))
+        self.assertEqual(v2.shape(), (9, True))
         v3 = Const(0, (4, True)) * Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (8, True))
+        self.assertEqual(v3.shape(), (8, True))
         v5 = 10 * Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (8, False))
+        self.assertEqual(v5.shape(), (8, False))
 
     def test_and(self):
         v1 = Const(0, (4, False)) & Const(0, (6, False))
         self.assertEqual(repr(v1), "(& (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (6, False))
+        self.assertEqual(v1.shape(), (6, False))
         v2 = Const(0, (4, True)) & Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (6, True))
+        self.assertEqual(v2.shape(), (6, True))
         v3 = Const(0, (4, True)) & Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (5, True))
+        self.assertEqual(v3.shape(), (5, True))
         v4 = Const(0, (4, False)) & Const(0, (4, True))
-        self.assertEqual(v4.bits_sign(), (5, True))
+        self.assertEqual(v4.shape(), (5, True))
         v5 = 10 & Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (4, False))
+        self.assertEqual(v5.shape(), (4, False))
 
     def test_or(self):
         v1 = Const(0, (4, False)) | Const(0, (6, False))
         self.assertEqual(repr(v1), "(| (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (6, False))
+        self.assertEqual(v1.shape(), (6, False))
         v2 = Const(0, (4, True)) | Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (6, True))
+        self.assertEqual(v2.shape(), (6, True))
         v3 = Const(0, (4, True)) | Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (5, True))
+        self.assertEqual(v3.shape(), (5, True))
         v4 = Const(0, (4, False)) | Const(0, (4, True))
-        self.assertEqual(v4.bits_sign(), (5, True))
+        self.assertEqual(v4.shape(), (5, True))
         v5 = 10 | Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (4, False))
+        self.assertEqual(v5.shape(), (4, False))
 
     def test_xor(self):
         v1 = Const(0, (4, False)) ^ Const(0, (6, False))
         self.assertEqual(repr(v1), "(^ (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (6, False))
+        self.assertEqual(v1.shape(), (6, False))
         v2 = Const(0, (4, True)) ^ Const(0, (6, True))
-        self.assertEqual(v2.bits_sign(), (6, True))
+        self.assertEqual(v2.shape(), (6, True))
         v3 = Const(0, (4, True)) ^ Const(0, (4, False))
-        self.assertEqual(v3.bits_sign(), (5, True))
+        self.assertEqual(v3.shape(), (5, True))
         v4 = Const(0, (4, False)) ^ Const(0, (4, True))
-        self.assertEqual(v4.bits_sign(), (5, True))
+        self.assertEqual(v4.shape(), (5, True))
         v5 = 10 ^ Const(0, 4)
-        self.assertEqual(v5.bits_sign(), (4, False))
+        self.assertEqual(v5.shape(), (4, False))
 
     def test_lt(self):
         v = Const(0, 4) < Const(0, 6)
         self.assertEqual(repr(v), "(< (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_le(self):
         v = Const(0, 4) <= Const(0, 6)
         self.assertEqual(repr(v), "(<= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_gt(self):
         v = Const(0, 4) > Const(0, 6)
         self.assertEqual(repr(v), "(> (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_ge(self):
         v = Const(0, 4) >= Const(0, 6)
         self.assertEqual(repr(v), "(>= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_eq(self):
         v = Const(0, 4) == Const(0, 6)
         self.assertEqual(repr(v), "(== (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_ne(self):
         v = Const(0, 4) != Const(0, 6)
         self.assertEqual(repr(v), "(!= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_mux(self):
         s  = Const(0)
         v1 = Mux(s, Const(0, (4, False)), Const(0, (6, False)))
         self.assertEqual(repr(v1), "(m (const 0'd0) (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.bits_sign(), (6, False))
+        self.assertEqual(v1.shape(), (6, False))
         v2 = Mux(s, Const(0, (4, True)), Const(0, (6, True)))
-        self.assertEqual(v2.bits_sign(), (6, True))
+        self.assertEqual(v2.shape(), (6, True))
         v3 = Mux(s, Const(0, (4, True)), Const(0, (4, False)))
-        self.assertEqual(v3.bits_sign(), (5, True))
+        self.assertEqual(v3.shape(), (5, True))
         v4 = Mux(s, Const(0, (4, False)), Const(0, (4, True)))
-        self.assertEqual(v4.bits_sign(), (5, True))
+        self.assertEqual(v4.shape(), (5, True))
 
     def test_bool(self):
         v = Const(0).bool()
         self.assertEqual(repr(v), "(b (const 0'd0))")
-        self.assertEqual(v.bits_sign(), (1, False))
+        self.assertEqual(v.shape(), (1, False))
 
     def test_hash(self):
         with self.assertRaises(TypeError):
@@ -226,11 +226,11 @@ class OperatorTestCase(unittest.TestCase):
 
 
 class SliceTestCase(unittest.TestCase):
-    def test_bits_sign(self):
+    def test_shape(self):
         s1 = Const(10)[2]
-        self.assertEqual(s1.bits_sign(), (1, False))
+        self.assertEqual(s1.shape(), (1, False))
         s2 = Const(-10)[0:2]
-        self.assertEqual(s2.bits_sign(), (2, False))
+        self.assertEqual(s2.shape(), (2, False))
 
     def test_repr(self):
         s1 = Const(10)[2]
@@ -238,13 +238,13 @@ class SliceTestCase(unittest.TestCase):
 
 
 class CatTestCase(unittest.TestCase):
-    def test_bits_sign(self):
+    def test_shape(self):
         c1 = Cat(Const(10))
-        self.assertEqual(c1.bits_sign(), (4, False))
+        self.assertEqual(c1.shape(), (4, False))
         c2 = Cat(Const(10), Const(1))
-        self.assertEqual(c2.bits_sign(), (5, False))
+        self.assertEqual(c2.shape(), (5, False))
         c3 = Cat(Const(10), Const(1), Const(0))
-        self.assertEqual(c3.bits_sign(), (5, False))
+        self.assertEqual(c3.shape(), (5, False))
 
     def test_repr(self):
         c1 = Cat(Const(10), Const(1))
@@ -252,9 +252,9 @@ class CatTestCase(unittest.TestCase):
 
 
 class ReplTestCase(unittest.TestCase):
-    def test_bits_sign(self):
+    def test_shape(self):
         r1 = Repl(Const(10), 3)
-        self.assertEqual(r1.bits_sign(), (12, False))
+        self.assertEqual(r1.shape(), (12, False))
 
     def test_count_wrong(self):
         with self.assertRaises(TypeError):
@@ -268,23 +268,23 @@ class ReplTestCase(unittest.TestCase):
 
 
 class SignalTestCase(unittest.TestCase):
-    def test_bits_sign(self):
+    def test_shape(self):
         s1 = Signal()
-        self.assertEqual(s1.bits_sign(), (1, False))
+        self.assertEqual(s1.shape(), (1, False))
         s2 = Signal(2)
-        self.assertEqual(s2.bits_sign(), (2, False))
+        self.assertEqual(s2.shape(), (2, False))
         s3 = Signal((2, False))
-        self.assertEqual(s3.bits_sign(), (2, False))
+        self.assertEqual(s3.shape(), (2, False))
         s4 = Signal((2, True))
-        self.assertEqual(s4.bits_sign(), (2, True))
+        self.assertEqual(s4.shape(), (2, True))
         s5 = Signal(max=16)
-        self.assertEqual(s5.bits_sign(), (4, False))
+        self.assertEqual(s5.shape(), (4, False))
         s6 = Signal(min=4, max=16)
-        self.assertEqual(s6.bits_sign(), (4, False))
+        self.assertEqual(s6.shape(), (4, False))
         s7 = Signal(min=-4, max=16)
-        self.assertEqual(s7.bits_sign(), (5, True))
+        self.assertEqual(s7.shape(), (5, True))
         s8 = Signal(min=-20, max=16)
-        self.assertEqual(s8.bits_sign(), (6, True))
+        self.assertEqual(s8.shape(), (6, True))
 
         with self.assertRaises(ValueError):
             Signal(min=10, max=4)
@@ -316,16 +316,16 @@ class SignalTestCase(unittest.TestCase):
 
     def test_like(self):
         s1 = Signal.like(Signal(4))
-        self.assertEqual(s1.bits_sign(), (4, False))
+        self.assertEqual(s1.shape(), (4, False))
         s2 = Signal.like(Signal(min=-15))
-        self.assertEqual(s2.bits_sign(), (5, True))
+        self.assertEqual(s2.shape(), (5, True))
         s3 = Signal.like(Signal(4, reset=0b111, reset_less=True))
         self.assertEqual(s3.reset, 0b111)
         self.assertEqual(s3.reset_less, True)
         s4 = Signal.like(Signal(attrs={"no_retiming": True}))
         self.assertEqual(s4.attrs, {"no_retiming": True})
         s5 = Signal.like(10)
-        self.assertEqual(s5.bits_sign(), (4, False))
+        self.assertEqual(s5.shape(), (4, False))
 
 
 class ClockSignalTestCase(unittest.TestCase):

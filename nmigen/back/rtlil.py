@@ -285,8 +285,8 @@ class _ValueTransformer(xfrm.ValueTransformer):
 
     def on_Operator_unary(self, node):
         arg, = node.operands
-        arg_bits, arg_sign = arg.bits_sign()
-        res_bits, res_sign = node.bits_sign()
+        arg_bits, arg_sign = arg.shape()
+        res_bits, res_sign = node.shape()
         res = self.rtlil.wire(width=res_bits)
         self.rtlil.cell(self.operator_map[(1, node.op)], ports={
             "\\A": self(arg),
@@ -298,11 +298,11 @@ class _ValueTransformer(xfrm.ValueTransformer):
         })
         return res
 
-    def match_bits_sign(self, node, new_bits, new_sign):
+    def match_shape(self, node, new_bits, new_sign):
         if isinstance(node, ast.Const):
             return self(ast.Const(node.value, (new_bits, new_sign)))
 
-        node_bits, node_sign = node.bits_sign()
+        node_bits, node_sign = node.shape()
         if new_bits > node_bits:
             res = self.rtlil.wire(width=new_bits)
             self.rtlil.cell("$pos", ports={
@@ -319,17 +319,17 @@ class _ValueTransformer(xfrm.ValueTransformer):
 
     def on_Operator_binary(self, node):
         lhs, rhs = node.operands
-        lhs_bits, lhs_sign = lhs.bits_sign()
-        rhs_bits, rhs_sign = rhs.bits_sign()
+        lhs_bits, lhs_sign = lhs.shape()
+        rhs_bits, rhs_sign = rhs.shape()
         if lhs_sign == rhs_sign:
             lhs_wire = self(lhs)
             rhs_wire = self(rhs)
         else:
             lhs_sign = rhs_sign = True
             lhs_bits = rhs_bits = max(lhs_bits, rhs_bits)
-            lhs_wire = self.match_bits_sign(lhs, lhs_bits, lhs_sign)
-            rhs_wire = self.match_bits_sign(rhs, rhs_bits, rhs_sign)
-        res_bits, res_sign = node.bits_sign()
+            lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
+            rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
+        res_bits, res_sign = node.shape()
         res = self.rtlil.wire(width=res_bits)
         self.rtlil.cell(self.operator_map[(2, node.op)], ports={
             "\\A": lhs_wire,
@@ -346,9 +346,9 @@ class _ValueTransformer(xfrm.ValueTransformer):
 
     def on_Operator_mux(self, node):
         sel, lhs, rhs = node.operands
-        lhs_bits, lhs_sign = lhs.bits_sign()
-        rhs_bits, rhs_sign = rhs.bits_sign()
-        res_bits, res_sign = node.bits_sign()
+        lhs_bits, lhs_sign = lhs.shape()
+        rhs_bits, rhs_sign = rhs.shape()
+        res_bits, res_sign = node.shape()
         res = self.rtlil.wire(width=res_bits)
         self.rtlil.cell("$mux", ports={
             "\\A": self(lhs),
@@ -418,12 +418,12 @@ def convert_fragment(builder, fragment, name, clock_domains):
                 def _convert_stmts(case, stmts):
                     for stmt in stmts:
                         if isinstance(stmt, ast.Assign):
-                            lhs_bits, lhs_sign = stmt.lhs.bits_sign()
-                            rhs_bits, rhs_sign = stmt.rhs.bits_sign()
+                            lhs_bits, lhs_sign = stmt.lhs.shape()
+                            rhs_bits, rhs_sign = stmt.rhs.shape()
                             if lhs_bits == rhs_bits:
                                 rhs_sigspec = xformer(stmt.rhs)
                             else:
-                                rhs_sigspec = xformer.match_bits_sign(
+                                rhs_sigspec = xformer.match_shape(
                                     stmt.rhs, lhs_bits, rhs_sign)
                             with xformer.lhs():
                                 lhs_sigspec = xformer(stmt.lhs)

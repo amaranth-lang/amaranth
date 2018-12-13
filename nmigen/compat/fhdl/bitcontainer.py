@@ -16,6 +16,6 @@ def bits_for(n, require_sign_bit=False):
     return tools.bits_for(n, require_sign_bit)
 
 
-@deprecated("instead of `value_bits_sign(v)`, use `v.bits_sign()`")
+@deprecated("instead of `value_bits_sign(v)`, use `v.shape()`")
 def value_bits_sign(v):
-    return ast.Value.wrap(v).bits_sign()
+    return ast.Value.wrap(v).shape()

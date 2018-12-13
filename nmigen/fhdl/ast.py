@@ -98,7 +98,7 @@ class Value:
         return Operator(">=", [self, other])
 
     def __len__(self):
-        return self.bits_sign()[0]
+        return self.shape()[0]
 
     def __getitem__(self, key):
         n = len(self)
@@ -160,7 +160,7 @@ class Value:
         """
         return Assign(self, value)
 
-    def bits_sign(self):
+    def shape(self):
         """Bit length and signedness of a value.
 
         Returns
@@ -171,9 +171,9 @@ class Value:
 
         Examples
         --------
-        >>> Value.bits_sign(Signal(8))
+        >>> Value.shape(Signal(8))
         8, False
-        >>> Value.bits_sign(C(0xaa))
+        >>> Value.shape(C(0xaa))
         8, False
         """
         raise NotImplementedError # :nocov:
@@ -194,10 +194,10 @@ class Const(Value):
     Parameters
     ----------
     value : int
-    bits_sign : int or tuple or None
+    shape : int or tuple or None
         Either an integer `bits` or a tuple `(bits, signed)`
         specifying the number of bits in this `Const` and whether it is
-        signed (can represent negative values). `bits_sign` defaults
+        signed (can represent negative values). `shape` defaults
         to the minimum width and signedness of `value`.
 
     Attributes
@@ -205,17 +205,17 @@ class Const(Value):
     nbits : int
     signed : bool
     """
-    def __init__(self, value, bits_sign=None):
+    def __init__(self, value, shape=None):
         self.value = int(value)
-        if bits_sign is None:
-            bits_sign = self.value.bit_length(), self.value < 0
-        if isinstance(bits_sign, int):
-            bits_sign = bits_sign, self.value < 0
-        self.nbits, self.signed = bits_sign
+        if shape is None:
+            shape = self.value.bit_length(), self.value < 0
+        if isinstance(shape, int):
+            shape = shape, self.value < 0
+        self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer")
 
-    def bits_sign(self):
+    def shape(self):
         return self.nbits, self.signed
 
     def _rhs_signals(self):
@@ -235,7 +235,7 @@ class Operator(Value):
         self.operands = [Value.wrap(o) for o in operands]
 
     @staticmethod
-    def _bitwise_binary_bits_sign(a, b):
+    def _bitwise_binary_shape(a, b):
         if not a[1] and not b[1]:
             # both operands unsigned
             return max(a[0], b[0]), False
@@ -249,15 +249,15 @@ class Operator(Value):
             # first signed, second operand unsigned (add sign bit)
             return max(a[0], b[0] + 1), True
 
-    def bits_sign(self):
-        obs = list(map(lambda x: x.bits_sign(), self.operands))
+    def shape(self):
+        obs = list(map(lambda x: x.shape(), self.operands))
         if self.op == "+" or self.op == "-":
             if len(obs) == 1:
                 if self.op == "-" and not obs[0][1]:
                     return obs[0][0] + 1, True
                 else:
                     return obs[0]
-            n, s = self._bitwise_binary_bits_sign(*obs)
+            n, s = self._bitwise_binary_shape(*obs)
             return n + 1, s
         elif self.op == "*":
             if not obs[0][1] and not obs[1][1]:
@@ -282,14 +282,14 @@ class Operator(Value):
                 extra = 0
             return obs[0][0] + extra, obs[0][1]
         elif self.op == "&" or self.op == "^" or self.op == "|":
-            return self._bitwise_binary_bits_sign(*obs)
+            return self._bitwise_binary_shape(*obs)
         elif (self.op == "<" or self.op == "<=" or self.op == "==" or self.op == "!=" or
               self.op == ">" or self.op == ">=" or self.op == "b"):
             return 1, False
         elif self.op == "~":
             return obs[0]
         elif self.op == "m":
-            return self._bitwise_binary_bits_sign(obs[1], obs[2])
+            return self._bitwise_binary_shape(obs[1], obs[2])
         else:
             raise TypeError # :nocov:
 
@@ -341,7 +341,7 @@ class Slice(Value):
         self.start = start
         self.end   = end
 
-    def bits_sign(self):
+    def shape(self):
         return self.end - self.start, False
 
     def _lhs_signals(self):
@@ -364,7 +364,7 @@ class Part(Value):
         self.offset = Value.wrap(offset)
         self.width  = width
 
-    def bits_sign(self):
+    def shape(self):
         return self.width, False
 
     def _lhs_signals(self):
@@ -405,7 +405,7 @@ class Cat(Value):
         super().__init__()
         self.operands = [Value.wrap(v) for v in flatten(args)]
 
-    def bits_sign(self):
+    def shape(self):
         return sum(len(op) for op in self.operands), False
 
     def _lhs_signals(self):
@@ -446,7 +446,7 @@ class Repl(Value):
         self.value = Value.wrap(value)
         self.count = count
 
-    def bits_sign(self):
+    def shape(self):
         return len(self.value) * self.count, False
 
     def _rhs_signals(self):
@@ -461,10 +461,10 @@ class Signal(Value, DUID):
 
     Parameters
     ----------
-    bits_sign : int or tuple or None
+    shape : int or tuple or None
         Either an integer ``bits`` or a tuple ``(bits, signed)`` specifying the number of bits
         in this ``Signal`` and whether it is signed (can represent negative values).
-        ``bits_sign`` defaults to 1-bit and non-signed.
+        ``shape`` defaults to 1-bit and non-signed.
     name : str
         Name hint for this signal. If ``None`` (default) the name is inferred from the variable
         name this ``Signal`` is assigned to. Name collisions are automatically resolved by
@@ -482,9 +482,9 @@ class Signal(Value, DUID):
         Defaults to ``False``.
     min : int or None
     max : int or None
-        If `bits_sign` is `None`, the signal bit width and signedness are
-        determined by the integer range given by `min` (inclusive,
-        defaults to 0) and `max` (exclusive, defaults to 2).
+        If ``shape`` is ``None``, the signal bit width and signedness are
+        determined by the integer range given by ``min`` (inclusive,
+        defaults to 0) and ``max`` (exclusive, defaults to 2).
     attrs : dict
         Dictionary of synthesis attributes.
 
@@ -498,7 +498,7 @@ class Signal(Value, DUID):
     attrs : dict
     """
 
-    def __init__(self, bits_sign=None, name=None, reset=0, reset_less=False, min=None, max=None,
+    def __init__(self, shape=None, name=None, reset=0, reset_less=False, min=None, max=None,
                  attrs=None):
         super().__init__()
 
@@ -509,7 +509,7 @@ class Signal(Value, DUID):
                 name = "$signal"
         self.name = name
 
-        if bits_sign is None:
+        if shape is None:
             if min is None:
                 min = 0
             if max is None:
@@ -524,10 +524,10 @@ class Signal(Value, DUID):
         else:
             if not (min is None and max is None):
                 raise ValueError("Only one of bits/signedness or bounds may be specified")
-            if isinstance(bits_sign, int):
-                self.nbits, self.signed = bits_sign, False
+            if isinstance(shape, int):
+                self.nbits, self.signed = shape, False
             else:
-                self.nbits, self.signed = bits_sign
+                self.nbits, self.signed = shape
 
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer, not {!r}".format(self.nbits))
@@ -545,13 +545,13 @@ class Signal(Value, DUID):
         other : Value
             Object to base this Signal on.
         """
-        kw = dict(bits_sign=cls.wrap(other).bits_sign())
+        kw = dict(shape=cls.wrap(other).shape())
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
         kw.update(kwargs)
         return cls(**kw)
 
-    def bits_sign(self):
+    def shape(self):
         return self.nbits, self.signed
 
     def _lhs_signals(self):
