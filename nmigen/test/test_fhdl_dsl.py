@@ -317,3 +317,31 @@ class DSLTestCase(unittest.TestCase):
             (eq (sig c2) (const 1'd1))
         )
         """)
+
+    def test_submodule_anon(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules += m2
+        self.assertEqual(m1._submodules, [(m2, None)])
+
+    def test_submodule_anon_multi(self):
+        m1 = Module()
+        m2 = Module()
+        m3 = Module()
+        m1.submodules += m2, m3
+        self.assertEqual(m1._submodules, [(m2, None), (m3, None)])
+
+    def test_submodule_named(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules.foo = m2
+        self.assertEqual(m1._submodules, [(m2, "foo")])
+
+    def test_submodule_wrong(self):
+        m = Module()
+        with self.assertRaises(TypeError,
+                msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
+            m.submodules.foo = 1
+        with self.assertRaises(TypeError,
+                msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
+            m.submodules += 1

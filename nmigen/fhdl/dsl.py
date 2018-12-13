@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 from contextlib import contextmanager
 
 from .ast import *
@@ -68,9 +68,13 @@ class _ModuleBuilderSubmodules:
     def __init__(self, builder):
         object.__setattr__(self, "_builder", builder)
 
-    def __iadd__(self, submodules):
-        for submodule in submodules:
-            self._builder._add_submodule(submodule)
+    def __iadd__(self, modules):
+        if isinstance(modules, Iterable):
+            for module in modules:
+                self._builder._add_submodule(module)
+        else:
+            module = modules
+            self._builder._add_submodule(module)
         return self
 
     def __setattr__(self, name, submodule):
@@ -254,7 +258,7 @@ class Module(_ModuleBuilderRoot):
 
     def _add_submodule(self, submodule, name=None):
         if not hasattr(submodule, "get_fragment"):
-            raise TypeError("Trying to add {!r}, which does not implement .get_fragment(), as "
+            raise TypeError("Trying to add '{!r}', which does not implement .get_fragment(), as "
                             "a submodule".format(submodule))
         self._submodules.append((submodule, name))
 
