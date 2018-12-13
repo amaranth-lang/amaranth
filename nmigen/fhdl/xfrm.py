@@ -56,7 +56,7 @@ class ValueTransformer:
         elif isinstance(value, Repl):
             return self.on_Repl(value)
         else:
-            raise TypeError("Cannot transform value {!r}".format(value))
+            raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
 
     def __call__(self, value):
         return self.on_value(value)
@@ -84,7 +84,7 @@ class StatementTransformer:
         elif isinstance(stmt, (list, tuple)):
             return self.on_statements(stmt)
         else:
-            raise TypeError("Cannot transform statement {!r}".format(stmt))
+            raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
 
     def __call__(self, value):
         return self.on_statement(value)
@@ -94,6 +94,10 @@ class FragmentTransformer:
     def map_subfragments(self, fragment, new_fragment):
         for subfragment, name in fragment.subfragments:
             new_fragment.add_subfragment(self(subfragment), name)
+
+    def map_domains(self, fragment, new_fragment):
+        for domain in fragment.iter_domains():
+            new_fragment.add_domains(fragment.domains[domain])
 
     def map_statements(self, fragment, new_fragment):
         if hasattr(self, "on_statement"):
@@ -108,6 +112,7 @@ class FragmentTransformer:
     def on_fragment(self, fragment):
         new_fragment = Fragment()
         self.map_subfragments(fragment, new_fragment)
+        self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
         self.map_drivers(fragment, new_fragment)
         return new_fragment
@@ -117,25 +122,36 @@ class FragmentTransformer:
 
 
 class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer):
-    def __init__(self, domains):
-        if isinstance(domains, str):
-            domains = {"sync": domains}
-        self.domains = OrderedDict(domains)
+    def __init__(self, domain_map):
+        if isinstance(domain_map, str):
+            domain_map = {"sync": domain_map}
+        self.domain_map = OrderedDict(domain_map)
 
     def on_ClockSignal(self, value):
-        if value.domain in self.domains:
-            return ClockSignal(self.domains[value.domain])
+        if value.domain in self.domain_map:
+            return ClockSignal(self.domain_map[value.domain])
         return value
 
     def on_ResetSignal(self, value):
-        if value.domain in self.domains:
-            return ResetSignal(self.domains[value.domain])
+        if value.domain in self.domain_map:
+            return ResetSignal(self.domain_map[value.domain])
         return value
+
+    def map_domains(self, fragment, new_fragment):
+        for domain in fragment.iter_domains():
+            cd = fragment.domains[domain]
+            if domain in self.domain_map:
+                if cd.name == domain:
+                    # Rename the actual ClockDomain object.
+                    cd.name = self.domain_map[domain]
+                else:
+                    assert cd.name == self.domain_map[domain]
+            new_fragment.add_domains(cd)
 
     def map_drivers(self, fragment, new_fragment):
         for domain, signals in fragment.drivers.items():
-            if domain in self.domains:
-                domain = self.domains[domain]
+            if domain in self.domain_map:
+                domain = self.domain_map[domain]
             for signal in signals:
                 new_fragment.drive(signal, domain)
 

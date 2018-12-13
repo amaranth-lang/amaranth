@@ -2,9 +2,14 @@ from collections import defaultdict, OrderedDict
 
 from ..tools import *
 from .ast import *
+from .cd import *
 
 
-__all__ = ["Fragment"]
+__all__ = ["Fragment", "DomainError"]
+
+
+class DomainError(Exception):
+    pass
 
 
 class Fragment:
@@ -12,6 +17,7 @@ class Fragment:
         self.ports = ValueSet()
         self.drivers = OrderedDict()
         self.statements = []
+        self.domains = OrderedDict()
         self.subfragments = []
 
     def add_ports(self, *ports):
@@ -40,6 +46,15 @@ class Fragment:
             for signal in signals:
                 yield domain, signal
 
+    def add_domains(self, *domains):
+        for domain in domains:
+            assert isinstance(domain, ClockDomain)
+            assert domain.name not in self.domains
+            self.domains[domain.name] = domain
+
+    def iter_domains(self):
+        yield from self.domains
+
     def add_statements(self, *stmts):
         self.statements += Statement.wrap(stmts)
 
@@ -47,13 +62,79 @@ class Fragment:
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
 
-    def _propagate_ports(self, ports, clock_domains={}):
+    def _propagate_domains_up(self, hierarchy=("top",)):
+        from .xfrm import DomainRenamer
+
+        domain_subfrags = defaultdict(lambda: set())
+
+        # For each domain defined by a subfragment, determine which subfragments define it.
+        for i, (subfrag, name) in enumerate(self.subfragments):
+            # First, recurse into subfragments and let them propagate domains up as well.
+            hier_name = name
+            if hier_name is None:
+                hier_name = "<unnamed #{}>".format(i)
+            subfrag._propagate_domains_up(hierarchy + (hier_name,))
+
+            # Second, classify subfragments by domains they define.
+            for domain in subfrag.iter_domains():
+                domain_subfrags[domain].add((subfrag, name, i))
+
+        # For each domain defined by more than one subfragment, rename the domain in each
+        # of the subfragments such that they no longer conflict.
+        for domain, subfrags in domain_subfrags.items():
+            if len(subfrags) == 1:
+                continue
+
+            names = [n for f, n, i in subfrags]
+            if not all(names):
+                names = sorted("<unnamed #{}>".format(i) if n is None else "'{}'".format(n)
+                               for f, n, i in subfrags)
+                raise DomainError("Domain '{}' is defined by subfragments {} of fragment '{}'; "
+                                  "it is necessary to either rename subfragment domains "
+                                  "explicitly, or give names to subfragments"
+                                  .format(domain, ", ".join(names), ".".join(hierarchy)))
+
+            if len(names) != len(set(names)):
+                names = sorted("#{}".format(i) for f, n, i in subfrags)
+                raise DomainError("Domain '{}' is defined by subfragments {} of fragment '{}', "
+                                  "some of which have identical names; it is necessary to either "
+                                  "rename subfragment domains explicitly, or give distinct names "
+                                  "to subfragments"
+                                  .format(domain, ", ".join(names), ".".join(hierarchy)))
+
+            for subfrag, name, i in subfrags:
+                self.subfragments[i] = \
+                    (DomainRenamer({domain: "{}_{}".format(name, domain)})(subfrag), name)
+
+        # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
+        for subfrag, name in self.subfragments:
+            for domain in subfrag.iter_domains():
+                self.add_domains(subfrag.domains[domain])
+
+    def _propagate_domains_down(self):
+        # For each domain defined in this fragment, ensure it also exists in all subfragments.
+        for subfrag, name in self.subfragments:
+            for domain in self.iter_domains():
+                if domain in subfrag.domains:
+                    assert self.domains[domain] is subfrag.domains[domain]
+                else:
+                    subfrag.add_domains(self.domains[domain])
+
+            subfrag._propagate_domains_down()
+
+    def _propagate_domains(self, ensure_sync_exists=False):
+        self._propagate_domains_up()
+        if ensure_sync_exists and not self.domains:
+            self.add_domains(ClockDomain("sync"))
+        self._propagate_domains_down()
+
+    def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
         self_driven = union(s._lhs_signals() for s in self.statements)
         self_used   = union(s._rhs_signals() for s in self.statements)
         for domain, _ in self.iter_sync():
-            cd = clock_domains[domain]
+            cd = self.domains[domain]
             self_used.add(cd.clk)
             if cd.rst is not None:
                 self_used.add(cd.rst)
@@ -69,8 +150,7 @@ class Fragment:
         for subfrag, name in self.subfragments:
             # Always ask subfragments to provide all signals we're using and signals we're asked
             # to provide. If the subfragment is not driving it, it will silently ignore it.
-            sub_ins, sub_outs = subfrag._propagate_ports(ports=self_used | ports,
-                                                         clock_domains=clock_domains)
+            sub_ins, sub_outs = subfrag._propagate_ports(ports=self_used | ports)
             # Refine the input port approximation: if a subfragment is driving a signal,
             # it is definitely not our input.
             ins  -= sub_outs

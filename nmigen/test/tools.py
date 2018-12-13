@@ -1,5 +1,6 @@
 import re
 import unittest
+from contextlib import contextmanager
 
 from ..fhdl.ast import *
 
@@ -14,3 +15,11 @@ class FHDLTestCase(unittest.TestCase):
         repr_str = re.sub(r"\( (?=\()", "(", repr_str)
         repr_str = re.sub(r"\) (?=\))", ")", repr_str)
         self.assertEqual(repr(obj), repr_str.strip())
+
+    @contextmanager
+    def assertRaises(self, exception, msg=None):
+        with super().assertRaises(exception) as cm:
+            yield
+        if msg is not None:
+            # WTF? unittest.assertRaises is completely broken.
+            self.assertEqual(str(cm.exception), msg)

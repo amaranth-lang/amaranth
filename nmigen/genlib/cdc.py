@@ -5,13 +5,13 @@ __all__ = ["MultiReg"]
 
 
 class MultiReg:
-    def __init__(self, i, o, odomain="sys", n=2, reset=0):
+    def __init__(self, i, o, odomain="sync", n=2, reset=0):
         self.i = i
         self.o = o
         self.odomain = odomain
 
-        self._regs = [Signal(self.i.shape(), name="cdc{}".format(i), reset=reset, reset_less=True,
-                             attrs={"no_retiming": True})
+        self._regs = [Signal(self.i.shape(), name="cdc{}".format(i),
+                             reset=reset, reset_less=True, attrs={"no_retiming": True})
                       for i in range(n)]
 
     def get_fragment(self, platform):

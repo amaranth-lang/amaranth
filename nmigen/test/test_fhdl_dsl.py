@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-
 from ..fhdl.ast import *
 from ..fhdl.dsl import *
 from .tools import *

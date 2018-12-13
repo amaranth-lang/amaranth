@@ -14,8 +14,7 @@ class ClockDivisor:
         return m.lower(platform)
 
 
-sync = ClockDomain()
 ctr  = ClockDivisor(factor=16)
 frag = ctr.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[sync.clk, ctr.o], clock_domains={"sync": sync}))
-print(verilog.convert(frag, ports=[sync.clk, ctr.o], clock_domains={"sync": sync}))
+# print(rtlil.convert(frag, ports=[ctr.o]))
+print(verilog.convert(frag, ports=[ctr.o]))

@@ -1,4 +1,5 @@
 from ..fhdl.ast import *
+from ..fhdl.cd import *
 from ..fhdl.ir import *
 from ..fhdl.xfrm import *
 from .tools import *
@@ -56,6 +57,37 @@ class DomainRenamerTestCase(FHDLTestCase):
         )
         """)
 
+    def test_rename_cd(self):
+        cd_sync = ClockDomain()
+        cd_pix  = ClockDomain()
+
+        f = Fragment()
+        f.add_domains(cd_sync, cd_pix)
+
+        f = DomainRenamer("ext")(f)
+        self.assertEqual(cd_sync.name, "ext")
+        self.assertEqual(f.domains, {
+            "ext": cd_sync,
+            "pix": cd_pix,
+        })
+
+    def test_rename_cd_subfragment(self):
+        cd_sync = ClockDomain()
+        cd_pix  = ClockDomain()
+
+        f1 = Fragment()
+        f1.add_domains(cd_sync, cd_pix)
+        f2 = Fragment()
+        f2.add_domains(cd_sync)
+        f1.add_subfragment(f2)
+
+        f1 = DomainRenamer("ext")(f1)
+        self.assertEqual(cd_sync.name, "ext")
+        self.assertEqual(f1.domains, {
+            "ext": cd_sync,
+            "pix": cd_pix,
+        })
+
 
 class ResetInserterTestCase(FHDLTestCase):
     def setUp(self):
@@ -87,6 +119,7 @@ class ResetInserterTestCase(FHDLTestCase):
             self.s1.eq(1),
             self.s2.eq(0),
         )
+        f.add_domains(ClockDomain("sync"))
         f.drive(self.s1, "sync")
         f.drive(self.s2, "pix")
 

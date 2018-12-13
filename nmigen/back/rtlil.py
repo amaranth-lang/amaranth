@@ -396,7 +396,7 @@ class _ValueTransformer(xfrm.ValueTransformer):
         return "{{ {} }}".format(" ".join(self(node.value) for _ in range(node.count)))
 
 
-def convert_fragment(builder, fragment, name, top, clock_domains):
+def convert_fragment(builder, fragment, name, top):
     with builder.module(name, attrs={"top": 1} if top else {}) as module:
         xformer = _ValueTransformer(module)
 
@@ -413,7 +413,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
         # Transform all clocks clocks and resets eagerly and outside of any hierarchy, to make
         # sure they get sensible (non-prefixed) names. This does not affect semantics.
         for domain, _ in fragment.iter_sync():
-            cd = clock_domains[domain]
+            cd = fragment.domains[domain]
             xformer(cd.clk)
             xformer(cd.rst)
 
@@ -422,8 +422,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
         # name) names.
         for subfragment, sub_name in fragment.subfragments:
             sub_name, sub_port_map = \
-                convert_fragment(builder, subfragment, top=False, name=sub_name,
-                                 clock_domains=clock_domains)
+                convert_fragment(builder, subfragment, top=False, name=sub_name)
             with xformer.hierarchy(sub_name):
                 module.cell(sub_name, name=sub_name, ports={
                     p: xformer(s) for p, s in sub_port_map.items()
@@ -484,13 +483,11 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
                 triggers = []
                 if domain is None:
                     triggers.append(("always",))
-                elif domain in clock_domains:
-                    cd = clock_domains[domain]
+                else:
+                    cd = fragment.domains[domain]
                     triggers.append(("posedge", xformer(cd.clk)))
                     if cd.async_reset:
                         triggers.append(("posedge", xformer(cd.rst)))
-                else:
-                    raise ValueError("Clock domain {} not found in design".format(domain))
 
                 for trigger in triggers:
                     with process.sync(*trigger) as sync:
@@ -509,15 +506,17 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
     return module.name, port_map
 
 
-def convert(fragment, ports=[], clock_domains={}):
+def convert(fragment, ports=[]):
+    fragment._propagate_domains(ensure_sync_exists=True)
+
     # Clock domain reset always takes priority over all other logic. To ensure this, insert
     # decision trees for clock domain reset as the very last step before synthesis.
     fragment = xfrm.ResetInserter({
-        cd.name: cd.rst for cd in clock_domains.values() if cd.rst is not None
+        cd.name: cd.rst for cd in fragment.domains.values() if cd.rst is not None
     })(fragment)
 
-    ins, outs = fragment._propagate_ports(ports, clock_domains)
+    ins, outs = fragment._propagate_ports(ports)
 
     builder = _Builder()
-    convert_fragment(builder, fragment, name="top", top=True, clock_domains=clock_domains)
+    convert_fragment(builder, fragment, name="top", top=True)
     return str(builder)
