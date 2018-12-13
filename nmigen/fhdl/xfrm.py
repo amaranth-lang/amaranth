@@ -102,9 +102,8 @@ class FragmentTransformer:
             new_fragment.add_statements(fragment.statements)
 
     def map_drivers(self, fragment, new_fragment):
-        for domain, signals in fragment.iter_domains():
-            for signal in signals:
-                new_fragment.drive(signal, domain)
+        for domain, signal in fragment.iter_drivers():
+            new_fragment.drive(signal, domain)
 
     def on_fragment(self, fragment):
         new_fragment = Fragment()
@@ -134,7 +133,7 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
         return value
 
     def map_drivers(self, fragment, new_fragment):
-        for domain, signals in fragment.iter_domains():
+        for domain, signals in fragment.drivers.items():
             if domain in self.domains:
                 domain = self.domains[domain]
             for signal in signals:
@@ -149,7 +148,7 @@ class _ControlInserter(FragmentTransformer):
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        for domain, signals in fragment.iter_domains():
+        for domain, signals in fragment.drivers.items():
             if domain is None or domain not in self.controls:
                 continue
             self._insert_control(new_fragment, domain, signals)

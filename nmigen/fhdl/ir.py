@@ -25,9 +25,6 @@ class Fragment:
             self.drivers[domain] = ValueSet()
         self.drivers[domain].add(signal)
 
-    def iter_domains(self):
-        yield from self.drivers.items()
-
     def iter_drivers(self):
         for domain, signals in self.drivers.items():
             for signal in signals:

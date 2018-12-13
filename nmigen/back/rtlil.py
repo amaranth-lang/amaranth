@@ -480,7 +480,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
             # however, differs between domains: for comb domains, it is `always`, for sync domains
             # with sync reset, it is `posedge clk`, for sync domains with async rest it is
             # `posedge clk or posedge rst`.
-            for domain, signals in fragment.iter_domains():
+            for domain, signals in fragment.drivers.items():
                 triggers = []
                 if domain is None:
                     triggers.append(("always",))
