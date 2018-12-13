@@ -1,4 +1,3 @@
-import unittest
 from contextlib import contextmanager
 
 from ..fhdl.ast import *
@@ -15,14 +14,6 @@ class DSLTestCase(FHDLTestCase):
         self.c2 = Signal()
         self.c3 = Signal()
         self.w1 = Signal(4)
-
-    @contextmanager
-    def assertRaises(self, exception, msg=None):
-        with super().assertRaises(exception) as cm:
-            yield
-        if msg is not None:
-            # WTF? unittest.assertRaises is completely broken.
-            self.assertEqual(str(cm.exception), msg)
 
     def test_d_comb(self):
         m = Module()

@@ -1,6 +1,3 @@
-import re
-import unittest
-
 from ..fhdl.ast import *
 from ..fhdl.ir import *
 from ..fhdl.xfrm import *

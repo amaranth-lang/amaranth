@@ -32,9 +32,10 @@ class ClockDomain:
     """
     def __init__(self, name=None, reset_less=False, async_reset=False):
         if name is None:
-            name = tracer.get_var_name()
-        if name is None:
-            raise ValueError("Clock domain name must be specified explicitly")
+            try:
+                name = tracer.get_var_name()
+            except tracer.NameNotFound:
+                raise ValueError("Clock domain name must be specified explicitly")
         if name.startswith("cd_"):
             name = name[3:]
         self.name = name

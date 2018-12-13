@@ -1,9 +1,8 @@
-import unittest
+from ..fhdl.ast import *
+from .tools import *
 
-from nmigen.fhdl.ast import *
 
-
-class ValueTestCase(unittest.TestCase):
+class ValueTestCase(FHDLTestCase):
     def test_wrap(self):
         self.assertIsInstance(Value.wrap(0), Const)
         self.assertIsInstance(Value.wrap(True), Const)
@@ -58,7 +57,7 @@ class ValueTestCase(unittest.TestCase):
             Const(31)["str"]
 
 
-class ConstTestCase(unittest.TestCase):
+class ConstTestCase(FHDLTestCase):
     def test_shape(self):
         self.assertEqual(Const(0).shape(),   (0, False))
         self.assertEqual(Const(1).shape(),   (1, False))
@@ -83,7 +82,7 @@ class ConstTestCase(unittest.TestCase):
             hash(Const(0))
 
 
-class OperatorTestCase(unittest.TestCase):
+class OperatorTestCase(FHDLTestCase):
     def test_invert(self):
         v = ~Const(0, 4)
         self.assertEqual(repr(v), "(~ (const 4'd0))")
@@ -225,7 +224,7 @@ class OperatorTestCase(unittest.TestCase):
             hash(Const(0) + Const(0))
 
 
-class SliceTestCase(unittest.TestCase):
+class SliceTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Const(10)[2]
         self.assertEqual(s1.shape(), (1, False))
@@ -237,7 +236,7 @@ class SliceTestCase(unittest.TestCase):
         self.assertEqual(repr(s1), "(slice (const 4'd10) 2:3)")
 
 
-class CatTestCase(unittest.TestCase):
+class CatTestCase(FHDLTestCase):
     def test_shape(self):
         c1 = Cat(Const(10))
         self.assertEqual(c1.shape(), (4, False))
@@ -251,7 +250,7 @@ class CatTestCase(unittest.TestCase):
         self.assertEqual(repr(c1), "(cat (const 4'd10) (const 1'd1))")
 
 
-class ReplTestCase(unittest.TestCase):
+class ReplTestCase(FHDLTestCase):
     def test_shape(self):
         r1 = Repl(Const(10), 3)
         self.assertEqual(r1.shape(), (12, False))
@@ -267,7 +266,7 @@ class ReplTestCase(unittest.TestCase):
         self.assertEqual(repr(r1), "(repl (const 4'd10) 3)")
 
 
-class SignalTestCase(unittest.TestCase):
+class SignalTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Signal()
         self.assertEqual(s1.shape(), (1, False))
@@ -328,7 +327,7 @@ class SignalTestCase(unittest.TestCase):
         self.assertEqual(s5.shape(), (4, False))
 
 
-class ClockSignalTestCase(unittest.TestCase):
+class ClockSignalTestCase(FHDLTestCase):
     def test_domain(self):
         s1 = ClockSignal()
         self.assertEqual(s1.domain, "sync")
@@ -343,7 +342,7 @@ class ClockSignalTestCase(unittest.TestCase):
         self.assertEqual(repr(s1), "(clk sync)")
 
 
-class ResetSignalTestCase(unittest.TestCase):
+class ResetSignalTestCase(FHDLTestCase):
     def test_domain(self):
         s1 = ResetSignal()
         self.assertEqual(s1.domain, "sync")

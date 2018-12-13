@@ -1,10 +1,9 @@
-import unittest
+from ..fhdl.ast import *
+from ..fhdl.ir import *
+from .tools import *
 
-from nmigen.fhdl.ast import *
-from nmigen.fhdl.ir import *
 
-
-class FragmentPortsTestCase(unittest.TestCase):
+class FragmentPortsTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
         self.s2 = Signal()
