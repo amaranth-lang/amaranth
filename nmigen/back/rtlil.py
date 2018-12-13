@@ -415,7 +415,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
         for cd_name, _ in fragment.iter_sync():
             cd = clock_domains[cd_name]
             xformer(cd.clk)
-            xformer(cd.reset)
+            xformer(cd.rst)
 
         # Transform all subfragments to their respective cells. Transforming signals connected
         # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
@@ -488,7 +488,7 @@ def convert_fragment(builder, fragment, name, top, clock_domains):
                     cd = clock_domains[cd_name]
                     triggers.append(("posedge", xformer(cd.clk)))
                     if cd.async_reset:
-                        triggers.append(("posedge", xformer(cd.reset)))
+                        triggers.append(("posedge", xformer(cd.rst)))
                 else:
                     raise ValueError("Clock domain {} not found in design".format(cd_name))
 
@@ -513,7 +513,7 @@ def convert(fragment, ports=[], clock_domains={}):
     # Clock domain reset always takes priority over all other logic. To ensure this, insert
     # decision trees for clock domain reset as the very last step before synthesis.
     fragment = xfrm.ResetInserter({
-        cd.name: cd.reset for cd in clock_domains.values() if cd.reset is not None
+        cd.name: cd.rst for cd in clock_domains.values() if cd.rst is not None
     })(fragment)
 
     ins, outs = fragment._propagate_ports(ports, clock_domains)

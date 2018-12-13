@@ -58,8 +58,8 @@ class Fragment:
         for cd_name, _ in self.iter_sync():
             cd = clock_domains[cd_name]
             self_used.add(cd.clk)
-            if cd.reset is not None:
-                self_used.add(cd.reset)
+            if cd.rst is not None:
+                self_used.add(cd.rst)
 
         # Our input ports are all the signals we're using but not driving. This is an over-
         # approximation: some of these signals may be driven by our subfragments.
