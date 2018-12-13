@@ -1,7 +1,8 @@
-import os
-from os import path
-
 from setuptools import setup, find_packages
+
+
+if sys.version_info[:3] < (3, 7):
+    raise SystemExit("nMigen requires Python 3.7+")
 
 
 setup(
