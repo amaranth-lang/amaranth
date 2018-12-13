@@ -320,8 +320,7 @@ class Simulator:
             stmt = proc.send(None)
         except StopIteration:
             self._processes.remove(proc)
-            self._passive.remove(proc)
-            self._suspended.remove(proc)
+            self._passive.discard(proc)
             return
 
         if isinstance(stmt, Delay):
