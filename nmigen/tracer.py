@@ -14,7 +14,7 @@ def get_var_name(depth=2):
     code = frame.f_code
     call_index = frame.f_lasti
     call_opc   = opname[code.co_code[call_index]]
-    if call_opc != "CALL_FUNCTION" and call_opc != "CALL_FUNCTION_KW":
+    if call_opc not in ("CALL_FUNCTION", "CALL_FUNCTION_KW", "CALL_FUNCTION_EX", "CALL_METHOD"):
         return None
 
     index = call_index + 2
