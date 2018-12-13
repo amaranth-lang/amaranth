@@ -1,0 +1,9 @@
+[run]
+branch = True
+omit =
+  nmigen/test/*
+  */__init__.py
+
+[report]
+exclude_lines =
+	:nocov:
