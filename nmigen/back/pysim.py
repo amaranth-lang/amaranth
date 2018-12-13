@@ -198,7 +198,7 @@ class Simulator:
         self._passive         = set()         # {process}
         self._suspended       = {}            # process -> until
 
-        self._handlers        = ValueDict()   # Signal -> lambda
+        self._handlers        = ValueDict()   # Signal -> set(lambda)
 
         self._vcd_file        = vcd_file
         self._vcd_writer      = None
@@ -240,6 +240,11 @@ class Simulator:
                 return "{}_{}".format(name, signal.name)
         return signal.name
 
+    def _add_handler(self, signal, handler):
+        if signal not in self._handlers:
+            self._handlers[signal] = set()
+        self._handlers[signal].add(handler)
+
     def __enter__(self):
         if self._vcd_file:
             self._vcd_writer = VCDWriter(self._vcd_file, timescale="100 ps",
@@ -280,11 +285,11 @@ class Simulator:
             compiler = _StatementCompiler()
             handler  = compiler(fragment.statements)
             for signal in compiler.sensitivity:
-                self._handlers[signal] = handler
+                self._add_handler(signal, handler)
             for domain, cd in fragment.domains.items():
-                self._handlers[cd.clk] = handler
+                self._add_handler(cd.clk, handler)
                 if cd.rst is not None:
-                    self._handlers[cd.rst] = handler
+                    self._add_handler(cd.rst, handler)
 
         self._user_signals = self._signals - self._comb_signals - self._sync_signals
 
@@ -304,7 +309,8 @@ class Simulator:
         while self._state.curr_dirty:
             signal = self._state.curr_dirty.pop()
             if signal in self._handlers:
-                self._handlers[signal](self._state)
+                for handler in self._handlers[signal]:
+                    handler(self._state)
 
         for signal in self._state.next_dirty:
             if signal in self._comb_signals or signal in self._user_signals:
