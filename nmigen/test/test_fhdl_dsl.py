@@ -11,7 +11,6 @@ class DSLTestCase(unittest.TestCase):
         self.s1 = Signal()
         self.s2 = Signal()
         self.s3 = Signal()
-        self.s4 = Signal()
         self.c1 = Signal()
         self.c2 = Signal()
         self.c3 = Signal()

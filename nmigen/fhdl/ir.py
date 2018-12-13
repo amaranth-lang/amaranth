@@ -50,7 +50,7 @@ class Fragment:
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
 
-    def _propagate_ports(self, ports, clock_domains):
+    def _propagate_ports(self, ports, clock_domains={}):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
         self_driven = union(s._lhs_signals() for s in self.statements)
