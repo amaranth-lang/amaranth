@@ -30,6 +30,14 @@ class ClockDomain:
     rst : Signal or None, inout
         Reset signal for this domain. Can be driven or used to drive.
     """
+
+    @staticmethod
+    def _name_for(domain_name, signal_name):
+        if domain_name == "sync":
+            return signal_name
+        else:
+            return "{}_{}".format(domain_name, signal_name)
+
     def __init__(self, name=None, reset_less=False, async_reset=False):
         if name is None:
             try:
@@ -40,10 +48,16 @@ class ClockDomain:
             name = name[3:]
         self.name = name
 
-        self.clk = Signal(name=self.name + "_clk", src_loc_at=1)
+        self.clk = Signal(name=self._name_for(name, "clk"), src_loc_at=1)
         if reset_less:
             self.rst = None
         else:
-            self.rst = Signal(name=self.name + "_rst", src_loc_at=1)
+            self.rst = Signal(name=self._name_for(name, "rst"), src_loc_at=1)
 
         self.async_reset = async_reset
+
+    def rename(self, name):
+        self.name = name
+        self.clk.name = self._name_for(name, "clk")
+        if self.rst is not None:
+            self.rst.name = self._name_for(name, "rst")

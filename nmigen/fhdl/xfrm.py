@@ -153,7 +153,7 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
             if domain in self.domain_map:
                 if cd.name == domain:
                     # Rename the actual ClockDomain object.
-                    cd.name = self.domain_map[domain]
+                    cd.rename(self.domain_map[domain])
                 else:
                     assert cd.name == self.domain_map[domain]
             new_fragment.add_domains(cd)

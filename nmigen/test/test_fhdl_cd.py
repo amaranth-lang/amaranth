@@ -4,8 +4,14 @@ from .tools import *
 
 class ClockDomainCase(FHDLTestCase):
     def test_name(self):
+        sync = ClockDomain()
+        self.assertEqual(sync.name, "sync")
+        self.assertEqual(sync.clk.name, "clk")
+        self.assertEqual(sync.rst.name, "rst")
         pix = ClockDomain()
         self.assertEqual(pix.name, "pix")
+        self.assertEqual(pix.clk.name, "pix_clk")
+        self.assertEqual(pix.rst.name, "pix_rst")
         cd_pix = ClockDomain()
         self.assertEqual(pix.name, "pix")
         dom = [ClockDomain("foo")][0]
@@ -31,3 +37,13 @@ class ClockDomainCase(FHDLTestCase):
         self.assertIsNotNone(pix.clk)
         self.assertIsNotNone(pix.rst)
         self.assertTrue(pix.async_reset)
+
+    def test_rename(self):
+        sync = ClockDomain()
+        self.assertEqual(sync.name, "sync")
+        self.assertEqual(sync.clk.name, "clk")
+        self.assertEqual(sync.rst.name, "rst")
+        sync.rename("pix")
+        self.assertEqual(sync.name, "pix")
+        self.assertEqual(sync.clk.name, "pix_clk")
+        self.assertEqual(sync.rst.name, "pix_rst")
