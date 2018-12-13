@@ -8,4 +8,4 @@ from .fhdl.bitcontainer import *
 # from .sim import *
 
 # from .genlib.record import *
-# from .genlib.fsm import *
+from .genlib.fsm import *

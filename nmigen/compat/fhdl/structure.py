@@ -45,17 +45,41 @@ class If(ast.Switch):
 
 
 class Case(ast.Switch):
-    @deprecated("instead of `Case(test, ...)`, use `with m.Case(test, ...):`")
+    @deprecated("instead of `Case(test, { value: stmts })`, use `with m.Switch(test):` and "
+                "`with m.Case(value): stmts`; instead of `\"default\": stmts`, use "
+                "`with m.Case(): stmts`")
     def __init__(self, test, cases):
         new_cases = []
         for k, v in cases.items():
-            if k == "default":
+            if isinstance(k, (bool, int)):
+                k = Const(k)
+            if (not isinstance(k, Const)
+                    and not (isinstance(k, str) and k == "default")):
+                raise TypeError("Case object is not a Migen constant")
+            if isinstance(k, str) and k == "default":
                 k = "-" * len(ast.Value.wrap(test))
+            else:
+                k = k.value
             new_cases.append((k, v))
         super().__init__(test, OrderedDict(new_cases))
 
+    @deprecated("instead of `Case(...).makedefault()`, use an explicit default case: "
+                "`with m.Case(): ...`")
     def makedefault(self, key=None):
-        raise NotImplementedError
+        if key is None:
+            for choice in self.cases.keys():
+                if (key is None
+                        or (isinstance(choice, str) and choice == "default")
+                        or choice > key):
+                    key = choice
+        if isinstance(key, str) and key == "default":
+            key = "-" * len(self.test)
+        else:
+            key = "{:0{}b}".format(wrap(key).value, len(self.test))
+        stmts = self.cases[key]
+        del self.cases[key]
+        self.cases["-" * len(self.test)] = stmts
+        return self
 
 
 def Array(*args):

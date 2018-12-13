@@ -30,7 +30,8 @@ proc_clean
 write_verilog
 # Make sure there are no undriven wires in generated RTLIL.
 proc
-select -assert-none w:* i:* %a %d c:* %co* %a %d n:$* %d
+write_ilang x.il
+select -assert-none w:* i:* %a %d o:* %a %ci* %d c:* %co* %a %d n:$* %d
 """.format(il_text))
     if popen.returncode:
         raise YosysError(error.strip())

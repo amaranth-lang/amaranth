@@ -1,5 +1,6 @@
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 
+from ..tools import flatten
 from .ast import *
 from .ir import *
 
@@ -36,6 +37,9 @@ class ValueTransformer:
     def on_Repl(self, value):
         return Repl(self.on_value(value.value), value.count)
 
+    def on_unknown_value(self, value):
+        raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+
     def on_value(self, value):
         if isinstance(value, Const):
             new_value = self.on_Const(value)
@@ -56,7 +60,7 @@ class ValueTransformer:
         elif isinstance(value, Repl):
             new_value = self.on_Repl(value)
         else:
-            raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+            new_value = self.on_unknown_value(value)
         if isinstance(new_value, Value):
             new_value.src_loc = value.src_loc
         return new_value
@@ -73,21 +77,24 @@ class StatementTransformer:
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
     def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_value(v)) for k, v in stmt.cases.items())
+        cases = OrderedDict((k, self.on_statement(v)) for k, v in stmt.cases.items())
         return Switch(self.on_value(stmt.test), cases)
 
     def on_statements(self, stmt):
-        return list(flatten(self.on_statement(stmt) for stmt in self.on_statement(stmt)))
+        return list(flatten(self.on_statement(stmt) for stmt in stmt))
+
+    def on_unknown_statement(self, stmt):
+        raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
 
     def on_statement(self, stmt):
         if isinstance(stmt, Assign):
             return self.on_Assign(stmt)
         elif isinstance(stmt, Switch):
             return self.on_Switch(stmt)
-        elif isinstance(stmt, (list, tuple)):
+        elif isinstance(stmt, Iterable):
             return self.on_statements(stmt)
         else:
-            raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
+            return self.on_unknown_statement(stmt)
 
     def __call__(self, value):
         return self.on_statement(value)
