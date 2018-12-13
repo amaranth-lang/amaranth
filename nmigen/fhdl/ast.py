@@ -545,7 +545,7 @@ class Signal(Value, DUID):
         other : Value
             Object to base this Signal on.
         """
-        kw = dict(shape=cls.wrap(other).shape())
+        kw = dict(shape=cls.wrap(other).shape(), name=tracer.get_var_name())
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
         kw.update(kwargs)

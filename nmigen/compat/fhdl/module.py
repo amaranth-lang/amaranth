@@ -58,14 +58,12 @@ class _CompatModuleSync(_CompatModuleProxy):
             raise AttributeError("Attempted to assign sync property - use += instead")
 
 
-class _CompatModuleForwardAttr:
+class _CompatModuleSpecials(_CompatModuleProxy):
     @deprecated("TODO")
     def __setattr__(self, name, value):
         self.__iadd__(value)
         setattr(self._cm, name, value)
 
-
-class _CompatModuleSpecials(_CompatModuleProxy, _CompatModuleForwardAttr):
     @deprecated("TODO")
     def __iadd__(self, other):
         self._cm._fragment.specials |= set(_flat_list(other))
@@ -73,18 +71,23 @@ class _CompatModuleSpecials(_CompatModuleProxy, _CompatModuleForwardAttr):
 
 
 class _CompatModuleSubmodules(_CompatModuleProxy):
-    @deprecated("TODO")
+    @deprecated("instead of `self.submodules.<mod> =`, use `m.submodules.<mod> =`")
     def __setattr__(self, name, value):
         self._cm._submodules += [(name, e) for e in _flat_list(value)]
         setattr(self._cm, name, value)
 
-    @deprecated("TODO")
+    @deprecated("instead of `self.submodules +=`, use `m.submodules +=`")
     def __iadd__(self, other):
         self._cm._submodules += [(None, e) for e in _flat_list(other)]
         return self
 
 
-class _CompatModuleClockDomains(_CompatModuleProxy, _CompatModuleForwardAttr):
+class _CompatModuleClockDomains(_CompatModuleProxy):
+    @deprecated("TODO")
+    def __setattr__(self, name, value):
+        self.__iadd__(value)
+        setattr(self._cm, name, value)
+
     @deprecated("TODO")
     def __iadd__(self, other):
         self._cm._fragment.clock_domains += _flat_list(other)
@@ -92,11 +95,12 @@ class _CompatModuleClockDomains(_CompatModuleProxy, _CompatModuleForwardAttr):
 
 
 class CompatModule:
+    # Actually returns nmigen.fhdl.Module, not a Fragment.
     def get_fragment(self):
         assert not self.get_fragment_called
         self.get_fragment_called = True
         self.finalize()
-        return self._fragment
+        return self._module
 
     def __getattr__(self, name):
         if name == "comb":
@@ -127,6 +131,21 @@ class CompatModule:
         else:
             raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(type(self).__name__, name))
+
+    def _finalize_submodules(self):
+        for name, submodule in self._submodules:
+            if not submodule.get_fragment_called:
+                self._module._add_submodule(submodule.get_fragment(), name)
+
+    def finalize(self, *args, **kwargs):
+        if not self.finalized:
+            self.finalized = True
+            self._finalize_submodules()
+            self.do_finalize(*args, **kwargs)
+            self._finalize_submodules()
+
+    def do_finalize(self):
+        pass
 
 
 Module = CompatModule

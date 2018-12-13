@@ -53,6 +53,8 @@ class _ModuleBuilderRoot:
         if name in ("comb", "sync"):
             raise AttributeError("'{}' object has no attribute '{}'; did you mean 'd.{}'?"
                                  .format(type(self).__name__, name, name))
+        raise AttributeError("'{}' object has no attribute '{}'"
+                             .format(type(self).__name__, name))
 
 
 class _ModuleBuilderIf(_ModuleBuilderRoot):
@@ -223,7 +225,7 @@ class Module(_ModuleBuilderRoot):
     def _add_submodule(self, submodule, name=None):
         if not hasattr(submodule, "get_fragment"):
             raise TypeError("Trying to add {!r}, which does not have .get_fragment(), as "
-                            " a submodule")
+                            "a submodule".format(submodule))
         self._submodules.append((submodule, name))
 
     def lower(self, platform):
@@ -237,3 +239,5 @@ class Module(_ModuleBuilderRoot):
             for lhs_signal in signal._lhs_signals():
                 fragment.drive(lhs_signal, cd_name)
         return fragment
+
+    get_fragment = lower
