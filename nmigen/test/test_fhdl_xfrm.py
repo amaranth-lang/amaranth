@@ -142,3 +142,36 @@ class CEInserterTestCase(unittest.TestCase):
             )
         )
         """)
+
+    def test_ce_subfragment(self):
+        f1 = Fragment()
+        f1.add_statements(
+            self.s1.eq(1)
+        )
+        f1.drive(self.s1, "sync")
+
+        f2 = Fragment()
+        f2.add_statements(
+            self.s2.eq(1)
+        )
+        f2.drive(self.s2, "sync")
+        f1.add_subfragment(f2)
+
+        f1 = CEInserter(self.c1)(f1)
+        (f2, _), = f1.subfragments
+        self.assertRepr(f1.statements, """
+        (
+            (eq (sig s1) (const 1'd1))
+            (switch (sig c1)
+                (case 0 (eq (sig s1) (sig s1)))
+            )
+        )
+        """)
+        self.assertRepr(f2.statements, """
+        (
+            (eq (sig s2) (const 1'd1))
+            (switch (sig c1)
+                (case 0 (eq (sig s2) (sig s2)))
+            )
+        )
+        """)
