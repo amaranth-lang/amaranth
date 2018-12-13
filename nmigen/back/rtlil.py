@@ -349,14 +349,17 @@ class _ValueTransformer(xfrm.ValueTransformer):
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
         res_bits, res_sign = node.shape()
+        lhs_bits = rhs_bits = res_bits = max(lhs_bits, rhs_bits, res_bits)
+        lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
+        rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
         res = self.rtlil.wire(width=res_bits)
         self.rtlil.cell("$mux", ports={
-            "\\A": self(lhs),
-            "\\B": self(rhs),
+            "\\A": lhs_wire,
+            "\\B": rhs_wire,
             "\\S": self(sel),
             "\\Y": res,
         }, params={
-            "WIDTH": max(lhs_bits, rhs_bits, res_bits)
+            "WIDTH": res_bits
         })
         return res
 
