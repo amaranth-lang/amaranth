@@ -42,19 +42,25 @@ class _Bufferer:
 
 
 class _Builder(_Namer, _Bufferer):
-    def module(self, name=None):
+    def module(self, name=None, attrs={}):
         name = self._make_name(name, local=False)
-        return _ModuleBuilder(self, name)
+        return _ModuleBuilder(self, name, attrs)
 
 
 class _ModuleBuilder(_Namer, _Bufferer):
-    def __init__(self, rtlil, name):
+    def __init__(self, rtlil, name, attrs):
         super().__init__()
         self.rtlil = rtlil
         self.name  = name
+        self.attrs = {"generator": "nMigen"}
+        self.attrs.update(attrs)
 
     def __enter__(self):
-        self._append("attribute \\generator \"{}\"\n", "nMigen")
+        for name, value in self.attrs.items():
+            if isinstance(value, str):
+                self._append("attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
+            else:
+                self._append("attribute \\{} {}\n", name, int(value))
         self._append("module {}\n", self.name)
         return self
 
@@ -390,8 +396,8 @@ class _ValueTransformer(xfrm.ValueTransformer):
         return "{{ {} }}".format(" ".join(self(node.value) for _ in range(node.count)))
 
 
-def convert_fragment(builder, fragment, name, clock_domains):
-    with builder.module(name) as module:
+def convert_fragment(builder, fragment, name, top, clock_domains):
+    with builder.module(name, attrs={"top": 1} if top else {}) as module:
         xformer = _ValueTransformer(module)
 
         # Register all signals driven in the current fragment. This must be done first, as it
@@ -416,7 +422,8 @@ def convert_fragment(builder, fragment, name, clock_domains):
         # name) names.
         for subfragment, sub_name in fragment.subfragments:
             sub_name, sub_port_map = \
-                convert_fragment(builder, subfragment, sub_name, clock_domains)
+                convert_fragment(builder, subfragment, top=False, name=sub_name,
+                                 clock_domains=clock_domains)
             with xformer.hierarchy(sub_name):
                 module.cell(sub_name, name=sub_name, ports={
                     p: xformer(s) for p, s in sub_port_map.items()
@@ -510,5 +517,5 @@ def convert(fragment, ports=[], clock_domains={}):
     ins, outs = fragment._propagate_ports(ports, clock_domains)
 
     builder = _Builder()
-    convert_fragment(builder, fragment, "top", clock_domains)
+    convert_fragment(builder, fragment, name="top", top=True, clock_domains=clock_domains)
     return str(builder)
