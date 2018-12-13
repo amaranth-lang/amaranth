@@ -89,36 +89,58 @@ class StatementTransformer:
         return self.on_statement(value)
 
 
-class _ControlInserter:
-    def __init__(self, controls):
-        if isinstance(controls, Value):
-            controls = {"sys": controls}
-        self.controls = OrderedDict(controls)
-
-    def __call__(self, fragment):
-        new_fragment = Fragment()
+class FragmentTransformer:
+    def map_subfragments(self, fragment, new_fragment):
         for subfragment, name in fragment.subfragments:
             new_fragment.add_subfragment(self(subfragment), name)
-        new_fragment.add_statements(fragment.statements)
+
+    def map_statements(self, fragment, new_fragment):
+        if hasattr(self, "on_statement"):
+            new_fragment.add_statements(map(self.on_statement, fragment.statements))
+        else:
+            new_fragment.add_statements(fragment.statements)
+
+    def map_drivers(self, fragment, new_fragment):
         for cd_name, signals in fragment.iter_domains():
             for signal in signals:
                 new_fragment.drive(signal, cd_name)
-            if cd_name is None or cd_name not in self.controls:
-                continue
-            self._wrap_control(new_fragment, cd_name, signals)
+
+    def on_fragment(self, fragment):
+        new_fragment = Fragment()
+        self.map_subfragments(fragment, new_fragment)
+        self.map_statements(fragment, new_fragment)
+        self.map_drivers(fragment, new_fragment)
         return new_fragment
 
-    def _wrap_control(self, fragment, cd_name, signals):
-        raise NotImplementedError
+    def __call__(self, value):
+        return self.on_fragment(value)
+
+
+class _ControlInserter(FragmentTransformer):
+    def __init__(self, controls):
+        if isinstance(controls, Value):
+            controls = {"sync": controls}
+        self.controls = OrderedDict(controls)
+
+    def on_fragment(self, fragment):
+        new_fragment = super().on_fragment(fragment)
+        for cd_name, signals in fragment.iter_domains():
+            if cd_name is None or cd_name not in self.controls:
+                continue
+            self._insert_control(new_fragment, cd_name, signals)
+        return new_fragment
+
+    def _insert_control(self, fragment, cd_name, signals):
+        raise NotImplementedError # :nocov:
 
 
 class ResetInserter(_ControlInserter):
-    def _wrap_control(self, fragment, cd_name, signals):
+    def _insert_control(self, fragment, cd_name, signals):
         stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals if not s.reset_less]
         fragment.add_statements(Switch(self.controls[cd_name], {1: stmts}))
 
 
 class CEInserter(_ControlInserter):
-    def _wrap_control(self, fragment, cd_name, signals):
+    def _insert_control(self, fragment, cd_name, signals):
         stmts = [s.eq(s) for s in signals]
         fragment.add_statements(Switch(self.controls[cd_name], {0: stmts}))
