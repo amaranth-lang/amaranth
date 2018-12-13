@@ -606,14 +606,19 @@ class ResetSignal(Value):
         return "(reset {})".format(self.domain)
 
 
+class _StatementList(list):
+    def __repr__(self):
+        return "({})".format(" ".join(map(repr, self)))
+
+
 class Statement:
     @staticmethod
     def wrap(obj):
         if isinstance(obj, Iterable):
-            return sum((Statement.wrap(e) for e in obj), [])
+            return _StatementList(sum((Statement.wrap(e) for e in obj), []))
         else:
             if isinstance(obj, Statement):
-                return [obj]
+                return _StatementList([obj])
             else:
                 raise TypeError("Object {!r} is not a Migen statement".format(obj))
 
