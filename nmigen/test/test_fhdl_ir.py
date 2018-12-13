@@ -232,11 +232,11 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f1.add_domains(cd)
         f1.add_subfragment(f2)
 
-        f1._propagate_domains()
+        f1._propagate_domains(ensure_sync_exists=False)
         self.assertEqual(f1.domains, {"cd": cd})
         self.assertEqual(f2.domains, {"cd": cd})
 
-    def test_propagate_default(self):
+    def test_propagate_ensure_sync(self):
         f1 = Fragment()
         f2 = Fragment()
         f1.add_subfragment(f2)

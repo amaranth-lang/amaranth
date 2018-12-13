@@ -48,6 +48,13 @@ class Fragment:
             for signal in signals:
                 yield domain, signal
 
+    def iter_signals(self):
+        signals = ValueSet()
+        signals |= self.ports.keys()
+        for domain, domain_signals in self.drivers.items():
+            signals |= domain_signals
+        return signals
+
     def add_domains(self, *domains):
         for domain in domains:
             assert isinstance(domain, ClockDomain)
@@ -124,11 +131,18 @@ class Fragment:
 
             subfrag._propagate_domains_down()
 
-    def _propagate_domains(self, ensure_sync_exists=False):
+    def _propagate_domains(self, ensure_sync_exists):
         self._propagate_domains_up()
         if ensure_sync_exists and not self.domains:
             self.add_domains(ClockDomain("sync"))
         self._propagate_domains_down()
+
+    def _insert_domain_resets(self):
+        from .xfrm import ResetInserter
+
+        return ResetInserter({
+            cd.name: cd.rst for cd in self.domains.values() if cd.rst is not None
+        })(self)
 
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
@@ -167,3 +181,12 @@ class Fragment:
         self.add_ports(outs, kind="o")
 
         return ins, outs
+
+    def prepare(self, ports=(), ensure_sync_exists=True):
+        from .xfrm import FragmentTransformer
+
+        fragment = FragmentTransformer()(self)
+        fragment._propagate_domains(ensure_sync_exists)
+        fragment = fragment._insert_domain_resets()
+        fragment._propagate_ports(ports)
+        return fragment

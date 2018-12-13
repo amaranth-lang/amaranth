@@ -518,17 +518,8 @@ def convert_fragment(builder, fragment, name, top):
     return module.name, port_map
 
 
-def convert(fragment, ports=[]):
-    fragment._propagate_domains(ensure_sync_exists=True)
-
-    # Clock domain reset always takes priority over all other logic. To ensure this, insert
-    # decision trees for clock domain reset as the very last step before synthesis.
-    fragment = xfrm.ResetInserter({
-        cd.name: cd.rst for cd in fragment.domains.values() if cd.rst is not None
-    })(fragment)
-
-    ins, outs = fragment._propagate_ports(ports)
-
+def convert(fragment, name="top", **kwargs):
+    fragment = fragment.prepare(**kwargs)
     builder = _Builder()
-    convert_fragment(builder, fragment, name="top", top=True)
+    convert_fragment(builder, fragment, name=name, top=True)
     return str(builder)

@@ -728,6 +728,9 @@ class ValueKey:
         else:
             raise TypeError
 
+    def __repr__(self):
+        return "<{}.ValueKey {!r}>".format(__name__, self.value)
+
 
 class ValueDict(MutableMapping):
     def __init__(self, pairs=()):
