@@ -649,10 +649,11 @@ class Switch(Statement):
             self.cases[key] = Statement.wrap(stmts)
 
     def _lhs_signals(self):
-        return union(s._lhs_signals() for ss in self.cases.values() for s in ss )
+        signals = union(s._lhs_signals() for ss in self.cases.values() for s in ss) or ValueSet()
+        return signals
 
     def _rhs_signals(self):
-        signals = union(s._rhs_signals() for ss in self.cases.values() for s in ss)
+        signals = union(s._rhs_signals() for ss in self.cases.values() for s in ss) or ValueSet()
         return self.test._rhs_signals() | signals
 
     def __repr__(self):
