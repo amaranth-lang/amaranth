@@ -274,7 +274,7 @@ class Module(_ModuleBuilderRoot):
             fragment.add_subfragment(submodule.get_fragment(platform), name)
         fragment.add_statements(self._statements)
         for signal, domain in self._driving.items():
-            fragment.drive(signal, domain)
+            fragment.add_driver(signal, domain)
         return fragment
 
     get_fragment = lower

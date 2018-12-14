@@ -24,7 +24,7 @@ class Fragment:
     def iter_ports(self):
         yield from self.ports.keys()
 
-    def drive(self, signal, domain=None):
+    def add_driver(self, signal, domain=None):
         if domain not in self.drivers:
             self.drivers[domain] = ValueSet()
         self.drivers[domain].add(signal)

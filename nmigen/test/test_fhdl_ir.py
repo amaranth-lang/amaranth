@@ -109,7 +109,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
         f.add_domains(sync)
-        f.drive(self.c1, "sync")
+        f.add_driver(self.c1, "sync")
 
         f._propagate_ports(ports=())
         self.assertEqual(f.ports, ValueDict([
@@ -125,7 +125,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
         f.add_domains(sync)
-        f.drive(self.c1, "sync")
+        f.add_driver(self.c1, "sync")
 
         f._propagate_ports(ports=())
         self.assertEqual(f.ports, ValueDict([

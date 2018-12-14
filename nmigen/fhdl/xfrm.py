@@ -119,7 +119,7 @@ class FragmentTransformer:
 
     def map_drivers(self, fragment, new_fragment):
         for domain, signal in fragment.iter_drivers():
-            new_fragment.drive(signal, domain)
+            new_fragment.add_driver(signal, domain)
 
     def on_fragment(self, fragment):
         new_fragment = Fragment()
@@ -165,7 +165,7 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
             if domain in self.domain_map:
                 domain = self.domain_map[domain]
             for signal in signals:
-                new_fragment.drive(signal, domain)
+                new_fragment.add_driver(signal, domain)
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):

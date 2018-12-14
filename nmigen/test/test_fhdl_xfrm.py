@@ -23,9 +23,9 @@ class DomainRenamerTestCase(FHDLTestCase):
             self.s4.eq(ClockSignal("other")),
             self.s5.eq(ResetSignal("other")),
         )
-        f.drive(self.s1, None)
-        f.drive(self.s2, None)
-        f.drive(self.s3, "sync")
+        f.add_driver(self.s1, None)
+        f.add_driver(self.s2, None)
+        f.add_driver(self.s3, "sync")
 
         f = DomainRenamer("pix")(f)
         self.assertRepr(f.statements, """
@@ -170,7 +170,7 @@ class ResetInserterTestCase(FHDLTestCase):
         f.add_statements(
             self.s1.eq(1)
         )
-        f.drive(self.s1, "sync")
+        f.add_driver(self.s1, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements, """
@@ -189,8 +189,8 @@ class ResetInserterTestCase(FHDLTestCase):
             self.s2.eq(0),
         )
         f.add_domains(ClockDomain("sync"))
-        f.drive(self.s1, "sync")
-        f.drive(self.s2, "pix")
+        f.add_driver(self.s1, "sync")
+        f.add_driver(self.s2, "pix")
 
         f = ResetInserter({"pix": self.c1})(f)
         self.assertRepr(f.statements, """
@@ -208,7 +208,7 @@ class ResetInserterTestCase(FHDLTestCase):
         f.add_statements(
             self.s2.eq(0)
         )
-        f.drive(self.s2, "sync")
+        f.add_driver(self.s2, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements, """
@@ -225,7 +225,7 @@ class ResetInserterTestCase(FHDLTestCase):
         f.add_statements(
             self.s3.eq(0)
         )
-        f.drive(self.s3, "sync")
+        f.add_driver(self.s3, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements, """
@@ -250,7 +250,7 @@ class CEInserterTestCase(FHDLTestCase):
         f.add_statements(
             self.s1.eq(1)
         )
-        f.drive(self.s1, "sync")
+        f.add_driver(self.s1, "sync")
 
         f = CEInserter(self.c1)(f)
         self.assertRepr(f.statements, """
@@ -268,8 +268,8 @@ class CEInserterTestCase(FHDLTestCase):
             self.s1.eq(1),
             self.s2.eq(0),
         )
-        f.drive(self.s1, "sync")
-        f.drive(self.s2, "pix")
+        f.add_driver(self.s1, "sync")
+        f.add_driver(self.s2, "pix")
 
         f = CEInserter({"pix": self.c1})(f)
         self.assertRepr(f.statements, """
@@ -287,13 +287,13 @@ class CEInserterTestCase(FHDLTestCase):
         f1.add_statements(
             self.s1.eq(1)
         )
-        f1.drive(self.s1, "sync")
+        f1.add_driver(self.s1, "sync")
 
         f2 = Fragment()
         f2.add_statements(
             self.s2.eq(1)
         )
-        f2.drive(self.s2, "sync")
+        f2.add_driver(self.s2, "sync")
         f1.add_subfragment(f2)
 
         f1 = CEInserter(self.c1)(f1)

@@ -14,7 +14,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
         frag = Fragment()
         frag.add_statements(osig.eq(stmt(*isigs)))
-        frag.drive(osig)
+        frag.add_driver(osig)
 
         with Simulator(frag,
                 vcd_file =open("test.vcd",  "w"),
