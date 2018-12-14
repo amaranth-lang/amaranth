@@ -1,4 +1,5 @@
 import math
+import inspect
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
@@ -223,8 +224,29 @@ class Simulator:
         self._gtkw_file       = gtkw_file
         self._gtkw_signals    = gtkw_signals
 
+    def _check_process(self, process):
+        if inspect.isgeneratorfunction(process):
+            process = process()
+        if not inspect.isgenerator(process):
+            raise TypeError("Cannot add a process '{!r}' because it is not a generator or"
+                            "a generator function"
+                            .format(process))
+        return process
+
     def add_process(self, process):
+        process = self._check_process(process)
         self._processes.add(process)
+
+    def add_sync_process(self, process, domain="sync"):
+        process = self._check_process(process)
+        def sync_process():
+            try:
+                result = process.send(None)
+                while True:
+                    result = process.send((yield (result or Tick(domain))))
+            except StopIteration:
+                pass
+        self.add_process(sync_process())
 
     def add_clock(self, period, domain="sync"):
         if self._fastest_clock == self._epsilon or period < self._fastest_clock:
@@ -241,16 +263,6 @@ class Simulator:
                 yield clk.eq(0)
                 yield Delay(half_period)
         self.add_process(clk_process())
-
-    def add_sync_process(self, process, domain="sync"):
-        def sync_process():
-            try:
-                result = process.send(None)
-                while True:
-                    result = process.send((yield (result or Tick(domain))))
-            except StopIteration:
-                pass
-        self.add_process(sync_process())
 
     def __enter__(self):
         if self._vcd_file:
