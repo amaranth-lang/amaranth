@@ -18,7 +18,7 @@ def run_simulation(fragment_or_module, generators, clocks={"sync": 10}, vcd_name
 
     with Simulator(fragment, vcd_file=open(vcd_name, "w") if vcd_name else None) as sim:
         for domain, period in clocks.items():
-            sim.add_clock(period, domain)
+            sim.add_clock(period / 1e9, domain)
         for domain, process in generators.items():
             sim.add_sync_process(process, domain)
         sim.run()
