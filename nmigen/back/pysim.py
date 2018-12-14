@@ -231,6 +231,7 @@ class Simulator:
         half_period = period / 2
         def clk_process():
             yield Passive()
+            yield Delay(half_period)
             while True:
                 yield clk.eq(1)
                 yield Delay(half_period)
