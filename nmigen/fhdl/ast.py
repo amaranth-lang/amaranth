@@ -1,3 +1,4 @@
+from abc import ABCMeta, abstractmethod
 import builtins
 import traceback
 from collections import OrderedDict
@@ -23,7 +24,7 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class Value:
+class Value(metaclass=ABCMeta):
     @staticmethod
     def wrap(obj):
         """Ensures that the passed object is a Migen value. Booleans and integers
@@ -33,8 +34,7 @@ class Value:
         elif isinstance(obj, (bool, int)):
             return Const(obj)
         else:
-            raise TypeError("Object {} of type {} is not a Migen value"
-                            .format(repr(obj), type(obj)))
+            raise TypeError("Object {!r} is not a Migen value".format(repr(obj)))
 
     def __init__(self, src_loc_at=0):
         super().__init__()
@@ -171,6 +171,7 @@ class Value:
         """
         return Assign(self, value)
 
+    @abstractmethod
     def shape(self):
         """Bit length and signedness of a value.
 
@@ -187,16 +188,16 @@ class Value:
         >>> Value.shape(C(0xaa))
         8, False
         """
-        raise NotImplementedError # :nocov:
+        pass # :nocov:
 
     def _lhs_signals(self):
         raise TypeError("Value {!r} cannot be used in assignments".format(self))
 
+    @abstractmethod
     def _rhs_signals(self):
-        raise NotImplementedError # :nocov:
+        pass # :nocov:
 
-    def __hash__(self):
-        raise TypeError("Unhashable type: {}".format(type(self).__name__))
+    __hash__ = None
 
 
 class Const(Value):
@@ -304,17 +305,15 @@ class Operator(Value):
             else:
                 extra = 0
             return obs[0][0] + extra, obs[0][1]
-        elif self.op == "&" or self.op == "^" or self.op == "|":
+        elif self.op in ("&", "^", "|"):
             return self._bitwise_binary_shape(*obs)
-        elif (self.op == "<" or self.op == "<=" or self.op == "==" or self.op == "!=" or
-              self.op == ">" or self.op == ">=" or self.op == "b"):
+        elif self.op in ("<", "<=", "==", "!=", ">", ">=", "b"):
             return 1, False
         elif self.op == "~":
             return obs[0]
         elif self.op == "m":
             return self._bitwise_binary_shape(obs[1], obs[2])
-        else:
-            raise TypeError # :nocov:
+        raise NotImplementedError("Operator '{!r}' not implemented".format(self.op)) # :nocov:
 
     def _rhs_signals(self):
         return union(op._rhs_signals() for op in self.operands)
@@ -612,6 +611,12 @@ class ClockSignal(Value):
             raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
         self.domain = domain
 
+    def shape(self):
+        return 1, False
+
+    def _rhs_signals(self):
+        raise NotImplementedError("ClockSignal must be lowered to a concrete signal") # :nocov:
+
     def __repr__(self):
         return "(clk {})".format(self.domain)
 
@@ -635,6 +640,12 @@ class ResetSignal(Value):
             raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
         self.domain = domain
         self.allow_reset_less = allow_reset_less
+
+    def shape(self):
+        return 1, False
+
+    def _rhs_signals(self):
+        raise NotImplementedError("ResetSignal must be lowered to a concrete signal") # :nocov:
 
     def __repr__(self):
         return "(rst {})".format(self.domain)
@@ -682,7 +693,8 @@ class Switch(Statement):
             elif isinstance(key, str):
                 assert len(key) == len(self.test)
             else:
-                raise TypeError
+                raise TypeError("Object {!r} cannot be used as a switch key"
+                                .format(key))
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
             self.cases[key] = Statement.wrap(stmts)
@@ -745,8 +757,8 @@ class ValueKey:
             return hash(id(self.value))
         elif isinstance(self.value, Slice):
             return hash((ValueKey(self.value.value), self.value.start, self.value.end))
-        else:
-            raise TypeError
+        else: # :nocov:
+            raise TypeError("Object {!r} cannot be used as a key in value collections")
 
     def __eq__(self, other):
         if not isinstance(other, ValueKey):
@@ -762,8 +774,8 @@ class ValueKey:
             return (ValueKey(self.value.value) == ValueKey(other.value.value) and
                     self.value.start == other.value.start and
                     self.value.end == other.value.end)
-        else:
-            raise TypeError
+        else: # :nocov:
+            raise TypeError("Object {!r} cannot be used as a key in value collections")
 
     def __lt__(self, other):
         if not isinstance(other, ValueKey):
@@ -779,8 +791,8 @@ class ValueKey:
             return (ValueKey(self.value.value) < ValueKey(other.value.value) and
                     self.value.start < other.value.start and
                     self.value.end < other.value.end)
-        else:
-            raise TypeError
+        else: # :nocov:
+            raise TypeError("Object {!r} cannot be used as a key in value collections")
 
     def __repr__(self):
         return "<{}.ValueKey {!r}>".format(__name__, self.value)
