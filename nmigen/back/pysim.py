@@ -189,7 +189,7 @@ class _StatementCompiler(StatementTransformer):
 
 
 class Simulator:
-    def __init__(self, fragment=None, vcd_file=None, gtkw_file=None, gtkw_signals=()):
+    def __init__(self, fragment, vcd_file=None, gtkw_file=None, gtkw_signals=()):
         self._fragments       = {}            # fragment -> hierarchy
 
         self._domains         = {}            # str/domain -> ClockDomain
@@ -223,20 +223,20 @@ class Simulator:
         self._gtkw_file       = gtkw_file
         self._gtkw_signals    = gtkw_signals
 
-        if fragment is not None:
-            fragment = fragment.prepare()
-            self._add_fragment(fragment)
-            self._domains = fragment.domains
-            for domain, cd in self._domains.items():
-                self._domain_triggers[cd.clk] = domain
-                if cd.rst is not None:
-                    self._domain_triggers[cd.rst] = domain
-                self._domain_signals[domain] = ValueSet()
+        fragment = fragment.prepare()
 
-    def _add_fragment(self, fragment, hierarchy=("top",)):
-        self._fragments[fragment] = hierarchy
-        for subfragment, name in fragment.subfragments:
-            self._add_fragment(subfragment, (*hierarchy, name))
+        def add_fragment(fragment, hierarchy=("top",)):
+            self._fragments[fragment] = hierarchy
+            for subfragment, name in fragment.subfragments:
+                add_fragment(subfragment, (*hierarchy, name))
+        add_fragment(fragment)
+
+        self._domains = fragment.domains
+        for domain, cd in self._domains.items():
+            self._domain_triggers[cd.clk] = domain
+            if cd.rst is not None:
+                self._domain_triggers[cd.rst] = domain
+            self._domain_signals[domain] = ValueSet()
 
     def add_process(self, process):
         self._processes.add(process)
@@ -267,17 +267,6 @@ class Simulator:
                 pass
         self.add_process(sync_process())
 
-    def _signal_name_in_fragment(self, fragment, signal):
-        for subfragment, name in fragment.subfragments:
-            if signal in subfragment.ports:
-                return "{}_{}".format(name, signal.name)
-        return signal.name
-
-    def _add_funclet(self, signal, funclet):
-        if signal not in self._funclets:
-            self._funclets[signal] = set()
-        self._funclets[signal].add(funclet)
-
     def __enter__(self):
         if self._vcd_file:
             self._vcd_writer = VCDWriter(self._vcd_file, timescale="100 ps",
@@ -293,8 +282,14 @@ class Simulator:
 
                 if signal not in self._vcd_signals:
                     self._vcd_signals[signal] = set()
-                name   = self._signal_name_in_fragment(fragment, signal)
-                suffix = None
+
+                for subfragment, name in fragment.subfragments:
+                    if signal in subfragment.ports:
+                        var_name = "{}_{}".format(name, signal.name)
+                        break
+                else:
+                    var_name = signal.name
+
                 if signal.decoder:
                     var_type = "string"
                     var_size = 1
@@ -303,18 +298,20 @@ class Simulator:
                     var_type = "wire"
                     var_size = signal.nbits
                     var_init = signal.reset
+
+                suffix = None
                 while True:
                     try:
                         if suffix is None:
-                            name_suffix = name
+                            var_name_suffix = var_name
                         else:
-                            name_suffix = "{}${}".format(name, suffix)
+                            var_name_suffix = "{}${}".format(var_name, suffix)
                         self._vcd_signals[signal].add(self._vcd_writer.register_var(
-                            scope=".".join(self._fragments[fragment]), name=name_suffix,
+                            scope=".".join(self._fragments[fragment]), name=var_name_suffix,
                             var_type=var_type, size=var_size, init=var_init))
                         if signal not in self._vcd_names:
                             self._vcd_names[signal] = \
-                                ".".join(self._fragments[fragment] + (name_suffix,))
+                                ".".join(self._fragments[fragment] + (var_name_suffix,))
                         break
                     except KeyError:
                         suffix = (suffix or 0) + 1
@@ -331,14 +328,19 @@ class Simulator:
                 statements.append(signal.eq(signal.reset))
             statements += fragment.statements
 
+            def add_funclet(signal, funclet):
+                if signal not in self._funclets:
+                    self._funclets[signal] = set()
+                self._funclets[signal].add(funclet)
+
             compiler = _StatementCompiler()
             funclet  = compiler(statements)
             for signal in compiler.sensitivity:
-                self._add_funclet(signal, funclet)
+                add_funclet(signal, funclet)
             for domain, cd in fragment.domains.items():
-                self._add_funclet(cd.clk, funclet)
+                add_funclet(cd.clk, funclet)
                 if cd.rst is not None:
-                    self._add_funclet(cd.rst, funclet)
+                    add_funclet(cd.rst, funclet)
 
         self._user_signals = self._signals - self._comb_signals - self._sync_signals
 
