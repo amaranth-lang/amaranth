@@ -61,19 +61,19 @@ class _CompatModuleSync(_CompatModuleProxy):
 class _CompatModuleSpecials(_CompatModuleProxy):
     @deprecated("instead of `self.specials.<name> =`, use `m.submodules.<name> =`")
     def __setattr__(self, name, value):
-        self._cm._submodules += (name, value)
+        self._cm._specials.append((name, value))
         setattr(self._cm, name, value)
 
     @deprecated("instead of `self.specials +=`, use `m.submodules +=`")
     def __iadd__(self, other):
-        self._cm._submodules += [(None, e) for e in _flat_list(other)]
+        self._cm._specials += [(None, e) for e in _flat_list(other)]
         return self
 
 
 class _CompatModuleSubmodules(_CompatModuleProxy):
     @deprecated("instead of `self.submodules.<name> =`, use `m.submodules.<name> =`")
     def __setattr__(self, name, value):
-        self._cm._submodules += (name, value)
+        self._cm._submodules.append((name, value))
         setattr(self._cm, name, value)
 
     @deprecated("instead of `self.submodules +=`, use `m.submodules +=`")
@@ -122,6 +122,9 @@ class CompatModule:
         elif name == "_submodules":
             self._submodules = []
             return self._submodules
+        elif name == "_specials":
+            self._specials = []
+            return self._specials
         elif name == "_clock_domains":
             self._clock_domains = []
             return self._clock_domains
@@ -131,6 +134,10 @@ class CompatModule:
         else:
             raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(type(self).__name__, name))
+
+    def _finalize_specials(self):
+        for name, special in self._specials:
+            self._module._add_submodule(special, name)
 
     def _finalize_submodules(self):
         for name, submodule in self._submodules:
