@@ -579,3 +579,8 @@ class Simulator:
 
             for signal in self._gtkw_signals:
                 add_trace(signal)
+
+        if self._vcd_file:
+            self._vcd_file.close()
+        if self._gtkw_file:
+            self._gtkw_file.close()
