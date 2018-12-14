@@ -53,7 +53,7 @@ class _RHSValueCompiler(ValueTransformer):
         return lambda state: value.value
 
     def on_Signal(self, value):
-        if self.sensitivity:
+        if self.sensitivity is not None:
             self.sensitivity.add(value)
         if self.signal_mode == "curr":
             return lambda state: state.curr[value]
