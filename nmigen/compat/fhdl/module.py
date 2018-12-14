@@ -59,21 +59,21 @@ class _CompatModuleSync(_CompatModuleProxy):
 
 
 class _CompatModuleSpecials(_CompatModuleProxy):
-    @deprecated("TODO")
+    @deprecated("instead of `self.specials.<name> =`, use `m.submodules.<name> =`")
     def __setattr__(self, name, value):
-        self.__iadd__(value)
+        self._cm._submodules += (name, value)
         setattr(self._cm, name, value)
 
-    @deprecated("TODO")
+    @deprecated("instead of `self.specials +=`, use `m.submodules +=`")
     def __iadd__(self, other):
-        self._cm._fragment.specials |= set(_flat_list(other))
+        self._cm._submodules += [(None, e) for e in _flat_list(other)]
         return self
 
 
 class _CompatModuleSubmodules(_CompatModuleProxy):
-    @deprecated("instead of `self.submodules.<mod> =`, use `m.submodules.<mod> =`")
+    @deprecated("instead of `self.submodules.<name> =`, use `m.submodules.<name> =`")
     def __setattr__(self, name, value):
-        self._cm._submodules += [(name, e) for e in _flat_list(value)]
+        self._cm._submodules += (name, value)
         setattr(self._cm, name, value)
 
     @deprecated("instead of `self.submodules +=`, use `m.submodules +=`")
