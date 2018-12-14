@@ -169,14 +169,15 @@ class _StatementCompiler(StatementTransformer):
                 mask  = "1" * len(value)
             mask  = int(mask,  2)
             value = int(value, 2)
-            cases.append((lambda test: test & mask == value,
-                          self.on_statements(stmts)))
+            def make_test(mask, value):
+                return lambda test: test & mask == value
+            cases.append((make_test(mask, value), self.on_statements(stmts)))
         def run(state):
             test_value = test(state)
             for check, body in cases:
                 if check(test_value):
                     body(state)
-                return
+                    return
         return run
 
     def on_statements(self, stmts):
