@@ -512,6 +512,9 @@ class Signal(Value, DUID):
         defaults to 0) and ``max`` (exclusive, defaults to 2).
     attrs : dict
         Dictionary of synthesis attributes.
+    decoder : function
+        A function converting integer signal values to human-readable strings (e.g. FSM state
+        names).
 
     Attributes
     ----------
@@ -524,7 +527,7 @@ class Signal(Value, DUID):
     """
 
     def __init__(self, shape=None, name=None, reset=0, reset_less=False, min=None, max=None,
-                 attrs=None, src_loc_at=0):
+                 attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
         if name is None:
@@ -560,6 +563,7 @@ class Signal(Value, DUID):
         self.reset_less = bool(reset_less)
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
+        self.decoder = decoder
 
     @classmethod
     def like(cls, other, src_loc_at=0, **kwargs):
@@ -573,7 +577,8 @@ class Signal(Value, DUID):
         kw = dict(shape=cls.wrap(other).shape(),
                   name=tracer.get_var_name(depth=2 + src_loc_at))
         if isinstance(other, cls):
-            kw.update(reset=other.reset, reset_less=other.reset_less, attrs=other.attrs)
+            kw.update(reset=other.reset, reset_less=other.reset_less,
+                      attrs=other.attrs, decoder=other.decoder)
         kw.update(kwargs)
         return cls(**kw, src_loc_at=1 + src_loc_at)
 

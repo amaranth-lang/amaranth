@@ -295,6 +295,14 @@ class Simulator:
                     self._vcd_signals[signal] = set()
                 name   = self._signal_name_in_fragment(fragment, signal)
                 suffix = None
+                if signal.decoder:
+                    var_type = "string"
+                    var_size = 1
+                    var_init = signal.decoder(signal.reset).replace(" ", "_")
+                else:
+                    var_type = "wire"
+                    var_size = signal.nbits
+                    var_init = signal.reset
                 while True:
                     try:
                         if suffix is None:
@@ -303,7 +311,7 @@ class Simulator:
                             name_suffix = "{}${}".format(name, suffix)
                         self._vcd_signals[signal].add(self._vcd_writer.register_var(
                             scope=".".join(self._fragments[fragment]), name=name_suffix,
-                            var_type="wire", size=signal.nbits, init=signal.reset))
+                            var_type=var_type, size=var_size, init=var_init))
                         if signal not in self._vcd_names:
                             self._vcd_names[signal] = \
                                 ".".join(self._fragments[fragment] + (name_suffix,))
@@ -356,10 +364,14 @@ class Simulator:
         if (old, new) == (0, 1) and signal in self._domain_triggers:
             domains.add(self._domain_triggers[signal])
 
-        if self._vcd_writer:
+        if self._vcd_writer and old != new:
             # Finally, dump the new value to the VCD file.
             for vcd_signal in self._vcd_signals[signal]:
-                self._vcd_writer.change(vcd_signal, self._timestamp / self._epsilon, new)
+                if signal.decoder:
+                    var_value = signal.decoder(new).replace(" ", "_")
+                else:
+                    var_value = new
+                self._vcd_writer.change(vcd_signal, self._timestamp / self._epsilon, var_value)
 
     def _commit_comb_signals(self, domains):
         """Perform the comb part of IR processes (aka RTLIL always)."""

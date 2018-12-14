@@ -156,10 +156,9 @@ class FSM(CompatModule):
         self.encoding = dict((s, n) for n, s in enumerate(self.actions.keys()))
         self.decoding = {n: s for s, n in self.encoding.items()}
 
-        self.state = Signal(max=nstates, reset=self.encoding[self.reset_state])
-        self.state._enumeration = self.decoding
-        self.next_state = Signal(max=nstates)
-        self.next_state._enumeration = {n: "{}:{}".format(n, s) for n, s in self.decoding.items()}
+        decoder = lambda n: "{}/{}".format(self.decoding[n], n)
+        self.state = Signal(max=nstates, reset=self.encoding[self.reset_state], decoder=decoder)
+        self.next_state = Signal.like(self.state)
 
         for state, signal in self.before_leaving_signals.items():
             encoded = self.encoding[state]
