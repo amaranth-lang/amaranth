@@ -513,8 +513,8 @@ class Simulator:
             for domain, cd in self._domains.items():
                 with gtkw_save.group("d.{}".format(domain)):
                     if cd.rst is not None:
-                        gtkw_save.trace("top.{}".format(cd.rst.name))
-                    gtkw_save.trace("top.{}".format(cd.clk.name))
+                        gtkw_save.trace(self._vcd_names[cd.rst])
+                    gtkw_save.trace(self._vcd_names[cd.clk])
 
             for signal in self._gtkw_signals:
                 if signal in self._vcd_names:
