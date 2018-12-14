@@ -47,3 +47,11 @@ class ClockDomainCase(FHDLTestCase):
         self.assertEqual(sync.name, "pix")
         self.assertEqual(sync.clk.name, "pix_clk")
         self.assertEqual(sync.rst.name, "pix_rst")
+
+    def test_rename_reset_less(self):
+        sync = ClockDomain(reset_less=True)
+        self.assertEqual(sync.name, "sync")
+        self.assertEqual(sync.clk.name, "clk")
+        sync.rename("pix")
+        self.assertEqual(sync.name, "pix")
+        self.assertEqual(sync.clk.name, "pix_clk")

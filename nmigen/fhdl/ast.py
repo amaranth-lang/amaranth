@@ -626,12 +626,15 @@ class ResetSignal(Value):
     ----------
     domain : str
         Clock domain to obtain a reset signal for. Defaults to ``"sync"``.
+    allow_reset_less : bool
+        If the clock domain is reset-less, act as a constant ``0`` instead of reporting an error.
     """
-    def __init__(self, domain="sync"):
+    def __init__(self, domain="sync", allow_reset_less=False):
         super().__init__()
         if not isinstance(domain, str):
             raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
         self.domain = domain
+        self.allow_reset_less = allow_reset_less
 
     def __repr__(self):
         return "(rst {})".format(self.domain)

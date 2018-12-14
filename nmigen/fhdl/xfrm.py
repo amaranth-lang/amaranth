@@ -2,11 +2,12 @@ from collections import OrderedDict, Iterable
 
 from ..tools import flatten
 from .ast import *
+from .ast import _StatementList
 from .ir import *
 
 
 __all__ = ["ValueTransformer", "StatementTransformer", "FragmentTransformer",
-           "DomainRenamer", "ResetInserter", "CEInserter"]
+           "DomainRenamer", "DomainLowerer", "ResetInserter", "CEInserter"]
 
 
 class ValueTransformer:
@@ -81,7 +82,7 @@ class StatementTransformer:
         return Switch(self.on_value(stmt.test), cases)
 
     def on_statements(self, stmt):
-        return list(flatten(self.on_statement(stmt) for stmt in stmt))
+        return _StatementList(flatten(self.on_statement(stmt) for stmt in stmt))
 
     def on_unknown_statement(self, stmt):
         raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
@@ -164,6 +165,31 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 domain = self.domain_map[domain]
             for signal in signals:
                 new_fragment.drive(signal, domain)
+
+
+class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
+    def __init__(self, domains):
+        self.domains = domains
+
+    def _resolve(self, domain, context):
+        if domain not in self.domains:
+            raise DomainError("Signal {!r} refers to nonexistent domain '{}'"
+                              .format(context, domain))
+        return self.domains[domain]
+
+    def on_ClockSignal(self, value):
+        cd = self._resolve(value.domain, value)
+        return cd.clk
+
+    def on_ResetSignal(self, value):
+        cd = self._resolve(value.domain, value)
+        if cd.rst is None:
+            if value.allow_reset_less:
+                return Const(0)
+            else:
+                raise DomainError("Signal {!r} refers to reset of reset-less domain '{}'"
+                                  .format(value, value.domain))
+        return cd.rst
 
 
 class _ControlInserter(FragmentTransformer):

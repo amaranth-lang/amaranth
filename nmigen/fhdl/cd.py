@@ -2,7 +2,11 @@ from .. import tracer
 from .ast import Signal
 
 
-__all__ = ["ClockDomain"]
+__all__ = ["ClockDomain", "DomainError"]
+
+
+class DomainError(Exception):
+    pass
 
 
 class ClockDomain:

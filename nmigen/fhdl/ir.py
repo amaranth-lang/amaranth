@@ -146,9 +146,13 @@ class Fragment:
     def _insert_domain_resets(self):
         from .xfrm import ResetInserter
 
-        return ResetInserter({
-            cd.name: cd.rst for cd in self.domains.values() if cd.rst is not None
-        })(self)
+        resets = {cd.name: cd.rst for cd in self.domains.values() if cd.rst is not None}
+        return ResetInserter(resets)(self)
+
+    def _lower_domain_signals(self):
+        from .xfrm import DomainLowerer
+
+        return DomainLowerer(self.domains)(self)
 
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
@@ -194,5 +198,6 @@ class Fragment:
         fragment = FragmentTransformer()(self)
         fragment._propagate_domains(ensure_sync_exists)
         fragment = fragment._insert_domain_resets()
+        fragment = fragment._lower_domain_signals()
         fragment._propagate_ports(ports)
         return fragment
