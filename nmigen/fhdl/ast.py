@@ -702,14 +702,17 @@ class Switch(Statement):
 
 
 class Delay(Statement):
-    def __init__(self, interval):
-        self.interval = float(interval)
+    def __init__(self, interval=None):
+        self.interval = None if interval is None else float(interval)
 
     def _rhs_signals(self):
         return ValueSet()
 
     def __repr__(self):
-        return "(delay {:.3}us)".format(self.interval * 10e6)
+        if self.interval is None:
+            return "(delay ε)"
+        else:
+            return "(delay {:.3}us)".format(self.interval * 10e6)
 
 
 class Tick(Statement):

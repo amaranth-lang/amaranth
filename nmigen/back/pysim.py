@@ -421,46 +421,58 @@ class Simulator:
 
     def _run_process(self, process):
         try:
-            stmt = process.send(None)
+            cmd = process.send(None)
+            while True:
+                if isinstance(cmd, Delay):
+                    if cmd.interval is None:
+                        interval = self._epsilon
+                    else:
+                        interval = cmd.interval
+                    self._wait_deadline[process] = self._timestamp + interval
+                    self._suspended.add(process)
+
+                elif isinstance(cmd, Tick):
+                    self._wait_tick[process] = cmd.domain
+                    self._suspended.add(process)
+
+                elif isinstance(cmd, Passive):
+                    self._passive.add(process)
+
+                elif isinstance(cmd, Value):
+                    funclet = _RHSValueCompiler(sensitivity=ValueSet())(cmd)
+                    cmd = process.send(funclet(self._state))
+                    continue
+
+                elif isinstance(cmd, Assign):
+                    lhs_signals = cmd.lhs._lhs_signals()
+                    for signal in lhs_signals:
+                        if not signal in self._signals:
+                            raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                                             "which is not a part of simulation"
+                                             .format(process, signal))
+                        if signal in self._comb_signals:
+                            raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                                             "which is a part of combinatorial assignment in "
+                                             "simulation"
+                                             .format(process, signal))
+
+                    funclet = _StatementCompiler()(cmd)
+                    funclet(self._state)
+
+                    domains = set()
+                    for signal in lhs_signals:
+                        self._commit_signal(signal, domains)
+                    self._commit_sync_signals(domains)
+
+                else:
+                    raise TypeError("Received unsupported command '{!r}' from process {!r}"
+                                    .format(cmd, process))
+
+                break
+
         except StopIteration:
             self._processes.remove(process)
             self._passive.discard(process)
-            return
-
-        if isinstance(stmt, Delay):
-            self._wait_deadline[process] = self._timestamp + stmt.interval
-            self._suspended.add(process)
-
-        elif isinstance(stmt, Tick):
-            self._wait_tick[process] = stmt.domain
-            self._suspended.add(process)
-
-        elif isinstance(stmt, Passive):
-            self._passive.add(process)
-
-        elif isinstance(stmt, Assign):
-            lhs_signals = stmt.lhs._lhs_signals()
-            for signal in lhs_signals:
-                if not signal in self._signals:
-                    raise ValueError("Process {!r} sent a request to set signal '{!r}', "
-                                     "which is not a part of simulation"
-                                     .format(process, signal))
-                if signal in self._comb_signals:
-                    raise ValueError("Process {!r} sent a request to set signal '{!r}', "
-                                     "which is a part of combinatorial assignment in simulation"
-                                     .format(process, signal))
-
-            funclet = _StatementCompiler()(stmt)
-            funclet(self._state)
-
-            domains = set()
-            for signal in lhs_signals:
-                self._commit_signal(signal, domains)
-            self._commit_sync_signals(domains)
-
-        else:
-            raise TypeError("Received unsupported statement '{!r}' from process {!r}"
-                            .format(stmt, process))
 
     def step(self, run_passive=False):
         deadline = None
