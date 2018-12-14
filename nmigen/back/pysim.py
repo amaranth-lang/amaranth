@@ -326,8 +326,13 @@ class Simulator:
                     self._sync_signals.update(signals)
                     self._domain_signals[domain].update(signals)
 
+            statements = []
+            for signal in fragment.iter_comb():
+                statements.append(signal.eq(signal.reset))
+            statements += fragment.statements
+
             compiler = _StatementCompiler()
-            funclet  = compiler(fragment.statements)
+            funclet  = compiler(statements)
             for signal in compiler.sensitivity:
                 self._add_funclet(signal, funclet)
             for domain, cd in fragment.domains.items():

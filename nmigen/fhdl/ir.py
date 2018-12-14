@@ -39,7 +39,8 @@ class Fragment:
                 yield domain, signal
 
     def iter_comb(self):
-        yield from self.drivers[None]
+        if None in self.drivers:
+            yield from self.drivers[None]
 
     def iter_sync(self):
         for domain, signals in self.drivers.items():
