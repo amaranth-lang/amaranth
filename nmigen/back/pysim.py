@@ -27,13 +27,7 @@ class _State:
     def get(self, signal):
         return self.curr[signal]
 
-    def set_curr(self, signal, value):
-        assert isinstance(value, int)
-        if self.curr[signal] != value:
-            self.curr_dirty.add(signal)
-            self.curr[signal] = value
-
-    def set_next(self, signal, value):
+    def set(self, signal, value):
         assert isinstance(value, int)
         if self.next[signal] != value:
             self.next_dirty.add(signal)
@@ -47,11 +41,6 @@ class _State:
             self.curr[signal] = self.next[signal]
         new_value = self.curr[signal]
         return old_value, new_value
-
-    def iter_dirty(self):
-        dirty, self.dirty = self.dirty, ValueSet()
-        for signal in dirty:
-            yield signal, self.curr[signal], self.next[signal]
 
 
 normalize = Const.normalize
@@ -82,6 +71,8 @@ class _RHSValueCompiler(ValueTransformer):
                 return lambda state: normalize(~arg(state), shape)
             if value.op == "-":
                 return lambda state: normalize(-arg(state), shape)
+            if value.op == "b":
+                return lambda state: normalize(bool(arg(state)), shape)
         elif len(value.operands) == 2:
             lhs, rhs = map(self, value.operands)
             if value.op == "+":
@@ -96,11 +87,21 @@ class _RHSValueCompiler(ValueTransformer):
                 return lambda state: normalize(lhs(state) ^ rhs(state), shape)
             if value.op == "==":
                 return lambda state: normalize(lhs(state) == rhs(state), shape)
+            if value.op == "!=":
+                return lambda state: normalize(lhs(state) != rhs(state), shape)
+            if value.op == "<":
+                return lambda state: normalize(lhs(state) <  rhs(state), shape)
+            if value.op == "<=":
+                return lambda state: normalize(lhs(state) <= rhs(state), shape)
+            if value.op == ">":
+                return lambda state: normalize(lhs(state) >  rhs(state), shape)
+            if value.op == ">=":
+                return lambda state: normalize(lhs(state) >= rhs(state), shape)
         elif len(value.operands) == 3:
             if value.op == "m":
                 sel, val1, val0 = map(self, value.operands)
                 return lambda state: val1(state) if sel(state) else val0(state)
-        raise NotImplementedError("Operator '{}' not implemented".format(value.op))
+        raise NotImplementedError("Operator '{!r}' not implemented".format(value.op)) # :nocov:
 
     def on_Slice(self, value):
         shape = value.shape()
@@ -148,7 +149,7 @@ class _StatementCompiler(StatementTransformer):
 
     def lhs_compiler(self, value):
         # TODO
-        return lambda state, arg: state.set_next(value, arg)
+        return lambda state, arg: state.set(value, arg)
 
     def on_Assign(self, stmt):
         assert isinstance(stmt.lhs, Signal)

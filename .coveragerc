@@ -1,5 +1,7 @@
 [run]
 branch = True
+include =
+  nmigen/*
 omit =
   nmigen/test/*
   */__init__.py

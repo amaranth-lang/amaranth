@@ -8,7 +8,7 @@ from ..tools import *
 
 
 __all__ = [
-    "Value", "Const", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
+    "Value", "Const", "C", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Signal", "ClockSignal", "ResetSignal",
     "Statement", "Assign", "Switch", "Delay", "Tick", "Passive",
     "ValueKey", "ValueDict", "ValueSet",
