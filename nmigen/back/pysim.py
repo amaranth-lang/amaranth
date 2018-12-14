@@ -184,9 +184,9 @@ class _StatementCompiler(StatementTransformer):
 class Simulator:
     def __init__(self, fragment=None, vcd_file=None):
         self._fragments       = {}            # fragment -> hierarchy
-        self._domains         = {}            # str -> ClockDomain
-        self._domain_triggers = ValueDict()   # Signal -> str
-        self._domain_signals  = {}            # str -> {Signal}
+        self._domains         = {}            # str/domain -> ClockDomain
+        self._domain_triggers = ValueDict()   # Signal -> str/domain
+        self._domain_signals  = {}            # str/domain -> {Signal}
         self._signals         = ValueSet()    # {Signal}
         self._comb_signals    = ValueSet()    # {Signal}
         self._sync_signals    = ValueSet()    # {Signal}
@@ -198,7 +198,9 @@ class Simulator:
 
         self._processes       = set()         # {process}
         self._passive         = set()         # {process}
-        self._suspended       = {}            # process -> until
+        self._suspended       = set()         # {process}
+        self._wait_deadline   = {}            # process -> float/timestamp
+        self._wait_tick       = {}            # process -> str/domain
 
         self._handlers        = ValueDict()   # Signal -> set(lambda)
 
@@ -303,6 +305,11 @@ class Simulator:
                 if sync_signal in self._domain_signals[domain]:
                     self._commit_signal(sync_signal)
 
+            for proc, wait_domain in list(self._wait_tick.items()):
+                if domain == wait_domain:
+                    del self._wait_tick[proc]
+                    self._suspended.remove(proc)
+
         if self._vcd_writer:
             for vcd_signal in self._vcd_signals[signal]:
                 self._vcd_writer.change(vcd_signal, self._timestamp * 1e10, new)
@@ -335,7 +342,11 @@ class Simulator:
             return
 
         if isinstance(stmt, Delay):
-            self._suspended[proc] = self._timestamp + stmt.interval
+            self._wait_deadline[proc] = self._timestamp + stmt.interval
+            self._suspended.add(proc)
+        elif isinstance(stmt, Tick):
+            self._wait_tick[proc] = stmt.domain
+            self._suspended.add(proc)
         elif isinstance(stmt, Passive):
             self._passive.add(proc)
         elif isinstance(stmt, Assign):
@@ -361,12 +372,15 @@ class Simulator:
 
         # All processes are suspended. Are any of them active?
         if len(self._processes) > len(self._passive) or run_passive:
-            # Schedule the one with the lowest deadline.
-            proc, deadline = min(self._suspended.items(), key=lambda x: x[1])
-            del self._suspended[proc]
-            self._timestamp = deadline
-            self._run_process(proc)
-            return True
+            # Are any of them suspended before a deadline?
+            if self._wait_deadline:
+                # Schedule the one with the lowest deadline.
+                proc, deadline = min(self._wait_deadline.items(), key=lambda x: x[1])
+                del self._wait_deadline[proc]
+                self._suspended.remove(proc)
+                self._timestamp = deadline
+                self._run_process(proc)
+                return True
 
         # No processes, or all processes are passive. Nothing to do!
         return False

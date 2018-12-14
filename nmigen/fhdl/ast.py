@@ -10,7 +10,7 @@ from ..tools import *
 __all__ = [
     "Value", "Const", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Signal", "ClockSignal", "ResetSignal",
-    "Statement", "Assign", "Switch", "Delay", "Passive",
+    "Statement", "Assign", "Switch", "Delay", "Tick", "Passive",
     "ValueKey", "ValueDict", "ValueSet",
 ]
 
@@ -702,6 +702,17 @@ class Delay(Statement):
 
     def __repr__(self):
         return "(delay {:.3}us)".format(self.interval * 10e6)
+
+
+class Tick(Statement):
+    def __init__(self, domain):
+        self.domain = str(domain)
+
+    def _rhs_signals(self):
+        return ValueSet()
+
+    def __repr__(self):
+        return "(tick {})".format(self.domain)
 
 
 class Passive(Statement):
