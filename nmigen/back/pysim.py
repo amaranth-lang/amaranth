@@ -250,15 +250,17 @@ class Simulator:
                 pass
         self.add_process(sync_process())
 
-    def add_clock(self, period, domain="sync"):
+    def add_clock(self, period, phase=None, domain="sync"):
         if self._fastest_clock == self._epsilon or period < self._fastest_clock:
             self._fastest_clock = period
 
         half_period = period / 2
+        if phase is None:
+            phase = half_period
         clk = self._domains[domain].clk
         def clk_process():
             yield Passive()
-            yield Delay(half_period)
+            yield Delay(phase)
             while True:
                 yield clk.eq(1)
                 yield Delay(half_period)
