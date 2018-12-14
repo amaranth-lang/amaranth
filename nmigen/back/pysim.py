@@ -243,7 +243,9 @@ class Simulator:
             try:
                 result = process.send(None)
                 while True:
-                    result = process.send((yield (result or Tick(domain))))
+                    if result is None:
+                        result = Tick(domain)
+                    result = process.send((yield result))
             except StopIteration:
                 pass
         self.add_process(sync_process())
