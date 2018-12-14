@@ -1,4 +1,6 @@
+import math
 from vcd import VCDWriter
+from vcd.gtkw import GTKWSave
 
 from ..tools import flatten
 from ..fhdl.ast import *
@@ -182,7 +184,7 @@ class _StatementCompiler(StatementTransformer):
 
 
 class Simulator:
-    def __init__(self, fragment=None, vcd_file=None):
+    def __init__(self, fragment=None, vcd_file=None, gtkw_file=None, gtkw_signals=()):
         self._fragments       = {}            # fragment -> hierarchy
 
         self._domains         = {}            # str/domain -> ClockDomain
@@ -197,6 +199,7 @@ class Simulator:
         self._started         = False
         self._timestamp       = 0.
         self._epsilon         = 1e-10
+        self._fastest_clock   = self._epsilon
         self._state           = _State()
 
         self._processes       = set()         # {process}
@@ -210,6 +213,10 @@ class Simulator:
         self._vcd_file        = vcd_file
         self._vcd_writer      = None
         self._vcd_signals     = ValueDict()   # signal -> set(vcd_signal)
+        self._vcd_names       = ValueDict()   # signal -> str/name
+
+        self._gtkw_file       = gtkw_file
+        self._gtkw_signals    = gtkw_signals
 
         if fragment is not None:
             fragment = fragment.prepare()
@@ -230,8 +237,11 @@ class Simulator:
         self._processes.add(process)
 
     def add_clock(self, domain, period):
-        clk = self._domains[domain].clk
+        if self._fastest_clock == self._epsilon or period < self._fastest_clock:
+            self._fastest_clock = period
+
         half_period = period / 2
+        clk = self._domains[domain].clk
         def clk_process():
             yield Passive()
             yield Delay(half_period)
@@ -289,6 +299,9 @@ class Simulator:
                         self._vcd_signals[signal].add(self._vcd_writer.register_var(
                             scope=".".join(self._fragments[fragment]), name=name_suffix,
                             var_type="wire", size=signal.nbits, init=signal.reset))
+                        if signal not in self._vcd_names:
+                            self._vcd_names[signal] = \
+                                ".".join(self._fragments[fragment] + (name_suffix,))
                         break
                     except KeyError:
                         suffix = (suffix or 0) + 1
@@ -454,3 +467,27 @@ class Simulator:
     def __exit__(self, *args):
         if self._vcd_writer:
             self._vcd_writer.close(self._timestamp / self._epsilon)
+
+        if self._vcd_file and self._gtkw_file:
+            gtkw_save = GTKWSave(self._gtkw_file)
+            if hasattr(self._vcd_file, "name"):
+                gtkw_save.dumpfile(self._vcd_file.name)
+            if hasattr(self._vcd_file, "tell"):
+                gtkw_save.dumpfile_size(self._vcd_file.tell())
+
+            gtkw_save.treeopen("top")
+            gtkw_save.zoom_markers(math.log(self._epsilon / self._fastest_clock) - 14)
+
+            for domain, cd in self._domains.items():
+                with gtkw_save.group("d.{}".format(domain)):
+                    if cd.rst is not None:
+                        gtkw_save.trace("top.{}".format(cd.rst.name))
+                    gtkw_save.trace("top.{}".format(cd.clk.name))
+
+            for signal in self._gtkw_signals:
+                if signal in self._vcd_names:
+                    if len(signal) > 1:
+                        suffix = "[{}:0]".format(len(signal) - 1)
+                    else:
+                        suffix = ""
+                    gtkw_save.trace(self._vcd_names[signal] + suffix)
