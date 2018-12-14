@@ -295,7 +295,7 @@ class Simulator:
             self._domain_signals[domain] = ValueSet()
 
         hierarchy = {}
-        def add_fragment(fragment, scope=("top",)):
+        def add_fragment(fragment, scope=()):
             hierarchy[fragment] = scope
             for subfragment, name in fragment.subfragments:
                 add_fragment(subfragment, (*scope, name))
