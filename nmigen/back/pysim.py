@@ -68,10 +68,10 @@ class _RHSValueCompiler(ValueTransformer):
         return lambda state: state.get(value)
 
     def on_ClockSignal(self, value):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def on_ResetSignal(self, value):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def on_Operator(self, value):
         shape = value.shape()
@@ -406,46 +406,57 @@ class Simulator:
                         self._commit_signal(signal, domains)
 
                 # Wake up any simulator processes that wait for a domain tick.
-                for proc, wait_domain in list(self._wait_tick.items()):
+                for process, wait_domain in list(self._wait_tick.items()):
                     if domain == wait_domain:
-                        del self._wait_tick[proc]
-                        self._suspended.remove(proc)
+                        del self._wait_tick[process]
+                        self._suspended.remove(process)
 
             # Unless handling synchronous logic above has triggered more synchronous logic (which
             # can happen e.g. if a domain is clocked off a clock divisor in fabric), we're done.
             # Otherwise, do one more round of updates.
 
-    def _force_signal(self, signal, value):
-        assert signal in self._user_signals
-        self._state.set_next(signal, value)
-
-        domains = set()
-        self._commit_signal(signal, domains)
-        self._commit_sync_signals(domains)
-
-    def _run_process(self, proc):
+    def _run_process(self, process):
         try:
-            stmt = proc.send(None)
+            stmt = process.send(None)
         except StopIteration:
-            self._processes.remove(proc)
-            self._passive.discard(proc)
+            self._processes.remove(process)
+            self._passive.discard(process)
             return
 
         if isinstance(stmt, Delay):
-            self._wait_deadline[proc] = self._timestamp + stmt.interval
-            self._suspended.add(proc)
+            self._wait_deadline[process] = self._timestamp + stmt.interval
+            self._suspended.add(process)
+
         elif isinstance(stmt, Tick):
-            self._wait_tick[proc] = stmt.domain
-            self._suspended.add(proc)
+            self._wait_tick[process] = stmt.domain
+            self._suspended.add(process)
+
         elif isinstance(stmt, Passive):
-            self._passive.add(proc)
+            self._passive.add(process)
+
         elif isinstance(stmt, Assign):
-            assert isinstance(stmt.lhs, Signal)
-            assert isinstance(stmt.rhs, Const)
-            self._force_signal(stmt.lhs, normalize(stmt.rhs.value, stmt.lhs.shape()))
+            lhs_signals = stmt.lhs._lhs_signals()
+            for signal in lhs_signals:
+                if not signal in self._signals:
+                    raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                                     "which is not a part of simulation"
+                                     .format(process, signal))
+                if signal in self._comb_signals:
+                    raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                                     "which is a part of combinatorial assignment in simulation"
+                                     .format(process, signal))
+
+            funclet = _StatementCompiler()(stmt)
+            funclet(self._state)
+
+            domains = set()
+            for signal in lhs_signals:
+                self._commit_signal(signal, domains)
+            self._commit_sync_signals(domains)
+
         else:
-            raise TypeError("Received unsupported statement '{!r}' from process {}"
-                            .format(stmt, proc))
+            raise TypeError("Received unsupported statement '{!r}' from process {!r}"
+                            .format(stmt, process))
 
     def step(self, run_passive=False):
         deadline = None
@@ -470,8 +481,8 @@ class Simulator:
         # Are there any processes that haven't had a chance to run yet?
         if len(self._processes) > len(self._suspended):
             # Schedule an arbitrary one.
-            proc = (self._processes - set(self._suspended)).pop()
-            self._run_process(proc)
+            process = (self._processes - set(self._suspended)).pop()
+            self._run_process(process)
             return True
 
         # All processes are suspended. Are any of them active?
@@ -479,11 +490,11 @@ class Simulator:
             # Are any of them suspended before a deadline?
             if self._wait_deadline:
                 # Schedule the one with the lowest deadline.
-                proc, deadline = min(self._wait_deadline.items(), key=lambda x: x[1])
-                del self._wait_deadline[proc]
-                self._suspended.remove(proc)
+                process, deadline = min(self._wait_deadline.items(), key=lambda x: x[1])
+                del self._wait_deadline[process]
+                self._suspended.remove(process)
                 self._timestamp = deadline
-                self._run_process(proc)
+                self._run_process(process)
                 return True
 
         # No processes, or all processes are passive. Nothing to do!
