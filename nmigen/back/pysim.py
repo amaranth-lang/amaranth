@@ -223,8 +223,8 @@ class Simulator:
         for subfragment, name in fragment.subfragments:
             self._add_fragment(subfragment, (*hierarchy, name))
 
-    def add_process(self, fn):
-        self._processes.add(fn)
+    def add_process(self, process):
+        self._processes.add(process)
 
     def add_clock(self, domain, period):
         clk = self._domains[domain].clk
@@ -237,6 +237,16 @@ class Simulator:
                 yield clk.eq(0)
                 yield Delay(half_period)
         self.add_process(clk_process())
+
+    def add_sync_process(self, process, domain="sync"):
+        def sync_process():
+            try:
+                result = process.send(None)
+                while True:
+                    result = process.send((yield (result or Tick(domain))))
+            except StopIteration:
+                pass
+        self.add_process(sync_process())
 
     def _signal_name_in_fragment(self, fragment, signal):
         for subfragment, name in fragment.subfragments:

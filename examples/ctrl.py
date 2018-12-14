@@ -23,11 +23,12 @@ print(verilog.convert(frag, ports=[ctr.o, ctr.ce]))
 
 sim = pysim.Simulator(frag, vcd_file=open("ctrl.vcd", "w"))
 sim.add_clock("sync", 1e-6)
-def sim_proc():
-    yield pysim.Delay(15.25e-6)
-    yield ctr.ce.eq(Const(1))
-    yield pysim.Delay(15.25e-6)
-    yield pysim.Tick("sync")
-    yield ctr.ce.eq(Const(0))
-sim.add_process(sim_proc())
+def ce_proc():
+    yield; yield; yield
+    yield ctr.ce.eq(1)
+    yield; yield; yield
+    yield ctr.ce.eq(0)
+    yield; yield; yield
+    yield ctr.ce.eq(1)
+sim.add_sync_process(ce_proc())
 with sim: sim.run_until(100e-6, run_passive=True)
