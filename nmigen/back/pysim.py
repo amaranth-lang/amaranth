@@ -193,9 +193,9 @@ class Simulator:
     def __init__(self, fragment, vcd_file=None, gtkw_file=None, traces=()):
         self._fragment        = fragment
 
-        self._domains         = {}            # str/domain -> ClockDomain
+        self._domains         = dict()        # str/domain -> ClockDomain
         self._domain_triggers = ValueDict()   # Signal -> str/domain
-        self._domain_signals  = {}            # str/domain -> {Signal}
+        self._domain_signals  = dict()        # str/domain -> {Signal}
 
         self._signals         = ValueSet()    # {Signal}
         self._comb_signals    = ValueSet()    # {Signal}
@@ -210,10 +210,11 @@ class Simulator:
         self._state           = _State()
 
         self._processes       = set()         # {process}
+        self._process_loc     = dict()        # process -> str/loc
         self._passive         = set()         # {process}
         self._suspended       = set()         # {process}
-        self._wait_deadline   = {}            # process -> float/timestamp
-        self._wait_tick       = {}            # process -> str/domain
+        self._wait_deadline   = dict()        # process -> float/timestamp
+        self._wait_tick       = dict()        # process -> str/domain
 
         self._funclets        = ValueDict()   # Signal -> set(lambda)
 
@@ -224,7 +225,8 @@ class Simulator:
         self._gtkw_file       = gtkw_file
         self._traces          = traces
 
-    def _check_process(self, process):
+    @staticmethod
+    def _check_process(process):
         if inspect.isgeneratorfunction(process):
             process = process()
         if not inspect.isgenerator(process):
@@ -232,6 +234,13 @@ class Simulator:
                             "a generator function"
                             .format(process))
         return process
+
+    def _name_process(self, process):
+        if process in self._process_loc:
+            return self._process_loc[process]
+        else:
+            frame = process.gi_frame
+            return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
 
     def add_process(self, process):
         process = self._check_process(process)
@@ -245,10 +254,12 @@ class Simulator:
                 while True:
                     if result is None:
                         result = Tick(domain)
+                    self._process_loc[sync_process] = self._name_process(process)
                     result = process.send((yield result))
             except StopIteration:
                 pass
-        self.add_process(sync_process())
+        sync_process = sync_process()
+        self.add_process(sync_process)
 
     def add_clock(self, period, phase=None, domain="sync"):
         if self._fastest_clock == self._epsilon or period < self._fastest_clock:
@@ -266,7 +277,7 @@ class Simulator:
                 yield Delay(half_period)
                 yield clk.eq(0)
                 yield Delay(half_period)
-        self.add_process(clk_process())
+        self.add_process(clk_process)
 
     def __enter__(self):
         if self._vcd_file:
@@ -443,10 +454,6 @@ class Simulator:
             # Otherwise, do one more round of updates.
 
     def _run_process(self, process):
-        def format_process(process):
-            frame = process.gi_frame
-            return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
-
         try:
             cmd = process.send(None)
             while True:
@@ -477,12 +484,12 @@ class Simulator:
                         if not signal in self._signals:
                             raise ValueError("Process '{}' sent a request to set signal '{!r}', "
                                              "which is not a part of simulation"
-                                             .format(format_process(process), signal))
+                                             .format(self._name_process(process), signal))
                         if signal in self._comb_signals:
                             raise ValueError("Process '{}' sent a request to set signal '{!r}', "
                                              "which is a part of combinatorial assignment in "
                                              "simulation"
-                                             .format(format_process(process), signal))
+                                             .format(self._name_process(process), signal))
 
                     compiler = _StatementCompiler()
                     funclet = compiler(cmd)
@@ -495,7 +502,7 @@ class Simulator:
 
                 else:
                     raise TypeError("Received unsupported command '{!r}' from process '{}'"
-                                    .format(cmd, format_process(process)))
+                                    .format(cmd, self._name_process(process)))
 
                 break
 
