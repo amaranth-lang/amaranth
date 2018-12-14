@@ -7,7 +7,11 @@ from ..fhdl.ast import *
 from ..fhdl.xfrm import ValueTransformer, StatementTransformer
 
 
-__all__ = ["Simulator", "Delay", "Passive"]
+__all__ = ["Simulator", "Delay", "Tick", "Passive", "DeadlineError"]
+
+
+class DeadlineError(Exception):
+    pass
 
 
 class _State:
@@ -426,9 +430,19 @@ class Simulator:
                             .format(stmt, proc))
 
     def step(self, run_passive=False):
+        deadline = None
+        if self._wait_deadline:
+            # We might run some delta cycles, and we have simulator processes waiting on
+            # a deadline. Take care to not exceed the closest deadline.
+            deadline = min(self._wait_deadline.values())
+
         # Are there any delta cycles we should run?
         while self._state.curr_dirty:
             self._timestamp += self._epsilon
+            if deadline is not None and self._timestamp >= deadline:
+                # Oops, we blew the deadline. We *could* run the processes now, but this is
+                # virtually certainly a logic loop and a design bug, so bail out instead.d
+                raise DeadlineError("Delta cycles exceeded process deadline; combinatorial loop?")
 
             domains = set()
             self._update_dirty_signals()
