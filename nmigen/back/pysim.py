@@ -345,6 +345,8 @@ class Simulator:
             statements = []
             for signal in fragment.iter_comb():
                 statements.append(signal.eq(signal.reset))
+            for domain, signal in fragment.iter_sync():
+                statements.append(signal.eq(signal))
             statements += fragment.statements
 
             def add_funclet(signal, funclet):
