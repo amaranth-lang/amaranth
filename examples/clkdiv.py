@@ -20,6 +20,7 @@ frag = ctr.get_fragment(platform=None)
 # print(rtlil.convert(frag, ports=[ctr.o]))
 print(verilog.convert(frag, ports=[ctr.o]))
 
-sim = pysim.Simulator(frag, vcd_file=open("clkdiv.vcd", "w"))
-sim.add_clock("sync", 1e-6)
-with sim: sim.run_until(100e-6, run_passive=True)
+with pysim.Simulator(frag,
+        vcd_file=open("clkdiv.vcd", "w")) as sim:
+    sim.add_clock(1e-6)
+    sim.run_until(100e-6, run_passive=True)

@@ -21,17 +21,17 @@ frag = ctr.get_fragment(platform=None)
 # print(rtlil.convert(frag, ports=[ctr.o, ctr.ce]))
 print(verilog.convert(frag, ports=[ctr.o, ctr.ce]))
 
-sim = pysim.Simulator(frag,
-    vcd_file=open("ctrl.vcd", "w"),
-    gtkw_file=open("ctrl.gtkw", "w"),
-    gtkw_signals=[ctr.ce, ctr.v, ctr.o])
-sim.add_clock("sync", 1e-6)
-def ce_proc():
-    yield; yield; yield
-    yield ctr.ce.eq(1)
-    yield; yield; yield
-    yield ctr.ce.eq(0)
-    yield; yield; yield
-    yield ctr.ce.eq(1)
-sim.add_sync_process(ce_proc())
-with sim: sim.run_until(100e-6, run_passive=True)
+with pysim.Simulator(frag,
+        vcd_file=open("ctrl.vcd", "w"),
+        gtkw_file=open("ctrl.gtkw", "w"),
+        gtkw_signals=[ctr.ce, ctr.v, ctr.o]) as sim:
+    sim.add_clock(1e-6)
+    def ce_proc():
+        yield; yield; yield
+        yield ctr.ce.eq(1)
+        yield; yield; yield
+        yield ctr.ce.eq(0)
+        yield; yield; yield
+        yield ctr.ce.eq(1)
+    sim.add_sync_process(ce_proc())
+    sim.run_until(100e-6, run_passive=True)
