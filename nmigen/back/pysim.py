@@ -204,6 +204,7 @@ class Simulator:
 
         self._started         = False
         self._timestamp       = 0.
+        self._delta           = 0.
         self._epsilon         = 1e-10
         self._fastest_clock   = self._epsilon
         self._state           = _State()
@@ -401,7 +402,8 @@ class Simulator:
                     var_value = signal.decoder(new).replace(" ", "_")
                 else:
                     var_value = new
-                self._vcd_writer.change(vcd_signal, self._timestamp / self._epsilon, var_value)
+                vcd_timestamp = (self._timestamp + self._delta) / self._epsilon
+                self._vcd_writer.change(vcd_signal, vcd_timestamp, var_value)
 
     def _commit_comb_signals(self, domains):
         """Perform the comb part of IR processes (aka RTLIL always)."""
@@ -417,7 +419,7 @@ class Simulator:
         while domains:
             # Advance the timeline a bit (purely for observational purposes) and commit all of them
             # at the same timestamp.
-            self._timestamp += self._epsilon
+            self._delta += self._epsilon
             curr_domains, domains = domains, set()
 
             while curr_domains:
@@ -509,7 +511,8 @@ class Simulator:
         if self._state.curr_dirty:
             # We might run some delta cycles, and we have simulator processes waiting on
             # a deadline. Take care to not exceed the closest deadline.
-            if self._wait_deadline and self._timestamp >= min(self._wait_deadline.values()):
+            if self._wait_deadline and \
+                    (self._timestamp + self._delta) >= min(self._wait_deadline.values()):
                 # Oops, we blew the deadline. We *could* run the processes now, but this is
                 # virtually certainly a logic loop and a design bug, so bail out instead.d
                 raise DeadlineError("Delta cycles exceeded process deadline; combinatorial loop?")
@@ -537,6 +540,7 @@ class Simulator:
                 del self._wait_deadline[process]
                 self._suspended.remove(process)
                 self._timestamp = deadline
+                self._delta = 0.
                 self._run_process(process)
                 return True
 
@@ -556,7 +560,8 @@ class Simulator:
 
     def __exit__(self, *args):
         if self._vcd_writer:
-            self._vcd_writer.close(self._timestamp / self._epsilon)
+            vcd_timestamp = (self._timestamp + self._delta) / self._epsilon
+            self._vcd_writer.close(vcd_timestamp)
 
         if self._vcd_file and self._gtkw_file:
             gtkw_save = GTKWSave(self._gtkw_file)
