@@ -678,9 +678,9 @@ class Switch(Statement):
         self.cases = OrderedDict()
         for key, stmts in cases.items():
             if isinstance(key, (bool, int)):
-                key = "{:0{}b}".format(key, len(test))
+                key = "{:0{}b}".format(key, len(self.test))
             elif isinstance(key, str):
-                assert len(key) == len(test)
+                assert len(key) == len(self.test)
             else:
                 raise TypeError
             if not isinstance(stmts, Iterable):
