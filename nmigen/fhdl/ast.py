@@ -218,6 +218,15 @@ class Const(Value):
     """
     src_loc = None
 
+    @staticmethod
+    def normalize(value, shape):
+        nbits, signed = shape
+        mask = (1 << nbits) - 1
+        value &= mask
+        if signed and value >> (nbits - 1):
+            value |= ~mask
+        return value
+
     def __init__(self, value, shape=None):
         self.value = int(value)
         if shape is None:
@@ -227,11 +236,7 @@ class Const(Value):
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a positive integer")
-
-        mask = (1 << self.nbits) - 1
-        self.value &= mask
-        if self.signed and self.value >> (self.nbits - 1):
-            self.value |= ~mask
+        self.value = self.normalize(self.value, shape)
 
     def shape(self):
         return self.nbits, self.signed
