@@ -489,6 +489,9 @@ class Simulator:
             self._processes.remove(process)
             self._passive.discard(process)
 
+        except Exception as e:
+            process.throw(e)
+
     def step(self, run_passive=False):
         deadline = None
         if self._wait_deadline:
