@@ -19,7 +19,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
         with Simulator(frag,
                 vcd_file =open("test.vcd",  "w"),
                 gtkw_file=open("test.gtkw", "w"),
-                gtkw_signals=[*isigs, osig]) as sim:
+                traces=[*isigs, osig]) as sim:
             def process():
                 for isig, input in zip(isigs, inputs):
                     yield isig.eq(input)

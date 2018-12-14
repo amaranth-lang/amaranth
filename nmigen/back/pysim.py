@@ -191,7 +191,7 @@ class _StatementCompiler(StatementTransformer):
 
 
 class Simulator:
-    def __init__(self, fragment, vcd_file=None, gtkw_file=None, gtkw_signals=()):
+    def __init__(self, fragment, vcd_file=None, gtkw_file=None, traces=()):
         self._fragment        = fragment
 
         self._domains         = {}            # str/domain -> ClockDomain
@@ -221,9 +221,8 @@ class Simulator:
         self._vcd_writer      = None
         self._vcd_signals     = ValueDict()   # signal -> set(vcd_signal)
         self._vcd_names       = ValueDict()   # signal -> str/name
-
         self._gtkw_file       = gtkw_file
-        self._gtkw_signals    = gtkw_signals
+        self._traces          = traces
 
     def _check_process(self, process):
         if inspect.isgeneratorfunction(process):
@@ -578,7 +577,7 @@ class Simulator:
                         add_trace(cd.rst)
                     add_trace(cd.clk)
 
-            for signal in self._gtkw_signals:
+            for signal in self._traces:
                 add_trace(signal)
 
         if self._vcd_file:

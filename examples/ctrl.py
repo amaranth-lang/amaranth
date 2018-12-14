@@ -24,7 +24,7 @@ print(verilog.convert(frag, ports=[ctr.o, ctr.ce]))
 with pysim.Simulator(frag,
         vcd_file=open("ctrl.vcd", "w"),
         gtkw_file=open("ctrl.gtkw", "w"),
-        gtkw_signals=[ctr.ce, ctr.v, ctr.o]) as sim:
+        traces=[ctr.ce, ctr.v, ctr.o]) as sim:
     sim.add_clock(1e-6)
     def ce_proc():
         yield; yield; yield
