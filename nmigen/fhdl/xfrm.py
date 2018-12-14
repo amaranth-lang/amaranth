@@ -3,6 +3,7 @@ from collections import OrderedDict, Iterable
 from ..tools import flatten
 from .ast import *
 from .ast import _StatementList
+from .cd import *
 from .ir import *
 
 

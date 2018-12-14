@@ -5,11 +5,7 @@ from .ast import *
 from .cd import *
 
 
-__all__ = ["Fragment", "DomainError"]
-
-
-class DomainError(Exception):
-    pass
+__all__ = ["Fragment"]
 
 
 class Fragment:
