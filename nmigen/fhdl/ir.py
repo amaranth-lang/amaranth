@@ -1,3 +1,4 @@
+import warnings
 from collections import defaultdict, OrderedDict
 
 from ..tools import *
@@ -5,7 +6,11 @@ from .ast import *
 from .cd import *
 
 
-__all__ = ["Fragment"]
+__all__ = ["Fragment", "DriverConflict"]
+
+
+class DriverConflict(UserWarning):
+    pass
 
 
 class Fragment:
@@ -72,6 +77,77 @@ class Fragment:
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
+
+    def _resolve_driver_conflicts(self, hierarchy=("top",), mode="warn"):
+        assert mode in ("silent", "warn", "error")
+
+        driver_subfrags = ValueDict()
+
+        # For each signal driven by this fragment and/or its subfragments, determine which
+        # subfragments also drive it.
+        for domain, signal in self.iter_drivers():
+            if signal not in driver_subfrags:
+                driver_subfrags[signal] = set()
+            driver_subfrags[signal].add((None, hierarchy))
+
+        for i, (subfrag, name) in enumerate(self.subfragments):
+            # First, recurse into subfragments and let them detect driver conflicts as well.
+            if name is None:
+                name = "<unnamed #{}>".format(i)
+            subfrag_hierarchy = hierarchy + (name,)
+            subfrag_drivers = subfrag._resolve_driver_conflicts(subfrag_hierarchy, mode)
+
+            # Second, classify subfragments by domains they define.
+            for signal in subfrag_drivers:
+                if signal not in driver_subfrags:
+                    driver_subfrags[signal] = set()
+                driver_subfrags[signal].add((subfrag, subfrag_hierarchy))
+
+        # Find out the set of subfragments that needs to be flattened into this fragment
+        # to resolve driver-driver conflicts.
+        flatten_subfrags = set()
+        for signal, subfrags in driver_subfrags.items():
+            if len(subfrags) > 1:
+                flatten_subfrags.update((f, h) for f, h in subfrags if f is not None)
+
+                # While we're at it, show a message.
+                subfrag_names = ", ".join(sorted(".".join(h) for f, h in subfrags))
+                message = ("Signal '{}' is driven from multiple fragments: {}"
+                           .format(signal, subfrag_names))
+                if mode == "error":
+                    raise DriverConflict(message)
+                elif mode == "warn":
+                    message += "; hierarchy will be flattened"
+                    warnings.warn_explicit(message, DriverConflict, *signal.src_loc)
+
+        for subfrag, subfrag_hierarchy in sorted(flatten_subfrags, key=lambda x: x[1]):
+            # Merge subfragment's everything except clock domains into this fragment.
+            # Flattening is done after clock domain propagation, so we can assume the domains
+            # are already the same in every involved fragment in the first place.
+            self.ports.update(subfrag.ports)
+            for domain, signal in subfrag.iter_drivers():
+                self.add_driver(signal, domain)
+            self.statements += subfrag.statements
+            self.subfragments += subfrag.subfragments
+
+            # Remove the merged subfragment.
+            for i, (check_subfrag, check_name) in enumerate(self.subfragments): # :nobr:
+                if subfrag == check_subfrag:
+                    del self.subfragments[i]
+                    break
+
+        # If we flattened anything, we might be in a situation where we have a driver conflict
+        # again, e.g. if we had a tree of fragments like A --- B --- C where only fragments
+        # A and C were driving a signal S. In that case, since B is not driving S itself,
+        # processing B will not result in any flattening, but since B is transitively driving S,
+        # processing A will flatten B into it. Afterwards, we have a tree like AB --- C, which
+        # has another conflict.
+        if any(flatten_subfrags):
+            # Try flattening again.
+            return self._resolve_driver_conflicts(hierarchy, mode)
+
+        # Nothing was flattened, we're done!
+        return ValueSet(driver_subfrags.keys())
 
     def _propagate_domains_up(self, hierarchy=("top",)):
         from .xfrm import DomainRenamer
@@ -193,6 +269,7 @@ class Fragment:
 
         fragment = FragmentTransformer()(self)
         fragment._propagate_domains(ensure_sync_exists)
+        fragment._resolve_driver_conflicts()
         fragment = fragment._insert_domain_resets()
         fragment = fragment._lower_domain_signals()
         fragment._propagate_ports(ports)

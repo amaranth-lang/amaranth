@@ -9,3 +9,5 @@ omit =
 [report]
 exclude_lines =
 	:nocov:
+partial_branches =
+  :nobr:

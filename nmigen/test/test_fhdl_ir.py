@@ -245,3 +245,123 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains.keys(), {"sync"})
         self.assertEqual(f2.domains.keys(), {"sync"})
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
+
+
+class FragmentDriverConflictTestCase(FHDLTestCase):
+    def setUp_self_sub(self):
+        self.s1 = Signal()
+        self.c1 = Signal()
+        self.c2 = Signal()
+
+        self.f1 = Fragment()
+        self.f1.add_statements(self.c1.eq(0))
+        self.f1.add_driver(self.s1)
+        self.f1.add_driver(self.c1, "sync")
+
+        self.f1a = Fragment()
+        self.f1.add_subfragment(self.f1a, "f1a")
+
+        self.f2 = Fragment()
+        self.f2.add_statements(self.c2.eq(1))
+        self.f2.add_driver(self.s1)
+        self.f2.add_driver(self.c2, "sync")
+        self.f1.add_subfragment(self.f2)
+
+        self.f1b = Fragment()
+        self.f1.add_subfragment(self.f1b, "f1b")
+
+        self.f2a = Fragment()
+        self.f2.add_subfragment(self.f2a, "f2a")
+
+    def test_conflict_self_sub(self):
+        self.setUp_self_sub()
+
+        self.f1._resolve_driver_conflicts(mode="silent")
+        self.assertEqual(self.f1.subfragments, [
+            (self.f1a, "f1a"),
+            (self.f1b, "f1b"),
+            (self.f2a, "f2a"),
+        ])
+        self.assertRepr(self.f1.statements, """
+        (
+            (eq (sig c1) (const 1'd0))
+            (eq (sig c2) (const 1'd1))
+        )
+        """)
+        self.assertEqual(self.f1.drivers, {
+            None:   ValueSet((self.s1,)),
+            "sync": ValueSet((self.c1, self.c2)),
+        })
+
+    def test_conflict_self_sub_error(self):
+        self.setUp_self_sub()
+
+        with self.assertRaises(DriverConflict,
+                msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>"):
+            self.f1._resolve_driver_conflicts(mode="error")
+
+    def test_conflict_self_sub_warning(self):
+        self.setUp_self_sub()
+
+        with self.assertWarns(DriverConflict,
+                msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>; "
+                    "hierarchy will be flattened"):
+            self.f1._resolve_driver_conflicts(mode="warn")
+
+    def setUp_sub_sub(self):
+        self.s1 = Signal()
+        self.c1 = Signal()
+        self.c2 = Signal()
+
+        self.f1 = Fragment()
+
+        self.f2 = Fragment()
+        self.f2.add_driver(self.s1)
+        self.f2.add_statements(self.c1.eq(0))
+        self.f1.add_subfragment(self.f2)
+
+        self.f3 = Fragment()
+        self.f3.add_driver(self.s1)
+        self.f3.add_statements(self.c2.eq(1))
+        self.f1.add_subfragment(self.f3)
+
+    def test_conflict_sub_sub(self):
+        self.setUp_sub_sub()
+
+        self.f1._resolve_driver_conflicts(mode="silent")
+        self.assertEqual(self.f1.subfragments, [])
+        self.assertRepr(self.f1.statements, """
+        (
+            (eq (sig c1) (const 1'd0))
+            (eq (sig c2) (const 1'd1))
+        )
+        """)
+
+    def setUp_self_subsub(self):
+        self.s1 = Signal()
+        self.c1 = Signal()
+        self.c2 = Signal()
+
+        self.f1 = Fragment()
+        self.f1.add_driver(self.s1)
+
+        self.f2 = Fragment()
+        self.f2.add_statements(self.c1.eq(0))
+        self.f1.add_subfragment(self.f2)
+
+        self.f3 = Fragment()
+        self.f3.add_driver(self.s1)
+        self.f3.add_statements(self.c2.eq(1))
+        self.f2.add_subfragment(self.f3)
+
+    def test_conflict_self_subsub(self):
+        self.setUp_self_subsub()
+
+        self.f1._resolve_driver_conflicts(mode="silent")
+        self.assertEqual(self.f1.subfragments, [])
+        self.assertRepr(self.f1.statements, """
+        (
+            (eq (sig c1) (const 1'd0))
+            (eq (sig c2) (const 1'd1))
+        )
+        """)
