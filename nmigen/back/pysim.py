@@ -435,6 +435,10 @@ class Simulator:
             # Otherwise, do one more round of updates.
 
     def _run_process(self, process):
+        def format_process(process):
+            frame = process.gi_frame
+            return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
+
         try:
             cmd = process.send(None)
             while True:
@@ -462,14 +466,14 @@ class Simulator:
                     lhs_signals = cmd.lhs._lhs_signals()
                     for signal in lhs_signals:
                         if not signal in self._signals:
-                            raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                            raise ValueError("Process '{}' sent a request to set signal '{!r}', "
                                              "which is not a part of simulation"
-                                             .format(process, signal))
+                                             .format(format_process(process), signal))
                         if signal in self._comb_signals:
-                            raise ValueError("Process {!r} sent a request to set signal '{!r}', "
+                            raise ValueError("Process '{}' sent a request to set signal '{!r}', "
                                              "which is a part of combinatorial assignment in "
                                              "simulation"
-                                             .format(process, signal))
+                                             .format(format_process(process), signal))
 
                     funclet = _StatementCompiler()(cmd)
                     funclet(self._state)
@@ -480,8 +484,8 @@ class Simulator:
                     self._commit_sync_signals(domains)
 
                 else:
-                    raise TypeError("Received unsupported command '{!r}' from process {!r}"
-                                    .format(cmd, process))
+                    raise TypeError("Received unsupported command '{!r}' from process '{}'"
+                                    .format(cmd, format_process(process)))
 
                 break
 
