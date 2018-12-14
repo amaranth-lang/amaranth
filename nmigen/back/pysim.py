@@ -1,5 +1,6 @@
 import math
 import inspect
+from contextlib import contextmanager
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
@@ -24,9 +25,6 @@ class _State:
         self.curr_dirty = ValueSet()
         self.next_dirty = ValueSet()
 
-    def get(self, signal):
-        return self.curr[signal]
-
     def set(self, signal, value):
         assert isinstance(value, int)
         if self.next[signal] != value:
@@ -47,15 +45,21 @@ normalize = Const.normalize
 
 
 class _RHSValueCompiler(ValueTransformer):
-    def __init__(self, sensitivity):
+    def __init__(self, sensitivity=None):
         self.sensitivity = sensitivity
+        self.signal_mode = "next"
 
     def on_Const(self, value):
         return lambda state: value.value
 
     def on_Signal(self, value):
-        self.sensitivity.add(value)
-        return lambda state: state.get(value)
+        if self.sensitivity:
+            self.sensitivity.add(value)
+        if self.signal_mode == "curr":
+            return lambda state: state.curr[value]
+        if self.signal_mode == "next":
+            return lambda state: state.next[value]
+        raise NotImplementedError # :nocov:
 
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
@@ -146,6 +150,14 @@ class _StatementCompiler(StatementTransformer):
     def __init__(self):
         self.sensitivity  = ValueSet()
         self.rhs_compiler = _RHSValueCompiler(self.sensitivity)
+
+    @contextmanager
+    def initial(self):
+        try:
+            self.rhs_compiler.signal_mode = "curr"
+            yield
+        finally:
+            self.rhs_compiler.signal_mode = "next"
 
     def lhs_compiler(self, value):
         # TODO
@@ -342,20 +354,28 @@ class Simulator:
                     self._sync_signals.update(signals)
                     self._domain_signals[domain].update(signals)
 
-            statements = []
+            initial_stmts = []
             for signal in fragment.iter_comb():
-                statements.append(signal.eq(signal.reset))
+                initial_stmts.append(signal.eq(signal.reset))
             for domain, signal in fragment.iter_sync():
-                statements.append(signal.eq(signal))
-            statements += fragment.statements
+                initial_stmts.append(signal.eq(signal))
+
+            compiler = _StatementCompiler()
+            def make_funclet():
+                with compiler.initial():
+                    funclet_init = compiler(initial_stmts)
+                funclet_frag = compiler(fragment.statements)
+                def funclet(state):
+                    funclet_init(state)
+                    funclet_frag(state)
+                return funclet
+            funclet = make_funclet()
 
             def add_funclet(signal, funclet):
                 if signal not in self._funclets:
                     self._funclets[signal] = set()
                 self._funclets[signal].add(funclet)
 
-            compiler = _StatementCompiler()
-            funclet  = compiler(statements)
             for signal in compiler.sensitivity:
                 add_funclet(signal, funclet)
             for domain, cd in fragment.domains.items():
@@ -464,7 +484,7 @@ class Simulator:
                     self._passive.add(process)
 
                 elif isinstance(cmd, Value):
-                    funclet = _RHSValueCompiler(sensitivity=ValueSet())(cmd)
+                    funclet = _RHSValueCompiler()(cmd)
                     cmd = process.send(funclet(self._state))
                     continue
 
