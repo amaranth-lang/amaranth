@@ -241,7 +241,7 @@ class Simulator:
         process = self._check_process(process)
         def sync_process():
             try:
-                result = process.send(None)
+                result = None
                 while True:
                     if result is None:
                         result = Tick(domain)
