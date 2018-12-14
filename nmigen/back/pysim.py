@@ -556,16 +556,19 @@ class Simulator:
             gtkw_save.treeopen("top")
             gtkw_save.zoom_markers(math.log(self._epsilon / self._fastest_clock) - 14)
 
-            for domain, cd in self._domains.items():
-                with gtkw_save.group("d.{}".format(domain)):
-                    if cd.rst is not None:
-                        gtkw_save.trace(self._vcd_names[cd.rst])
-                    gtkw_save.trace(self._vcd_names[cd.clk])
-
-            for signal in self._gtkw_signals:
+            def add_trace(signal, **kwargs):
                 if signal in self._vcd_names:
                     if len(signal) > 1:
                         suffix = "[{}:0]".format(len(signal) - 1)
                     else:
                         suffix = ""
-                    gtkw_save.trace(self._vcd_names[signal] + suffix)
+                    gtkw_save.trace(self._vcd_names[signal] + suffix, **kwargs)
+
+            for domain, cd in self._domains.items():
+                with gtkw_save.group("d.{}".format(domain)):
+                    if cd.rst is not None:
+                        add_trace(cd.rst)
+                    add_trace(cd.clk)
+
+            for signal in self._gtkw_signals:
+                add_trace(signal)
