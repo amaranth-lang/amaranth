@@ -1,10 +1,10 @@
-from ...genlib.io import TSTriple as NewTSTriple
+from ...genlib.io import TSTriple as NativeTSTriple
 
 
 __all__ = ["TSTriple"]
 
 
-class CompatTSTriple(NewTSTriple):
+class CompatTSTriple(NativeTSTriple):
     def __init__(self, bits_sign=None, min=None, max=None, reset_o=0, reset_oe=0, reset_i=0,
                  name=None):
         super().__init__(shape=bits_sign, min=min, max=max,
