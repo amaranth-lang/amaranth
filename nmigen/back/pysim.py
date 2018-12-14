@@ -33,11 +33,11 @@ class _State:
 
     def commit(self, signal):
         old_value = self.curr[signal]
-        if self.curr[signal] != self.next[signal]:
+        new_value = self.next[signal]
+        if old_value != new_value:
             self.next_dirty.remove(signal)
             self.curr_dirty.add(signal)
-            self.curr[signal] = self.next[signal]
-        new_value = self.curr[signal]
+            self.curr[signal] = new_value
         return old_value, new_value
 
 
@@ -288,7 +288,7 @@ class Simulator:
                 add_fragment(subfragment, (*scope, name))
         add_fragment(root_fragment)
 
-        for fragment, fragment_name in hierarchy.items():
+        for fragment, fragment_scope in hierarchy.items():
             for signal in fragment.iter_signals():
                 self._signals.add(signal)
 
@@ -326,10 +326,10 @@ class Simulator:
                         else:
                             var_name_suffix = "{}${}".format(var_name, suffix)
                         self._vcd_signals[signal].add(self._vcd_writer.register_var(
-                            scope=".".join(fragment_name), name=var_name_suffix,
+                            scope=".".join(fragment_scope), name=var_name_suffix,
                             var_type=var_type, size=var_size, init=var_init))
                         if signal not in self._vcd_names:
-                            self._vcd_names[signal] = ".".join(fragment_name + (var_name_suffix,))
+                            self._vcd_names[signal] = ".".join(fragment_scope + (var_name_suffix,))
                         break
                     except KeyError:
                         suffix = (suffix or 0) + 1
@@ -408,7 +408,7 @@ class Simulator:
         # Take the computed value (at the start of this delta cycle) of every comb signal and
         # update the value for this delta cycle.
         for signal in self._state.next_dirty:
-            if signal in self._comb_signals or signal in self._user_signals:
+            if signal in self._comb_signals:
                 self._commit_signal(signal, domains)
 
     def _commit_sync_signals(self, domains):
@@ -505,24 +505,21 @@ class Simulator:
             process.throw(e)
 
     def step(self, run_passive=False):
-        deadline = None
-        if self._wait_deadline:
+        # Are there any delta cycles we should run?
+        if self._state.curr_dirty:
             # We might run some delta cycles, and we have simulator processes waiting on
             # a deadline. Take care to not exceed the closest deadline.
-            deadline = min(self._wait_deadline.values())
-
-        # Are there any delta cycles we should run?
-        while self._state.curr_dirty:
-            self._timestamp += self._epsilon
-            if deadline is not None and self._timestamp >= deadline:
+            if self._wait_deadline and self._timestamp >= min(self._wait_deadline.values()):
                 # Oops, we blew the deadline. We *could* run the processes now, but this is
                 # virtually certainly a logic loop and a design bug, so bail out instead.d
                 raise DeadlineError("Delta cycles exceeded process deadline; combinatorial loop?")
 
             domains = set()
-            self._update_dirty_signals()
-            self._commit_comb_signals(domains)
+            while self._state.curr_dirty:
+                self._update_dirty_signals()
+                self._commit_comb_signals(domains)
             self._commit_sync_signals(domains)
+            return True
 
         # Are there any processes that haven't had a chance to run yet?
         if len(self._processes) > len(self._suspended):
