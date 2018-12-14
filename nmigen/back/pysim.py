@@ -279,14 +279,14 @@ class Simulator:
                 self._domain_triggers[cd.rst] = domain
             self._domain_signals[domain] = ValueSet()
 
-        fragment_names = {}
-        def add_fragment(fragment, hierarchy=("top",)):
-            fragment_names[fragment] = hierarchy
+        hierarchy = {}
+        def add_fragment(fragment, scope=("top",)):
+            hierarchy[fragment] = scope
             for subfragment, name in fragment.subfragments:
-                add_fragment(subfragment, (*hierarchy, name))
+                add_fragment(subfragment, (*scope, name))
         add_fragment(root_fragment)
 
-        for fragment, fragment_name in fragment_names.items():
+        for fragment, fragment_name in hierarchy.items():
             for signal in fragment.iter_signals():
                 self._signals.add(signal)
 
