@@ -281,6 +281,9 @@ class Simulator:
                     normalize(signal.reset, signal.shape())
                 self._state.curr_dirty.add(signal)
 
+                if not self._vcd_writer:
+                    continue
+
                 if signal not in self._vcd_signals:
                     self._vcd_signals[signal] = set()
 
