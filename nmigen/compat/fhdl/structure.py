@@ -29,10 +29,12 @@ def Constant(value, bits_sign=None):
 class If(ast.Switch):
     @deprecated("instead of `If(cond, ...)`, use `with m.If(cond): ...`")
     def __init__(self, cond, *stmts):
+        cond = Value.wrap(cond).bool()
         super().__init__(cond, {"1": ast.Statement.wrap(stmts)})
 
     @deprecated("instead of `.Elif(cond, ...)`, use `with m.Elif(cond): ...`")
     def Elif(self, cond, *stmts):
+        cond = Value.wrap(cond).bool()
         self.cases = OrderedDict(("-" + k, v) for k, v in self.cases.items())
         self.cases["1" + "-" * len(self.test)] = ast.Statement.wrap(stmts)
         self.test = Cat(self.test, cond)
