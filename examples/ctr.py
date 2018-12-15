@@ -2,9 +2,9 @@ from nmigen import *
 from nmigen.back import rtlil, verilog, pysim
 
 
-class ClockDivisor:
-    def __init__(self, factor):
-        self.v = Signal(factor, reset=2**factor-1)
+class Counter:
+    def __init__(self, width):
+        self.v = Signal(width, reset=2**width-1)
         self.o = Signal()
 
     def get_fragment(self, platform):
@@ -14,13 +14,13 @@ class ClockDivisor:
         return m.lower(platform)
 
 
-ctr  = ClockDivisor(factor=16)
+ctr  = Counter(width=16)
 frag = ctr.get_fragment(platform=None)
 
 # print(rtlil.convert(frag, ports=[ctr.o]))
 print(verilog.convert(frag, ports=[ctr.o]))
 
 with pysim.Simulator(frag,
-        vcd_file=open("clkdiv.vcd", "w")) as sim:
+        vcd_file=open("ctr.vcd", "w")) as sim:
     sim.add_clock(1e-6)
     sim.run_until(100e-6, run_passive=True)

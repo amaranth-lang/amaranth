@@ -2,9 +2,9 @@ from nmigen import *
 from nmigen.back import rtlil, verilog, pysim
 
 
-class ClockDivisor:
-    def __init__(self, factor):
-        self.v = Signal(factor, reset=2**factor-1)
+class Counter:
+    def __init__(self, width):
+        self.v = Signal(width, reset=2**width-1)
         self.o = Signal()
         self.ce = Signal()
 
@@ -15,7 +15,7 @@ class ClockDivisor:
         return CEInserter(self.ce)(m.lower(platform))
 
 
-ctr  = ClockDivisor(factor=16)
+ctr  = Counter(width=16)
 frag = ctr.get_fragment(platform=None)
 
 # print(rtlil.convert(frag, ports=[ctr.o, ctr.ce]))
