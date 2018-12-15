@@ -606,10 +606,11 @@ class Signal(Value, DUID):
 
 
 class ClockSignal(Value):
-    """Clock signal for a given clock domain.
+    """Clock signal for a clock domain.
 
-    ``ClockSignal`` s for a given clock domain can be retrieved multiple
-    times. They all ultimately refer to the same signal.
+    Any ``ClockSignal`` is equivalent to ``cd.clk`` for a clock domain with the corresponding name.
+    All of these signals ultimately refer to the same signal, but they can be manipulated
+    independently of the clock domain, even before the clock domain is created.
 
     Parameters
     ----------
@@ -633,10 +634,11 @@ class ClockSignal(Value):
 
 
 class ResetSignal(Value):
-    """Reset signal for a given clock domain
+    """Reset signal for a clock domain.
 
-    ``ResetSignal`` s for a given clock domain can be retrieved multiple
-    times. They all ultimately refer to the same signal.
+    Any ``ResetSignal`` is equivalent to ``cd.rst`` for a clock domain with the corresponding name.
+    All of these signals ultimately refer to the same signal, but they can be manipulated
+    independently of the clock domain, even before the clock domain is created.
 
     Parameters
     ----------
