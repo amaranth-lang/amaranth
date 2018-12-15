@@ -1,8 +1,8 @@
 import warnings
 from collections import OrderedDict
 
-from ...fhdl.xfrm import ValueTransformer, StatementTransformer
-from ...fhdl.ast import *
+from ...hdl.xfrm import ValueTransformer, StatementTransformer
+from ...hdl.ast import *
 from ..fhdl.module import CompatModule, CompatFinalizeError
 from ..fhdl.structure import If, Case
 

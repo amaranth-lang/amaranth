@@ -1,4 +1,4 @@
-from ..fhdl.cd import *
+from ..hdl.cd import *
 from .tools import *
 
 

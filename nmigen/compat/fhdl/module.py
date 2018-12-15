@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from ...tools import flatten, deprecated
-from ...fhdl import dsl
+from ...hdl import dsl
 
 
 __all__ = ["Module", "FinalizeError"]

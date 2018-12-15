@@ -1,4 +1,4 @@
-from ..fhdl.ast import *
+from ..hdl.ast import *
 from .tools import *
 
 

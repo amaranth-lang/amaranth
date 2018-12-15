@@ -1,7 +1,7 @@
-from ..fhdl.ast import *
-from ..fhdl.cd import *
-from ..fhdl.ir import *
-from ..fhdl.xfrm import *
+from ..hdl.ast import *
+from ..hdl.cd import *
+from ..hdl.ir import *
+from ..hdl.xfrm import *
 from .tools import *
 
 

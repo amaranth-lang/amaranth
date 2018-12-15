@@ -1,5 +1,5 @@
 from ... import tools
-from ...fhdl import ast
+from ...hdl import ast
 from ...tools import deprecated
 
 

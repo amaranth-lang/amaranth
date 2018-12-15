@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 from ...tools import deprecated
-from ...fhdl import ast
-from ...fhdl.ast import DUID, Value, Signal, Mux, Cat, Repl, Const, C, ClockSignal, ResetSignal
-from ...fhdl.cd import ClockDomain
+from ...hdl import ast
+from ...hdl.ast import DUID, Value, Signal, Mux, Cat, Repl, Const, C, ClockSignal, ResetSignal
+from ...hdl.cd import ClockDomain
 
 
 __all__ = ["DUID", "wrap", "Mux", "Cat", "Replicate", "Constant", "C", "Signal", "ClockSignal",

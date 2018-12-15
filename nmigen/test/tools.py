@@ -3,7 +3,7 @@ import unittest
 import warnings
 from contextlib import contextmanager
 
-from ..fhdl.ast import *
+from ..hdl.ast import *
 
 
 __all__ = ["FHDLTestCase"]

@@ -3,7 +3,7 @@ import textwrap
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 
-from ..fhdl import ast, ir, xfrm
+from ..hdl import ast, ir, xfrm
 
 
 class _Namer:

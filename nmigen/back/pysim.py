@@ -5,8 +5,8 @@ from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
 from ..tools import flatten
-from ..fhdl.ast import *
-from ..fhdl.xfrm import ValueTransformer, StatementTransformer
+from ..hdl.ast import *
+from ..hdl.xfrm import ValueTransformer, StatementTransformer
 
 
 __all__ = ["Simulator", "Delay", "Tick", "Passive", "DeadlineError"]

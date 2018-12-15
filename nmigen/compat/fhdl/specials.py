@@ -1,4 +1,4 @@
-from ...genlib.io import TSTriple as NativeTSTriple
+from ...lib.io import TSTriple as NativeTSTriple
 
 
 __all__ = ["TSTriple"]

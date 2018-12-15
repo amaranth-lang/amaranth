@@ -1,4 +1,4 @@
-from ..fhdl import *
+from .. import *
 
 
 __all__ = ["MultiReg"]

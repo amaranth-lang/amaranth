@@ -27,13 +27,13 @@ Status legend:
 Compatibility summary
 ---------------------
 
-  - (−) `fhdl`
+  - (−) `fhdl` → `.hdl`
     - (+) `bitcontainer` ⇒ `.tools`
       - (+) `log2_int` id
       - (+) `bits_for` id
       - (+) `value_bits_sign` → `Value.shape`
     - (−) `conv_output` ?
-    - (+) `decorators` ⇒ `.fhdl.xfrm`
+    - (+) `decorators` ⇒ `.hdl.xfrm`
       <br>Note: `transform_*` methods not considered part of public API.
       - (⊙) `ModuleTransformer` **brk**
       - (⊙) `ControlInserter` **brk**
@@ -41,9 +41,9 @@ Compatibility summary
       - (+) `ResetInserter` id, `clock_domains=`→`controls=`
       - (+) `ClockDomainsRenamer` → `DomainRenamer`, `cd_remapping=`→`domain_map=`
     - (⊙) `edif` **brk**
-    - (+) `module` **obs** → `.fhdl.dsl`
+    - (+) `module` **obs** → `.hdl.dsl`
       - (+) `FinalizeError` **obs**
-      - (+) `Module` **obs** → `.fhdl.dsl.Module`
+      - (+) `Module` **obs** → `.hdl.dsl.Module`
     - (⊙) `namer` **brk**
     - (−) `simplify` ?
       - (−) `FullMemoryWE` ?
@@ -52,12 +52,12 @@ Compatibility summary
     - (−) `specials` **obs**
       - (−) `Special` ?
       - (−) `Tristate` ?
-      - (+) `TSTriple` → `.genlib.io.TSTriple`, `bits_sign=`→`shape=`
+      - (+) `TSTriple` → `.lib.io.TSTriple`, `bits_sign=`→`shape=`
       - (−) `Instance` ?
       - (−) `READ_FIRST`/`WRITE_FIRST`/`NO_CHANGE` ?
       - (−) `_MemoryPort` ?
       - (−) `Memory` ?
-    - (−) `structure` → `.fhdl.ast`
+    - (−) `structure` → `.hdl.ast`
       - (+) `DUID` id
       - (+) `_Value` → `Value`
         <br>Note: values no longer valid as keys in `dict` and `set`; use `ValueDict` and `ValueSet` instead.
@@ -75,14 +75,14 @@ Compatibility summary
       - (+) `_Statement` → `Statement`
       - (+) `_Assign` → `Assign`, `l=`→`lhs=`, `r=`→`rhs=`
       - (-) `_check_statement` **obs** → `Statement.wrap`
-      - (+) `If` **obs** → `.fhdl.dsl.Module.If`
-      - (+) `Case` **obs** → `.fhdl.dsl.Module.Switch`
+      - (+) `If` **obs** → `.hdl.dsl.Module.If`
+      - (+) `Case` **obs** → `.hdl.dsl.Module.Switch`
       - (−) `_ArrayProxy` ?
       - (−) `Array` ?
-      - (+) `ClockDomain` → `.fhdl.cd.ClockDomain`
+      - (+) `ClockDomain` → `.hdl.cd.ClockDomain`
       - (−) `_ClockDomainList` ?
       - (−) `SPECIAL_INPUT`/`SPECIAL_OUTPUT`/`SPECIAL_INOUT` ?
-      - (⊙) `_Fragment` **brk** → `.fhdl.ir.Fragment`
+      - (⊙) `_Fragment` **brk** → `.hdl.ir.Fragment`
     - (−) `tools` **brk**
       - (−) `list_signals` ?
       - (−) `list_targets` ?
@@ -94,12 +94,12 @@ Compatibility summary
       - (−) `is_variable` ?
       - (⊙) `generate_reset` **brk**
       - (⊙) `insert_reset` **brk**
-      - (⊙) `insert_resets` **brk** → `.fhdl.xfrm.ResetInserter`
+      - (⊙) `insert_resets` **brk** → `.hdl.xfrm.ResetInserter`
       - (⊙) `lower_basics` **brk**
       - (⊙) `lower_complex_slices` **brk**
       - (⊙) `lower_complex_parts` **brk**
       - (⊙) `rename_clock_domain_expr` **brk**
-      - (⊙) `rename_clock_domain` **brk** → `.fhdl.xfrm.DomainRenamer`
+      - (⊙) `rename_clock_domain` **brk** → `.hdl.xfrm.DomainRenamer`
       - (⊙) `call_special_classmethod` **brk**
       - (⊙) `lower_specials` **brk**
     - (−) `tracer` **brk**
@@ -111,10 +111,10 @@ Compatibility summary
     - (−) `verilog`
       - (−) `DummyAttrTranslate` ?
       - (−) `convert` **obs** → `.back.verilog.convert`
-    - (⊙) `visit` **brk** → `.fhdl.xfrm`
+    - (⊙) `visit` **brk** → `.hdl.xfrm`
       - (⊙) `NodeVisitor` **brk**
-      - (⊙) `NodeTransformer` **brk** → `.fhdl.xfrm.ValueTransformer`/`.fhdl.xfrm.StatementTransformer`
-  - (−) `genlib`
+      - (⊙) `NodeTransformer` **brk** → `.hdl.xfrm.ValueTransformer`/`.hdl.xfrm.StatementTransformer`
+  - (−) `genlib` → `.lib`
     - (−) `cdc` ?
       - (−) `MultiRegImpl` ?
       - (+) `MultiReg` id
@@ -177,7 +177,7 @@ Compatibility summary
     - (⊙) `vcd` **brk** → `vcd`
     - (⊙) `Simulator` **brk**
     - (+) `run_simulation` **obs** → `.back.pysim.Simulator`
-    - (−) `passive` **obs** → `.fhdl.ast.Passive`
+    - (−) `passive` **obs** → `.hdl.ast.Passive`
   - (−) `build` ?
   - (+) `util` **obs**
     - (+) `misc` ⇒ `.tools`

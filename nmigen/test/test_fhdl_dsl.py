@@ -1,5 +1,5 @@
-from ..fhdl.ast import *
-from ..fhdl.dsl import *
+from ..hdl.ast import *
+from ..hdl.dsl import *
 from .tools import *
 
 

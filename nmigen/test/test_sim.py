@@ -1,6 +1,6 @@
 from .tools import *
-from ..fhdl.ast import *
-from ..fhdl.ir import *
+from ..hdl.ast import *
+from ..hdl.ir import *
 from ..back.pysim import *
 
 
