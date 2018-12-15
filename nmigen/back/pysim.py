@@ -100,7 +100,7 @@ class _RHSValueCompiler(ValueTransformer):
             if value.op == "m":
                 sel, val1, val0 = map(self, value.operands)
                 return lambda state: val1(state) if sel(state) else val0(state)
-        raise NotImplementedError("Operator '{!r}' not implemented".format(value.op)) # :nocov:
+        raise NotImplementedError("Operator '{}' not implemented".format(value.op)) # :nocov:
 
     def on_Slice(self, value):
         shape = value.shape()

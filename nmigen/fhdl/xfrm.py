@@ -41,7 +41,7 @@ class ValueTransformer:
         return Repl(self.on_value(value.value), value.count)
 
     def on_unknown_value(self, value):
-        raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+        raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
 
     def on_value(self, value):
         if isinstance(value, Const):
@@ -87,7 +87,7 @@ class StatementTransformer:
         return _StatementList(flatten(self.on_statement(stmt) for stmt in stmt))
 
     def on_unknown_statement(self, stmt):
-        raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
+        raise TypeError("Cannot transform statement '{!r}'".format(stmt)) # :nocov:
 
     def on_statement(self, stmt):
         if isinstance(stmt, Assign):

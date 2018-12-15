@@ -34,7 +34,7 @@ class Value(metaclass=ABCMeta):
         elif isinstance(obj, (bool, int)):
             return Const(obj)
         else:
-            raise TypeError("Object {!r} is not a Migen value".format(repr(obj)))
+            raise TypeError("Object '{!r}' is not a Migen value".format(obj))
 
     def __init__(self, src_loc_at=0):
         super().__init__()
@@ -344,9 +344,9 @@ def Mux(sel, val1, val0):
 class Slice(Value):
     def __init__(self, value, start, end):
         if not isinstance(start, int):
-            raise TypeError("Slice start must be an integer, not {!r}".format(start))
+            raise TypeError("Slice start must be an integer, not '{!r}'".format(start))
         if not isinstance(end, int):
-            raise TypeError("Slice end must be an integer, not {!r}".format(end))
+            raise TypeError("Slice end must be an integer, not '{!r}'".format(end))
 
         n = len(value)
         if start not in range(-n, n):
@@ -381,7 +381,7 @@ class Slice(Value):
 class Part(Value):
     def __init__(self, value, offset, width):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("Part width must be a non-negative integer, not {!r}".format(width))
+            raise TypeError("Part width must be a non-negative integer, not '{!r}'".format(width))
 
         super().__init__()
         self.value  = value
@@ -464,7 +464,7 @@ class Repl(Value):
     """
     def __init__(self, value, count):
         if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a non-negative integer, not {!r}"
+            raise TypeError("Replication count must be a non-negative integer, not '{!r}'"
                             .format(count))
 
         super().__init__()
@@ -544,7 +544,7 @@ class Signal(Value, DUID):
                 max = 2
             max -= 1  # make both bounds inclusive
             if not min < max:
-                raise ValueError("Lower bound {!r} should be less than higher bound {!r}"
+                raise ValueError("Lower bound {} should be less than higher bound {}"
                                  .format(min, max))
             self.signed = min < 0 or max < 0
             self.nbits  = builtins.max(bits_for(min, self.signed), bits_for(max, self.signed))
@@ -558,7 +558,7 @@ class Signal(Value, DUID):
                 self.nbits, self.signed = shape
 
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}".format(self.nbits))
+            raise TypeError("Width must be a non-negative integer, not '{!r}'".format(self.nbits))
         self.reset = int(reset)
         self.reset_less = bool(reset_less)
 
@@ -609,7 +609,7 @@ class ClockSignal(Value):
     def __init__(self, domain="sync"):
         super().__init__()
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+            raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
         self.domain = domain
 
     def shape(self):
@@ -638,7 +638,7 @@ class ResetSignal(Value):
     def __init__(self, domain="sync", allow_reset_less=False):
         super().__init__()
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+            raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
         self.domain = domain
         self.allow_reset_less = allow_reset_less
 
@@ -666,7 +666,7 @@ class Statement:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
             else:
-                raise TypeError("Object {!r} is not a Migen statement".format(obj))
+                raise TypeError("Object '{!r}' is not a Migen statement".format(obj))
 
 
 class Assign(Statement):
@@ -694,7 +694,7 @@ class Switch(Statement):
             elif isinstance(key, str):
                 assert len(key) == len(self.test)
             else:
-                raise TypeError("Object {!r} cannot be used as a switch key"
+                raise TypeError("Object '{!r}' cannot be used as a switch key"
                                 .format(key))
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
@@ -759,7 +759,7 @@ class ValueKey:
         elif isinstance(self.value, Slice):
             return hash((ValueKey(self.value.value), self.value.start, self.value.end))
         else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections")
+            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
 
     def __eq__(self, other):
         if not isinstance(other, ValueKey):
@@ -776,7 +776,7 @@ class ValueKey:
                     self.value.start == other.value.start and
                     self.value.end == other.value.end)
         else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections")
+            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
 
     def __lt__(self, other):
         if not isinstance(other, ValueKey):
@@ -793,7 +793,7 @@ class ValueKey:
                     self.value.start < other.value.start and
                     self.value.end < other.value.end)
         else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections")
+            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
 
     def __repr__(self):
         return "<{}.ValueKey {!r}>".format(__name__, self.value)
