@@ -88,6 +88,11 @@ class ConstTestCase(FHDLTestCase):
 
 
 class OperatorTestCase(FHDLTestCase):
+    def test_bool(self):
+        v = Const(0, 4).bool()
+        self.assertEqual(repr(v), "(b (const 4'd0))")
+        self.assertEqual(v.shape(), (1, False))
+
     def test_invert(self):
         v = ~Const(0, 4)
         self.assertEqual(repr(v), "(~ (const 4'd0))")
