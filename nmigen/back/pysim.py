@@ -159,17 +159,45 @@ class _RHSValueCompiler(ValueTransformer):
         return lambda state: normalize(elems[index(state)](state), shape)
 
 
+class _LHSValueCompiler(ValueTransformer):
+    def on_Const(self, value):
+        raise TypeError # :nocov:
+
+    def on_Signal(self, value):
+        return lambda state, arg: state.set(value, arg)
+
+    def on_ClockSignal(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_ResetSignal(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_Operator(self, value):
+        raise TypeError # :nocov:
+
+    def on_Slice(self, value):
+        raise NotImplementedError
+
+    def on_Part(self, value):
+        raise NotImplementedError
+
+    def on_Cat(self, value):
+        raise NotImplementedError
+
+    def on_Repl(self, value):
+        raise TypeError # :nocov:
+
+    def on_ArrayProxy(self, value):
+        raise NotImplementedError
+
+
 class _StatementCompiler(StatementTransformer):
     def __init__(self):
         self.sensitivity  = ValueSet()
         self.rhs_compiler = _RHSValueCompiler(self.sensitivity)
-
-    def lhs_compiler(self, value):
-        # TODO
-        return lambda state, arg: state.set(value, arg)
+        self.lhs_compiler = _LHSValueCompiler()
 
     def on_Assign(self, stmt):
-        assert isinstance(stmt.lhs, Signal)
         shape = stmt.lhs.shape()
         lhs   = self.lhs_compiler(stmt.lhs)
         rhs   = self.rhs_compiler(stmt.rhs)
