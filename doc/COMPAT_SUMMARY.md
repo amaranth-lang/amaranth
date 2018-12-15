@@ -34,7 +34,7 @@ Compatibility summary
       - (+) `value_bits_sign` → `Value.shape`
     - (−) `conv_output` ?
     - (+) `decorators` ⇒ `.fhdl.xfrm`
-      Note: `transform_*` methods not considered part of public API.
+      <br>Note: `transform_*` methods not considered part of public API.
       - (⊙) `ModuleTransformer` **brk**
       - (⊙) `ControlInserter` **brk**
       - (+) `CEInserter` id, `clock_domains=`→`controls=`
@@ -60,7 +60,7 @@ Compatibility summary
     - (−) `structure` → `.fhdl.ast`
       - (+) `DUID` id
       - (+) `_Value` → `Value`
-        Note: values no longer valid as keys in `dict` and `set`; use `ValueDict` and `ValueSet` instead.
+        <br>Note: values no longer valid as keys in `dict` and `set`; use `ValueDict` and `ValueSet` instead.
       - (+) `wrap` → `Value.wrap`
       - (+) `_Operator` → `Operator`
       - (+) `Mux` → `Mux`
@@ -172,9 +172,9 @@ Compatibility summary
     - (−) `sort` ?
       - (−) `BitonicSort` ?
   - (-) `sim` **obs** → `.back.pysim`
+    <br>Note: only items directly under `nmigen.compat.sim`, not submodules, are provided.
     - (⊙) `core` **brk**
     - (⊙) `vcd` **brk** → `vcd`
-    Note: only items directly under `nmigen.compat.sim`, not submodules, are provided.
     - (⊙) `Simulator` **brk**
     - (+) `run_simulation` **obs** → `.back.pysim.Simulator`
     - (−) `passive` **obs** → `.fhdl.ast.Passive`
