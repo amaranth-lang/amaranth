@@ -14,7 +14,7 @@ See the [doc/](doc/) folder for more technical information.
 
 nMigen is a direct descendant of [Migen](https://m-labs.hk/migen) rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive compatibility layer that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-nMigen is designed for Python 3.7 and newer. Note that nMigen is **not** spelled nMiGen.
+nMigen is designed for Python 3.6 and newer. Note that nMigen is **not** spelled nMiGen.
 
 ### Introduction
 
