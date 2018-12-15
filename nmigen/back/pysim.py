@@ -75,15 +75,23 @@ class _RHSValueCompiler(ValueTransformer):
         elif len(value.operands) == 2:
             lhs, rhs = map(self, value.operands)
             if value.op == "+":
-                return lambda state: normalize(lhs(state) + rhs(state), shape)
+                return lambda state: normalize(lhs(state) +  rhs(state), shape)
             if value.op == "-":
-                return lambda state: normalize(lhs(state) - rhs(state), shape)
+                return lambda state: normalize(lhs(state) -  rhs(state), shape)
             if value.op == "&":
-                return lambda state: normalize(lhs(state) & rhs(state), shape)
+                return lambda state: normalize(lhs(state) &  rhs(state), shape)
             if value.op == "|":
-                return lambda state: normalize(lhs(state) | rhs(state), shape)
+                return lambda state: normalize(lhs(state) |  rhs(state), shape)
             if value.op == "^":
-                return lambda state: normalize(lhs(state) ^ rhs(state), shape)
+                return lambda state: normalize(lhs(state) ^  rhs(state), shape)
+            if value.op == "<<":
+                def sshl(lhs, rhs):
+                    return lhs << rhs if rhs >= 0 else lhs >> -rhs
+                return lambda state: normalize(sshl(lhs(state), rhs(state)), shape)
+            if value.op == ">>":
+                def sshr(lhs, rhs):
+                    return lhs >> rhs if rhs >= 0 else lhs << -rhs
+                return lambda state: normalize(sshr(lhs(state), rhs(state)), shape)
             if value.op == "==":
                 return lambda state: normalize(lhs(state) == rhs(state), shape)
             if value.op == "!=":

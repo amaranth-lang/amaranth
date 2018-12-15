@@ -71,6 +71,18 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda a, b: a ^ b
         self.assertOperator(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b0110, 4))
 
+    def test_shl(self):
+        stmt = lambda a, b: a << b
+        self.assertOperator(stmt, [C(0b1001, 4), C(0)],  C(0b1001,    5))
+        self.assertOperator(stmt, [C(0b1001, 4), C(3)],  C(0b1001000, 7))
+        self.assertOperator(stmt, [C(0b1001, 4), C(-2)], C(0b10,      7))
+
+    def test_shr(self):
+        stmt = lambda a, b: a >> b
+        self.assertOperator(stmt, [C(0b1001, 4), C(0)],  C(0b1001,    4))
+        self.assertOperator(stmt, [C(0b1001, 4), C(2)],  C(0b10,      4))
+        self.assertOperator(stmt, [C(0b1001, 4), C(-2)], C(0b100100,  5))
+
     def test_eq(self):
         stmt = lambda a, b: a == b
         self.assertOperator(stmt, [C(0, 4), C(0, 4)], C(1))

@@ -75,13 +75,13 @@ class Value(metaclass=ABCMeta):
     def __rdiv__(self, other):
         return Operator("/", [other, self])
     def __lshift__(self, other):
-        return Operator("<<<", [self, other])
+        return Operator("<<", [self, other])
     def __rlshift__(self, other):
-        return Operator("<<<", [other, self])
+        return Operator("<<", [other, self])
     def __rshift__(self, other):
-        return Operator(">>>", [self, other])
+        return Operator(">>", [self, other])
     def __rrshift__(self, other):
-        return Operator(">>>", [other, self])
+        return Operator(">>", [other, self])
     def __and__(self, other):
         return Operator("&", [self, other])
     def __rand__(self, other):
@@ -306,15 +306,15 @@ class Operator(Value):
                 return 1, False
             if self.op in ("&", "^", "|"):
                 return self._bitwise_binary_shape(*op_shapes)
-            if self.op == "<<<":
+            if self.op == "<<":
                 if b_sign:
-                    extra = 2**(b_bits - 1) - 1
+                    extra = 2 ** (b_bits - 1) - 1
                 else:
-                    extra = 2**b_bits - 1
+                    extra = 2 ** (b_bits)     - 1
                 return a_bits + extra, a_sign
-            if self.op == ">>>":
+            if self.op == ">>":
                 if b_sign:
-                    extra = 2**(b_bits - 1)
+                    extra = 2 ** (b_bits - 1)
                 else:
                     extra = 0
                 return a_bits + extra, a_sign

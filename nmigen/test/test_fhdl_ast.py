@@ -182,6 +182,20 @@ class OperatorTestCase(FHDLTestCase):
         v5 = 10 ^ Const(0, 4)
         self.assertEqual(v5.shape(), (4, False))
 
+    def test_shl(self):
+        v1 = Const(1, 4) << Const(4)
+        self.assertEqual(repr(v1), "(<< (const 4'd1) (const 3'd4))")
+        self.assertEqual(v1.shape(), (11, False))
+        v2 = Const(1, 4) << Const(-3)
+        self.assertEqual(v2.shape(), (7, False))
+
+    def test_shr(self):
+        v1 = Const(1, 4) >> Const(4)
+        self.assertEqual(repr(v1), "(>> (const 4'd1) (const 3'd4))")
+        self.assertEqual(v1.shape(), (4, False))
+        v2 = Const(1, 4) >> Const(-3)
+        self.assertEqual(v2.shape(), (8, False))
+
     def test_lt(self):
         v = Const(0, 4) < Const(0, 6)
         self.assertEqual(repr(v), "(< (const 4'd0) (const 6'd0))")
