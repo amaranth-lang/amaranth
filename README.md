@@ -1,251 +1,41 @@
-This repository contains a proposal for the design of nMigen in form of an implementation. This implementation deviates from the existing design of Migen by making several observations of its drawbacks:
+# nMigen
 
-  * Migen is strongly tailored towards Verilog, yet translation of Migen to Verilog is not straightforward, leaves much semantics implicit (e.g. signedness, width extension, combinatorial assignments, sub-signal assignments...);
-  * Hierarchical designs are useful for floorplanning and optimization, yet Migen does not support them at all;
-  * Migen's syntax is not easily composable, and something like an FSM requires extending Migen's syntax in non-orthogonal ways;
-  * Migen reimplements a lot of mature open-source tooling, such as conversion of RTL to Verilog (Yosys' Verilog backend), or simulation (Icarus Verilog, Verilator, etc.), and often lacks in features, speed, or corner case handling.
-  * Migen requires awkward specials for some FPGA features such as asynchronous resets.
+## A refreshed Python toolbox for building complex digital hardware
 
-It also observes that Yosys' intermediate language, RTLIL, is an ideal target for Migen-style logic, as conversion of FHDL to RTLIL is essentially a 1:1 translation, with the exception of the related issues of naming and hierarchy.
+**nMigen is incomplete and undergoes rapid development. The nMigen documentation refers to features that may not be implemented yet and compatibility guarantees that may not hold yet. Use at your own risk.**
 
-This proposal makes several major changes to Migen that hopefully solve all of these drawbacks:
+Despite being faster than schematics entry, hardware design with Verilog and VHDL remains tedious and inefficient for several reasons. The event-driven model introduces issues and manual coding that are unnecessary for synchronous circuits, which represent the lion's share of today's logic designs. Counterintuitive arithmetic rules result in steeper learning curves and provide a fertile ground for subtle bugs in designs. Finally, support for procedural generation of logic (metaprogramming) through "generate" statements is very limited and restricts the ways code can be made generic, reused and organized.
 
-  * nMigen changes FHDL's internal representation to closely match that of RTLIL;
-  * nMigen outputs RTLIL and relies on Yosys for conversion to Verilog, EDIF, etc;
-  * nMigen uses an exact mapping between FHDL signals and RTLIL names to off-load logic simulation to Icarus Verilog, Verilator, etc;
-  * nMigen uses an uniform, composable Python eHDL;
-  * nMigen outputs hierarchical RTLIL, automatically threading signals through the hierarchy;
-  * nMigen supports asynchronous reset directly;
-  * nMigen makes driving a signal from multiple clock domains a precise, hard error.
+To address those issues, we have developed the *nMigen FHDL*, a library that replaces the event-driven paradigm with the notions of combinatorial and synchronous statements, has arithmetic rules that make integers always behave like mathematical integers, and most importantly allows the design's logic to be constructed by a Python program. This last point enables hardware designers to take advantage of the richness of the Python language—object oriented programming, function parameters, generators, operator overloading, libraries, etc.—to build well organized, reusable and elegant designs.
 
-This proposal keeps in mind but does not make the following major changes:
+Other nMigen libraries are built on FHDL and provide various tools such as a system-on-chip interconnect infrastructure, a dataflow programming system, a more traditional high-level synthesizer that compiles Python routines into state machines with datapaths, and a simulator that allows test benches to be written in Python.
 
-  * nMigen could be easily modified to flatten the hierarchy if a signal is driven simultaneously from multiple modules;
-  * nMigen could be easily modified to support `x` values (invalid / don't care) by relying on RTLIL's ability to directly represent them;
-  * nMigen could be easily modified to support negative edge triggered flip-flops by relying on RTLIL's ability to directly represent them;
-  * nMigen could be easily modified to track Python source locations of primitives and export them to RTLIL/Verilog through the `src` attribute, displaying the Python source locations in timing reports directly.
+See the [doc/](doc/) folder for more technical information.
 
-This proposal also makes the following simplifications:
-  * Specials are eliminated. Primitives such as memory ports are represented directly, and primitives such as tristate buffers are lowered to a selectable implementation via ordinary dependency injection (`f.submodules += platform.get_tristate(triple, io)`).
+nMigen is a direct descendant of [Migen](https://m-labs.hk/migen) rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive compatibility layer that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-The internals of nMigen in this proposal are cleaned up, yet they are kept sufficiently close to Migen that \~all Migen code should be possible to run directly on nMigen using a syntactic compatibility layer.
+nMigen is designed for Python 3.7 and newer. Note that nMigen is **not** spelled nMiGen.
 
-FHDL features currently missing from this implementation:
-  * self.clock_domains +=
-  * Array
-  * Memory
-  * Tristate, TSTriple
-  * Instance
-  * FSM
-  * transformers: SplitMemory, FullMemoryWE
-  * transformers: ClockDomainsRenamer
+### Introduction
 
-`migen.genlib`, `migen.sim` and `migen.build` are missing completely.
+TBD
 
-One might reasonably expect that a roundtrip through RTLIL would result in unreadable Verilog.
-However, this is not the case, e.g. consider the examples:
+### Links
 
-<details>
-<summary>alu.v</summary>
+TBD
 
-```verilog
-module \$1 (co, sel, a, b, o);
-  wire [17:0] _04_;
-  input [15:0] a;
-  input [15:0] b;
-  output co;
-  reg \co$next ;
-  output [15:0] o;
-  reg [15:0] \o$next ;
-  input [1:0] sel;
-  assign _04_ = $signed(+ a) + $signed(- b);
-  always @* begin
-    \o$next  = 16'h0000;
-    \co$next  = 1'h0;
-    casez ({ 1'h1, sel == 2'h2, sel == 1'h1, sel == 0'b0 })
-      4'bzzz1:
-          \o$next  = a | b;
-      4'bzz1z:
-          \o$next  = a & b;
-      4'bz1zz:
-          \o$next  = a ^ b;
-      4'b1zzz:
-          { \co$next , \o$next  } = _04_[16:0];
-    endcase
-  end
-  assign o = \o$next ;
-  assign co = \co$next ;
-endmodule
-```
-</details>
+### License
 
-<details>
-<summary>alu_hier.v</summary>
+nMigen is released under the very permissive two-clause BSD license. Under the terms of this license, you are authorized to use nMigen for closed-source proprietary designs.
 
-```verilog
-module add(b, o, a);
-  wire [16:0] _0_;
-  input [15:0] a;
-  input [15:0] b;
-  output [15:0] o;
-  reg [15:0] \o$next ;
-  assign _0_ = a + b;
-  always @* begin
-    \o$next  = 16'h0000;
-    \o$next  = _0_[15:0];
-  end
-  assign o = \o$next ;
-endmodule
+Even though we do not require you to do so, these things are awesome, so please do them if possible:
+  * tell us that you are using nMigen
+  * put the [nMigen logo](doc/nmigen_logo.svg) on the page of a product using it, with a link to https://m-labs.hk
+  * cite nMigen in publications related to research it has helped
+  * send us feedback and suggestions for improvements
+  * send us bug reports when something goes wrong
+  * send us the modifications and improvements you have done to nMigen as pull requests on GitHub
 
-module sub(b, o, a);
-  wire [16:0] _0_;
-  input [15:0] a;
-  input [15:0] b;
-  output [15:0] o;
-  reg [15:0] \o$next ;
-  assign _0_ = a - b;
-  always @* begin
-    \o$next  = 16'h0000;
-    \o$next  = _0_[15:0];
-  end
-  assign o = \o$next ;
-endmodule
+See LICENSE file for full copyright and license info.
 
-module top(a, b, o, add_o, sub_o, op);
-  input [15:0] a;
-  wire [15:0] add_a;
-  reg [15:0] \add_a$next ;
-  wire [15:0] add_b;
-  reg [15:0] \add_b$next ;
-  input [15:0] add_o;
-  input [15:0] b;
-  output [15:0] o;
-  reg [15:0] \o$next ;
-  input op;
-  wire [15:0] sub_a;
-  reg [15:0] \sub_a$next ;
-  wire [15:0] sub_b;
-  reg [15:0] \sub_b$next ;
-  input [15:0] sub_o;
-  add add (
-    .a(add_a),
-    .b(add_b),
-    .o(add_o)
-  );
-  sub sub (
-    .a(sub_a),
-    .b(sub_b),
-    .o(sub_o)
-  );
-  always @* begin
-    \o$next  = 16'h0000;
-    \add_a$next  = 16'h0000;
-    \add_b$next  = 16'h0000;
-    \sub_a$next  = 16'h0000;
-    \sub_b$next  = 16'h0000;
-    \add_a$next  = a;
-    \sub_a$next  = a;
-    \add_b$next  = b;
-    \sub_b$next  = b;
-    casez ({ 1'h1, op })
-      2'bz1:
-          \o$next  = sub_o;
-      2'b1z:
-          \o$next  = add_o;
-    endcase
-  end
-  assign o = \o$next ;
-  assign add_a = \add_a$next ;
-  assign add_b = \add_b$next ;
-  assign sub_a = \sub_a$next ;
-  assign sub_b = \sub_b$next ;
-endmodule
-```
-</details>
-<details>
-<summary>clkdiv.v</summary>
-
-```verilog
-module \$1 (sys_clk, o);
-  wire [16:0] _0_;
-  output o;
-  reg \o$next ;
-  input sys_clk;
-  wire sys_rst;
-  (* init = 16'hffff *)
-  reg [15:0] v = 16'hffff;
-  reg [15:0] \v$next ;
-  assign _0_ = v + 1'h1;
-  always @(posedge sys_clk)
-      v <= \v$next ;
-  always @* begin
-    \o$next  = 1'h0;
-    \v$next  = _0_[15:0];
-    \o$next  = v[15];
-    casez (sys_rst)
-      1'h1:
-          \v$next  = 16'hffff;
-    endcase
-  end
-  assign o = \o$next ;
-endmodule
-```
-</details>
-
-<details>
-<summary>arst.v</summary>
-
-```verilog
-module \$1 (o, sys_clk, sys_rst);
-  wire [16:0] _0_;
-  output o;
-  reg \o$next ;
-  input sys_clk;
-  input sys_rst;
-  (* init = 16'h0000 *)
-  reg [15:0] v = 16'h0000;
-  reg [15:0] \v$next ;
-  assign _0_ = v + 1'h1;
-  always @(posedge sys_clk or posedge sys_rst)
-    if (sys_rst)
-      v <= 16'h0000;
-    else
-      v <= \v$next ;
-  always @* begin
-    \o$next  = 1'h0;
-    \v$next  = _0_[15:0];
-    \o$next  = v[15];
-  end
-  assign o = \o$next ;
-endmodule
-```
-</details>
-
-<details>
-<summary>pmux.v</summary>
-
-```verilog
-module \$1 (c, o, s, a, b);
-  input [15:0] a;
-  input [15:0] b;
-  input [15:0] c;
-  output [15:0] o;
-  reg [15:0] \o$next ;
-  input [2:0] s;
-  always @* begin
-    \o$next  = 16'h0000;
-    casez (s)
-      3'bzz1:
-          \o$next  = a;
-      3'bz1z:
-          \o$next  = b;
-      3'b1zz:
-          \o$next  = c;
-      3'hz:
-          \o$next  = 16'h0000;
-    endcase
-  end
-  assign o = \o$next ;
-endmodule
-```
-</details>
+  "Electricity! It's like magic!"

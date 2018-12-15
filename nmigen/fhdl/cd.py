@@ -60,8 +60,8 @@ class ClockDomain:
 
         self.async_reset = async_reset
 
-    def rename(self, name):
-        self.name = name
-        self.clk.name = self._name_for(name, "clk")
+    def rename(self, new_name):
+        self.name = new_name
+        self.clk.name = self._name_for(new_name, "clk")
         if self.rst is not None:
-            self.rst.name = self._name_for(name, "rst")
+            self.rst.name = self._name_for(new_name, "rst")
