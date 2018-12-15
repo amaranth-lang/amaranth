@@ -236,7 +236,7 @@ class Const(Value):
             shape = shape, self.value < 0
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a positive integer")
+            raise TypeError("Width must be a non-negative integer")
         self.value = self.normalize(self.value, shape)
 
     def shape(self):
@@ -313,7 +313,7 @@ class Operator(Value):
             return obs[0]
         elif self.op == "m":
             return self._bitwise_binary_shape(obs[1], obs[2])
-        raise NotImplementedError("Operator '{!r}' not implemented".format(self.op)) # :nocov:
+        raise NotImplementedError("Operator '{}' not implemented".format(self.op)) # :nocov:
 
     def _rhs_signals(self):
         return union(op._rhs_signals() for op in self.operands)
@@ -344,9 +344,9 @@ def Mux(sel, val1, val0):
 class Slice(Value):
     def __init__(self, value, start, end):
         if not isinstance(start, int):
-            raise TypeError("Slice start must be integer, not {!r}".format(start))
+            raise TypeError("Slice start must be an integer, not {!r}".format(start))
         if not isinstance(end, int):
-            raise TypeError("Slice end must be integer, not {!r}".format(end))
+            raise TypeError("Slice end must be an integer, not {!r}".format(end))
 
         n = len(value)
         if start not in range(-n, n):
@@ -381,7 +381,7 @@ class Slice(Value):
 class Part(Value):
     def __init__(self, value, offset, width):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("Part width must be a positive integer, not {!r}".format(width))
+            raise TypeError("Part width must be a non-negative integer, not {!r}".format(width))
 
         super().__init__()
         self.value  = value
@@ -398,7 +398,7 @@ class Part(Value):
         return self.value._rhs_signals()
 
     def __repr__(self):
-        return "(part {} {})".format(repr(self.value), repr(self.offset), self.width)
+        return "(part {} {} {})".format(repr(self.value), repr(self.offset), self.width)
 
 
 class Cat(Value):
@@ -464,7 +464,8 @@ class Repl(Value):
     """
     def __init__(self, value, count):
         if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a positive integer, not {!r}".format(count))
+            raise TypeError("Replication count must be a non-negative integer, not {!r}"
+                            .format(count))
 
         super().__init__()
         self.value = Value.wrap(value)
@@ -557,7 +558,7 @@ class Signal(Value, DUID):
                 self.nbits, self.signed = shape
 
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a positive integer, not {!r}".format(self.nbits))
+            raise TypeError("Width must be a non-negative integer, not {!r}".format(self.nbits))
         self.reset = int(reset)
         self.reset_less = bool(reset_less)
 

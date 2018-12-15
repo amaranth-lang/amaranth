@@ -64,9 +64,11 @@ class ConstTestCase(FHDLTestCase):
         self.assertEqual(Const(10).shape(),  (4, False))
         self.assertEqual(Const(-10).shape(), (5, True))
 
-        self.assertEqual(Const(1, 4).shape(),         (4, False))
-        self.assertEqual(Const(1, (4, True)).shape(), (4, True))
+        self.assertEqual(Const(1, 4).shape(),          (4, False))
+        self.assertEqual(Const(1, (4, True)).shape(),  (4, True))
+        self.assertEqual(Const(0, (0, False)).shape(), (0, False))
 
+    def test_shape_bad(self):
         with self.assertRaises(TypeError):
             Const(1, -1)
 
@@ -234,9 +236,51 @@ class SliceTestCase(FHDLTestCase):
         s2 = Const(-10)[0:2]
         self.assertEqual(s2.shape(), (2, False))
 
+    def test_start_end_negative(self):
+        c  = Const(0, 8)
+        s1 = Slice(c, 0, -1)
+        self.assertEqual((s1.start, s1.end), (0, 7))
+        s1 = Slice(c, -4, -1)
+        self.assertEqual((s1.start, s1.end), (4, 7))
+
+    def test_start_end_wrong(self):
+        with self.assertRaises(TypeError):
+            Slice(0, "x", 1)
+        with self.assertRaises(TypeError):
+            Slice(0, 1, "x")
+
+    def test_start_end_out_of_range(self):
+        c = Const(0, 8)
+        with self.assertRaises(IndexError):
+            Slice(c, 10, 12)
+        with self.assertRaises(IndexError):
+            Slice(c, 0, 12)
+        with self.assertRaises(IndexError):
+            Slice(c, 4, 2)
+
     def test_repr(self):
         s1 = Const(10)[2]
         self.assertEqual(repr(s1), "(slice (const 4'd10) 2:3)")
+
+
+class PartTestCase(FHDLTestCase):
+    def setUp(self):
+        self.c = Const(0, 8)
+        self.s = Signal(max=self.c.nbits)
+
+    def test_shape(self):
+        s1 = self.c.part(self.s, 2)
+        self.assertEqual(s1.shape(), (2, False))
+        s2 = self.c.part(self.s, 0)
+        self.assertEqual(s2.shape(), (0, False))
+
+    def test_width_bad(self):
+        with self.assertRaises(TypeError):
+            self.c.part(self.s, -1)
+
+    def test_repr(self):
+        s = self.c.part(self.s, 2)
+        self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2)")
 
 
 class CatTestCase(FHDLTestCase):
@@ -255,8 +299,10 @@ class CatTestCase(FHDLTestCase):
 
 class ReplTestCase(FHDLTestCase):
     def test_shape(self):
-        r1 = Repl(Const(10), 3)
-        self.assertEqual(r1.shape(), (12, False))
+        s1 = Repl(Const(10), 3)
+        self.assertEqual(s1.shape(), (12, False))
+        s2 = Repl(Const(10), 0)
+        self.assertEqual(s2.shape(), (0, False))
 
     def test_count_wrong(self):
         with self.assertRaises(TypeError):
@@ -265,8 +311,8 @@ class ReplTestCase(FHDLTestCase):
             Repl(Const(10), "str")
 
     def test_repr(self):
-        r1 = Repl(Const(10), 3)
-        self.assertEqual(repr(r1), "(repl (const 4'd10) 3)")
+        s = Repl(Const(10), 3)
+        self.assertEqual(repr(s), "(repl (const 4'd10) 3)")
 
 
 class SignalTestCase(FHDLTestCase):
@@ -287,7 +333,10 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s7.shape(), (5, True))
         s8 = Signal(min=-20, max=16)
         self.assertEqual(s8.shape(), (6, True))
+        s9 = Signal(0)
+        self.assertEqual(s9.shape(), (0, False))
 
+    def test_shape_bad(self):
         with self.assertRaises(ValueError):
             Signal(min=10, max=4)
         with self.assertRaises(ValueError):
@@ -326,8 +375,10 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s3.reset_less, True)
         s4 = Signal.like(Signal(attrs={"no_retiming": True}))
         self.assertEqual(s4.attrs, {"no_retiming": True})
-        s5 = Signal.like(10)
-        self.assertEqual(s5.shape(), (4, False))
+        s5 = Signal.like(Signal(decoder=str))
+        self.assertEqual(s5.decoder, str)
+        s6 = Signal.like(10)
+        self.assertEqual(s6.shape(), (4, False))
 
 
 class ClockSignalTestCase(FHDLTestCase):
@@ -339,6 +390,9 @@ class ClockSignalTestCase(FHDLTestCase):
 
         with self.assertRaises(TypeError):
             ClockSignal(1)
+
+    def test_shape(self):
+        self.assertEqual(ClockSignal().shape(), (1, False))
 
     def test_repr(self):
         s1 = ClockSignal()
@@ -354,6 +408,9 @@ class ResetSignalTestCase(FHDLTestCase):
 
         with self.assertRaises(TypeError):
             ResetSignal(1)
+
+    def test_shape(self):
+        self.assertEqual(ResetSignal().shape(), (1, False))
 
     def test_repr(self):
         s1 = ResetSignal()
