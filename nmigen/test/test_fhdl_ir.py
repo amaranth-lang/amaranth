@@ -4,6 +4,13 @@ from ..fhdl.ir import *
 from .tools import *
 
 
+class FragmentDriversTestCase(FHDLTestCase):
+    def test_empty(self):
+        f = Fragment()
+        self.assertEqual(list(f.iter_comb()), [])
+        self.assertEqual(list(f.iter_sync()), [])
+
+
 class FragmentPortsTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
@@ -15,9 +22,15 @@ class FragmentPortsTestCase(FHDLTestCase):
 
     def test_empty(self):
         f = Fragment()
+        self.assertEqual(list(f.iter_ports()), [])
 
         f._propagate_ports(ports=())
         self.assertEqual(f.ports, ValueDict([]))
+
+    def test_iter_signals(self):
+        f = Fragment()
+        f.add_ports(self.s1, self.s2, kind="io")
+        self.assertEqual(ValueSet((self.s1, self.s2)), f.iter_signals())
 
     def test_self_contained(self):
         f = Fragment()
@@ -135,6 +148,19 @@ class FragmentPortsTestCase(FHDLTestCase):
 
 
 class FragmentDomainsTestCase(FHDLTestCase):
+    def test_iter_signals(self):
+        cd1 = ClockDomain()
+        cd2 = ClockDomain(reset_less=True)
+        s1 = Signal()
+        s2 = Signal()
+
+        f = Fragment()
+        f.add_domains(cd1, cd2)
+        f.add_driver(s1, "cd1")
+        self.assertEqual(ValueSet((cd1.clk, cd1.rst, s1)), f.iter_signals())
+        f.add_driver(s2, "cd2")
+        self.assertEqual(ValueSet((cd1.clk, cd1.rst, cd2.clk, s1, s2)), f.iter_signals())
+
     def test_propagate_up(self):
         cd = ClockDomain()
 
