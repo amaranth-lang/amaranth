@@ -14,8 +14,8 @@ def flatten(i):
             yield e
 
 
-def union(i):
-    r = None
+def union(i, start=None):
+    r = start
     for e in i:
         if r is None:
             r = e

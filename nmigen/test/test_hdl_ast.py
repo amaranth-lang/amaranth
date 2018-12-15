@@ -334,6 +334,66 @@ class ReplTestCase(FHDLTestCase):
         self.assertEqual(repr(s), "(repl (const 4'd10) 3)")
 
 
+class ArrayTestCase(FHDLTestCase):
+    def test_acts_like_array(self):
+        a = Array([1,2,3])
+        self.assertSequenceEqual(a, [1,2,3])
+        self.assertEqual(a[1], 2)
+        a[1] = 4
+        self.assertSequenceEqual(a, [1,4,3])
+        del a[1]
+        self.assertSequenceEqual(a, [1,3])
+        a.insert(1, 2)
+        self.assertSequenceEqual(a, [1,2,3])
+
+    def test_becomes_immutable(self):
+        a = Array([1,2,3])
+        s1 = Signal(max=len(a))
+        s2 = Signal(max=len(a))
+        v1 = a[s1]
+        v2 = a[s2]
+        with self.assertRaisesRegex(ValueError,
+                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+            a[1] = 2
+        with self.assertRaisesRegex(ValueError,
+                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+            del a[1]
+        with self.assertRaisesRegex(ValueError,
+                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+            a.insert(1, 2)
+
+    def test_repr(self):
+        a = Array([1,2,3])
+        self.assertEqual(repr(a), "(array mutable [1, 2, 3])")
+        s = Signal(max=len(a))
+        v = a[s]
+        self.assertEqual(repr(a), "(array [1, 2, 3])")
+
+
+class ArrayProxyTestCase(FHDLTestCase):
+    def test_index_shape(self):
+        m = Array(Array(x * y for y in range(1, 4)) for x in range(1, 4))
+        a = Signal(max=3)
+        b = Signal(max=3)
+        v = m[a][b]
+        self.assertEqual(v.shape(), (4, False))
+
+    def test_attr_shape(self):
+        from collections import namedtuple
+        pair = namedtuple("pair", ("p", "n"))
+        a = Array(pair(i, -i) for i in range(10))
+        s = Signal(max=len(a))
+        v = a[s]
+        self.assertEqual(v.p.shape(), (4, False))
+        self.assertEqual(v.n.shape(), (6, True))
+
+    def test_repr(self):
+        a = Array([1, 2, 3])
+        s = Signal(max=3)
+        v = a[s]
+        self.assertEqual(repr(v), "(proxy (array [1, 2, 3]) (sig s))")
+
+
 class SignalTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Signal()

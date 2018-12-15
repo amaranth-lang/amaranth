@@ -1,4 +1,4 @@
-from .hdl.ast import Value, Const, Mux, Cat, Repl, Signal, ClockSignal, ResetSignal
+from .hdl.ast import Value, Const, Mux, Cat, Repl, Array, Signal, ClockSignal, ResetSignal
 from .hdl.dsl import Module
 from .hdl.cd import ClockDomain
 from .hdl.ir import Fragment
