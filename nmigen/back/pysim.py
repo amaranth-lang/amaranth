@@ -118,7 +118,11 @@ class _RHSValueCompiler(ValueTransformer):
         return lambda state: normalize((arg(state) >> shift) & mask, shape)
 
     def on_Part(self, value):
-        raise NotImplementedError
+        shape = value.shape()
+        arg   = self(value.value)
+        shift = self(value.offset)
+        mask  = (1 << value.width) - 1
+        return lambda state: normalize((arg(state) >> shift(state)) & mask, shape)
 
     def on_Cat(self, value):
         shape  = value.shape()

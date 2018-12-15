@@ -405,7 +405,7 @@ class Part(Value):
         return self.value._lhs_signals()
 
     def _rhs_signals(self):
-        return self.value._rhs_signals()
+        return self.value._rhs_signals() | self.offset._rhs_signals()
 
     def __repr__(self):
         return "(part {} {} {})".format(repr(self.value), repr(self.offset), self.width)

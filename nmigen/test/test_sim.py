@@ -130,6 +130,12 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt2 = lambda a: a[2:4]
         self.assertOperator(stmt2, [C(0b10110100, 8)], C(0b01, 2))
 
+    def test_part(self):
+        stmt = lambda a, b: a.part(b, 3)
+        self.assertOperator(stmt, [C(0b10110100, 8), C(0)], C(0b100, 3))
+        self.assertOperator(stmt, [C(0b10110100, 8), C(2)], C(0b101, 3))
+        self.assertOperator(stmt, [C(0b10110100, 8), C(3)], C(0b110, 3))
+
     def test_cat(self):
         self.assertOperator(Cat, [C(0b10, 2), C(0b01, 2)], C(0b0110, 4))
 
