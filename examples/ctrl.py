@@ -1,4 +1,4 @@
-from nmigen.fhdl import *
+from nmigen import *
 from nmigen.back import rtlil, verilog, pysim
 
 

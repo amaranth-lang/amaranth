@@ -1,6 +1,5 @@
-from nmigen.fhdl import *
+from nmigen import *
 from nmigen.back import rtlil, verilog
-from nmigen.genlib.cdc import *
 
 
 i, o = Signal(name="i"), Signal(name="o")
