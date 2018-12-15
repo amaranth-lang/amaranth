@@ -136,3 +136,26 @@ class SimulatorUnitTestCase(FHDLTestCase):
     def test_repl(self):
         stmt = lambda a: Repl(a, 3)
         self.assertOperator(stmt, [C(0b10, 2)], C(0b101010, 6))
+
+    def test_array(self):
+        array = Array([1, 4, 10])
+        stmt = lambda a: array[a]
+        self.assertOperator(stmt, [C(0)], C(1))
+        self.assertOperator(stmt, [C(1)], C(4))
+        self.assertOperator(stmt, [C(2)], C(10))
+
+    def test_array_index(self):
+        array = Array(Array(x * y for y in range(10)) for x in range(10))
+        stmt = lambda a, b: array[a][b]
+        for x in range(10):
+            for y in range(10):
+                self.assertOperator(stmt, [C(x), C(y)], C(x * y))
+
+    def test_array_attr(self):
+        from collections import namedtuple
+        pair = namedtuple("pair", ("p", "n"))
+
+        array = Array(pair(x, -x) for x in range(10))
+        stmt = lambda a: array[a].p + array[a].n
+        for i in range(10):
+            self.assertOperator(stmt, [C(i)], C(0))

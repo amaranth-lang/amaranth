@@ -148,6 +148,12 @@ class _RHSValueCompiler(ValueTransformer):
             return normalize(result, shape)
         return eval
 
+    def on_ArrayProxy(self, value):
+        shape  = value.shape()
+        elems  = list(map(self, value.elems))
+        index  = self(value.index)
+        return lambda state: normalize(elems[index(state)](state), shape)
+
 
 class _StatementCompiler(StatementTransformer):
     def __init__(self):

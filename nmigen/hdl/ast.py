@@ -776,10 +776,12 @@ class ArrayProxy(Value):
         return bits, sign
 
     def _lhs_signals(self):
-        return union((elem._lhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        signals = union((elem._lhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        return signals
 
     def _rhs_signals(self):
-        return union((elem._rhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        signals = union((elem._rhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        return self.index._rhs_signals() | signals
 
     def __repr__(self):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)

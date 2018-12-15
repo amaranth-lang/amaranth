@@ -40,6 +40,10 @@ class ValueTransformer:
     def on_Repl(self, value):
         return Repl(self.on_value(value.value), value.count)
 
+    def on_ArrayProxy(self, value):
+        return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
+                          self.on_value(value.index))
+
     def on_unknown_value(self, value):
         raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
 
@@ -62,6 +66,8 @@ class ValueTransformer:
             new_value = self.on_Cat(value)
         elif isinstance(value, Repl):
             new_value = self.on_Repl(value)
+        elif isinstance(value, ArrayProxy):
+            new_value = self.on_ArrayProxy(value)
         else:
             new_value = self.on_unknown_value(value)
         if isinstance(new_value, Value):
