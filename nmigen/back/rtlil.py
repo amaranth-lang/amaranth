@@ -257,45 +257,45 @@ class _ValueTransformer(xfrm.AbstractValueTransformer):
         finally:
             self.sub_name = None
 
-    def on_unknown(self, node):
-        if node is None:
+    def on_unknown(self, value):
+        if value is None:
             return None
         else:
-            super().visit_unknown(node)
+            super().on_unknown(value)
 
-    def on_Const(self, node):
-        if isinstance(node.value, str):
-            return "{}'{}".format(node.nbits, node.value)
+    def on_Const(self, value):
+        if isinstance(value.value, str):
+            return "{}'{}".format(value.nbits, value.value)
         else:
-            return "{}'{:b}".format(node.nbits, node.value)
+            return "{}'{:b}".format(value.nbits, value.value)
 
-    def on_Signal(self, node):
-        if node in self.wires:
-            wire_curr, wire_next = self.wires[node]
+    def on_Signal(self, value):
+        if value in self.wires:
+            wire_curr, wire_next = self.wires[value]
         else:
-            if node in self.ports:
-                port_id, port_kind = self.ports[node]
+            if value in self.ports:
+                port_id, port_kind = self.ports[value]
             else:
                 port_id = port_kind = None
             if self.sub_name:
-                wire_name = "{}_{}".format(self.sub_name, node.name)
+                wire_name = "{}_{}".format(self.sub_name, value.name)
             else:
-                wire_name = node.name
-            for attr_name, attr_value in node.attrs.items():
+                wire_name = value.name
+            for attr_name, attr_value in value.attrs.items():
                 self.rtlil.attribute(attr_name, attr_value)
-            wire_curr = self.rtlil.wire(width=node.nbits, name=wire_name,
+            wire_curr = self.rtlil.wire(width=value.nbits, name=wire_name,
                                         port_id=port_id, port_kind=port_kind,
-                                        src=src(node.src_loc))
-            if node in self.driven:
-                wire_next = self.rtlil.wire(width=node.nbits, name=wire_curr + "$next",
-                                            src=src(node.src_loc))
+                                        src=src(value.src_loc))
+            if value in self.driven:
+                wire_next = self.rtlil.wire(width=value.nbits, name=wire_curr + "$next",
+                                            src=src(value.src_loc))
             else:
                 wire_next = None
-            self.wires[node] = (wire_curr, wire_next)
+            self.wires[value] = (wire_curr, wire_next)
 
         if self.is_lhs:
             if wire_next is None:
-                raise ValueError("Cannot return lhs for non-driven signal {}".format(repr(node)))
+                raise ValueError("Cannot return lhs for non-driven signal {}".format(repr(value)))
             return wire_next
         else:
             return wire_curr
@@ -306,42 +306,42 @@ class _ValueTransformer(xfrm.AbstractValueTransformer):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Operator_unary(self, node):
-        arg, = node.operands
+    def on_Operator_unary(self, value):
+        arg, = value.operands
         arg_bits, arg_sign = arg.shape()
-        res_bits, res_sign = node.shape()
+        res_bits, res_sign = value.shape()
         res = self.rtlil.wire(width=res_bits)
-        self.rtlil.cell(self.operator_map[(1, node.op)], ports={
+        self.rtlil.cell(self.operator_map[(1, value.op)], ports={
             "\\A": self(arg),
             "\\Y": res,
         }, params={
             "A_SIGNED": arg_sign,
             "A_WIDTH": arg_bits,
             "Y_WIDTH": res_bits,
-        }, src=src(node.src_loc))
+        }, src=src(value.src_loc))
         return res
 
-    def match_shape(self, node, new_bits, new_sign):
-        if isinstance(node, ast.Const):
-            return self(ast.Const(node.value, (new_bits, new_sign)))
+    def match_shape(self, value, new_bits, new_sign):
+        if isinstance(value, ast.Const):
+            return self(ast.Const(value.value, (new_bits, new_sign)))
 
-        node_bits, node_sign = node.shape()
-        if new_bits > node_bits:
+        value_bits, value_sign = value.shape()
+        if new_bits > value_bits:
             res = self.rtlil.wire(width=new_bits)
             self.rtlil.cell("$pos", ports={
-                "\\A": self(node),
+                "\\A": self(value),
                 "\\Y": res,
             }, params={
-                "A_SIGNED": node_sign,
-                "A_WIDTH": node_bits,
+                "A_SIGNED": value_sign,
+                "A_WIDTH": value_bits,
                 "Y_WIDTH": new_bits,
-            }, src=src(node.src_loc))
+            }, src=src(value.src_loc))
             return res
         else:
-            return "{} [{}:0]".format(self(node), new_bits - 1)
+            return "{} [{}:0]".format(self(value), new_bits - 1)
 
-    def on_Operator_binary(self, node):
-        lhs, rhs = node.operands
+    def on_Operator_binary(self, value):
+        lhs, rhs = value.operands
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
         if lhs_sign == rhs_sign:
@@ -352,9 +352,9 @@ class _ValueTransformer(xfrm.AbstractValueTransformer):
             lhs_bits = rhs_bits = max(lhs_bits, rhs_bits)
             lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
             rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
-        res_bits, res_sign = node.shape()
+        res_bits, res_sign = value.shape()
         res = self.rtlil.wire(width=res_bits)
-        self.rtlil.cell(self.operator_map[(2, node.op)], ports={
+        self.rtlil.cell(self.operator_map[(2, value.op)], ports={
             "\\A": lhs_wire,
             "\\B": rhs_wire,
             "\\Y": res,
@@ -364,14 +364,14 @@ class _ValueTransformer(xfrm.AbstractValueTransformer):
             "B_SIGNED": rhs_sign,
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
-        }, src=src(node.src_loc))
+        }, src=src(value.src_loc))
         return res
 
-    def on_Operator_mux(self, node):
-        sel, lhs, rhs = node.operands
+    def on_Operator_mux(self, value):
+        sel, lhs, rhs = value.operands
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
-        res_bits, res_sign = node.shape()
+        res_bits, res_sign = value.shape()
         lhs_bits = rhs_bits = res_bits = max(lhs_bits, rhs_bits, res_bits)
         lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
         rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
@@ -383,36 +383,36 @@ class _ValueTransformer(xfrm.AbstractValueTransformer):
             "\\Y": res,
         }, params={
             "WIDTH": res_bits
-        }, src=src(node.src_loc))
+        }, src=src(value.src_loc))
         return res
 
-    def on_Operator(self, node):
-        if len(node.operands) == 1:
-            return self.on_Operator_unary(node)
-        elif len(node.operands) == 2:
-            return self.on_Operator_binary(node)
-        elif len(node.operands) == 3:
-            assert node.op == "m"
-            return self.on_Operator_mux(node)
+    def on_Operator(self, value):
+        if len(value.operands) == 1:
+            return self.on_Operator_unary(value)
+        elif len(value.operands) == 2:
+            return self.on_Operator_binary(value)
+        elif len(value.operands) == 3:
+            assert value.op == "m"
+            return self.on_Operator_mux(value)
         else:
             raise TypeError
 
-    def on_Slice(self, node):
-        if node.end == node.start + 1:
-            return "{} [{}]".format(self(node.value), node.start)
+    def on_Slice(self, value):
+        if value.end == value.start + 1:
+            return "{} [{}]".format(self(value.value), value.start)
         else:
-            return "{} [{}:{}]".format(self(node.value), node.end - 1, node.start)
+            return "{} [{}:{}]".format(self(value.value), value.end - 1, value.start)
 
-    def on_Part(self, node):
+    def on_Part(self, value):
         raise NotImplementedError
 
-    def on_Cat(self, node):
-        return "{{ {} }}".format(" ".join(reversed([self(o) for o in node.operands])))
+    def on_Cat(self, value):
+        return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.operands])))
 
-    def on_Repl(self, node):
-        return "{{ {} }}".format(" ".join(self(node.value) for _ in range(node.count)))
+    def on_Repl(self, value):
+        return "{{ {} }}".format(" ".join(self(value.value) for _ in range(value.count)))
 
-    def on_ArrayProxy(self, node):
+    def on_ArrayProxy(self, value):
         raise NotImplementedError
 
 
