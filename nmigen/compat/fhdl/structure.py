@@ -2,7 +2,8 @@ from collections import OrderedDict
 
 from ...tools import deprecated
 from ...hdl import ast
-from ...hdl.ast import DUID, Value, Signal, Mux, Cat, Repl, Const, C, ClockSignal, ResetSignal
+from ...hdl.ast import (DUID, Value, Signal, Mux, Cat, Repl, Const, C, ClockSignal, ResetSignal,
+                        Array, ArrayProxy as _ArrayProxy)
 from ...hdl.cd import ClockDomain
 
 
@@ -82,10 +83,6 @@ class Case(ast.Switch):
         del self.cases[key]
         self.cases["-" * len(self.test)] = stmts
         return self
-
-
-def Array(*args):
-    raise NotImplementedError
 
 
 (SPECIAL_INPUT, SPECIAL_OUTPUT, SPECIAL_INOUT) = range(3)

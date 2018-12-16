@@ -713,7 +713,7 @@ class Array(MutableSequence):
             master.dat_r.eq(buses[sel].dat_r),
         ]
     """
-    def __init__(self, iterable):
+    def __init__(self, iterable=()):
         self._inner    = list(iterable)
         self._proxy_at = None
         self._mutable  = True

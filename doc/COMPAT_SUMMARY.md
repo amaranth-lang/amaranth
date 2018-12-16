@@ -77,8 +77,8 @@ Compatibility summary
       - (-) `_check_statement` **obs** → `Statement.wrap`
       - (+) `If` **obs** → `.hdl.dsl.Module.If`
       - (+) `Case` **obs** → `.hdl.dsl.Module.Switch`
-      - (−) `_ArrayProxy` ?
-      - (−) `Array` ?
+      - (+) `_ArrayProxy` → `.hdl.ast.ArrayProxy`, `choices=`→`elems=`, `key=`→`index=`
+      - (+) `Array` id
       - (+) `ClockDomain` → `.hdl.cd.ClockDomain`
       - (−) `_ClockDomainList` ?
       - (−) `SPECIAL_INPUT`/`SPECIAL_OUTPUT`/`SPECIAL_INOUT` ?
