@@ -1,4 +1,5 @@
 from ..hdl.ast import *
+from ..hdl.cd import *
 from ..hdl.dsl import *
 from .tools import *
 
@@ -341,6 +342,17 @@ class DSLTestCase(FHDLTestCase):
         with self.assertRaises(TypeError,
                 msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
             m.submodules += 1
+
+    def test_domain_named_implicit(self):
+        m = Module()
+        m.domains += ClockDomain("sync")
+        self.assertEqual(len(m._domains), 1)
+
+    def test_domain_named_explicit(self):
+        m = Module()
+        m.domains.foo = ClockDomain()
+        self.assertEqual(len(m._domains), 1)
+        self.assertEqual(m._domains[0].name, "foo")
 
     def test_lower(self):
         m1 = Module()

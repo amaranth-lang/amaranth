@@ -90,7 +90,7 @@ class _CompatModuleClockDomains(_CompatModuleProxy):
 
     @deprecated("TODO")
     def __iadd__(self, other):
-        self._cm._fragment.clock_domains += _flat_list(other)
+        self._cm._module.domains += _flat_list(other)
         return self
 
 

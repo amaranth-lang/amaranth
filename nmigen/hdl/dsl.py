@@ -2,6 +2,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from contextlib import contextmanager
 
+from ..tools import flatten
 from .ast import *
 from .ir import *
 from .xfrm import *
@@ -20,7 +21,7 @@ class _ModuleBuilderProxy:
         object.__setattr__(self, "_depth", depth)
 
 
-class _ModuleBuilderDomain(_ModuleBuilderProxy):
+class _ModuleBuilderDomainExplicit(_ModuleBuilderProxy):
     def __init__(self, builder, depth, domain):
         super().__init__(builder, depth)
         self._domain = domain
@@ -30,13 +31,13 @@ class _ModuleBuilderDomain(_ModuleBuilderProxy):
         return self
 
 
-class _ModuleBuilderDomains(_ModuleBuilderProxy):
+class _ModuleBuilderDomainImplicit(_ModuleBuilderProxy):
     def __getattr__(self, name):
         if name == "comb":
             domain = None
         else:
             domain = name
-        return _ModuleBuilderDomain(self._builder, self._depth, domain)
+        return _ModuleBuilderDomainExplicit(self._builder, self._depth, domain)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -44,7 +45,7 @@ class _ModuleBuilderDomains(_ModuleBuilderProxy):
     def __setattr__(self, name, value):
         if name == "_depth":
             object.__setattr__(self, name, value)
-        elif not isinstance(value, _ModuleBuilderDomain):
+        elif not isinstance(value, _ModuleBuilderDomainExplicit):
             raise AttributeError("Cannot assign 'd.{}' attribute; did you mean 'd.{} +='?"
                                  .format(name, name))
 
@@ -55,7 +56,7 @@ class _ModuleBuilderDomains(_ModuleBuilderProxy):
 class _ModuleBuilderRoot:
     def __init__(self, builder, depth):
         self._builder = builder
-        self.domain = self.d = _ModuleBuilderDomains(builder, depth)
+        self.domain = self.d = _ModuleBuilderDomainImplicit(builder, depth)
 
     def __getattr__(self, name):
         if name in ("comb", "sync"):
@@ -70,11 +71,7 @@ class _ModuleBuilderSubmodules:
         object.__setattr__(self, "_builder", builder)
 
     def __iadd__(self, modules):
-        if isinstance(modules, Iterable):
-            for module in modules:
-                self._builder._add_submodule(module)
-        else:
-            module = modules
+        for module in flatten([modules]):
             self._builder._add_submodule(module)
         return self
 
@@ -82,16 +79,32 @@ class _ModuleBuilderSubmodules:
         self._builder._add_submodule(submodule, name)
 
 
+class _ModuleBuilderDomainSet:
+    def __init__(self, builder):
+        object.__setattr__(self, "_builder", builder)
+
+    def __iadd__(self, domains):
+        for domain in flatten([domains]):
+            self._builder._add_domain(domain)
+        return self
+
+    def __setattr__(self, name, domain):
+        self._builder._add_domain(domain)
+
+
 class Module(_ModuleBuilderRoot):
     def __init__(self):
         _ModuleBuilderRoot.__init__(self, self, depth=0)
-        self.submodules = _ModuleBuilderSubmodules(self)
+        self.submodules    = _ModuleBuilderSubmodules(self)
+        self.domains       = _ModuleBuilderDomainSet(self)
 
-        self._submodules   = []
-        self._driving      = ValueDict()
         self._statements   = Statement.wrap([])
         self._ctrl_context = None
         self._ctrl_stack   = []
+
+        self._driving      = ValueDict()
+        self._submodules   = []
+        self._domains      = []
 
     def _check_context(self, construct, context):
         if self._ctrl_context != context:
@@ -259,6 +272,9 @@ class Module(_ModuleBuilderRoot):
                             "a submodule".format(submodule))
         self._submodules.append((submodule, name))
 
+    def _add_domain(self, cd):
+        self._domains.append(cd)
+
     def _flush(self):
         while self._ctrl_stack:
             self._pop_ctrl()
@@ -272,6 +288,7 @@ class Module(_ModuleBuilderRoot):
         fragment.add_statements(self._statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
+        fragment.add_domains(self._domains)
         return fragment
 
     get_fragment = lower

@@ -63,7 +63,7 @@ class Fragment:
         return signals
 
     def add_domains(self, *domains):
-        for domain in domains:
+        for domain in flatten(domains):
             assert isinstance(domain, ClockDomain)
             assert domain.name not in self.domains
             self.domains[domain.name] = domain
