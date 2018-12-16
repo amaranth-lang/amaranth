@@ -273,7 +273,9 @@ class _ValueCompiler(xfrm.AbstractValueTransformer):
         raise NotImplementedError # :nocov:
 
     def on_Slice(self, value):
-        if value.end == value.start + 1:
+        if value.start == 0 and value.end == len(value.value):
+            return self(value.value)
+        elif value.start + 1 == value.end:
             return "{} [{}]".format(self(value.value), value.start)
         else:
             return "{} [{}:{}]".format(self(value.value), value.end - 1, value.start)
