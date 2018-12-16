@@ -275,6 +275,19 @@ class _ValueCompiler(xfrm.AbstractValueTransformer):
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.operands])))
 
+    def _prepare_value_for_Slice(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_Slice(self, value):
+        if value.start == 0 and value.end == len(value.value):
+            return self(value.value)
+
+        sigspec = self._prepare_value_for_Slice(value.value)
+        if value.start + 1 == value.end:
+            return "{} [{}]".format(sigspec, value.start)
+        else:
+            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+
 
 class _RHSValueCompiler(_ValueCompiler):
     operator_map = {
@@ -402,20 +415,15 @@ class _RHSValueCompiler(_ValueCompiler):
         else:
             raise TypeError # :nocov:
 
-    def on_Slice(self, value):
-        if value.start == 0 and value.end == len(value.value):
-            return self(value.value)
-
-        if isinstance(value.value, ast.Signal):
-            sigspec = self(value.value)
+    def _prepare_value_for_Slice(self, value):
+        # Uncomment after the following is merged: https://github.com/YosysHQ/yosys/pull/741
+        # if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
+        if isinstance(value, ast.Signal):
+            sigspec = self(value)
         else:
-            sigspec = self.s.rtlil.wire(len(value.value))
-            self.s.rtlil.connect(sigspec, self(value.value))
-
-        if value.start + 1 == value.end:
-            return "{} [{}]".format(sigspec, value.start)
-        else:
-            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+            sigspec = self.s.rtlil.wire(len(value))
+            self.s.rtlil.connect(sigspec, self(value))
+        return sigspec
 
     def on_Part(self, value):
         raise NotImplementedError
@@ -437,22 +445,12 @@ class _LHSValueCompiler(_ValueCompiler):
     def on_Signal(self, value):
         wire_curr, wire_next = self.s.resolve(value)
         if wire_next is None:
-            raise ValueError("Cannot return lhs for non-driven signal {}".format(repr(value)))
+            raise ValueError("No LHS wire for non-driven signal {}".format(repr(value)))
         return wire_next
 
-    def on_Slice(self, value):
-        if value.start == 0 and value.end == len(value.value):
-            return self(value.value)
-
-        if isinstance(value.value, ast.Signal):
-            sigspec = self(value.value)
-        else:
-            raise NotImplementedError
-
-        if value.start + 1 == value.end:
-            return "{} [{}]".format(sigspec, value.start)
-        else:
-            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+    def _prepare_value_for_Slice(self, value):
+        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat))
+        return self(value)
 
     def on_Part(self, value):
         raise NotImplementedError
