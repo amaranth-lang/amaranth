@@ -1,20 +1,23 @@
 from .tools import *
+from ..tools import flatten, union
 from ..hdl.ast import *
 from ..hdl.ir import *
 from ..back.pysim import *
 
 
 class SimulatorUnitTestCase(FHDLTestCase):
-    def assertStatement(self, stmt, inputs, output):
+    def assertStatement(self, stmt, inputs, output, reset=0):
         inputs = [Value.wrap(i) for i in inputs]
         output = Value.wrap(output)
 
         isigs = [Signal(i.shape(), name=n) for i, n in zip(inputs, "abcd")]
-        osig  = Signal(output.shape(), name="y")
+        osig  = Signal(output.shape(), name="y", reset=reset)
 
+        stmt = stmt(osig, *isigs)
         frag = Fragment()
-        frag.add_statements(stmt(osig, *isigs))
-        frag.add_driver(osig)
+        frag.add_statements(stmt)
+        for signal in flatten(s._lhs_signals() for s in Statement.wrap(stmt)):
+            frag.add_driver(signal)
 
         with Simulator(frag,
                 vcd_file =open("test.vcd",  "w"),
@@ -130,15 +133,34 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt2 = lambda y, a: y.eq(a[2:4])
         self.assertStatement(stmt2, [C(0b10110100, 8)], C(0b01, 2))
 
+    def test_slice_lhs(self):
+        stmt1 = lambda y, a: y[2].eq(a)
+        self.assertStatement(stmt1, [C(0b0,  1)], C(0b11111011, 8), reset=0b11111111)
+        stmt2 = lambda y, a: y[2:4].eq(a)
+        self.assertStatement(stmt2, [C(0b01, 2)], C(0b11110111, 8), reset=0b11111011)
+
     def test_part(self):
         stmt = lambda y, a, b: y.eq(a.part(b, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(0)], C(0b100, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(2)], C(0b101, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(3)], C(0b110, 3))
 
+    def test_part_lhs(self):
+        stmt = lambda y, a, b: y.part(a, 3).eq(b)
+        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(2), C(0b101, 3)], C(0b11110111, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(3), C(0b110, 3)], C(0b11110111, 8), reset=0b11111111)
+
     def test_cat(self):
         stmt = lambda y, *xs: y.eq(Cat(*xs))
         self.assertStatement(stmt, [C(0b10, 2), C(0b01, 2)], C(0b0110, 4))
+
+    def test_cat_lhs(self):
+        l = Signal(3)
+        m = Signal(3)
+        n = Signal(3)
+        stmt = lambda y, a: [Cat(l, m, n).eq(a), y.eq(Cat(n, m, l))]
+        self.assertStatement(stmt, [C(0b100101110, 9)], C(0b110101100, 9))
 
     def test_repl(self):
         stmt = lambda y, a: y.eq(Repl(a, 3))
@@ -150,6 +172,16 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0)], C(1))
         self.assertStatement(stmt, [C(1)], C(4))
         self.assertStatement(stmt, [C(2)], C(10))
+
+    def test_array_lhs(self):
+        l = Signal(3, reset=1)
+        m = Signal(3, reset=4)
+        n = Signal(3, reset=7)
+        array = Array([l, m, n])
+        stmt = lambda y, a, b: [array[a].eq(b), y.eq(Cat(*array))]
+        self.assertStatement(stmt, [C(0), C(0b000)], C(0b111100000))
+        self.assertStatement(stmt, [C(1), C(0b010)], C(0b111010001))
+        self.assertStatement(stmt, [C(2), C(0b100)], C(0b100100001))
 
     def test_array_index(self):
         array = Array(Array(x * y for y in range(10)) for x in range(10))

@@ -813,7 +813,7 @@ class Assign(Statement):
         return self.lhs._lhs_signals()
 
     def _rhs_signals(self):
-        return self.rhs._rhs_signals()
+        return self.lhs._rhs_signals() | self.rhs._rhs_signals()
 
     def __repr__(self):
         return "(eq {!r} {!r})".format(self.lhs, self.rhs)
