@@ -195,7 +195,7 @@ def src(src_loc):
     return "{}:{}".format(file, line)
 
 
-class _ValueTransformer(xfrm.ValueTransformer):
+class _ValueTransformer(xfrm.AbstractValueTransformer):
     operator_map = {
         (1, "~"):    "$not",
         (1, "-"):    "$neg",
@@ -300,6 +300,12 @@ class _ValueTransformer(xfrm.ValueTransformer):
         else:
             return wire_curr
 
+    def on_ClockSignal(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_ResetSignal(self, value):
+        raise NotImplementedError # :nocov:
+
     def on_Operator_unary(self, node):
         arg, = node.operands
         arg_bits, arg_sign = arg.shape()
@@ -397,14 +403,17 @@ class _ValueTransformer(xfrm.ValueTransformer):
         else:
             return "{} [{}:{}]".format(self(node.value), node.end - 1, node.start)
 
-    # def on_Part(self, node):
-    #     return _Part(self(node.value), self(node.offset), node.width)
+    def on_Part(self, node):
+        raise NotImplementedError
 
     def on_Cat(self, node):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in node.operands])))
 
     def on_Repl(self, node):
         return "{{ {} }}".format(" ".join(self(node.value) for _ in range(node.count)))
+
+    def on_ArrayProxy(self, node):
+        raise NotImplementedError
 
 
 def convert_fragment(builder, fragment, name, top):

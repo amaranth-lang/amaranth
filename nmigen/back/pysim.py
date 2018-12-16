@@ -6,7 +6,7 @@ from vcd.gtkw import GTKWSave
 
 from ..tools import flatten
 from ..hdl.ast import *
-from ..hdl.xfrm import ValueTransformer, StatementTransformer
+from ..hdl.xfrm import AbstractValueTransformer, AbstractStatementTransformer
 
 
 __all__ = ["Simulator", "Delay", "Tick", "Passive", "DeadlineError"]
@@ -44,7 +44,7 @@ class _State:
 normalize = Const.normalize
 
 
-class _RHSValueCompiler(ValueTransformer):
+class _RHSValueCompiler(AbstractValueTransformer):
     def __init__(self, sensitivity=None, mode="rhs"):
         self.sensitivity = sensitivity
         self.signal_mode = mode
@@ -165,7 +165,7 @@ class _RHSValueCompiler(ValueTransformer):
         return lambda state: normalize(elems[index(state)](state), shape)
 
 
-class _LHSValueCompiler(ValueTransformer):
+class _LHSValueCompiler(AbstractValueTransformer):
     def __init__(self, rhs_compiler):
         self.rhs_compiler = rhs_compiler
 
@@ -234,7 +234,7 @@ class _LHSValueCompiler(ValueTransformer):
         return eval
 
 
-class _StatementCompiler(StatementTransformer):
+class _StatementCompiler(AbstractStatementTransformer):
     def __init__(self):
         self.sensitivity   = ValueSet()
         self.rrhs_compiler = _RHSValueCompiler(self.sensitivity, mode="rhs")
