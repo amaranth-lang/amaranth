@@ -272,14 +272,6 @@ class _ValueCompiler(xfrm.AbstractValueTransformer):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Slice(self, value):
-        if value.start == 0 and value.end == len(value.value):
-            return self(value.value)
-        elif value.start + 1 == value.end:
-            return "{} [{}]".format(self(value.value), value.start)
-        else:
-            return "{} [{}:{}]".format(self(value.value), value.end - 1, value.start)
-
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.operands])))
 
@@ -410,6 +402,21 @@ class _RHSValueCompiler(_ValueCompiler):
         else:
             raise TypeError # :nocov:
 
+    def on_Slice(self, value):
+        if value.start == 0 and value.end == len(value.value):
+            return self(value.value)
+
+        if isinstance(value.value, ast.Signal):
+            sigspec = self(value.value)
+        else:
+            sigspec = self.s.rtlil.wire(len(value.value))
+            self.s.rtlil.connect(sigspec, self(value.value))
+
+        if value.start + 1 == value.end:
+            return "{} [{}]".format(sigspec, value.start)
+        else:
+            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+
     def on_Part(self, value):
         raise NotImplementedError
 
@@ -432,6 +439,20 @@ class _LHSValueCompiler(_ValueCompiler):
         if wire_next is None:
             raise ValueError("Cannot return lhs for non-driven signal {}".format(repr(value)))
         return wire_next
+
+    def on_Slice(self, value):
+        if value.start == 0 and value.end == len(value.value):
+            return self(value.value)
+
+        if isinstance(value.value, ast.Signal):
+            sigspec = self(value.value)
+        else:
+            raise NotImplementedError
+
+        if value.start + 1 == value.end:
+            return "{} [{}]".format(sigspec, value.start)
+        else:
+            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
 
     def on_Part(self, value):
         raise NotImplementedError
