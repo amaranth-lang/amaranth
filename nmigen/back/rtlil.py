@@ -339,19 +339,19 @@ class _RHSValueCompiler(_ValueCompiler):
             return self(ast.Const(value.value, (new_bits, new_sign)))
 
         value_bits, value_sign = value.shape()
-        if new_bits > value_bits:
-            res = self.s.rtlil.wire(width=new_bits)
-            self.s.rtlil.cell("$pos", ports={
-                "\\A": self(value),
-                "\\Y": res,
-            }, params={
-                "A_SIGNED": value_sign,
-                "A_WIDTH": value_bits,
-                "Y_WIDTH": new_bits,
-            }, src=src(value.src_loc))
-            return res
-        else:
-            return "{} [{}:0]".format(self(value), new_bits - 1)
+        if new_bits <= value_bits:
+            return self(ast.Slice(value, 0, new_bits))
+
+        res = self.s.rtlil.wire(width=new_bits)
+        self.s.rtlil.cell("$pos", ports={
+            "\\A": self(value),
+            "\\Y": res,
+        }, params={
+            "A_SIGNED": value_sign,
+            "A_WIDTH": value_bits,
+            "Y_WIDTH": new_bits,
+        }, src=src(value.src_loc))
+        return res
 
     def on_Operator_binary(self, value):
         lhs, rhs = value.operands
