@@ -515,7 +515,8 @@ def convert_fragment(builder, fragment, name, top):
         for domain, _ in fragment.iter_sync():
             cd = fragment.domains[domain]
             compiler_state.resolve_curr(cd.clk)
-            compiler_state.resolve_curr(cd.rst)
+            if cd.rst is not None:
+                compiler_state.resolve_curr(cd.rst)
 
         # Transform all subfragments to their respective cells. Transforming signals connected
         # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
