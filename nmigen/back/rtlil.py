@@ -26,6 +26,13 @@ class _Namer:
 
 
 class _Bufferer:
+    _escape_map = str.maketrans({
+        "\"": "\\\"",
+        "\\": "\\\\",
+        "\t": "\\t",
+        "\r": "\\r",
+        "\n": "\\n",
+    })
     def __init__(self):
         super().__init__()
         self._buffer = io.StringIO()
@@ -36,9 +43,17 @@ class _Bufferer:
     def _append(self, fmt, *args, **kwargs):
         self._buffer.write(fmt.format(*args, **kwargs))
 
+    def attribute(self, name, value, indent=0):
+        if isinstance(value, str):
+            self._append("{}attribute \\{} \"{}\"\n",
+                         "  " * indent, name, value.translate(self._escape_map))
+        else:
+            self._append("{}attribute \\{} {}\n",
+                         "  " * indent, name, int(value))
+
     def _src(self, src):
         if src:
-            self._append("  attribute \\src \"{}\"\n", src.replace("\"", "\\\""))
+            self.attribute("src", src)
 
 
 class _Builder(_Namer, _Bufferer):
@@ -57,10 +72,7 @@ class _ModuleBuilder(_Namer, _Bufferer):
 
     def __enter__(self):
         for name, value in self.attrs.items():
-            if isinstance(value, str):
-                self._append("attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
-            else:
-                self._append("attribute \\{} {}\n", name, int(value))
+            self.attribute(name, value, indent=0)
         self._append("module {}\n", self.name)
         return self
 
@@ -68,11 +80,8 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self._append("end\n")
         self.rtlil._buffer.write(str(self))
 
-    def attribute(self, name, value):
-        if isinstance(value, str):
-            self._append("  attribute \\{} \"{}\"\n", name, value.replace("\"", "\\\""))
-        else:
-            self._append("  attribute \\{} {}\n", name, int(value))
+    def attribute(self, name, value, indent=1):
+        super().attribute(name, value, indent)
 
     def wire(self, width, port_id=None, port_kind=None, name=None, src=""):
         self._src(src)
