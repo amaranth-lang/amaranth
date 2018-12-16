@@ -210,7 +210,6 @@ class _ValueCompilerState:
         self.wires    = ast.ValueDict()
         self.driven   = ast.ValueDict()
         self.ports    = ast.ValueDict()
-        self.sub_name = None
 
     def add_driven(self, signal, sync):
         self.driven[signal] = sync
@@ -225,7 +224,7 @@ class _ValueCompilerState:
             kind = "inout"
         self.ports[signal] = (len(self.ports), kind)
 
-    def resolve(self, signal):
+    def resolve(self, signal, prefix=None):
         if signal in self.wires:
             return self.wires[signal]
 
@@ -233,8 +232,8 @@ class _ValueCompilerState:
             port_id, port_kind = self.ports[signal]
         else:
             port_id = port_kind = None
-        if self.sub_name:
-            wire_name = "{}_{}".format(self.sub_name, signal.name)
+        if prefix is not None:
+            wire_name = "{}_{}".format(prefix, signal.name)
         else:
             wire_name = signal.name
 
@@ -252,17 +251,9 @@ class _ValueCompilerState:
 
         return wire_curr, wire_next
 
-    def resolve_curr(self, signal):
-        wire_curr, wire_next = self.resolve(signal)
+    def resolve_curr(self, signal, prefix=None):
+        wire_curr, wire_next = self.resolve(signal, prefix)
         return wire_curr
-
-    @contextmanager
-    def hierarchy(self, sub_name):
-        try:
-            self.sub_name = sub_name
-            yield
-        finally:
-            self.sub_name = None
 
 
 class _ValueCompiler(xfrm.AbstractValueTransformer):
@@ -486,14 +477,14 @@ def convert_fragment(builder, fragment, name, top):
         # any hierarchy, to make sure they get sensible (non-prefixed) names.
         for signal in fragment.ports:
             compiler_state.add_port(signal, fragment.ports[signal])
-            rhs_compiler(signal)
+            compiler_state.resolve_curr(signal)
 
         # Transform all clocks clocks and resets eagerly and outside of any hierarchy, to make
         # sure they get sensible (non-prefixed) names. This does not affect semantics.
         for domain, _ in fragment.iter_sync():
             cd = fragment.domains[domain]
-            rhs_compiler(cd.clk)
-            rhs_compiler(cd.rst)
+            compiler_state.resolve_curr(cd.clk)
+            compiler_state.resolve_curr(cd.rst)
 
         # Transform all subfragments to their respective cells. Transforming signals connected
         # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
@@ -501,10 +492,10 @@ def convert_fragment(builder, fragment, name, top):
         for subfragment, sub_name in fragment.subfragments:
             sub_name, sub_port_map = \
                 convert_fragment(builder, subfragment, top=False, name=sub_name)
-            with compiler_state.hierarchy(sub_name):
-                module.cell(sub_name, name=sub_name, ports={
-                    p: rhs_compiler(s) for p, s in sub_port_map.items()
-                })
+            module.cell(sub_name, name=sub_name, ports={
+                port: compiler_state.resolve_curr(signal, prefix=sub_name)
+                for port, signal in sub_port_map.items()
+            })
 
         with module.process() as process:
             with process.case() as case:
