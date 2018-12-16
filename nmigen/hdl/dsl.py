@@ -92,10 +92,6 @@ class Module(_ModuleBuilderRoot):
         self._statements   = Statement.wrap([])
         self._ctrl_context = None
         self._ctrl_stack   = []
-        self._stmt_if_cond      = []
-        self._stmt_if_bodies    = []
-        self._stmt_switch_test  = None
-        self._stmt_switch_cases = OrderedDict()
 
     def _check_context(self, construct, context):
         if self._ctrl_context != context:
