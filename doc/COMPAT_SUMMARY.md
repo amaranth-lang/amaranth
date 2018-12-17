@@ -63,7 +63,7 @@ Compatibility summary
         <br>Note: values no longer valid as keys in `dict` and `set`; use `ValueDict` and `ValueSet` instead.
       - (+) `wrap` → `Value.wrap`
       - (+) `_Operator` → `Operator`
-      - (+) `Mux` → `Mux`
+      - (+) `Mux` id
       - (+) `_Slice` → `Slice`, `stop=`→`end=`, `.stop`→`.end`
       - (+) `_Part` → `Part`
       - (+) `Cat` id, `.l`→`.operands`

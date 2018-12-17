@@ -890,13 +890,21 @@ class ValueKey:
 
     def __hash__(self):
         if isinstance(self.value, Const):
-            return hash(self.value)
+            return hash(self.value.value)
         elif isinstance(self.value, Signal):
             return hash(id(self.value))
+        elif isinstance(self.value, Operator):
+            return hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
         elif isinstance(self.value, Slice):
             return hash((ValueKey(self.value.value), self.value.start, self.value.end))
+        elif isinstance(self.value, Part):
+            return hash((ValueKey(self.value.value), ValueKey(self.value.offset),
+                         self.value.width))
+        elif isinstance(self.value, Cat):
+            return hash(tuple(ValueKey(o) for o in self.value.operands))
         else: # :nocov:
-            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
+            raise TypeError("Object '{!r}' cannot be used as a key in value collections"
+                            .format(self.value))
 
     def __eq__(self, other):
         if not isinstance(other, ValueKey):
@@ -905,15 +913,28 @@ class ValueKey:
             return False
 
         if isinstance(self.value, Const):
-            return self.value == other.value
+            return self.value.value == other.value.value
         elif isinstance(self.value, Signal):
             return id(self.value) == id(other.value)
+        elif isinstance(self.value, Operator):
+            return (self.value.op == other.value.op and
+                    len(self.value.operands) == len(other.value.operands) and
+                    all(ValueKey(a) == ValueKey(b)
+                        for a, b in zip(self.value.operands, other.value.operands)))
         elif isinstance(self.value, Slice):
             return (ValueKey(self.value.value) == ValueKey(other.value.value) and
                     self.value.start == other.value.start and
                     self.value.end == other.value.end)
+        elif isinstance(self.value, Part):
+            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
+                    ValueKey(self.value.offset) == ValueKey(other.value.offset) and
+                    self.value.width == other.value.width)
+        elif isinstance(self.value, Cat):
+            return all(ValueKey(a) == ValueKey(b)
+                        for a, b in zip(self.value.operands, other.value.operands))
         else: # :nocov:
-            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
+            raise TypeError("Object '{!r}' cannot be used as a key in value collections"
+                            .format(self.value))
 
     def __lt__(self, other):
         if not isinstance(other, ValueKey):
