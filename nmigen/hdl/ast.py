@@ -887,11 +887,11 @@ class Passive(Statement):
 class _MappedKeyCollection(metaclass=ABCMeta):
     @abstractmethod
     def _map_key(self, key):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def _unmap_key(self, key):
-        pass
+        pass # :nocov:
 
 
 class _MappedKeyDict(MutableMapping, _MappedKeyCollection):

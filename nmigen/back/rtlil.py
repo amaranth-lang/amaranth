@@ -567,6 +567,16 @@ class _StatementCompiler(xfrm.AbstractStatementTransformer):
 
 
 def convert_fragment(builder, fragment, name, top):
+    if fragment.black_box is not None:
+        port_map = OrderedDict()
+        for signal in fragment.ports:
+            port_map["\\{}".format(fragment.port_names[signal])] = signal
+
+        return "\\{}".format(fragment.black_box), port_map
+    else:
+        assert not fragment.port_names
+        assert not fragment.parameters
+
     with builder.module(name or "anonymous", attrs={"top": 1} if top else {}) as module:
         compiler_state = _ValueCompilerState(module)
         rhs_compiler   = _RHSValueCompiler(compiler_state)
@@ -601,7 +611,7 @@ def convert_fragment(builder, fragment, name, top):
             module.cell(sub_name, name=sub_name, ports={
                 port: compiler_state.resolve_curr(signal, prefix=sub_name)
                 for port, signal in sub_port_map.items()
-            })
+            }, params=subfragment.parameters)
 
         with module.process() as process:
             with process.case() as case:

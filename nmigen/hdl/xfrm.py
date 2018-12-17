@@ -18,43 +18,43 @@ __all__ = ["AbstractValueTransformer", "ValueTransformer",
 class AbstractValueTransformer(metaclass=ABCMeta):
     @abstractmethod
     def on_Const(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Signal(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_ClockSignal(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_ResetSignal(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Operator(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Slice(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Part(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Cat(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Repl(self, value):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_ArrayProxy(self, value):
-        pass
+        pass # :nocov:
 
     def on_unknown_value(self, value):
         raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
@@ -126,15 +126,15 @@ class ValueTransformer(AbstractValueTransformer):
 class AbstractStatementTransformer(metaclass=ABCMeta):
     @abstractmethod
     def on_Assign(self, stmt):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_Switch(self, stmt):
-        pass
+        pass # :nocov:
 
     @abstractmethod
     def on_statements(self, stmt):
-        pass
+        pass # :nocov:
 
     def on_unknown_statement(self, stmt):
         raise TypeError("Cannot transform statement '{!r}'".format(stmt)) # :nocov:
@@ -173,6 +173,10 @@ class FragmentTransformer:
         for subfragment, name in fragment.subfragments:
             new_fragment.add_subfragment(self(subfragment), name)
 
+    def map_ports(self, fragment, new_fragment):
+        for port, dir in fragment.ports.items():
+            new_fragment.add_ports(port, dir=dir)
+
     def map_domains(self, fragment, new_fragment):
         for domain in fragment.iter_domains():
             new_fragment.add_domains(fragment.domains[domain])
@@ -189,6 +193,10 @@ class FragmentTransformer:
 
     def on_fragment(self, fragment):
         new_fragment = Fragment()
+        new_fragment.black_box = fragment.black_box
+        new_fragment.parameters = OrderedDict(fragment.parameters)
+        new_fragment.port_names = SignalDict(fragment.port_names.items())
+        self.map_ports(fragment, new_fragment)
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)

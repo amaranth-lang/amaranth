@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.ir import *
@@ -29,7 +31,7 @@ class FragmentPortsTestCase(FHDLTestCase):
 
     def test_iter_signals(self):
         f = Fragment()
-        f.add_ports(self.s1, self.s2, kind="io")
+        f.add_ports(self.s1, self.s2, dir="io")
         self.assertEqual(SignalSet((self.s1, self.s2)), f.iter_signals())
 
     def test_self_contained(self):
@@ -144,6 +146,18 @@ class FragmentPortsTestCase(FHDLTestCase):
         self.assertEqual(f.ports, SignalDict([
             (self.s1,  "i"),
             (sync.clk, "i"),
+        ]))
+
+    def test_inout(self):
+        s = Signal()
+        f1 = Fragment()
+        f2 = Fragment()
+        f2.add_ports(s, dir="io")
+        f1.add_subfragment(f2)
+
+        f1._propagate_ports(ports=())
+        self.assertEqual(f1.ports, SignalDict([
+            (s, "io")
         ]))
 
 
@@ -391,3 +405,18 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
             (eq (sig c2) (const 1'd1))
         )
         """)
+
+
+class InstanceTestCase(FHDLTestCase):
+    def test_init(self):
+        rst = Signal()
+        stb = Signal()
+        pins = Signal(8)
+        inst = Instance("cpu", p_RESET=0x1234, i_rst=rst, o_stb=stb, io_pins=pins)
+        self.assertEqual(inst.black_box, "cpu")
+        self.assertEqual(inst.parameters, OrderedDict([("RESET", 0x1234)]))
+        self.assertEqual(inst.ports, SignalDict([
+            (rst, "i"),
+            (stb, "o"),
+            (pins, "io"),
+        ]))

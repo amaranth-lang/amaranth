@@ -6,7 +6,7 @@ from .ast import *
 from .cd import *
 
 
-__all__ = ["Fragment", "DriverConflict"]
+__all__ = ["Fragment", "Instance", "DriverConflict"]
 
 
 class DriverConflict(UserWarning):
@@ -15,19 +15,28 @@ class DriverConflict(UserWarning):
 
 class Fragment:
     def __init__(self):
+        self.black_box = None
+        self.port_names = SignalDict()
+        self.parameters = OrderedDict()
+
         self.ports = SignalDict()
         self.drivers = OrderedDict()
         self.statements = []
         self.domains = OrderedDict()
         self.subfragments = []
 
-    def add_ports(self, *ports, kind):
-        assert kind in ("i", "o", "io")
+    def add_ports(self, *ports, dir):
+        assert dir in ("i", "o", "io")
         for port in flatten(ports):
-            self.ports[port] = kind
+            self.ports[port] = dir
 
-    def iter_ports(self):
-        yield from self.ports.keys()
+    def iter_ports(self, dir=None):
+        if dir is None:
+            yield from self.ports
+        else:
+            for port, port_dir in self.ports.items():
+                if port_dir == dir:
+                    yield port
 
     def add_driver(self, signal, domain=None):
         if domain not in self.drivers:
@@ -77,6 +86,9 @@ class Fragment:
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
+
+    def get_fragment(self, platform):
+        return self
 
     def _resolve_driver_conflicts(self, hierarchy=("top",), mode="warn"):
         assert mode in ("silent", "warn", "error")
@@ -248,7 +260,7 @@ class Fragment:
         for subfrag, name in self.subfragments:
             # Always ask subfragments to provide all signals we're using and signals we're asked
             # to provide. If the subfragment is not driving it, it will silently ignore it.
-            sub_ins, sub_outs = subfrag._propagate_ports(ports=self_used | ports)
+            sub_ins, sub_outs, sub_inouts = subfrag._propagate_ports(ports=self_used | ports)
             # Refine the input port approximation: if a subfragment is driving a signal,
             # it is definitely not our input. But, if a subfragment requires a signal as an input,
             # and we aren't driving it, it has to be our input as well.
@@ -257,12 +269,17 @@ class Fragment:
             # Refine the output port approximation: if a subfragment is driving a signal,
             # and we're asked to provide it, we can provide it now.
             outs |= ports & sub_outs
+            # All of our subfragments' bidirectional ports are also our bidirectional ports,
+            # since these are only used for pins.
+            self.add_ports(sub_inouts, dir="io")
 
         # We've computed the precise set of input and output ports.
-        self.add_ports(ins,  kind="i")
-        self.add_ports(outs, kind="o")
+        self.add_ports(ins,  dir="i")
+        self.add_ports(outs, dir="o")
 
-        return ins, outs
+        return (SignalSet(self.iter_ports("i")),
+                SignalSet(self.iter_ports("o")),
+                SignalSet(self.iter_ports("io")))
 
     def prepare(self, ports=(), ensure_sync_exists=True):
         from .xfrm import FragmentTransformer
@@ -274,3 +291,24 @@ class Fragment:
         fragment = fragment._lower_domain_signals()
         fragment._propagate_ports(ports)
         return fragment
+
+
+class Instance(Fragment):
+    def __init__(self, type, **kwargs):
+        super().__init__()
+        self.black_box = type
+        for kw, arg in kwargs.items():
+            if kw.startswith("p_"):
+                self.parameters[kw[2:]] = arg
+            elif kw.startswith("i_"):
+                self.port_names[arg] = kw[2:]
+                self.add_ports(arg, dir="i")
+            elif kw.startswith("o_"):
+                self.port_names[arg] = kw[2:]
+                self.add_ports(arg, dir="o")
+            elif kw.startswith("io_"):
+                self.port_names[arg] = kw[3:]
+                self.add_ports(arg, dir="io")
+            else:
+                raise NameError("Instance argument '{}' does not start with p_, i_, o_, or io_"
+                                .format(arg))
