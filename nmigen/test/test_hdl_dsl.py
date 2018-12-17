@@ -369,7 +369,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(f1.drivers, {
-            None: ValueSet((self.c1,))
+            None: SignalSet((self.c1,))
         })
         self.assertEqual(len(f1.subfragments), 1)
         (f2, f2_name), = f1.subfragments
@@ -381,7 +381,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(f2.drivers, {
-            None: ValueSet((self.c2,)),
-            "sync": ValueSet((self.c3,))
+            None: SignalSet((self.c2,)),
+            "sync": SignalSet((self.c3,))
         })
         self.assertEqual(len(f2.subfragments), 0)

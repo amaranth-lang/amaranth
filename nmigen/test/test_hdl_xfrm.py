@@ -38,8 +38,8 @@ class DomainRenamerTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(f.drivers, {
-            None: ValueSet((self.s1, self.s2)),
-            "pix": ValueSet((self.s3,)),
+            None: SignalSet((self.s1, self.s2)),
+            "pix": SignalSet((self.s3,)),
         })
 
     def test_rename_multi(self):

@@ -20,10 +20,10 @@ class _State:
     __slots__ = ("curr", "curr_dirty", "next", "next_dirty")
 
     def __init__(self):
-        self.curr = ValueDict()
-        self.next = ValueDict()
-        self.curr_dirty = ValueSet()
-        self.next_dirty = ValueSet()
+        self.curr = SignalDict()
+        self.next = SignalDict()
+        self.curr_dirty = SignalSet()
+        self.next_dirty = SignalSet()
 
     def set(self, signal, value):
         assert isinstance(value, int)
@@ -236,7 +236,7 @@ class _LHSValueCompiler(AbstractValueTransformer):
 
 class _StatementCompiler(AbstractStatementTransformer):
     def __init__(self):
-        self.sensitivity   = ValueSet()
+        self.sensitivity   = SignalSet()
         self.rrhs_compiler = _RHSValueCompiler(self.sensitivity, mode="rhs")
         self.lrhs_compiler = _RHSValueCompiler(self.sensitivity, mode="lhs")
         self.lhs_compiler  = _LHSValueCompiler(self.lrhs_compiler)
@@ -284,13 +284,13 @@ class Simulator:
         self._fragment        = fragment
 
         self._domains         = dict()        # str/domain -> ClockDomain
-        self._domain_triggers = ValueDict()   # Signal -> str/domain
+        self._domain_triggers = SignalDict()  # Signal -> str/domain
         self._domain_signals  = dict()        # str/domain -> {Signal}
 
-        self._signals         = ValueSet()    # {Signal}
-        self._comb_signals    = ValueSet()    # {Signal}
-        self._sync_signals    = ValueSet()    # {Signal}
-        self._user_signals    = ValueSet()    # {Signal}
+        self._signals         = SignalSet()    # {Signal}
+        self._comb_signals    = SignalSet()    # {Signal}
+        self._sync_signals    = SignalSet()    # {Signal}
+        self._user_signals    = SignalSet()    # {Signal}
 
         self._started         = False
         self._timestamp       = 0.
@@ -306,12 +306,12 @@ class Simulator:
         self._wait_deadline   = dict()        # process -> float/timestamp
         self._wait_tick       = dict()        # process -> str/domain
 
-        self._funclets        = ValueDict()   # Signal -> set(lambda)
+        self._funclets        = SignalDict()  # Signal -> set(lambda)
 
         self._vcd_file        = vcd_file
         self._vcd_writer      = None
-        self._vcd_signals     = ValueDict()   # signal -> set(vcd_signal)
-        self._vcd_names       = ValueDict()   # signal -> str/name
+        self._vcd_signals     = SignalDict()  # signal -> set(vcd_signal)
+        self._vcd_names       = SignalDict()  # signal -> str/name
         self._gtkw_file       = gtkw_file
         self._traces          = traces
 
@@ -381,7 +381,7 @@ class Simulator:
             self._domain_triggers[cd.clk] = domain
             if cd.rst is not None:
                 self._domain_triggers[cd.rst] = domain
-            self._domain_signals[domain] = ValueSet()
+            self._domain_signals[domain] = SignalSet()
 
         hierarchy = {}
         def add_fragment(fragment, scope=()):

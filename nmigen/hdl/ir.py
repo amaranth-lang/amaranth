@@ -15,7 +15,7 @@ class DriverConflict(UserWarning):
 
 class Fragment:
     def __init__(self):
-        self.ports = ValueDict()
+        self.ports = SignalDict()
         self.drivers = OrderedDict()
         self.statements = []
         self.domains = OrderedDict()
@@ -31,7 +31,7 @@ class Fragment:
 
     def add_driver(self, signal, domain=None):
         if domain not in self.drivers:
-            self.drivers[domain] = ValueSet()
+            self.drivers[domain] = SignalSet()
         self.drivers[domain].add(signal)
 
     def iter_drivers(self):
@@ -51,7 +51,7 @@ class Fragment:
                 yield domain, signal
 
     def iter_signals(self):
-        signals = ValueSet()
+        signals = SignalSet()
         signals |= self.ports.keys()
         for domain, domain_signals in self.drivers.items():
             if domain is not None:
@@ -81,7 +81,7 @@ class Fragment:
     def _resolve_driver_conflicts(self, hierarchy=("top",), mode="warn"):
         assert mode in ("silent", "warn", "error")
 
-        driver_subfrags = ValueDict()
+        driver_subfrags = SignalDict()
 
         # For each signal driven by this fragment and/or its subfragments, determine which
         # subfragments also drive it.
@@ -147,7 +147,7 @@ class Fragment:
             return self._resolve_driver_conflicts(hierarchy, mode)
 
         # Nothing was flattened, we're done!
-        return ValueSet(driver_subfrags.keys())
+        return SignalSet(driver_subfrags.keys())
 
     def _propagate_domains_up(self, hierarchy=("top",)):
         from .xfrm import DomainRenamer
@@ -229,8 +229,8 @@ class Fragment:
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        self_driven = union(s._lhs_signals() for s in self.statements) or ValueSet()
-        self_used   = union(s._rhs_signals() for s in self.statements) or ValueSet()
+        self_driven = union(s._lhs_signals() for s in self.statements) or SignalSet()
+        self_used   = union(s._rhs_signals() for s in self.statements) or SignalSet()
         for domain, _ in self.iter_sync():
             cd = self.domains[domain]
             self_used.add(cd.clk)

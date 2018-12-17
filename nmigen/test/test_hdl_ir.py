@@ -25,12 +25,12 @@ class FragmentPortsTestCase(FHDLTestCase):
         self.assertEqual(list(f.iter_ports()), [])
 
         f._propagate_ports(ports=())
-        self.assertEqual(f.ports, ValueDict([]))
+        self.assertEqual(f.ports, SignalDict([]))
 
     def test_iter_signals(self):
         f = Fragment()
         f.add_ports(self.s1, self.s2, kind="io")
-        self.assertEqual(ValueSet((self.s1, self.s2)), f.iter_signals())
+        self.assertEqual(SignalSet((self.s1, self.s2)), f.iter_signals())
 
     def test_self_contained(self):
         f = Fragment()
@@ -40,7 +40,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
 
         f._propagate_ports(ports=())
-        self.assertEqual(f.ports, ValueDict([]))
+        self.assertEqual(f.ports, SignalDict([]))
 
     def test_infer_input(self):
         f = Fragment()
@@ -49,7 +49,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
 
         f._propagate_ports(ports=())
-        self.assertEqual(f.ports, ValueDict([
+        self.assertEqual(f.ports, SignalDict([
             (self.s1, "i")
         ]))
 
@@ -60,7 +60,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
 
         f._propagate_ports(ports=(self.c1,))
-        self.assertEqual(f.ports, ValueDict([
+        self.assertEqual(f.ports, SignalDict([
             (self.s1, "i"),
             (self.c1, "o")
         ]))
@@ -76,8 +76,8 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         f1.add_subfragment(f2)
         f1._propagate_ports(ports=())
-        self.assertEqual(f1.ports, ValueDict())
-        self.assertEqual(f2.ports, ValueDict([
+        self.assertEqual(f1.ports, SignalDict())
+        self.assertEqual(f2.ports, SignalDict([
             (self.s1, "o"),
         ]))
 
@@ -89,10 +89,10 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         f1.add_subfragment(f2)
         f1._propagate_ports(ports=())
-        self.assertEqual(f1.ports, ValueDict([
+        self.assertEqual(f1.ports, SignalDict([
             (self.s1, "i"),
         ]))
-        self.assertEqual(f2.ports, ValueDict([
+        self.assertEqual(f2.ports, SignalDict([
             (self.s1, "i"),
         ]))
 
@@ -108,10 +108,10 @@ class FragmentPortsTestCase(FHDLTestCase):
         f1.add_subfragment(f2)
 
         f1._propagate_ports(ports=(self.c2,))
-        self.assertEqual(f1.ports, ValueDict([
+        self.assertEqual(f1.ports, SignalDict([
             (self.c2, "o"),
         ]))
-        self.assertEqual(f2.ports, ValueDict([
+        self.assertEqual(f2.ports, SignalDict([
             (self.c2, "o"),
         ]))
 
@@ -125,7 +125,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_driver(self.c1, "sync")
 
         f._propagate_ports(ports=())
-        self.assertEqual(f.ports, ValueDict([
+        self.assertEqual(f.ports, SignalDict([
             (self.s1,  "i"),
             (sync.clk, "i"),
             (sync.rst, "i"),
@@ -141,7 +141,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_driver(self.c1, "sync")
 
         f._propagate_ports(ports=())
-        self.assertEqual(f.ports, ValueDict([
+        self.assertEqual(f.ports, SignalDict([
             (self.s1,  "i"),
             (sync.clk, "i"),
         ]))
@@ -157,9 +157,9 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(cd1, cd2)
         f.add_driver(s1, "cd1")
-        self.assertEqual(ValueSet((cd1.clk, cd1.rst, s1)), f.iter_signals())
+        self.assertEqual(SignalSet((cd1.clk, cd1.rst, s1)), f.iter_signals())
         f.add_driver(s2, "cd2")
-        self.assertEqual(ValueSet((cd1.clk, cd1.rst, cd2.clk, s1, s2)), f.iter_signals())
+        self.assertEqual(SignalSet((cd1.clk, cd1.rst, cd2.clk, s1, s2)), f.iter_signals())
 
     def test_propagate_up(self):
         cd = ClockDomain()
@@ -315,8 +315,8 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(self.f1.drivers, {
-            None:   ValueSet((self.s1,)),
-            "sync": ValueSet((self.c1, self.c2)),
+            None:   SignalSet((self.s1,)),
+            "sync": SignalSet((self.c1, self.c2)),
         })
 
     def test_conflict_self_sub_error(self):

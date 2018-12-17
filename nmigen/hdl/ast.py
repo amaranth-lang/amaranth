@@ -13,7 +13,7 @@ __all__ = [
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "Statement", "Assign", "Switch", "Delay", "Tick", "Passive",
-    "ValueKey", "ValueDict", "ValueSet",
+    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
 ]
 
 
@@ -28,14 +28,14 @@ class DUID:
 class Value(metaclass=ABCMeta):
     @staticmethod
     def wrap(obj):
-        """Ensures that the passed object is a Migen value. Booleans and integers
+        """Ensures that the passed object is an nMigen value. Booleans and integers
         are automatically wrapped into ``Const``."""
         if isinstance(obj, Value):
             return obj
         elif isinstance(obj, (bool, int)):
             return Const(obj)
         else:
-            raise TypeError("Object '{!r}' is not a Migen value".format(obj))
+            raise TypeError("Object '{!r}' is not an nMigen value".format(obj))
 
     def __init__(self, src_loc_at=0):
         super().__init__()
@@ -47,7 +47,7 @@ class Value(metaclass=ABCMeta):
             self.src_loc = (tb[0].filename, tb[0].lineno)
 
     def __bool__(self):
-        raise TypeError("Attempted to convert Migen value to boolean")
+        raise TypeError("Attempted to convert nMigen value to boolean")
 
     def __invert__(self):
         return Operator("~", [self])
@@ -801,7 +801,7 @@ class Statement:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
             else:
-                raise TypeError("Object '{!r}' is not a Migen statement".format(obj))
+                raise TypeError("Object '{!r}' is not an nMigen statement".format(obj))
 
 
 class Assign(Statement):
@@ -936,7 +936,8 @@ class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
 
     def __repr__(self):
         pairs = ["({!r}, {!r})".format(k, v) for k, v in self.items()]
-        return "{}([{}])".format(type(self).__name__, ", ".join(pairs))
+        return "{}.{}([{}])".format(type(self).__module__, type(self).__name__,
+                                    ", ".join(pairs))
 
 
 class _MappedKeySet(MutableSet, _MappedKeyCollection):
@@ -967,7 +968,8 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
         return len(self._storage)
 
     def __repr__(self):
-        return "{}({})".format(type(self).__name__, ", ".join(repr(x) for x in self))
+        return "{}.{}({})".format(type(self).__module__, type(self).__name__,
+                                  ", ".join(repr(x) for x in self))
 
 
 class ValueKey:
@@ -1060,3 +1062,34 @@ class ValueDict(_MappedKeyDict):
 class ValueSet(_MappedKeySet):
     _map_key   = ValueKey
     _unmap_key = lambda self, key: key.value
+
+
+class SignalKey:
+    def __init__(self, signal):
+        if not isinstance(signal, Signal):
+            raise TypeError("Object '{!r}' is not an nMigen signal")
+        self.signal = signal
+
+    def __hash__(self):
+        return hash(self.signal.duid)
+
+    def __eq__(self, other):
+        return isinstance(other, SignalKey) and self.signal.duid == other.signal.duid
+
+    def __lt__(self, other):
+        if not isinstance(other, SignalKey):
+            raise TypeError("Object '{!r}' cannot be compared to a SignalKey")
+        return self.signal.duid < other.signal.duid
+
+    def __repr__(self):
+        return "<{}.SignalKey {!r}>".format(__name__, self.signal)
+
+
+class SignalDict(_MappedKeyDict):
+    _map_key   = SignalKey
+    _unmap_key = lambda self, key: key.signal
+
+
+class SignalSet(_MappedKeySet):
+    _map_key   = SignalKey
+    _unmap_key = lambda self, key: key.signal

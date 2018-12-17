@@ -213,9 +213,9 @@ class LegalizeValue(Exception):
 class _ValueCompilerState:
     def __init__(self, rtlil):
         self.rtlil  = rtlil
-        self.wires  = ast.ValueDict()
-        self.driven = ast.ValueDict()
-        self.ports  = ast.ValueDict()
+        self.wires  = ast.SignalDict()
+        self.driven = ast.SignalDict()
+        self.ports  = ast.SignalDict()
 
         self.expansions = ast.ValueDict()
 

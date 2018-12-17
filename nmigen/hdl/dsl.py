@@ -102,7 +102,7 @@ class Module(_ModuleBuilderRoot):
         self._ctrl_context = None
         self._ctrl_stack   = []
 
-        self._driving      = ValueDict()
+        self._driving      = SignalDict()
         self._submodules   = []
         self._domains      = []
 
