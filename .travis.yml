@@ -3,8 +3,14 @@ language: python
 python:
   - "3.6"
   - "3.7"
+cache:
+  directories:
+    - "$HOME/.ccache"
+before_install:
+  - export PATH="/usr/lib/ccache:$PATH"
 install:
   - pip install coverage codecov pyvcd
+  - git clone https://github.com/YosysHQ/yosys && (cd yosys && make CONFIG=gcc ENABLE_ABC=0)
 script:
   - coverage run -m unittest discover
   - codecov
