@@ -902,6 +902,9 @@ class ValueKey:
                          self.value.width))
         elif isinstance(self.value, Cat):
             return hash(tuple(ValueKey(o) for o in self.value.operands))
+        elif isinstance(self.value, ArrayProxy):
+            return hash((ValueKey(self.value.index),
+                         tuple(ValueKey(e) for e in self.value._iter_as_values())))
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
@@ -932,6 +935,12 @@ class ValueKey:
         elif isinstance(self.value, Cat):
             return all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value.operands, other.value.operands))
+        elif isinstance(self.value, ArrayProxy):
+            return (ValueKey(self.value.index) == ValueKey(other.value.index) and
+                    len(self.value.elems) == len(other.value.elems) and
+                    all(ValueKey(a) == ValueKey(b)
+                        for a, b in zip(self.value._iter_as_values(),
+                                        other.value._iter_as_values())))
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))

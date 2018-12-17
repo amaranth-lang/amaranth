@@ -264,6 +264,8 @@ class _ValueCompilerState:
         return wire_curr
 
     def expand(self, value):
+        if not self.expansions:
+            return value
         return self.expansions.get(value, value)
 
     @contextmanager
@@ -310,6 +312,16 @@ class _ValueCompiler(xfrm.AbstractValueTransformer):
             return "{} [{}]".format(sigspec, value.start)
         else:
             return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+
+    def on_ArrayProxy(self, value):
+        index = self.s.expand(value.index)
+        if isinstance(index, ast.Const):
+            if index.value < len(value.elems):
+                return self(value.elems[index.value])
+            else:
+                return self(value.elems[-1])
+        else:
+            raise LegalizeValue(value.index, range(len(value.elems)))
 
 
 class _RHSValueCompiler(_ValueCompiler):
@@ -473,9 +485,6 @@ class _RHSValueCompiler(_ValueCompiler):
     def on_Repl(self, value):
         return "{{ {} }}".format(" ".join(self(value.value) for _ in range(value.count)))
 
-    def on_ArrayProxy(self, value):
-        raise NotImplementedError
-
 
 class _LHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
@@ -499,13 +508,10 @@ class _LHSValueCompiler(_ValueCompiler):
         if isinstance(offset, ast.Const):
             return self(ast.Slice(value.value, offset.value, offset.value + value.width))
         else:
-            raise LegalizeValue(value.offset, range(0, (1 << len(value.offset) - 1)))
+            raise LegalizeValue(value.offset, range((1 << len(value.offset)) - 1))
 
     def on_Repl(self, value):
         raise TypeError # :nocov:
-
-    def on_ArrayProxy(self, value):
-        raise NotImplementedError
 
 
 class _StatementCompiler(xfrm.AbstractStatementTransformer):
