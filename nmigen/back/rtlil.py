@@ -451,9 +451,7 @@ class _RHSValueCompiler(_ValueCompiler):
             raise TypeError # :nocov:
 
     def _prepare_value_for_Slice(self, value):
-        # Uncomment after the following is merged: https://github.com/YosysHQ/yosys/pull/741
-        # if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
-        if isinstance(value, ast.Signal):
+        if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
             sigspec = self(value)
         else:
             sigspec = self.s.rtlil.wire(len(value))
