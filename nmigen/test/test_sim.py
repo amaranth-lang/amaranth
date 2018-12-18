@@ -66,6 +66,12 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0,  4), C(1,  4)], C(-1,  4))
         self.assertStatement(stmt, [C(0,  4), C(10, 4)], C(-10, 5))
 
+    def test_mul(self):
+        stmt = lambda y, a, b: y.eq(a * b)
+        self.assertStatement(stmt, [C(2,  4), C(1,  4)], C(2,   8))
+        self.assertStatement(stmt, [C(2,  4), C(2,  4)], C(4,   8))
+        self.assertStatement(stmt, [C(7,  4), C(7,  4)], C(49,  8))
+
     def test_and(self):
         stmt = lambda y, a, b: y.eq(a & b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b1000, 4))

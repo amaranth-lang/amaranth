@@ -113,6 +113,8 @@ class _RHSValueCompiler(AbstractValueTransformer):
                 return lambda state: normalize(lhs(state) +  rhs(state), shape)
             if value.op == "-":
                 return lambda state: normalize(lhs(state) -  rhs(state), shape)
+            if value.op == "*":
+                return lambda state: normalize(lhs(state) *  rhs(state), shape)
             if value.op == "&":
                 return lambda state: normalize(lhs(state) &  rhs(state), shape)
             if value.op == "|":
