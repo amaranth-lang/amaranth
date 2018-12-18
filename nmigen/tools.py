@@ -52,3 +52,13 @@ def deprecated(message, stacklevel=2):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def extend(cls):
+    def decorator(f):
+        if isinstance(f, property):
+            name = f.fget.__name__
+        else:
+            name = f.__name__
+        setattr(cls, name, f)
+    return decorator

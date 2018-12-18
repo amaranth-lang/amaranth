@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
-from ...tools import deprecated
+from ...tools import deprecated, extend
 from ...hdl import ast
-from ...hdl.ast import (DUID, Value, Signal, Mux, Cat, Repl, Const, C, ClockSignal, ResetSignal,
+from ...hdl.ast import (DUID, Value, Signal, Mux, Slice as _Slice, Cat, Repl, Const, C,
+                        ClockSignal, ResetSignal,
                         Array, ArrayProxy as _ArrayProxy)
 from ...hdl.cd import ClockDomain
 
@@ -17,6 +18,20 @@ def wrap(v):
     return Value.wrap(v)
 
 
+@extend(_Slice)
+@property
+@deprecated("instead of `_Slice.stop`, use `Slice.end`")
+def stop(self):
+    return self.end
+
+
+@extend(Cat)
+@property
+@deprecated("instead of `Cat.l`, use `Cat.parts`")
+def l(self):
+    return self.parts
+
+
 @deprecated("instead of `Replicate`, use `Repl`")
 def Replicate(v, n):
     return Repl(v, n)
@@ -25,6 +40,13 @@ def Replicate(v, n):
 @deprecated("instead of `Constant`, use `Const`")
 def Constant(value, bits_sign=None):
     return Const(value, bits_sign)
+
+
+@extend(_ArrayProxy)
+@property
+@deprecated("instead `_ArrayProxy.choices`, use `ArrayProxy.elems`")
+def choices(self):
+    return self.elems
 
 
 class If(ast.Switch):
