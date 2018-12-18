@@ -185,8 +185,8 @@ Compatibility summary
     - (⊙) `core` **brk**
     - (⊙) `vcd` **brk** → `vcd`
     - (⊙) `Simulator` **brk**
-    - (+) `run_simulation` **obs** → `.back.pysim.Simulator`
-    - (−) `passive` **obs** → `.hdl.ast.Passive`
+    - (⊕) `run_simulation` **obs** → `.back.pysim.Simulator`
+    - (⊕) `passive` **obs** → `.hdl.ast.Passive`
   - (−) `build` ?
   - (+) `util` **obs**
     - (+) `misc` ⇒ `.tools`
