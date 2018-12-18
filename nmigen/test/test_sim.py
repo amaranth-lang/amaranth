@@ -1,6 +1,10 @@
+from contextlib import contextmanager
+
 from .tools import *
 from ..tools import flatten, union
 from ..hdl.ast import *
+from ..hdl.cd import  *
+from ..hdl.dsl import  *
 from ..hdl.ir import *
 from ..back.pysim import *
 
@@ -198,3 +202,185 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a: y.eq(array[a].p + array[a].n)
         for i in range(10):
             self.assertStatement(stmt, [C(i)], C(0))
+
+
+class SimulatorIntegrationTestCase(FHDLTestCase):
+    @contextmanager
+    def assertSimulation(self, module, deadline=None):
+        with Simulator(module.lower(platform=None)) as sim:
+            yield sim
+            if deadline is None:
+                sim.run()
+            else:
+                sim.run_until(deadline)
+
+    def setUp_counter(self):
+        self.count = Signal(3, reset=4)
+        self.sync  = ClockDomain()
+
+        self.m = Module()
+        self.m.d.sync  += self.count.eq(self.count + 1)
+        self.m.domains += self.sync
+
+    def test_counter_process(self):
+        self.setUp_counter()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                self.assertEqual((yield self.count), 4)
+                yield Delay(1e-6)
+                self.assertEqual((yield self.count), 4)
+                yield self.sync.clk.eq(1)
+                self.assertEqual((yield self.count), 5)
+                yield Delay(1e-6)
+                self.assertEqual((yield self.count), 5)
+                yield self.sync.clk.eq(0)
+                self.assertEqual((yield self.count), 5)
+                for _ in range(3):
+                    yield Delay(1e-6)
+                    yield self.sync.clk.eq(1)
+                    yield Delay(1e-6)
+                    yield self.sync.clk.eq(0)
+                self.assertEqual((yield self.count), 0)
+            sim.add_process(process)
+
+    def test_counter_clock_and_sync_process(self):
+        self.setUp_counter()
+        with self.assertSimulation(self.m) as sim:
+            sim.add_clock(1e-6, domain="sync")
+            def process():
+                self.assertEqual((yield self.count), 4)
+                self.assertEqual((yield self.sync.clk), 0)
+                yield
+                self.assertEqual((yield self.count), 5)
+                self.assertEqual((yield self.sync.clk), 1)
+                for _ in range(3):
+                    yield
+                self.assertEqual((yield self.count), 0)
+            sim.add_sync_process(process)
+
+    def setUp_alu(self):
+        self.a = Signal(8)
+        self.b = Signal(8)
+        self.o = Signal(8)
+        self.x = Signal(8)
+        self.s = Signal(2)
+        self.sync = ClockDomain(reset_less=True)
+
+        self.m = Module()
+        self.m.d.comb += self.x.eq(self.a ^ self.b)
+        with self.m.Switch(self.s):
+            with self.m.Case(0):
+                self.m.d.sync += self.o.eq(self.a + self.b)
+            with self.m.Case(1):
+                self.m.d.sync += self.o.eq(self.a - self.b)
+            with self.m.Case():
+                self.m.d.sync += self.o.eq(0)
+        self.m.domains += self.sync
+
+    def test_alu(self):
+        self.setUp_alu()
+        with self.assertSimulation(self.m) as sim:
+            sim.add_clock(1e-6)
+            def process():
+                yield self.a.eq(5)
+                yield self.b.eq(1)
+                yield
+                self.assertEqual((yield self.x), 4)
+                self.assertEqual((yield self.o), 6)
+                yield self.s.eq(1)
+                yield
+                self.assertEqual((yield self.o), 4)
+                yield self.s.eq(2)
+                yield
+                self.assertEqual((yield self.o), 0)
+            sim.add_sync_process(process)
+
+    def setUp_multiclock(self):
+        self.sys = ClockDomain()
+        self.pix = ClockDomain()
+
+        self.m = Module()
+        self.m.domains += self.sys, self.pix
+
+    def test_multiclock(self):
+        self.setUp_multiclock()
+        with self.assertSimulation(self.m) as sim:
+            sim.add_clock(1e-6, domain="sys")
+            sim.add_clock(0.3e-6, domain="pix")
+
+            def sys_process():
+                yield Passive()
+                yield
+                yield
+                self.fail()
+            def pix_process():
+                yield
+                yield
+                yield
+            sim.add_sync_process(sys_process, domain="sys")
+            sim.add_sync_process(pix_process, domain="pix")
+
+    def setUp_lhs_rhs(self):
+        self.i = Signal(8)
+        self.o = Signal(8)
+
+        self.m = Module()
+        self.m.d.comb += self.o.eq(self.i)
+
+    def test_complex_lhs_rhs(self):
+        self.setUp_lhs_rhs()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.i.eq(0b10101010)
+                yield self.i[:4].eq(-1)
+                yield Delay()
+                self.assertEqual((yield self.i[:4]), 0b1111)
+                self.assertEqual((yield self.i), 0b10101111)
+            sim.add_process(process)
+
+    def test_run_until(self):
+        with self.assertSimulation(Module(), deadline=100e-6) as sim:
+            sim.add_clock(1e-6)
+            def process():
+                for _ in range(100):
+                    yield
+                self.fail()
+
+    def test_add_process_wrong(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaises(TypeError,
+                    msg="Cannot add a process '1' because it is not a generator or "
+                        "a generator function"):
+                sim.add_process(1)
+
+    def test_eq_signal_unused_wrong(self):
+        self.setUp_lhs_rhs()
+        self.s = Signal()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                with self.assertRaisesRegex(ValueError,
+                        regex=r"Process '.+?' sent a request to set signal '\(sig s\)', "
+                              r"which is not a part of simulation"):
+                    yield self.s.eq(0)
+                yield Delay()
+            sim.add_process(process)
+
+    def test_eq_signal_comb_wrong(self):
+        self.setUp_lhs_rhs()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                with self.assertRaisesRegex(ValueError,
+                        regex=r"Process '.+?' sent a request to set signal '\(sig o\)', "
+                              r"which is a part of combinatorial assignment in simulation"):
+                    yield self.o.eq(0)
+                yield Delay()
+            sim.add_process(process)
+
+    def test_command_wrong(self):
+        with self.assertSimulation(Module()) as sim:
+            def process():
+                with self.assertRaisesRegex(TypeError,
+                        regex=r"Received unsupported command '1' from process '.+?'"):
+                    yield 1
+                yield Delay()
+            sim.add_process(process)
