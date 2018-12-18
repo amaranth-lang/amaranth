@@ -113,7 +113,7 @@ class ValueTransformer(AbstractValueTransformer):
         return Part(self.on_value(value.value), self.on_value(value.offset), value.width)
 
     def on_Cat(self, value):
-        return Cat(self.on_value(o) for o in value.operands)
+        return Cat(self.on_value(o) for o in value.parts)
 
     def on_Repl(self, value):
         return Repl(self.on_value(value.value), value.count)

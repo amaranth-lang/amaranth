@@ -165,7 +165,7 @@ class _RHSValueCompiler(AbstractValueTransformer):
         shape  = value.shape()
         parts  = []
         offset = 0
-        for opnd in value.operands:
+        for opnd in value.parts:
             parts.append((offset, (1 << len(opnd)) - 1, self(opnd)))
             offset += len(opnd)
         def eval(state):
@@ -248,7 +248,7 @@ class _LHSValueCompiler(AbstractValueTransformer):
     def on_Cat(self, value):
         parts  = []
         offset = 0
-        for opnd in value.operands:
+        for opnd in value.parts:
             parts.append((offset, (1 << len(opnd)) - 1, self(opnd)))
             offset += len(opnd)
         def eval(state, rhs):

@@ -42,15 +42,15 @@ class ValueTestCase(FHDLTestCase):
         self.assertEqual(s2.end, 2)
         s3 = Const(31)[::2]
         self.assertIsInstance(s3, Cat)
-        self.assertIsInstance(s3.operands[0], Slice)
-        self.assertEqual(s3.operands[0].start, 0)
-        self.assertEqual(s3.operands[0].end, 1)
-        self.assertIsInstance(s3.operands[1], Slice)
-        self.assertEqual(s3.operands[1].start, 2)
-        self.assertEqual(s3.operands[1].end, 3)
-        self.assertIsInstance(s3.operands[2], Slice)
-        self.assertEqual(s3.operands[2].start, 4)
-        self.assertEqual(s3.operands[2].end, 5)
+        self.assertIsInstance(s3.parts[0], Slice)
+        self.assertEqual(s3.parts[0].start, 0)
+        self.assertEqual(s3.parts[0].end, 1)
+        self.assertIsInstance(s3.parts[1], Slice)
+        self.assertEqual(s3.parts[1].start, 2)
+        self.assertEqual(s3.parts[1].end, 3)
+        self.assertIsInstance(s3.parts[2], Slice)
+        self.assertEqual(s3.parts[2].start, 4)
+        self.assertEqual(s3.parts[2].end, 5)
 
     def test_getitem_wrong(self):
         with self.assertRaises(TypeError):

@@ -437,19 +437,19 @@ class Cat(Value):
     """
     def __init__(self, *args):
         super().__init__()
-        self.operands = [Value.wrap(v) for v in flatten(args)]
+        self.parts = [Value.wrap(v) for v in flatten(args)]
 
     def shape(self):
-        return sum(len(op) for op in self.operands), False
+        return sum(len(op) for op in self.parts), False
 
     def _lhs_signals(self):
-        return union(op._lhs_signals() for op in self.operands)
+        return union(op._lhs_signals() for op in self.parts)
 
     def _rhs_signals(self):
-        return union(op._rhs_signals() for op in self.operands)
+        return union(op._rhs_signals() for op in self.parts)
 
     def __repr__(self):
-        return "(cat {})".format(" ".join(map(repr, self.operands)))
+        return "(cat {})".format(" ".join(map(repr, self.parts)))
 
 
 class Repl(Value):

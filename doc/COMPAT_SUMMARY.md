@@ -66,7 +66,7 @@ Compatibility summary
       - (+) `Mux` id
       - (+) `_Slice` → `Slice`, `stop=`→`end=`, `.stop`→`.end`
       - (+) `_Part` → `Part`
-      - (+) `Cat` id, `.l`→`.operands`
+      - (+) `Cat` id, `.l`→`.parts`
       - (+) `Replicate` → `Repl`, `v=`→`value=`, `n=`→`count=`, `.v`→`.value`, `.n`→`.count`
       - (+) `Constant` → `Const`, `bits_sign=`→`shape=`
       - (+) `Signal` id, `bits_sign=`→`shape=`, `attr=`→`attrs=`, `name_override=`∼, `related=`, `variable=`∼
