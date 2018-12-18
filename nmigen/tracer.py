@@ -2,6 +2,9 @@ import inspect
 from opcode import opname
 
 
+__all__ = ["NameNotFound", "get_var_name"]
+
+
 class NameNotFound(Exception):
     pass
 

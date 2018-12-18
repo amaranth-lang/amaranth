@@ -74,7 +74,8 @@ class AbstractValueTransformer(metaclass=ABCMeta):
             new_value = self.on_Slice(value)
         elif type(value) is Part:
             new_value = self.on_Part(value)
-        elif type(value) is Cat:
+        elif isinstance(value, Cat):
+            # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
             new_value = self.on_Cat(value)
         elif type(value) is Repl:
             new_value = self.on_Repl(value)
