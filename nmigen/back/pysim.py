@@ -539,6 +539,13 @@ class Simulator:
                         del self._wait_tick[process]
                         self._suspended.remove(process)
 
+                        # Immediately run the process. It is important that this happens here,
+                        # and not on the next step, when all the processes will run anyway,
+                        # because Tick() simulates an edge triggered process. Like DFFs that latch
+                        # a value from the previous clock cycle, simulator processes observe signal
+                        # values from the previous clock cycle on a tick, too.
+                        self._run_process(process)
+
             # Unless handling synchronous logic above has triggered more synchronous logic (which
             # can happen e.g. if a domain is clocked off a clock divisor in fabric), we're done.
             # Otherwise, do one more round of updates.
