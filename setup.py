@@ -14,7 +14,7 @@ setup(
     description="Python toolbox for building complex digital hardware",
     #long_description="""TODO""",
     license="BSD",
-    install_requires=["pyvcd"],
+    install_requires=["pyvcd", "bitarray"],
     packages=find_packages(),
     project_urls={
         #"Documentation": "https://glasgow.readthedocs.io/",

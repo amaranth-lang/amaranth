@@ -10,7 +10,7 @@ cache:
 before_install:
   - export PATH="/usr/lib/ccache:$HOME/.local/bin:$PATH"
 install:
-  - pip install coverage codecov pyvcd
+  - pip install coverage codecov pyvcd bitarray
   - git clone https://github.com/YosysHQ/yosys
   - (cd yosys && if ! yosys -V || [ $(git rev-parse HEAD $(yosys -V | awk 'match($0,/sha1 ([0-9a-f]+)/,m) { print m[1] }') | uniq | wc -l) != 1 ]; then make CONFIG=gcc ENABLE_ABC=0 PREFIX=$HOME/.local install; fi)
 script:
