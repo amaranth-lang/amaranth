@@ -342,10 +342,11 @@ class Simulator:
             try:
                 result = None
                 while True:
+                    self._process_loc[sync_process] = self._name_process(process)
+                    result = process.send(result)
                     if result is None:
                         result = Tick(domain)
-                    self._process_loc[sync_process] = self._name_process(process)
-                    result = process.send((yield result))
+                    result = yield result
             except StopIteration:
                 pass
         sync_process = sync_process()
