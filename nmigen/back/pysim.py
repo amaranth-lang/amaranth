@@ -343,10 +343,10 @@ class Simulator:
                 result = None
                 while True:
                     self._process_loc[sync_process] = self._name_process(process)
-                    result = process.send(result)
-                    if result is None:
-                        result = Tick(domain)
-                    result = yield result
+                    cmd = process.send(result)
+                    if cmd is None:
+                        cmd = Tick(domain)
+                    result = yield cmd
             except StopIteration:
                 pass
         sync_process = sync_process()
