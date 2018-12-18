@@ -980,7 +980,7 @@ class ValueKey:
         if isinstance(self.value, Const):
             return hash(self.value.value)
         elif isinstance(self.value, Signal):
-            return hash(id(self.value))
+            return hash(self.value.duid)
         elif isinstance(self.value, Operator):
             return hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
         elif isinstance(self.value, Slice):
@@ -998,15 +998,15 @@ class ValueKey:
                             .format(self.value))
 
     def __eq__(self, other):
-        if not isinstance(other, ValueKey):
+        if type(other) is not ValueKey:
             return False
-        if type(self.value) != type(other.value):
+        if type(self.value) is not type(other.value):
             return False
 
         if isinstance(self.value, Const):
             return self.value.value == other.value.value
         elif isinstance(self.value, Signal):
-            return id(self.value) == id(other.value)
+            return self.value is other.value
         elif isinstance(self.value, Operator):
             return (self.value.op == other.value.op and
                     len(self.value.operands) == len(other.value.operands) and
@@ -1066,7 +1066,7 @@ class ValueSet(_MappedKeySet):
 
 class SignalKey:
     def __init__(self, signal):
-        if not isinstance(signal, Signal):
+        if type(signal) is not Signal:
             raise TypeError("Object '{!r}' is not an nMigen signal")
         self.signal = signal
 
@@ -1074,10 +1074,12 @@ class SignalKey:
         return hash(self.signal.duid)
 
     def __eq__(self, other):
-        return isinstance(other, SignalKey) and self.signal.duid == other.signal.duid
+        if type(other) is not SignalKey:
+            return False
+        return self.signal is other.signal
 
     def __lt__(self, other):
-        if not isinstance(other, SignalKey):
+        if type(other) is not SignalKey:
             raise TypeError("Object '{!r}' cannot be compared to a SignalKey")
         return self.signal.duid < other.signal.duid
 

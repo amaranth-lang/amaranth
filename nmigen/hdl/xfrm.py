@@ -60,25 +60,25 @@ class AbstractValueTransformer(metaclass=ABCMeta):
         raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
 
     def on_value(self, value):
-        if isinstance(value, Const):
+        if type(value) is Const:
             new_value = self.on_Const(value)
-        elif isinstance(value, Signal):
+        elif type(value) is Signal:
             new_value = self.on_Signal(value)
-        elif isinstance(value, ClockSignal):
+        elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
-        elif isinstance(value, ResetSignal):
+        elif type(value) is ResetSignal:
             new_value = self.on_ResetSignal(value)
-        elif isinstance(value, Operator):
+        elif type(value) is Operator:
             new_value = self.on_Operator(value)
-        elif isinstance(value, Slice):
+        elif type(value) is Slice:
             new_value = self.on_Slice(value)
-        elif isinstance(value, Part):
+        elif type(value) is Part:
             new_value = self.on_Part(value)
-        elif isinstance(value, Cat):
+        elif type(value) is Cat:
             new_value = self.on_Cat(value)
-        elif isinstance(value, Repl):
+        elif type(value) is Repl:
             new_value = self.on_Repl(value)
-        elif isinstance(value, ArrayProxy):
+        elif type(value) is ArrayProxy:
             new_value = self.on_ArrayProxy(value)
         else:
             new_value = self.on_unknown_value(value)
@@ -140,9 +140,10 @@ class AbstractStatementTransformer(metaclass=ABCMeta):
         raise TypeError("Cannot transform statement '{!r}'".format(stmt)) # :nocov:
 
     def on_statement(self, stmt):
-        if isinstance(stmt, Assign):
+        if type(stmt) is Assign:
             return self.on_Assign(stmt)
         elif isinstance(stmt, Switch):
+            # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
             return self.on_Switch(stmt)
         elif isinstance(stmt, Iterable):
             return self.on_statements(stmt)
