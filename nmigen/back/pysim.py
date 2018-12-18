@@ -554,10 +554,12 @@ class Simulator:
                         interval = cmd.interval
                     self._wait_deadline[process] = self._timestamp + interval
                     self._suspended.add(process)
+                    break
 
                 elif isinstance(cmd, Tick):
                     self._wait_tick[process] = cmd.domain
                     self._suspended.add(process)
+                    break
 
                 elif isinstance(cmd, Passive):
                     self._passive.add(process)
@@ -594,7 +596,7 @@ class Simulator:
                     raise TypeError("Received unsupported command '{!r}' from process '{}'"
                                     .format(cmd, self._name_process(process)))
 
-                break
+                cmd = process.send(None)
 
         except StopIteration:
             self._processes.remove(process)
