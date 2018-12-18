@@ -20,24 +20,30 @@ class _State:
     __slots__ = ("curr", "curr_dirty", "next", "next_dirty")
 
     def __init__(self):
-        self.curr = SignalDict()
-        self.next = SignalDict()
+        self.curr = []
+        self.next = []
         self.curr_dirty = SignalSet()
         self.next_dirty = SignalSet()
 
-    def set(self, signal, value):
-        assert isinstance(value, int)
-        if self.next[signal] != value:
-            self.next_dirty.add(signal)
-            self.next[signal] = value
+    def add(self, signal, value):
+        slot = len(self.curr)
+        self.curr.append(value)
+        self.next.append(value)
+        self.curr_dirty.add(signal)
+        return slot
 
-    def commit(self, signal):
-        old_value = self.curr[signal]
-        new_value = self.next[signal]
+    def set(self, signal, slot, value):
+        if self.next[slot] != value:
+            self.next_dirty.add(signal)
+            self.next[slot] = value
+
+    def commit(self, signal, slot):
+        old_value = self.curr[slot]
+        new_value = self.next[slot]
         if old_value != new_value:
             self.next_dirty.remove(signal)
             self.curr_dirty.add(signal)
-            self.curr[signal] = new_value
+            self.curr[slot] = new_value
         return old_value, new_value
 
 
@@ -45,9 +51,10 @@ normalize = Const.normalize
 
 
 class _RHSValueCompiler(AbstractValueTransformer):
-    def __init__(self, sensitivity=None, mode="rhs"):
-        self.sensitivity = sensitivity
-        self.signal_mode = mode
+    def __init__(self, signal_slots, sensitivity=None, mode="rhs"):
+        self.signal_slots = signal_slots
+        self.sensitivity  = sensitivity
+        self.signal_mode  = mode
 
     def on_Const(self, value):
         return lambda state: value.value
@@ -55,10 +62,11 @@ class _RHSValueCompiler(AbstractValueTransformer):
     def on_Signal(self, value):
         if self.sensitivity is not None:
             self.sensitivity.add(value)
+        value_slot = self.signal_slots[value]
         if self.signal_mode == "rhs":
-            return lambda state: state.curr[value]
+            return lambda state: state.curr[value_slot]
         elif self.signal_mode == "lhs":
-            return lambda state: state.next[value]
+            return lambda state: state.next[value_slot]
         else:
             raise ValueError # :nocov:
 
@@ -166,7 +174,8 @@ class _RHSValueCompiler(AbstractValueTransformer):
 
 
 class _LHSValueCompiler(AbstractValueTransformer):
-    def __init__(self, rhs_compiler):
+    def __init__(self, signal_slots, rhs_compiler):
+        self.signal_slots = signal_slots
         self.rhs_compiler = rhs_compiler
 
     def on_Const(self, value):
@@ -174,8 +183,9 @@ class _LHSValueCompiler(AbstractValueTransformer):
 
     def on_Signal(self, value):
         shape = value.shape()
+        value_slot = self.signal_slots[value]
         def eval(state, rhs):
-            state.set(value, normalize(rhs, shape))
+            state.set(value, value_slot, normalize(rhs, shape))
         return eval
 
     def on_ClockSignal(self, value):
@@ -235,11 +245,11 @@ class _LHSValueCompiler(AbstractValueTransformer):
 
 
 class _StatementCompiler(AbstractStatementTransformer):
-    def __init__(self):
+    def __init__(self, signal_slots):
         self.sensitivity   = SignalSet()
-        self.rrhs_compiler = _RHSValueCompiler(self.sensitivity, mode="rhs")
-        self.lrhs_compiler = _RHSValueCompiler(self.sensitivity, mode="lhs")
-        self.lhs_compiler  = _LHSValueCompiler(self.lrhs_compiler)
+        self.rrhs_compiler = _RHSValueCompiler(signal_slots, self.sensitivity, mode="rhs")
+        self.lrhs_compiler = _RHSValueCompiler(signal_slots, self.sensitivity, mode="lhs")
+        self.lhs_compiler  = _LHSValueCompiler(signal_slots, self.lrhs_compiler)
 
     def on_Assign(self, stmt):
         shape = stmt.lhs.shape()
@@ -287,10 +297,11 @@ class Simulator:
         self._domain_triggers = SignalDict()  # Signal -> str/domain
         self._domain_signals  = dict()        # str/domain -> {Signal}
 
-        self._signals         = SignalSet()    # {Signal}
-        self._comb_signals    = SignalSet()    # {Signal}
-        self._sync_signals    = SignalSet()    # {Signal}
-        self._user_signals    = SignalSet()    # {Signal}
+        self._signals         = SignalSet()   # {Signal}
+        self._comb_signals    = SignalSet()   # {Signal}
+        self._sync_signals    = SignalSet()   # {Signal}
+        self._user_signals    = SignalSet()   # {Signal}
+        self._signal_slots    = SignalDict()  # Signal -> int/slot
 
         self._started         = False
         self._timestamp       = 0.
@@ -393,12 +404,14 @@ class Simulator:
 
         for fragment, fragment_scope in hierarchy.items():
             for signal in fragment.iter_signals():
-                self._signals.add(signal)
+                if signal not in self._signals:
+                    self._signals.add(signal)
 
-                self._state.curr[signal] = self._state.next[signal] = \
-                    normalize(signal.reset, signal.shape())
-                self._state.curr_dirty.add(signal)
+                    signal_slot = self._state.add(signal, normalize(signal.reset, signal.shape()))
+                    self._signal_slots[signal] = signal_slot
 
+        for fragment, fragment_scope in hierarchy.items():
+            for signal in fragment.iter_signals():
                 if not self._vcd_writer:
                     continue
 
@@ -451,7 +464,7 @@ class Simulator:
                 statements.append(signal.eq(signal))
             statements += fragment.statements
 
-            compiler = _StatementCompiler()
+            compiler = _StatementCompiler(self._signal_slots)
             funclet = compiler(statements)
 
             def add_funclet(signal, funclet):
@@ -491,7 +504,7 @@ class Simulator:
         # Take the computed value (at the start of this delta cycle) of a signal (that could have
         # come from an IR process that ran earlier, or modified by a simulator process) and update
         # the value for this delta cycle.
-        old, new = self._state.commit(signal)
+        old, new = self._state.commit(signal, self._signal_slots[signal])
 
         # If the signal is a clock that triggers synchronous logic, record that fact.
         if (old, new) == (0, 1) and signal in self._domain_triggers:
@@ -573,7 +586,7 @@ class Simulator:
                     self._passive.add(process)
 
                 elif isinstance(cmd, Value):
-                    compiler = _RHSValueCompiler()
+                    compiler = _RHSValueCompiler(self._signal_slots)
                     funclet = compiler(cmd)
                     cmd = process.send(funclet(self._state))
                     continue
@@ -591,7 +604,7 @@ class Simulator:
                                              "simulation"
                                              .format(self._name_process(process), signal))
 
-                    compiler = _StatementCompiler()
+                    compiler = _StatementCompiler(self._signal_slots)
                     funclet = compiler(cmd)
                     funclet(self._state)
 
