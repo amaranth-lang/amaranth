@@ -19,6 +19,10 @@ nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend depends on
 [migen]: https://m-labs.hk/migen
 [yosys]: http://www.clifford.at/yosys/
 
+### Installation
+
+    pip install git+https://github.com/m-labs/nmigen.git
+
 ### Introduction
 
 TBD
