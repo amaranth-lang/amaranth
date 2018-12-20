@@ -179,6 +179,13 @@ class FragmentTransformer:
         for port, dir in fragment.ports.items():
             new_fragment.add_ports(port, dir=dir)
 
+    def map_named_ports(self, fragment, new_fragment):
+        if hasattr(self, "on_value"):
+            for name, value in fragment.named_ports.items():
+                new_fragment.named_ports[name] = self.on_value(value)
+        else:
+            new_fragment.named_ports = OrderedDict(fragment.named_ports.items())
+
     def map_domains(self, fragment, new_fragment):
         for domain in fragment.iter_domains():
             new_fragment.add_domains(fragment.domains[domain])
@@ -194,10 +201,12 @@ class FragmentTransformer:
             new_fragment.add_driver(signal, domain)
 
     def on_fragment(self, fragment):
-        new_fragment = Fragment()
-        new_fragment.black_box = fragment.black_box
-        new_fragment.parameters = OrderedDict(fragment.parameters)
-        new_fragment.port_names = SignalDict(fragment.port_names.items())
+        if isinstance(fragment, Instance):
+            new_fragment = Instance(fragment.type)
+            new_fragment.parameters = OrderedDict(fragment.parameters)
+            self.map_named_ports(fragment, new_fragment)
+        else:
+            new_fragment = Fragment()
         self.map_ports(fragment, new_fragment)
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)

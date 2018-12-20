@@ -15,10 +15,6 @@ class DriverConflict(UserWarning):
 
 class Fragment:
     def __init__(self):
-        self.black_box = None
-        self.port_names = SignalDict()
-        self.parameters = OrderedDict()
-
         self.ports = SignalDict()
         self.drivers = OrderedDict()
         self.statements = []
@@ -241,8 +237,11 @@ class Fragment:
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        self_driven = union(s._lhs_signals() for s in self.statements) or SignalSet()
-        self_used   = union(s._rhs_signals() for s in self.statements) or SignalSet()
+        self_driven = union((s._lhs_signals() for s in self.statements), start=SignalSet())
+        self_used   = union((s._rhs_signals() for s in self.statements), start=SignalSet())
+        if isinstance(self, Instance):
+            self_used |= union((p._rhs_signals() for p in self.named_ports.values()),
+                               start=SignalSet())
         for domain, _ in self.iter_sync():
             cd = self.domains[domain]
             self_used.add(cd.clk)
@@ -296,18 +295,24 @@ class Fragment:
 class Instance(Fragment):
     def __init__(self, type, **kwargs):
         super().__init__()
-        self.black_box = type
+
+        self.type = type
+        self.parameters = OrderedDict()
+        self.named_ports = OrderedDict()
+
         for kw, arg in kwargs.items():
             if kw.startswith("p_"):
                 self.parameters[kw[2:]] = arg
             elif kw.startswith("i_"):
-                self.port_names[arg] = kw[2:]
-                self.add_ports(arg, dir="i")
+                self.named_ports[kw[2:]] = arg
+                # Unlike with "o_" and "io_", "i_" ports can be assigned an arbitrary value;
+                # this includes unresolved ClockSignals etc. We rely on Fragment.prepare to
+                # populate fragment ports for these named ports.
             elif kw.startswith("o_"):
-                self.port_names[arg] = kw[2:]
+                self.named_ports[kw[2:]] = arg
                 self.add_ports(arg, dir="o")
             elif kw.startswith("io_"):
-                self.port_names[arg] = kw[3:]
+                self.named_ports[kw[3:]] = arg
                 self.add_ports(arg, dir="io")
             else:
                 raise NameError("Instance argument '{}' does not start with p_, i_, o_, or io_"

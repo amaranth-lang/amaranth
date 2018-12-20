@@ -412,11 +412,17 @@ class InstanceTestCase(FHDLTestCase):
         rst = Signal()
         stb = Signal()
         pins = Signal(8)
-        inst = Instance("cpu", p_RESET=0x1234, i_rst=rst, o_stb=stb, io_pins=pins)
-        self.assertEqual(inst.black_box, "cpu")
+        inst = Instance("cpu",
+            p_RESET=0x1234,
+            i_clk=ClockSignal(),
+            i_rst=rst,
+            o_stb=stb,
+            io_pins=pins
+        )
+        self.assertEqual(inst.type, "cpu")
         self.assertEqual(inst.parameters, OrderedDict([("RESET", 0x1234)]))
+        self.assertEqual(list(inst.named_ports.keys()), ["clk", "rst", "stb", "pins"])
         self.assertEqual(inst.ports, SignalDict([
-            (rst, "i"),
             (stb, "o"),
             (pins, "io"),
         ]))

@@ -16,6 +16,7 @@ class System:
             i_d_adr  =self.adr,
             i_d_dat_r=self.dat_r,
             o_d_dat_w=self.dat_w,
+            i_d_we   =self.we,
         )
         return m.lower(platform)
 
