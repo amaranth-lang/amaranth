@@ -28,16 +28,27 @@ class Memory:
         self.depth = depth
         self.init  = None if init is None else list(init)
 
-    def read_port(self, domain="sync", synchronous=False, transparent=True):
+        if self.init is not None and len(self.init) > self.depth:
+            raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
+                             .format(len(self.init), self.depth))
+
+    def read_port(self, domain="sync", synchronous=True, transparent=True):
+        if not synchronous and not transparent:
+            raise ValueError("Read port cannot be simultaneously asynchronous and non-transparent")
         return ReadPort(self, domain, synchronous, transparent)
 
     def write_port(self, domain="sync", priority=0, granularity=None):
         if granularity is None:
             granularity = self.width
-        if not isinstance(granularity, int) or granularity < 0 or granularity > self.width:
-            raise TypeError("Write port granularity must be a non-negative integer not greater "
-                            "than memory width, not '{!r}'"
+        if not isinstance(granularity, int) or granularity < 0:
+            raise TypeError("Write port granularity must be a non-negative integer, not '{!r}'"
                             .format(granularity))
+        if granularity > self.width:
+            raise ValueError("Write port granularity must not be greater than memory width "
+                             "({} > {})"
+                             .format(granularity, self.width))
+        if self.width // granularity * granularity != self.width:
+            raise ValueError("Write port granularity must divide memory width evenly")
         return WritePort(self, domain, priority, granularity)
 
 
@@ -50,7 +61,7 @@ class ReadPort:
 
         self.addr = Signal(max=memory.depth)
         self.data = Signal(memory.width)
-        if synchronous and transparent:
+        if synchronous and not transparent:
             self.en = Signal()
         else:
             self.en = Const(1)
@@ -63,7 +74,7 @@ class ReadPort:
             p_CLK_ENABLE=self.synchronous,
             p_CLK_POLARITY=1,
             p_TRANSPARENT=self.transparent,
-            i_CLK=ClockSignal(self.domain),
+            i_CLK=ClockSignal(self.domain) if self.synchronous else Const(0),
             i_EN=self.en,
             i_ADDR=self.addr,
             o_DATA=self.data,

@@ -2,7 +2,7 @@ from ..hdl.cd import *
 from .tools import *
 
 
-class ClockDomainCase(FHDLTestCase):
+class ClockDomainTestCase(FHDLTestCase):
     def test_name(self):
         sync = ClockDomain()
         self.assertEqual(sync.name, "sync")
