@@ -1,7 +1,14 @@
+import warnings
+
+from ...tools import deprecated, extend
+from ...hdl.ast import *
+from ...hdl.mem import Memory as NativeMemory
+from ...hdl.ir import Fragment
 from ...lib.io import TSTriple as NativeTSTriple
+from .module import Module as CompatModule
 
 
-__all__ = ["TSTriple"]
+__all__ = ["TSTriple", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE", "_MemoryPort", "Memory"]
 
 
 class CompatTSTriple(NativeTSTriple):
@@ -16,3 +23,77 @@ class CompatTSTriple(NativeTSTriple):
 
 
 TSTriple = CompatTSTriple
+
+
+(READ_FIRST, WRITE_FIRST, NO_CHANGE) = range(3)
+
+
+class _MemoryPort(CompatModule):
+    def __init__(self, adr, dat_r, we=None, dat_w=None, async_read=False, re=None,
+                 we_granularity=0, mode=WRITE_FIRST, clock_domain="sys"):
+        self.adr = adr
+        self.dat_r = dat_r
+        self.we = we
+        self.dat_w = dat_w
+        self.async_read = async_read
+        self.re = re
+        self.we_granularity = we_granularity
+        self.mode = mode
+        self.clock = ClockSignal(clock_domain)
+
+
+@extend(NativeMemory)
+@deprecated("it is not necessary or permitted to add Memory as a special or submodule")
+def get_fragment(self, platform):
+    return Fragment()
+
+
+class CompatMemory(NativeMemory):
+    @deprecated("instead of `get_port()`, use `read_port()` and `write_port()`")
+    def get_port(self, write_capable=False, async_read=False, has_re=False, we_granularity=0,
+                 mode=WRITE_FIRST, clock_domain="sys"):
+        if we_granularity >= self.width:
+            warnings.warn("do not specify `we_granularity` greater than memory width, as it "
+                          "is a hard error in non-compatibility mode",
+                          DeprecationWarning, stacklevel=1)
+            we_granularity = 0
+        if we_granularity == 0:
+            warnings.warn("instead of `we_granularity=0`, use `we_granularity=None` or avoid "
+                          "specifying it at all, as it is a hard error in non-compatibility mode",
+                          DeprecationWarning, stacklevel=1)
+            we_granularity = None
+        assert mode != NO_CHANGE
+        rdport = self.read_port(synchronous=not async_read, transparent=mode == WRITE_FIRST)
+        adr = rdport.addr
+        dat_r = rdport.data
+        if write_capable:
+            wrport = self.write_port(granularity=we_granularity)
+            wrport.addr = rdport.addr
+            we = wrport.en
+            dat_w = wrport.data
+        else:
+            we = None
+            dat_w = None
+        if has_re:
+            if mode == READ_FIRST:
+                re = rdport.en
+            else:
+                warnings.warn("the combination of `has_re=True` and `mode=WRITE_FIRST` has "
+                              "surprising behavior: keeping `re` low would merely latch "
+                              "the address, while the data will change with changing memory "
+                              "contents; avoid using `re` with transparent ports as it is a hard "
+                              "error in non-compatibility mode",
+                              DeprecationWarning, stacklevel=1)
+                re = Signal()
+        else:
+            re = None
+        mp = _MemoryPort(adr, dat_r, we, dat_w,
+          async_read, re, we_granularity, mode,
+          clock_domain)
+        mp.submodules.rdport = rdport
+        if write_capable:
+            mp.submodules.wrport = wrport
+        return mp
+
+
+Memory = CompatMemory
