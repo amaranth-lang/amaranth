@@ -22,15 +22,20 @@ class Memory:
                 name = tracer.get_var_name(depth=2)
             except tracer.NameNotFound:
                 name = "$memory"
-        self.name  = name
+        self.name = name
 
         self.width = width
         self.depth = depth
-        self.init  = None if init is None else list(init)
 
-        if self.init is not None and len(self.init) > self.depth:
+        self.init = [] if init is None else list(init)
+        if len(self.init) > self.depth:
             raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
                              .format(len(self.init), self.depth))
+
+        # Array of signals for simulation.
+        self._array = Array()
+        for addr, data in enumerate(self.init + [0 for _ in range(self.depth - len(self.init))]):
+            self._array.append(Signal(self.width, reset=data, name="{}[{}]".format(name, addr)))
 
     def read_port(self, domain="sync", synchronous=True, transparent=True):
         if not synchronous and not transparent:
@@ -51,6 +56,10 @@ class Memory:
             raise ValueError("Write port granularity must divide memory width evenly")
         return WritePort(self, domain, priority, granularity)
 
+    def __getitem__(self, index):
+        """Simulation only."""
+        return self._array[index]
+
 
 class ReadPort:
     def __init__(self, memory, domain, synchronous, transparent):
@@ -67,7 +76,7 @@ class ReadPort:
             self.en = Const(1)
 
     def get_fragment(self, platform):
-        return Instance("$memrd",
+        f = Instance("$memrd",
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,
             p_WIDTH=self.data.nbits,
@@ -79,6 +88,26 @@ class ReadPort:
             i_ADDR=self.addr,
             o_DATA=self.data,
         )
+        read_data = self.data.eq(self.memory._array[self.addr])
+        if self.synchronous and not self.transparent:
+            # Synchronous, read-before-write port
+            f.add_statements(Switch(self.en, { 1: read_data }))
+            f.add_driver(self.data, self.domain)
+        elif self.synchronous:
+            # Synchronous, write-through port
+            # This model is a bit unconventional. We model transparent ports as asynchronous ports
+            # that are latched when the clock is high. This isn't exactly correct, but it is very
+            # close to the correct behavior of a transparent port, and the difference should only
+            # be observable in pathological cases of clock gating.
+            f.add_statements(Switch(ClockSignal(self.domain),
+                { 1: self.data.eq(self.data), 0: read_data }))
+            f.add_driver(self.data)
+        else:
+            # Asynchronous port
+            f.add_statements(read_data)
+            f.add_driver(self.data)
+        return f
+
 
 class WritePort:
     def __init__(self, memory, domain, priority, granularity):
@@ -92,7 +121,7 @@ class WritePort:
         self.en   = Signal(memory.width // granularity)
 
     def get_fragment(self, platform):
-        return Instance("$memwr",
+        f = Instance("$memwr",
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,
             p_WIDTH=self.data.nbits,
@@ -104,3 +133,15 @@ class WritePort:
             i_ADDR=self.addr,
             i_DATA=self.data,
         )
+        if len(self.en) > 1:
+            for index, en_bit in enumerate(self.en):
+                offset = index * self.granularity
+                bits   = slice(offset, offset + self.granularity)
+                write_data = self.memory._array[self.addr][bits].eq(self.data[bits])
+                f.add_statements(Switch(en_bit, { 1: write_data }))
+        else:
+            write_data = self.memory._array[self.addr].eq(self.data)
+            f.add_statements(Switch(self.en, { 1: write_data }))
+        for signal in self.memory._array:
+            f.add_driver(signal, self.domain)
+        return f

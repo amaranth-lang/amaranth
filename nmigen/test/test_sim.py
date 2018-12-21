@@ -4,6 +4,7 @@ from .tools import *
 from ..tools import flatten, union
 from ..hdl.ast import *
 from ..hdl.cd import  *
+from ..hdl.mem import *
 from ..hdl.dsl import  *
 from ..hdl.ir import *
 from ..back.pysim import *
@@ -389,4 +390,114 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                         regex=r"Received unsupported command '1' from process '.+?'"):
                     yield 1
                 yield Delay()
+            sim.add_process(process)
+
+    def setUp_memory(self, rd_synchronous=True, rd_transparent=True, wr_granularity=None):
+        self.m = Module()
+        self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
+        self.m.submodules.rdport = self.rdport = \
+            self.memory.read_port(synchronous=rd_synchronous, transparent=rd_transparent)
+        self.m.submodules.wrport = self.wrport = \
+            self.memory.write_port(granularity=wr_granularity)
+
+    def test_memory_init(self):
+        self.setUp_memory()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield self.rdport.addr.eq(1)
+                yield
+                self.assertEqual((yield self.rdport.data), 0x55)
+                yield self.rdport.addr.eq(2)
+                yield
+                self.assertEqual((yield self.rdport.data), 0x00)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_write(self):
+        self.setUp_memory()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.wrport.addr.eq(4)
+                yield self.wrport.data.eq(0x33)
+                yield self.wrport.en.eq(1)
+                yield
+                yield self.wrport.en.eq(0)
+                yield self.rdport.addr.eq(4)
+                yield
+                self.assertEqual((yield self.rdport.data), 0x33)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_write_granularity(self):
+        self.setUp_memory(wr_granularity=4)
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.wrport.data.eq(0x50)
+                yield self.wrport.en.eq(0b00)
+                yield
+                yield self.wrport.en.eq(0)
+                yield
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield self.wrport.en.eq(0b10)
+                yield
+                yield self.wrport.en.eq(0)
+                yield
+                self.assertEqual((yield self.rdport.data), 0x5a)
+                yield self.wrport.data.eq(0x33)
+                yield self.wrport.en.eq(0b01)
+                yield
+                yield self.wrport.en.eq(0)
+                yield
+                self.assertEqual((yield self.rdport.data), 0x53)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_read_before_write(self):
+        self.setUp_memory(rd_transparent=False)
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.wrport.data.eq(0x33)
+                yield self.wrport.en.eq(1)
+                yield self.rdport.en.eq(1)
+                yield
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield Delay(1e-6) # let comb propagate
+                self.assertEqual((yield self.rdport.data), 0xaa)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_write_through(self):
+        self.setUp_memory(rd_transparent=True)
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.wrport.data.eq(0x33)
+                yield self.wrport.en.eq(1)
+                yield
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield Delay(1e-6) # let comb propagate
+                self.assertEqual((yield self.rdport.data), 0x33)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_async_read_write(self):
+        self.setUp_memory(rd_synchronous=False)
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                yield self.rdport.addr.eq(0)
+                yield Delay()
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield self.rdport.addr.eq(1)
+                yield Delay()
+                self.assertEqual((yield self.rdport.data), 0x55)
+                yield self.rdport.addr.eq(0)
+                yield self.wrport.addr.eq(0)
+                yield self.wrport.data.eq(0x33)
+                yield self.wrport.en.eq(1)
+                yield Tick("sync")
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield Delay(1e-6) # let comb propagate
+                self.assertEqual((yield self.rdport.data), 0x33)
+            sim.add_clock(1e-6)
             sim.add_process(process)
