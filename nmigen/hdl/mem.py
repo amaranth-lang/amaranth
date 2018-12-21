@@ -68,10 +68,12 @@ class ReadPort:
         self.synchronous = synchronous
         self.transparent = transparent
 
-        self.addr = Signal(max=memory.depth)
-        self.data = Signal(memory.width)
+        self.addr = Signal(max=memory.depth,
+                           name="{}_r_addr".format(memory.name))
+        self.data = Signal(memory.width,
+                           name="{}_r_data".format(memory.name))
         if synchronous and not transparent:
-            self.en = Signal()
+            self.en = Signal(name="{}_r_en".format(memory.name))
         else:
             self.en = Const(1)
 
@@ -131,9 +133,12 @@ class WritePort:
         self.priority     = priority
         self.granularity  = granularity
 
-        self.addr = Signal(max=memory.depth)
-        self.data = Signal(memory.width)
-        self.en   = Signal(memory.width // granularity)
+        self.addr = Signal(max=memory.depth,
+                           name="{}_w_addr".format(memory.name))
+        self.data = Signal(memory.width,
+                           name="{}_w_data".format(memory.name))
+        self.en   = Signal(memory.width // granularity,
+                           name="{}_w_en".format(memory.name))
 
     def get_fragment(self, platform):
         f = Instance("$memwr",
