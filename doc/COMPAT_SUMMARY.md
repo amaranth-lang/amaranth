@@ -54,9 +54,14 @@ Compatibility summary
       - (−) `Tristate` ?
       - (+) `TSTriple` → `.lib.io.TSTriple`, `bits_sign=`→`shape=`
       - (−) `Instance` ?
-      - (−) `READ_FIRST`/`WRITE_FIRST`/`NO_CHANGE` ?
-      - (−) `_MemoryPort` ?
-      - (−) `Memory` ?
+      - (−) `Memory` id
+        - (−) `.get_port` **obs** → `.read_port()` + `.write_port()`
+      - (−) `_MemoryPort` **obs**
+        <br>Note: nMigen separates read and write ports.
+      - (−) `READ_FIRST`/`WRITE_FIRST` **obs**
+        <br>Note: `READ_FIRST` corresponds to `mem.read_port(transparent=False)`, and `WRITE_FIRST` to `mem.read_port(transparent=True)`.
+      - (-) `NO_CHANGE` **brk**
+        <br>Note: in designs using `NO_CHANGE`, repalce it with an asynchronous read port and logic implementing required semantics explicitly.
     - (−) `structure` → `.hdl.ast`
       - (+) `DUID` id
       - (+) `_Value` → `Value`

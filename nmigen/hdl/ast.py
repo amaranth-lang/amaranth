@@ -236,7 +236,7 @@ class Const(Value):
             shape = shape, self.value < 0
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a non-negative integer")
+            raise TypeError("Width must be a non-negative integer, not '{!r}'", self.nbits)
         self.value = self.normalize(self.value, shape)
 
     def shape(self):
@@ -1067,7 +1067,7 @@ class ValueSet(_MappedKeySet):
 class SignalKey:
     def __init__(self, signal):
         if type(signal) is not Signal:
-            raise TypeError("Object '{!r}' is not an nMigen signal")
+            raise TypeError("Object '{!r}' is not an nMigen signal".format(signal))
         self.signal = signal
 
     def __hash__(self):
@@ -1080,7 +1080,7 @@ class SignalKey:
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
-            raise TypeError("Object '{!r}' cannot be compared to a SignalKey")
+            raise TypeError("Object '{!r}' cannot be compared to a SignalKey".format(signal))
         return self.signal.duid < other.signal.duid
 
     def __repr__(self):
