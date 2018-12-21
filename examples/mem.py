@@ -17,7 +17,6 @@ class RegisterFile:
         m.d.comb += [
             rdport.addr.eq(self.adr),
             self.dat_r.eq(rdport.data),
-            rdport.en.eq(1),
             wrport.addr.eq(self.adr),
             wrport.data.eq(self.dat_w),
             wrport.en.eq(self.we),

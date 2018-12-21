@@ -28,8 +28,8 @@ class Memory:
         self.depth = depth
         self.init  = None if init is None else list(init)
 
-    def read_port(self, domain="sync", asynchronous=False, transparent=True):
-        return ReadPort(self, domain, asynchronous, transparent)
+    def read_port(self, domain="sync", synchronous=False, transparent=True):
+        return ReadPort(self, domain, synchronous, transparent)
 
     def write_port(self, domain="sync", priority=0, granularity=None):
         if granularity is None:
@@ -42,22 +42,25 @@ class Memory:
 
 
 class ReadPort:
-    def __init__(self, memory, domain, asynchronous, transparent):
-        self.memory       = memory
-        self.domain       = domain
-        self.asynchronous = asynchronous
-        self.transparent  = transparent
+    def __init__(self, memory, domain, synchronous, transparent):
+        self.memory      = memory
+        self.domain      = domain
+        self.synchronous = synchronous
+        self.transparent = transparent
 
         self.addr = Signal(max=memory.depth)
         self.data = Signal(memory.width)
-        self.en   = Signal()
+        if synchronous and transparent:
+            self.en = Signal()
+        else:
+            self.en = Const(1)
 
     def get_fragment(self, platform):
         return Instance("$memrd",
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,
             p_WIDTH=self.data.nbits,
-            p_CLK_ENABLE=not self.asynchronous,
+            p_CLK_ENABLE=self.synchronous,
             p_CLK_POLARITY=1,
             p_TRANSPARENT=self.transparent,
             i_CLK=ClockSignal(self.domain),
