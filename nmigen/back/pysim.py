@@ -437,6 +437,8 @@ class Simulator:
                         self._domain_signals[domain] = bitarray()
                     self._domain_signals[domain].append(False)
 
+                self._funclets.append(set())
+
                 self._domain_triggers.append(None)
                 if self._vcd_writer:
                     self._vcd_signals.append(set())
@@ -520,10 +522,7 @@ class Simulator:
             funclet = compiler(statements)
 
             def add_funclet(signal, funclet):
-                signal_slot = self._signal_slots[signal]
-                while len(self._funclets) <= signal_slot:
-                    self._funclets.append(set())
-                self._funclets[signal_slot].add(funclet)
+                self._funclets[self._signal_slots[signal]].add(funclet)
 
             for signal in compiler.sensitivity:
                 add_funclet(signal, funclet)
