@@ -408,21 +408,39 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
 
 
 class InstanceTestCase(FHDLTestCase):
-    def test_init(self):
-        rst = Signal()
-        stb = Signal()
-        pins = Signal(8)
-        inst = Instance("cpu",
+    def setUp_cpu(self):
+        self.rst = Signal()
+        self.stb = Signal()
+        self.pins = Signal(8)
+        self.inst = Instance("cpu",
             p_RESET=0x1234,
             i_clk=ClockSignal(),
-            i_rst=rst,
-            o_stb=stb,
-            io_pins=pins
+            i_rst=self.rst,
+            o_stb=self.stb,
+            io_pins=self.pins
         )
-        self.assertEqual(inst.type, "cpu")
-        self.assertEqual(inst.parameters, OrderedDict([("RESET", 0x1234)]))
-        self.assertEqual(list(inst.named_ports.keys()), ["clk", "rst", "stb", "pins"])
-        self.assertEqual(inst.ports, SignalDict([
-            (stb, "o"),
-            (pins, "io"),
+
+    def test_init(self):
+        self.setUp_cpu()
+        f = self.inst
+        self.assertEqual(f.type, "cpu")
+        self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
+        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "pins"])
+        self.assertEqual(f.ports, SignalDict([
+            (self.stb, "o"),
+            (self.pins, "io"),
+        ]))
+
+    def test_prepare(self):
+        self.setUp_cpu()
+        f = self.inst.prepare()
+        clk = f.domains["sync"].clk
+        self.assertEqual(f.type, "cpu")
+        self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
+        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "pins"])
+        self.assertEqual(f.ports, SignalDict([
+            (clk, "i"),
+            (self.rst, "i"),
+            (self.stb, "o"),
+            (self.pins, "io"),
         ]))
