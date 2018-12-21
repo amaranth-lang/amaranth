@@ -270,9 +270,9 @@ class Fragment:
 
         # Go through subfragments and refine our approximation for ports.
         for subfrag, name in self.subfragments:
-            # Always ask subfragments to provide all signals we're using and signals we're asked
-            # to provide. If the subfragment is not driving it, it will silently ignore it.
-            sub_ins, sub_outs, sub_inouts = subfrag._propagate_ports(ports=self_used | ports)
+            # Always ask subfragments to provide all signals that are our inputs.
+            # If the subfragment is not driving it, it will silently ignore it.
+            sub_ins, sub_outs, sub_inouts = subfrag._propagate_ports(ports=ins | ports)
             # Refine the input port approximation: if a subfragment is driving a signal,
             # it is definitely not our input. But, if a subfragment requires a signal as an input,
             # and we aren't driving it, it has to be our input as well.
