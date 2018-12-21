@@ -417,8 +417,11 @@ class Simulator:
         hierarchy = {}
         def add_fragment(fragment, scope=()):
             hierarchy[fragment] = scope
-            for subfragment, name in fragment.subfragments:
-                add_fragment(subfragment, (*scope, name))
+            for index, (subfragment, name) in enumerate(fragment.subfragments):
+                if name is None:
+                    add_fragment(subfragment, (*scope, "#{}".format(index)))
+                else:
+                    add_fragment(subfragment, (*scope, name))
         add_fragment(root_fragment)
 
         def add_signal(signal):
