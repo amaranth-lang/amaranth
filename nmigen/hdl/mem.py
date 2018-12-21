@@ -35,7 +35,7 @@ class Memory:
         # Array of signals for simulation.
         self._array = Array()
         for addr, data in enumerate(self.init + [0 for _ in range(self.depth - len(self.init))]):
-            self._array.append(Signal(self.width, reset=data, name="{}[{}]".format(name, addr)))
+            self._array.append(Signal(self.width, reset=data, name="{}({})".format(name, addr)))
 
     def read_port(self, domain="sync", synchronous=True, transparent=True):
         if not synchronous and not transparent:
