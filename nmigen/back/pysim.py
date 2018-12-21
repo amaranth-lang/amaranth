@@ -193,7 +193,12 @@ class _RHSValueCompiler(AbstractValueTransformer):
         shape  = value.shape()
         elems  = list(map(self, value.elems))
         index  = self(value.index)
-        return lambda state: normalize(elems[index(state)](state), shape)
+        def eval(state):
+            index_value = index(state)
+            if index_value >= len(elems):
+                index_value = len(elems) - 1
+            return normalize(elems[index_value](state), shape)
+        return eval
 
 
 class _LHSValueCompiler(AbstractValueTransformer):
@@ -263,7 +268,10 @@ class _LHSValueCompiler(AbstractValueTransformer):
         elems = list(map(self, value.elems))
         index = self.rhs_compiler(value.index)
         def eval(state, rhs):
-            elems[index(state)](state, rhs)
+            index_value = index(state)
+            if index_value >= len(elems):
+                index_value = len(elems) - 1
+            elems[index_value](state, rhs)
         return eval
 
 
