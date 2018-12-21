@@ -27,8 +27,11 @@ proc_init
 proc_arst
 proc_dff
 proc_clean
+design -save orig
+memory_collect
 write_verilog
 # Make sure there are no undriven wires in generated RTLIL.
+design -load orig
 proc
 select -assert-none w:* i:* %a %d o:* %a %ci* %d c:* %co* %a %d n:$* %d
 """.format(il_text))

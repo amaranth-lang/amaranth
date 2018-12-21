@@ -3,7 +3,8 @@ import textwrap
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 
-from ..hdl import ast, ir, xfrm
+from ..tools import bits_for
+from ..hdl import ast, ir, mem, xfrm
 
 
 class _Namer:
@@ -96,16 +97,23 @@ class _ModuleBuilder(_Namer, _Bufferer):
     def connect(self, lhs, rhs):
         self._append("  connect {} {}\n", lhs, rhs)
 
+    def memory(self, width, size, name=None, src=""):
+        self._src(src)
+        name = self._make_name(name, local=False)
+        self._append("  memory width {} size {} {}\n", width, size, name)
+        return name
+
     def cell(self, kind, name=None, params={}, ports={}, src=""):
         self._src(src)
-        name = self._make_name(name, local=True)
+        name = self._make_name(name, local=False)
         self._append("  cell {} {}\n", kind, name)
         for param, value in params.items():
             if isinstance(value, str):
-                value = repr(value)
+                self._append("    parameter \\{} \"{}\"\n",
+                             param, value.translate(self._escape_map))
             else:
-                value = int(value)
-            self._append("    parameter \\{} {}\n", param, value)
+                self._append("    parameter \\{} {:d}\n",
+                             param, value)
         for port, wire in ports.items():
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
@@ -572,7 +580,10 @@ def convert_fragment(builder, fragment, name, top):
         for port_name, value in fragment.named_ports.items():
             port_map["\\{}".format(port_name)] = value
 
-        return "\\{}".format(fragment.type), port_map
+        if fragment.type[0] == "$":
+            return fragment.type, port_map
+        else:
+            return "\\{}".format(fragment.type), port_map
 
     with builder.module(name or "anonymous", attrs={"top": 1} if top else {}) as module:
         compiler_state = _ValueCompilerState(module)
@@ -602,13 +613,45 @@ def convert_fragment(builder, fragment, name, top):
         # Transform all subfragments to their respective cells. Transforming signals connected
         # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
         # name) names.
+        memories = OrderedDict()
         for subfragment, sub_name in fragment.subfragments:
-            sub_name, sub_port_map = \
+            sub_params = OrderedDict()
+            if hasattr(subfragment, "parameters"):
+                for param_name, param_value in subfragment.parameters.items():
+                    if isinstance(param_value, mem.Memory):
+                        memory = param_value
+                        if memory not in memories:
+                            memories[memory] = module.memory(width=memory.width, size=memory.depth,
+                                                             name=memory.name)
+                            addr_bits = bits_for(memory.depth)
+                            for addr, data in enumerate(memory.init):
+                                module.cell("$meminit", ports={
+                                    "\\ADDR": rhs_compiler(ast.Const(addr, addr_bits)),
+                                    "\\DATA": rhs_compiler(ast.Const(data, memory.width)),
+                                }, params={
+                                    "MEMID": memories[memory],
+                                    "ABITS": addr_bits,
+                                    "WIDTH": memory.width,
+                                    "WORDS": 1,
+                                    "PRIORITY": 0,
+                                })
+
+                        param_value = memories[memory]
+
+                    sub_params[param_name] = param_value
+
+            sub_type, sub_port_map = \
                 convert_fragment(builder, subfragment, top=False, name=sub_name)
-            module.cell(sub_name, name=sub_name, ports={
-                port: compiler_state.resolve_curr(signal, prefix=sub_name)
-                for port, signal in sub_port_map.items()
-            }, params=subfragment.parameters)
+
+            sub_ports = OrderedDict()
+            for port, value in sub_port_map.items():
+                if isinstance(value, ast.Signal):
+                    sigspec = compiler_state.resolve_curr(value, prefix=sub_name)
+                else:
+                    sigspec = rhs_compiler(value)
+                sub_ports[port] = sigspec
+
+            module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params)
 
         with module.process() as process:
             with process.case() as case:
