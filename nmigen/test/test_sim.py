@@ -419,12 +419,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         self.setUp_memory()
         with self.assertSimulation(self.m) as sim:
             def process():
-                yield
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield self.rdport.addr.eq(1)
                 yield
+                yield
                 self.assertEqual((yield self.rdport.data), 0x55)
                 yield self.rdport.addr.eq(2)
+                yield
                 yield
                 self.assertEqual((yield self.rdport.data), 0x00)
             sim.add_clock(1e-6)
@@ -491,6 +492,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 yield self.wrport.en.eq(1)
                 yield
                 self.assertEqual((yield self.rdport.data), 0xaa)
+                yield Delay(1e-6) # let comb propagate
+                self.assertEqual((yield self.rdport.data), 0x33)
+                yield
+                yield self.rdport.addr.eq(1)
                 yield Delay(1e-6) # let comb propagate
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)

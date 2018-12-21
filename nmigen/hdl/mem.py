@@ -88,23 +88,38 @@ class ReadPort:
             i_ADDR=self.addr,
             o_DATA=self.data,
         )
-        read_data = self.data.eq(self.memory._array[self.addr])
         if self.synchronous and not self.transparent:
             # Synchronous, read-before-write port
-            f.add_statements(Switch(self.en, { 1: read_data }))
+            f.add_statements(
+                Switch(self.en, {
+                    1: self.data.eq(self.memory._array[self.addr])
+                })
+            )
             f.add_driver(self.data, self.domain)
         elif self.synchronous:
             # Synchronous, write-through port
             # This model is a bit unconventional. We model transparent ports as asynchronous ports
             # that are latched when the clock is high. This isn't exactly correct, but it is very
             # close to the correct behavior of a transparent port, and the difference should only
-            # be observable in pathological cases of clock gating.
-            f.add_statements(Switch(ClockSignal(self.domain),
-                { 1: self.data.eq(self.data), 0: read_data }))
+            # be observable in pathological cases of clock gating. A register is injected to
+            # the address input to achieve the correct address-to-data latency. Also, the reset
+            # value of the data output is forcibly set to the 0th initial value, if any--note that
+            # many FPGAs do not guarantee this behavior!
+            if len(self.memory.init) > 0:
+                self.data.reset = self.memory.init[0]
+            latch_addr = Signal.like(self.addr)
+            f.add_statements(
+                latch_addr.eq(self.addr),
+                Switch(ClockSignal(self.domain), {
+                    0: self.data.eq(self.data),
+                    1: self.data.eq(self.memory._array[latch_addr]),
+                }),
+            )
+            f.add_driver(latch_addr, self.domain)
             f.add_driver(self.data)
         else:
             # Asynchronous port
-            f.add_statements(read_data)
+            f.add_statements(self.data.eq(self.memory._array[self.addr]))
             f.add_driver(self.data)
         return f
 
