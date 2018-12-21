@@ -99,6 +99,10 @@ class Fragment:
             driver_subfrags[signal].add((None, hierarchy))
 
         for i, (subfrag, name) in enumerate(self.subfragments):
+            # Never flatten instances.
+            if isinstance(subfrag, Instance):
+                continue
+
             # First, recurse into subfragments and let them detect driver conflicts as well.
             if name is None:
                 name = "<unnamed #{}>".format(i)
@@ -237,22 +241,25 @@ class Fragment:
     def _propagate_ports(self, ports):
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        self_driven = union((s._lhs_signals() for s in self.statements), start=SignalSet())
-        self_used   = union((s._rhs_signals() for s in self.statements), start=SignalSet())
-        for domain, _ in self.iter_sync():
-            cd = self.domains[domain]
-            self_used.add(cd.clk)
-            if cd.rst is not None:
-                self_used.add(cd.rst)
         if isinstance(self, Instance):
             # Named ports contain signals for input, output and bidirectional ports. Output
             # and bidirectional ports are already added to the main port dict, however, for
             # input ports this has to be done lazily as any expression is valid there, including
             # ones with deferred resolution to signals, such as ClockSignal().
+            self_driven = SignalSet()
+            self_used   = SignalSet()
             for named_port_used in union((p._rhs_signals() for p in self.named_ports.values()),
                                          start=SignalSet()):
                 if named_port_used not in self.ports:
                     self_used.add(named_port_used)
+        else:
+            self_driven = union((s._lhs_signals() for s in self.statements), start=SignalSet())
+            self_used   = union((s._rhs_signals() for s in self.statements), start=SignalSet())
+            for domain, _ in self.iter_sync():
+                cd = self.domains[domain]
+                self_used.add(cd.clk)
+                if cd.rst is not None:
+                    self_used.add(cd.rst)
 
         # Our input ports are all the signals we're using but not driving. This is an over-
         # approximation: some of these signals may be driven by our subfragments.
