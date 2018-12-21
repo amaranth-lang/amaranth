@@ -298,7 +298,7 @@ class _ValueCompiler(xfrm.AbstractValueTransformer):
         raise NotImplementedError # :nocov:
 
     def on_Cat(self, value):
-        return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.operands])))
+        return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.parts])))
 
     def _prepare_value_for_Slice(self, value):
         raise NotImplementedError # :nocov:
