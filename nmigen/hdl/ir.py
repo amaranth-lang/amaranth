@@ -268,16 +268,20 @@ class Fragment:
         # an underapproximation: some of these signals may be driven by subfragments.
         outs = ports & self_driven
 
-        # Go through subfragments and refine our approximation for ports.
+        # Go through subfragments and refine our approximation for inputs.
+        for subfrag, name in self.subfragments:
+            # Refine the input port approximation: if a subfragment requires a signal as an input,
+            # and we aren't driving it, it has to be our input as well.
+            sub_ins, sub_outs, sub_inouts = subfrag._propagate_ports(ports=())
+            ins  |= sub_ins - self_driven
+
         for subfrag, name in self.subfragments:
             # Always ask subfragments to provide all signals that are our inputs.
             # If the subfragment is not driving it, it will silently ignore it.
             sub_ins, sub_outs, sub_inouts = subfrag._propagate_ports(ports=ins | ports)
-            # Refine the input port approximation: if a subfragment is driving a signal,
-            # it is definitely not our input. But, if a subfragment requires a signal as an input,
-            # and we aren't driving it, it has to be our input as well.
+            # Refine the input port appropximation further: if any subfragment is driving a signal
+            # that we currently think should be our input, it shouldn't actually be our input.
             ins  -= sub_outs
-            ins  |= sub_ins - self_driven
             # Refine the output port approximation: if a subfragment is driving a signal,
             # and we're asked to provide it, we can provide it now.
             outs |= ports & sub_outs

@@ -134,6 +134,23 @@ class FragmentPortsTestCase(FHDLTestCase):
         f1._propagate_ports(ports=())
         self.assertEqual(f1.ports, SignalDict())
 
+    def test_output_input_sibling(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f2.add_statements(
+            self.c2.eq(0)
+        )
+        f2.add_driver(self.c2)
+        f1.add_subfragment(f2)
+        f3 = Fragment()
+        f3.add_statements(
+            self.c1.eq(self.c2)
+        )
+        f1.add_subfragment(f3)
+
+        f1._propagate_ports(ports=())
+        self.assertEqual(f1.ports, SignalDict())
+
     def test_input_cd(self):
         sync = ClockDomain()
         f = Fragment()
