@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog
+from nmigen.cli import main
 
 
 class System:
@@ -11,7 +11,7 @@ class System:
 
     def get_fragment(self, platform):
         m = Module()
-        m.submodules += Instance("CPU",
+        m.submodules.cpu = Instance("CPU",
             p_RESET_ADDR=0xfff0,
             i_d_adr  =self.adr,
             i_d_dat_r=self.dat_r,
@@ -21,7 +21,6 @@ class System:
         return m.lower(platform)
 
 
-sys  = System()
-frag = sys.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[sys.adr, sys.dat_r, sys.dat_w, sys.we]))
-print(verilog.convert(frag, ports=[sys.adr, sys.dat_r, sys.dat_w, sys.we]))
+if __name__ == "__main__":
+    sys = System()
+    main(sys, ports=[sys.adr, sys.dat_r, sys.dat_w, sys.we])

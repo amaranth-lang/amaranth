@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog
+from nmigen.cli import main
 
 
 class ParMux:
@@ -24,7 +24,6 @@ class ParMux:
         return m.lower(platform)
 
 
-pmux = ParMux(width=16)
-frag = pmux.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[pmux.s, pmux.a, pmux.b, pmux.c, pmux.o]))
-print(verilog.convert(frag, ports=[pmux.s, pmux.a, pmux.b, pmux.c, pmux.o]))
+if __name__ == "__main__":
+    pmux = ParMux(width=16)
+    main(pmux, ports=[pmux.s, pmux.a, pmux.b, pmux.c, pmux.o])

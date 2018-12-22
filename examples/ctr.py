@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog, pysim
+from nmigen.cli import main, pysim
 
 
 class Counter:
@@ -14,13 +14,6 @@ class Counter:
         return m.lower(platform)
 
 
-ctr  = Counter(width=16)
-frag = ctr.get_fragment(platform=None)
-
-# print(rtlil.convert(frag, ports=[ctr.o]))
-print(verilog.convert(frag, ports=[ctr.o]))
-
-with pysim.Simulator(frag,
-        vcd_file=open("ctr.vcd", "w")) as sim:
-    sim.add_clock(1e-6)
-    sim.run_until(100e-6, run_passive=True)
+ctr = Counter(width=16)
+if __name__ == "__main__":
+    main(ctr, ports=[ctr.o])

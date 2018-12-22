@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog
+from nmigen.cli import main
 
 
 class Adder:
@@ -53,7 +53,6 @@ class ALU:
         return m.lower(platform)
 
 
-alu  = ALU(width=16)
-frag = alu.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[alu.op, alu.a, alu.b, alu.o]))
-print(verilog.convert(frag, ports=[alu.op, alu.a, alu.b, alu.o]))
+if __name__ == "__main__":
+    alu = ALU(width=16)
+    main(alu, ports=[alu.op, alu.a, alu.b, alu.o])

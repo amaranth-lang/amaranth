@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog
+from nmigen.cli import main
 
 
 class ClockDivisor:
@@ -14,8 +14,8 @@ class ClockDivisor:
         return m.lower(platform)
 
 
-ctr  = ClockDivisor(factor=16)
-frag = ctr.get_fragment(platform=None)
-frag.add_domains(ClockDomain("sync", async_reset=True))
-# print(rtlil.convert(frag, ports=[ctr.o]))
-print(verilog.convert(frag, ports=[ctr.o]))
+if __name__ == "__main__":
+    ctr  = ClockDivisor(factor=16)
+    frag = ctr.get_fragment(platform=None)
+    frag.add_domains(ClockDomain("sync", async_reset=True))
+    main(frag, ports=[ctr.o])

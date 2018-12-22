@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog
+from nmigen.cli import main
 
 
 class RegisterFile:
@@ -24,7 +24,6 @@ class RegisterFile:
         return m.lower(platform)
 
 
-rf   = RegisterFile()
-frag = rf.get_fragment(platform=None)
-# print(rtlil.convert(frag, ports=[rf.adr, rf.dat_r, rf.dat_w, rf.we]))
-print(verilog.convert(frag, ports=[rf.adr, rf.dat_r, rf.dat_w, rf.we]))
+if __name__ == "__main__":
+    rf = RegisterFile()
+    main(rf, ports=[rf.adr, rf.dat_r, rf.dat_w, rf.we])

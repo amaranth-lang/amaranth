@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from nmigen import *
-from nmigen.back import rtlil, verilog, pysim
+from nmigen.cli import main
 
 
 class GPIO:
@@ -16,16 +16,14 @@ class GPIO:
         return m.lower(platform)
 
 
-# TODO: use Record
-bus = SimpleNamespace(
-    adr=Signal(max=8),
-    dat_r=Signal(),
-    dat_w=Signal(),
-    we=Signal()
-)
-pins = Signal(8)
-gpio = GPIO(Array(pins), bus)
-frag = gpio.get_fragment(platform=None)
-
-# print(rtlil.convert(frag, ports=[pins, bus.adr, bus.dat_r, bus.dat_w, bus.we]))
-print(verilog.convert(frag, ports=[pins, bus.adr, bus.dat_r, bus.dat_w, bus.we]))
+if __name__ == "__main__":
+    # TODO: use Record
+    bus = SimpleNamespace(
+        adr  =Signal(name="adr", max=8),
+        dat_r=Signal(name="dat_r"),
+        dat_w=Signal(name="dat_w"),
+        we   =Signal(name="we"),
+    )
+    pins = Signal(8)
+    gpio = GPIO(Array(pins), bus)
+    main(gpio, ports=[pins, bus.adr, bus.dat_r, bus.dat_w, bus.we])
