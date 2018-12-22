@@ -105,51 +105,81 @@ class Fragment:
                 break
         assert found
 
-    def _resolve_driver_conflicts(self, hierarchy=("top",), mode="warn"):
+    def _resolve_hierarchy_conflicts(self, hierarchy=("top",), mode="warn"):
         assert mode in ("silent", "warn", "error")
 
         driver_subfrags = SignalDict()
+        memory_subfrags = OrderedDict()
+        def add_subfrag(registry, entity, entry):
+            if entity not in registry:
+                registry[entity] = set()
+            registry[entity].add(entry)
 
         # For each signal driven by this fragment and/or its subfragments, determine which
         # subfragments also drive it.
         for domain, signal in self.iter_drivers():
-            if signal not in driver_subfrags:
-                driver_subfrags[signal] = set()
-            driver_subfrags[signal].add((None, hierarchy))
+            add_subfrag(driver_subfrags, signal, (None, hierarchy))
 
         for i, (subfrag, name) in enumerate(self.subfragments):
-            # Never flatten instances.
             if isinstance(subfrag, Instance):
+                # For memories (which are subfragments, but semantically a part of superfragment),
+                # record that this fragment is driving it.
+                if subfrag.type in ("$memrd", "$memwr"):
+                    memory = subfrag.parameters["MEMID"]
+                    add_subfrag(memory_subfrags, memory, (None, hierarchy))
+
+                # Never flatten instances.
                 continue
 
             # First, recurse into subfragments and let them detect driver conflicts as well.
             if name is None:
                 name = "<unnamed #{}>".format(i)
             subfrag_hierarchy = hierarchy + (name,)
-            subfrag_drivers = subfrag._resolve_driver_conflicts(subfrag_hierarchy, mode)
+            subfrag_drivers, subfrag_memories = \
+                subfrag._resolve_hierarchy_conflicts(subfrag_hierarchy, mode)
 
-            # Second, classify subfragments by domains they define.
+            # Second, classify subfragments by signals they drive and memories they use.
             for signal in subfrag_drivers:
-                if signal not in driver_subfrags:
-                    driver_subfrags[signal] = set()
-                driver_subfrags[signal].add((subfrag, subfrag_hierarchy))
+                add_subfrag(driver_subfrags, signal, (subfrag, subfrag_hierarchy))
+            for memory in subfrag_memories:
+                add_subfrag(memory_subfrags, memory, (subfrag, subfrag_hierarchy))
 
         # Find out the set of subfragments that needs to be flattened into this fragment
         # to resolve driver-driver conflicts.
         flatten_subfrags = set()
-        for signal, subfrags in driver_subfrags.items():
-            if len(subfrags) > 1:
-                flatten_subfrags.update((f, h) for f, h in subfrags if f is not None)
+        def flatten_subfrags_if_needed(subfrags):
+            if len(subfrags) == 1:
+                return []
+            flatten_subfrags.update((f, h) for f, h in subfrags if f is not None)
+            return list(sorted(".".join(h) for f, h in subfrags))
 
-                # While we're at it, show a message.
-                subfrag_names = ", ".join(sorted(".".join(h) for f, h in subfrags))
-                message = ("Signal '{}' is driven from multiple fragments: {}"
-                           .format(signal, subfrag_names))
-                if mode == "error":
-                    raise DriverConflict(message)
-                elif mode == "warn":
-                    message += "; hierarchy will be flattened"
-                    warnings.warn_explicit(message, DriverConflict, *signal.src_loc)
+        for signal, subfrags in driver_subfrags.items():
+            subfrag_names = flatten_subfrags_if_needed(subfrags)
+            if not subfrag_names:
+                continue
+
+            # While we're at it, show a message.
+            message = ("Signal '{}' is driven from multiple fragments: {}"
+                       .format(signal, ", ".join(subfrag_names)))
+            if mode == "error":
+                raise DriverConflict(message)
+            elif mode == "warn":
+                message += "; hierarchy will be flattened"
+                warnings.warn_explicit(message, DriverConflict, *signal.src_loc)
+
+        for memory, subfrags in memory_subfrags.items():
+            subfrag_names = flatten_subfrags_if_needed(subfrags)
+            if not subfrag_names:
+                continue
+
+            # While we're at it, show a message.
+            message = ("Memory '{}' is accessed from multiple fragments: {}"
+                       .format(memory.name, ", ".join(subfrag_names)))
+            if mode == "error":
+                raise DriverConflict(message)
+            elif mode == "warn":
+                message += "; hierarchy will be flattened"
+                warnings.warn_explicit(message, DriverConflict, *memory.src_loc)
 
         # Flatten hierarchy.
         for subfrag, subfrag_hierarchy in sorted(flatten_subfrags, key=lambda x: x[1]):
@@ -163,10 +193,11 @@ class Fragment:
         # has another conflict.
         if any(flatten_subfrags):
             # Try flattening again.
-            return self._resolve_driver_conflicts(hierarchy, mode)
+            return self._resolve_hierarchy_conflicts(hierarchy, mode)
 
         # Nothing was flattened, we're done!
-        return SignalSet(driver_subfrags.keys())
+        return (SignalSet(driver_subfrags.keys()),
+                set(memory_subfrags.keys()))
 
     def _propagate_domains_up(self, hierarchy=("top",)):
         from .xfrm import DomainRenamer
@@ -309,7 +340,7 @@ class Fragment:
 
         fragment = FragmentTransformer()(self)
         fragment._propagate_domains(ensure_sync_exists)
-        fragment._resolve_driver_conflicts()
+        fragment._resolve_hierarchy_conflicts()
         fragment = fragment._insert_domain_resets()
         fragment = fragment._lower_domain_signals()
         fragment._propagate_ports(ports)

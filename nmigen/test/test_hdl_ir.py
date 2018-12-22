@@ -3,6 +3,7 @@ from collections import OrderedDict
 from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.ir import *
+from ..hdl.mem import *
 from .tools import *
 
 
@@ -321,7 +322,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
 
 
-class FragmentDriverConflictTestCase(FHDLTestCase):
+class FragmentHierarchyConflictTestCase(FHDLTestCase):
     def setUp_self_sub(self):
         self.s1 = Signal()
         self.c1 = Signal()
@@ -350,7 +351,7 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
     def test_conflict_self_sub(self):
         self.setUp_self_sub()
 
-        self.f1._resolve_driver_conflicts(mode="silent")
+        self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [
             (self.f1a, "f1a"),
             (self.f1b, "f1b"),
@@ -372,7 +373,7 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
 
         with self.assertRaises(DriverConflict,
                 msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>"):
-            self.f1._resolve_driver_conflicts(mode="error")
+            self.f1._resolve_hierarchy_conflicts(mode="error")
 
     def test_conflict_self_sub_warning(self):
         self.setUp_self_sub()
@@ -380,7 +381,7 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
         with self.assertWarns(DriverConflict,
                 msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>; "
                     "hierarchy will be flattened"):
-            self.f1._resolve_driver_conflicts(mode="warn")
+            self.f1._resolve_hierarchy_conflicts(mode="warn")
 
     def setUp_sub_sub(self):
         self.s1 = Signal()
@@ -402,7 +403,7 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
     def test_conflict_sub_sub(self):
         self.setUp_sub_sub()
 
-        self.f1._resolve_driver_conflicts(mode="silent")
+        self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [])
         self.assertRepr(self.f1.statements, """
         (
@@ -431,7 +432,7 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
     def test_conflict_self_subsub(self):
         self.setUp_self_subsub()
 
-        self.f1._resolve_driver_conflicts(mode="silent")
+        self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [])
         self.assertRepr(self.f1.statements, """
         (
@@ -439,6 +440,43 @@ class FragmentDriverConflictTestCase(FHDLTestCase):
             (eq (sig c2) (const 1'd1))
         )
         """)
+
+    def setUp_memory(self):
+        self.m = Memory(width=8, depth=4)
+        self.fr = self.m.read_port().get_fragment(platform=None)
+        self.fw = self.m.write_port().get_fragment(platform=None)
+        self.f1 = Fragment()
+        self.f2 = Fragment()
+        self.f2.add_subfragment(self.fr)
+        self.f1.add_subfragment(self.f2)
+        self.f3 = Fragment()
+        self.f3.add_subfragment(self.fw)
+        self.f1.add_subfragment(self.f3)
+
+    def test_conflict_memory(self):
+        self.setUp_memory()
+
+        self.f1._resolve_hierarchy_conflicts(mode="silent")
+        self.assertEqual(self.f1.subfragments, [
+            (self.fr, None),
+            (self.fw, None),
+        ])
+
+    def test_conflict_memory_error(self):
+        self.setUp_memory()
+
+        with self.assertRaises(DriverConflict,
+                msg="Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
+                    "top.<unnamed #1>"):
+            self.f1._resolve_hierarchy_conflicts(mode="error")
+
+    def test_conflict_memory_warning(self):
+        self.setUp_memory()
+
+        with self.assertWarns(DriverConflict,
+                msg="Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
+                    "top.<unnamed #1>; hierarchy will be flattened"):
+            self.f1._resolve_hierarchy_conflicts(mode="warn")
 
 
 class InstanceTestCase(FHDLTestCase):
