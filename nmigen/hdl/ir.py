@@ -86,6 +86,25 @@ class Fragment:
     def get_fragment(self, platform):
         return self
 
+    def _merge_subfragment(self, subfragment):
+        # Merge subfragment's everything except clock domains into this fragment.
+        # Flattening is done after clock domain propagation, so we can assume the domains
+        # are already the same in every involved fragment in the first place.
+        self.ports.update(subfragment.ports)
+        for domain, signal in subfragment.iter_drivers():
+            self.add_driver(signal, domain)
+        self.statements += subfragment.statements
+        self.subfragments += subfragment.subfragments
+
+        # Remove the merged subfragment.
+        found = False
+        for i, (check_subfrag, check_name) in enumerate(self.subfragments): # :nobr:
+            if subfragment == check_subfrag:
+                del self.subfragments[i]
+                found = True
+                break
+        assert found
+
     def _resolve_driver_conflicts(self, hierarchy=("top",), mode="warn"):
         assert mode in ("silent", "warn", "error")
 
@@ -132,21 +151,9 @@ class Fragment:
                     message += "; hierarchy will be flattened"
                     warnings.warn_explicit(message, DriverConflict, *signal.src_loc)
 
+        # Flatten hierarchy.
         for subfrag, subfrag_hierarchy in sorted(flatten_subfrags, key=lambda x: x[1]):
-            # Merge subfragment's everything except clock domains into this fragment.
-            # Flattening is done after clock domain propagation, so we can assume the domains
-            # are already the same in every involved fragment in the first place.
-            self.ports.update(subfrag.ports)
-            for domain, signal in subfrag.iter_drivers():
-                self.add_driver(signal, domain)
-            self.statements += subfrag.statements
-            self.subfragments += subfrag.subfragments
-
-            # Remove the merged subfragment.
-            for i, (check_subfrag, check_name) in enumerate(self.subfragments): # :nobr:
-                if subfrag == check_subfrag:
-                    del self.subfragments[i]
-                    break
+            self._merge_subfragment(subfrag)
 
         # If we flattened anything, we might be in a situation where we have a driver conflict
         # again, e.g. if we had a tree of fragments like A --- B --- C where only fragments
