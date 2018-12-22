@@ -122,9 +122,6 @@ class CompatModule:
         elif name == "_submodules":
             self._submodules = []
             return self._submodules
-        elif name == "_specials":
-            self._specials = []
-            return self._specials
         elif name == "_clock_domains":
             self._clock_domains = []
             return self._clock_domains
@@ -135,22 +132,22 @@ class CompatModule:
             raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(type(self).__name__, name))
 
-    def _finalize_submodules(self):
+    def _finalize_submodules(self, finalize_native):
         for name, submodule in self._submodules:
             if hasattr(submodule, "get_fragment_called"):
                 # Compat submodule
                 if not submodule.get_fragment_called:
                     self._module._add_submodule(submodule.get_fragment(), name)
-            else:
+            elif finalize_native:
                 # Native submodule
                 self._module._add_submodule(submodule, name)
 
     def finalize(self, *args, **kwargs):
         if not self.finalized:
             self.finalized = True
-            self._finalize_submodules()
+            self._finalize_submodules(finalize_native=False)
             self.do_finalize(*args, **kwargs)
-            self._finalize_submodules()
+            self._finalize_submodules(finalize_native=True)
 
     def do_finalize(self):
         pass
