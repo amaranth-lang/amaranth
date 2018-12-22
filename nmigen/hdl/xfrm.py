@@ -298,6 +298,8 @@ class LHSGroupAnalyzer(StatementVisitor):
         root_group = self.find(root)
         for leaf in leaves:
             leaf_group = self.find(leaf)
+            if root_group == leaf_group:
+                continue
             self.unions[leaf_group] = root_group
 
     def groups(self):

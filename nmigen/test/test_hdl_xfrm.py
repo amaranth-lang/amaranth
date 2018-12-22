@@ -186,6 +186,20 @@ class LHSGroupAnalyzerTestCase(FHDLTestCase):
             SignalSet((a, b)),
         ])
 
+    def test_no_loops(self):
+        a = Signal()
+        b = Signal()
+        stmts = [
+            a.eq(0),
+            Cat(a, b).eq(0),
+            Cat(a, b).eq(0),
+        ]
+
+        groups = LHSGroupAnalyzer()(stmts)
+        self.assertEqual(list(groups.values()), [
+            SignalSet((a, b)),
+        ])
+
     def test_switch(self):
         a = Signal()
         b = Signal()
