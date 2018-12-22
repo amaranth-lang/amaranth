@@ -538,16 +538,15 @@ class _StatementCompiler(xfrm.AbstractStatementTransformer):
             self._case = old_case
 
     def on_Assign(self, stmt):
-        if isinstance(stmt, ast.Assign):
-            lhs_bits, lhs_sign = stmt.lhs.shape()
-            rhs_bits, rhs_sign = stmt.rhs.shape()
-            if lhs_bits == rhs_bits:
-                rhs_sigspec = self.rhs_compiler(stmt.rhs)
-            else:
-                # In RTLIL, LHS and RHS of assignment must have exactly same width.
-                rhs_sigspec = self.rhs_compiler.match_shape(
-                    stmt.rhs, lhs_bits, rhs_sign)
-            self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
+        lhs_bits, lhs_sign = stmt.lhs.shape()
+        rhs_bits, rhs_sign = stmt.rhs.shape()
+        if lhs_bits == rhs_bits:
+            rhs_sigspec = self.rhs_compiler(stmt.rhs)
+        else:
+            # In RTLIL, LHS and RHS of assignment must have exactly same width.
+            rhs_sigspec = self.rhs_compiler.match_shape(
+                stmt.rhs, lhs_bits, rhs_sign)
+        self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
     def on_Switch(self, stmt):
         with self._case.switch(self.rhs_compiler(stmt.test)) as switch:
