@@ -158,6 +158,52 @@ class DomainLowererTestCase(FHDLTestCase):
             DomainLowerer({"sync": sync})(f)
 
 
+class LHSGroupAnalyzerTestCase(FHDLTestCase):
+    def test_no_group_unrelated(self):
+        a = Signal()
+        b = Signal()
+        stmts = [
+            a.eq(0),
+            b.eq(0),
+        ]
+
+        groups = LHSGroupAnalyzer()(stmts)
+        self.assertEqual(list(groups.values()), [
+            SignalSet((a,)),
+            SignalSet((b,)),
+        ])
+
+    def test_group_related(self):
+        a = Signal()
+        b = Signal()
+        stmts = [
+            a.eq(0),
+            Cat(a, b).eq(0),
+        ]
+
+        groups = LHSGroupAnalyzer()(stmts)
+        self.assertEqual(list(groups.values()), [
+            SignalSet((a, b)),
+        ])
+
+    def test_switch(self):
+        a = Signal()
+        b = Signal()
+        stmts = [
+            a.eq(0),
+            Switch(a, {
+                1: b.eq(0),
+            })
+        ]
+
+        groups = LHSGroupAnalyzer()(stmts)
+        self.assertEqual(list(groups.values()), [
+            SignalSet((a,)),
+            SignalSet((b,)),
+        ])
+
+
+
 class ResetInserterTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
