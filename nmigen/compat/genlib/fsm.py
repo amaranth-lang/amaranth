@@ -78,8 +78,9 @@ class _LowerNext(ValueTransformer, StatementTransformer):
             except KeyError:
                 related = node.target if isinstance(node.target, Signal) else None
                 next_value = Signal(node.target.shape(),
-                                    name="{}_fsm_next".format(node.target.name))
-                next_value_ce = Signal(name="{}_fsm_next_ce".format(node.target.name))
+                    name=None if related is None else "{}_fsm_next".format(related.name))
+                next_value_ce = Signal(
+                    name=None if related is None else "{}_fsm_next_ce".format(related.name))
                 self.registers.append((node.target, next_value_ce, next_value))
             return next_value.eq(node.value), next_value_ce.eq(1)
         else:
