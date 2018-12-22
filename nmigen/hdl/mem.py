@@ -27,15 +27,29 @@ class Memory:
         self.width = width
         self.depth = depth
 
-        self.init = [] if init is None else list(init)
+        # Array of signals for simulation.
+        self._array = Array()
+        for addr in range(self.depth):
+            self._array.append(Signal(self.width, name="{}({})".format(name, addr)))
+
+        self.init = init
+
+    @property
+    def init(self):
+        return self._init
+
+    @init.setter
+    def init(self, new_init):
+        self._init = [] if new_init is None else list(new_init)
         if len(self.init) > self.depth:
             raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
                              .format(len(self.init), self.depth))
 
-        # Array of signals for simulation.
-        self._array = Array()
-        for addr, data in enumerate(self.init + [0 for _ in range(self.depth - len(self.init))]):
-            self._array.append(Signal(self.width, reset=data, name="{}({})".format(name, addr)))
+        for addr in range(self.depth):
+            if addr < len(self._init):
+                self._array[addr].reset = self._init[addr]
+            else:
+                self._array[addr].reset = 0
 
     def read_port(self, domain="sync", synchronous=True, transparent=True):
         if not synchronous and not transparent:
