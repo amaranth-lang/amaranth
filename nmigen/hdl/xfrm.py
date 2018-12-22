@@ -9,13 +9,13 @@ from .cd import *
 from .ir import *
 
 
-__all__ = ["AbstractValueTransformer", "ValueTransformer",
-           "AbstractStatementTransformer", "StatementTransformer",
+__all__ = ["ValueVisitor", "ValueTransformer",
+           "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
            "DomainRenamer", "DomainLowerer", "ResetInserter", "CEInserter"]
 
 
-class AbstractValueTransformer(metaclass=ABCMeta):
+class ValueVisitor(metaclass=ABCMeta):
     @abstractmethod
     def on_Const(self, value):
         pass # :nocov:
@@ -91,7 +91,7 @@ class AbstractValueTransformer(metaclass=ABCMeta):
         return self.on_value(value)
 
 
-class ValueTransformer(AbstractValueTransformer):
+class ValueTransformer(ValueVisitor):
     def on_Const(self, value):
         return value
 
@@ -124,7 +124,7 @@ class ValueTransformer(AbstractValueTransformer):
                           self.on_value(value.index))
 
 
-class AbstractStatementTransformer(metaclass=ABCMeta):
+class StatementVisitor(metaclass=ABCMeta):
     @abstractmethod
     def on_Assign(self, stmt):
         pass # :nocov:
@@ -155,7 +155,7 @@ class AbstractStatementTransformer(metaclass=ABCMeta):
         return self.on_statement(value)
 
 
-class StatementTransformer(AbstractStatementTransformer):
+class StatementTransformer(StatementVisitor):
     def on_value(self, value):
         return value
 

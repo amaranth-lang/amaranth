@@ -7,7 +7,7 @@ from vcd.gtkw import GTKWSave
 
 from ..tools import flatten
 from ..hdl.ast import *
-from ..hdl.xfrm import AbstractValueTransformer, AbstractStatementTransformer
+from ..hdl.xfrm import ValueVisitor, StatementVisitor
 
 
 __all__ = ["Simulator", "Delay", "Tick", "Passive", "DeadlineError"]
@@ -71,7 +71,7 @@ class _State:
 normalize = Const.normalize
 
 
-class _RHSValueCompiler(AbstractValueTransformer):
+class _RHSValueCompiler(ValueVisitor):
     def __init__(self, signal_slots, sensitivity=None, mode="rhs"):
         self.signal_slots = signal_slots
         self.sensitivity  = sensitivity
@@ -201,7 +201,7 @@ class _RHSValueCompiler(AbstractValueTransformer):
         return eval
 
 
-class _LHSValueCompiler(AbstractValueTransformer):
+class _LHSValueCompiler(ValueVisitor):
     def __init__(self, signal_slots, rhs_compiler):
         self.signal_slots = signal_slots
         self.rhs_compiler = rhs_compiler
@@ -275,7 +275,7 @@ class _LHSValueCompiler(AbstractValueTransformer):
         return eval
 
 
-class _StatementCompiler(AbstractStatementTransformer):
+class _StatementCompiler(StatementVisitor):
     def __init__(self, signal_slots):
         self.sensitivity   = SignalSet()
         self.rrhs_compiler = _RHSValueCompiler(signal_slots, self.sensitivity, mode="rhs")
