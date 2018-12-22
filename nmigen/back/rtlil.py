@@ -286,7 +286,7 @@ class _ValueCompilerState:
             del self.expansions[value]
 
 
-class _ValueCompiler(xfrm.AbstractValueTransformer):
+class _ValueCompiler(xfrm.ValueVisitor):
     def __init__(self, state):
         self.s = state
 
@@ -520,13 +520,14 @@ class _LHSValueCompiler(_ValueCompiler):
         raise TypeError # :nocov:
 
 
-class _StatementCompiler(xfrm.AbstractStatementTransformer):
+class _StatementCompiler(xfrm.StatementVisitor):
     def __init__(self, state, rhs_compiler, lhs_compiler):
         self.state        = state
         self.rhs_compiler = rhs_compiler
         self.lhs_compiler = lhs_compiler
 
-        self._case = None
+        self._group = None
+        self._case  = None
 
     @contextmanager
     def case(self, switch, value):
@@ -538,6 +539,12 @@ class _StatementCompiler(xfrm.AbstractStatementTransformer):
             self._case = old_case
 
     def on_Assign(self, stmt):
+        # The invariant provided by LHSGroupAnalyzer is that all signals that ever appear together
+        # on LHS are a part of the same group, so it is sufficient to check any of them.
+        any_lhs_signal = next(iter(stmt.lhs._lhs_signals()))
+        if any_lhs_signal not in self._group:
+            return
+
         lhs_bits, lhs_sign = stmt.lhs.shape()
         rhs_bits, rhs_sign = stmt.rhs.shape()
         if lhs_bits == rhs_bits:
@@ -654,47 +661,60 @@ def convert_fragment(builder, fragment, name, top):
 
             module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params)
 
-        with module.process() as process:
-            with process.case() as case:
-                # For every signal in comb domain, assign \sig$next to the reset value.
-                # For every signal in sync domains, assign \sig$next to the current value (\sig).
-                for domain, signal in fragment.iter_drivers():
+        lhs_grouper = xfrm.LHSGroupAnalyzer()
+        lhs_grouper.on_statements(fragment.statements)
+        for group, group_signals in lhs_grouper.groups().items():
+            with module.process(name="$group_{}".format(group)) as process:
+                with process.case() as case:
+                    # For every signal in comb domain, assign \sig$next to the reset value.
+                    # For every signal in sync domains, assign \sig$next to the current
+                    # value (\sig).
+                    for domain, signal in fragment.iter_drivers():
+                        if signal not in group_signals:
+                            continue
+                        if domain is None:
+                            prev_value = ast.Const(signal.reset, signal.nbits)
+                        else:
+                            prev_value = signal
+                        case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
+
+                    # Convert statements into decision trees.
+                    stmt_compiler._group = group_signals
+                    stmt_compiler._case = case
+                    stmt_compiler(fragment.statements)
+
+                # For every signal in the sync domain, assign \sig's initial value (which will
+                # end up as the \init reg attribute) to the reset value.
+                with process.sync("init") as sync:
+                    for domain, signal in fragment.iter_sync():
+                        if signal not in group_signals:
+                            continue
+                        wire_curr, wire_next = compiler_state.resolve(signal)
+                        sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.nbits)))
+
+                # For every signal in every domain, assign \sig to \sig$next. The sensitivity list,
+                # however, differs between domains: for comb domains, it is `always`, for sync
+                # domains with sync reset, it is `posedge clk`, for sync domains with async reset
+                # it is `posedge clk or posedge rst`.
+                for domain, signals in fragment.drivers.items():
+                    signals = signals & group_signals
+                    if not signals:
+                        continue
+
+                    triggers = []
                     if domain is None:
-                        prev_value = ast.Const(signal.reset, signal.nbits)
+                        triggers.append(("always",))
                     else:
-                        prev_value = signal
-                    case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
+                        cd = fragment.domains[domain]
+                        triggers.append(("posedge", compiler_state.resolve_curr(cd.clk)))
+                        if cd.async_reset:
+                            triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
 
-                # Convert statements into decision trees.
-                stmt_compiler._case = case
-                stmt_compiler(fragment.statements)
-
-            # For every signal in the sync domain, assign \sig's initial value (which will end up
-            # as the \init reg attribute) to the reset value.
-            with process.sync("init") as sync:
-                for domain, signal in fragment.iter_sync():
-                    wire_curr, wire_next = compiler_state.resolve(signal)
-                    sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.nbits)))
-
-            # For every signal in every domain, assign \sig to \sig$next. The sensitivity list,
-            # however, differs between domains: for comb domains, it is `always`, for sync domains
-            # with sync reset, it is `posedge clk`, for sync domains with async rest it is
-            # `posedge clk or posedge rst`.
-            for domain, signals in fragment.drivers.items():
-                triggers = []
-                if domain is None:
-                    triggers.append(("always",))
-                else:
-                    cd = fragment.domains[domain]
-                    triggers.append(("posedge", compiler_state.resolve_curr(cd.clk)))
-                    if cd.async_reset:
-                        triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
-
-                for trigger in triggers:
-                    with process.sync(*trigger) as sync:
-                        for signal in signals:
-                            wire_curr, wire_next = compiler_state.resolve(signal)
-                            sync.update(wire_curr, wire_next)
+                    for trigger in triggers:
+                        with process.sync(*trigger) as sync:
+                            for signal in signals:
+                                wire_curr, wire_next = compiler_state.resolve(signal)
+                                sync.update(wire_curr, wire_next)
 
     # Finally, collect the names we've given to our ports in RTLIL, and correlate these with
     # the signals represented by these ports. If we are a submodule, this will be necessary
