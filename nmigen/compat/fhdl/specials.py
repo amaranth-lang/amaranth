@@ -64,6 +64,7 @@ class CompatMemory(NativeMemory):
             we_granularity = None
         assert mode != NO_CHANGE
         rdport = self.read_port(synchronous=not async_read, transparent=mode == WRITE_FIRST)
+        rdport.addr.name = "{}_addr".format(self.name)
         adr = rdport.addr
         dat_r = rdport.data
         if write_capable:
