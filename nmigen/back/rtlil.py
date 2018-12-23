@@ -429,17 +429,17 @@ class _RHSValueCompiler(_ValueCompiler):
         return res
 
     def on_Operator_mux(self, value):
-        sel, lhs, rhs = value.operands
-        lhs_bits, lhs_sign = lhs.shape()
-        rhs_bits, rhs_sign = rhs.shape()
+        sel, val1, val0 = value.operands
+        val1_bits, val1_sign = val1.shape()
+        val0_bits, val0_sign = val0.shape()
         res_bits, res_sign = value.shape()
-        lhs_bits = rhs_bits = res_bits = max(lhs_bits, rhs_bits, res_bits)
-        lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
-        rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
+        val1_bits = val0_bits = res_bits = max(val1_bits, val0_bits, res_bits)
+        val1_wire = self.match_shape(val1, val1_bits, val1_sign)
+        val0_wire = self.match_shape(val0, val0_bits, val0_sign)
         res = self.s.rtlil.wire(width=res_bits)
         self.s.rtlil.cell("$mux", ports={
-            "\\A": lhs_wire,
-            "\\B": rhs_wire,
+            "\\A": val0_wire,
+            "\\B": val1_wire,
             "\\S": self(sel),
             "\\Y": res,
         }, params={
