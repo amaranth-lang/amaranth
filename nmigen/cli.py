@@ -15,7 +15,7 @@ def main_parser(parser=None):
     p_generate = p_action.add_parser("generate",
         help="generate RTLIL or Verilog from the design")
     p_generate.add_argument("-t", "--type", dest="generate_type",
-        metavar="LANGUAGE", choices=["il", "v"], default="v",
+        metavar="LANGUAGE", choices=["il", "v"],
         help="generate LANGUAGE (il for RTLIL, v for Verilog; default: %(default)s)")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
@@ -39,12 +39,20 @@ def main_parser(parser=None):
     return parser
 
 
-def main_runner(args, design, platform=None, name="top", ports=()):
+def main_runner(parser, args, design, platform=None, name="top", ports=()):
     if args.action == "generate":
         fragment = design.get_fragment(platform=platform)
-        if args.generate_type == "il":
+        generate_type = args.generate_type
+        if generate_type is None and args.generate_file:
+            if args.generate_file.name.endswith(".v"):
+                generate_type = "v"
+            if args.generate_file.name.endswith(".il"):
+                generate_type = "il"
+        if generate_type is None:
+            parser.error("specify file type explicitly with -t")
+        if generate_type == "il":
             output = rtlil.convert(fragment, name=name, ports=ports)
-        if args.generate_type == "v":
+        if generate_type == "v":
             output = verilog.convert(fragment, name=name, ports=ports)
         if args.generate_file:
             args.generate_file.write(output)
@@ -62,4 +70,5 @@ def main_runner(args, design, platform=None, name="top", ports=()):
 
 
 def main(*args, **kwargs):
-    main_runner(main_parser().parse_args(), *args, **kwargs)
+    parser = main_parser()
+    main_runner(parser, parser.parse_args(), *args, **kwargs)
