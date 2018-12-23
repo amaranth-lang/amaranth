@@ -627,6 +627,9 @@ def convert_fragment(builder, fragment, name, top):
         # name) names.
         memories = OrderedDict()
         for subfragment, sub_name in fragment.subfragments:
+            if not subfragment.ports:
+                continue
+
             sub_params = OrderedDict()
             if hasattr(subfragment, "parameters"):
                 for param_name, param_value in subfragment.parameters.items():
