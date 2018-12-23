@@ -531,6 +531,9 @@ class _StatementCompiler(xfrm.StatementVisitor):
 
         self._test_cache = {}
 
+        self._has_rhs = False
+        self._has_assign = False
+
     @contextmanager
     def case(self, switch, value):
         try:
@@ -547,6 +550,10 @@ class _StatementCompiler(xfrm.StatementVisitor):
         if any_lhs_signal not in self._group:
             return
 
+        if self._has_rhs or next(iter(stmt.rhs._rhs_signals()), None) is not None:
+            self._has_rhs = True
+        self._has_assign = True
+
         lhs_bits, lhs_sign = stmt.lhs.shape()
         rhs_bits, rhs_sign = stmt.rhs.shape()
         if lhs_bits == rhs_bits:
@@ -562,10 +569,20 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self._test_cache[stmt] = self.rhs_compiler(stmt.test)
         test_sigspec = self._test_cache[stmt]
 
-        with self._case.switch(test_sigspec) as switch:
-            for value, stmts in stmt.cases.items():
-                with self.case(switch, value):
-                    self.on_statements(stmts)
+        try:
+            self._has_assign, old_has_assign = False, self._has_assign
+
+            with self._case.switch(test_sigspec) as switch:
+                for value, stmts in stmt.cases.items():
+                    with self.case(switch, value):
+                        self.on_statements(stmts)
+
+        finally:
+            if self._has_assign:
+                if self._has_rhs or next(iter(stmt.test._rhs_signals()), None) is not None:
+                    self._has_rhs = True
+
+            self._has_assign = old_has_assign
 
     def on_statement(self, stmt):
         try:
@@ -602,6 +619,9 @@ def convert_fragment(builder, fragment, name, top):
         rhs_compiler   = _RHSValueCompiler(compiler_state)
         lhs_compiler   = _LHSValueCompiler(compiler_state)
         stmt_compiler  = _StatementCompiler(compiler_state, rhs_compiler, lhs_compiler)
+
+        verilog_trigger = None
+        verilog_trigger_sync_emitted = False
 
         # Register all signals driven in the current fragment. This must be done first, as it
         # affects further codegen; e.g. whether sig$next signals will be generated and used.
@@ -670,8 +690,16 @@ def convert_fragment(builder, fragment, name, top):
 
             module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params)
 
+        # If we emit all of our combinatorial logic into a single RTLIL process, Verilog
+        # simulators will break horribly, because Yosys write_verilog transforms RTLIL processes
+        # into always @* blocks with blocking assignment, and that does not create delta cycles.
+        #
+        # Therefore, we translate the fragment as many times as there are independent groups
+        # of signals (a group is a transitive closure of signals that appear together on LHS),
+        # splitting them into many RTLIL (and thus Verilog) processes.
         lhs_grouper = xfrm.LHSGroupAnalyzer()
         lhs_grouper.on_statements(fragment.statements)
+
         for group, group_signals in lhs_grouper.groups().items():
             with module.process(name="$group_{}".format(group)) as process:
                 with process.case() as case:
@@ -690,7 +718,19 @@ def convert_fragment(builder, fragment, name, top):
                     # Convert statements into decision trees.
                     stmt_compiler._group = group_signals
                     stmt_compiler._case = case
+                    stmt_compiler._has_rhs = False
                     stmt_compiler(fragment.statements)
+
+                    # Verilog `always @*` blocks will not run if `*` does not match anythng, i.e.
+                    # if the implicit sensitivity list is empty. We check this while translating,
+                    # by looking at any signals on RHS. If this is not true, we add some logic
+                    # whose only purpose is to trigger Verilog simulators when it converts
+                    # through RTLIL and to Verilog.
+                    if not stmt_compiler._has_rhs:
+                        if verilog_trigger is None:
+                            verilog_trigger = \
+                                module.wire(1, name="$verilog_initial_trigger")
+                        case.assign(verilog_trigger, verilog_trigger)
 
                 # For every signal in the sync domain, assign \sig's initial value (which will
                 # end up as the \init reg attribute) to the reset value.
@@ -700,6 +740,10 @@ def convert_fragment(builder, fragment, name, top):
                             continue
                         wire_curr, wire_next = compiler_state.resolve(signal)
                         sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.nbits)))
+
+                    if verilog_trigger and not verilog_trigger_sync_emitted:
+                        sync.update(verilog_trigger, "1'0")
+                        verilog_trigger_sync_emitted = True
 
                 # For every signal in every domain, assign \sig to \sig$next. The sensitivity list,
                 # however, differs between domains: for comb domains, it is `always`, for sync
