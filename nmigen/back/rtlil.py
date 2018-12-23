@@ -529,6 +529,8 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._group = None
         self._case  = None
 
+        self._test_cache = {}
+
     @contextmanager
     def case(self, switch, value):
         try:
@@ -556,7 +558,11 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
     def on_Switch(self, stmt):
-        with self._case.switch(self.rhs_compiler(stmt.test)) as switch:
+        if stmt not in self._test_cache:
+            self._test_cache[stmt] = self.rhs_compiler(stmt.test)
+        test_sigspec = self._test_cache[stmt]
+
+        with self._case.switch(test_sigspec) as switch:
             for value, stmts in stmt.cases.items():
                 with self.case(switch, value):
                     self.on_statements(stmts)
