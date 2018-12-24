@@ -644,7 +644,7 @@ def convert_fragment(builder, fragment, name, top):
                             memories[memory] = module.memory(width=memory.width, size=memory.depth,
                                                              name=memory.name)
                             addr_bits = bits_for(memory.depth)
-                            data_parts = ["{}'".format(memory.width * memory.depth)]
+                            data_parts = []
                             for addr in range(memory.depth):
                                 if addr < len(memory.init):
                                     data = memory.init[addr]
@@ -653,7 +653,8 @@ def convert_fragment(builder, fragment, name, top):
                                 data_parts.append("{:0{}b}".format(data, memory.width))
                             module.cell("$meminit", ports={
                                 "\\ADDR": rhs_compiler(ast.Const(0, addr_bits)),
-                                "\\DATA": "".join(data_parts),
+                                "\\DATA": "{}'".format(memory.width * memory.depth) +
+                                          "".join(reversed(data_parts)),
                             }, params={
                                 "MEMID": memories[memory],
                                 "ABITS": addr_bits,
