@@ -6,7 +6,7 @@ from .ir import Instance
 
 
 class Memory:
-    def __init__(self, width, depth, init=None, name=None):
+    def __init__(self, width, depth, init=None, name=None, simulate=True):
         if not isinstance(width, int) or width < 0:
             raise TypeError("Memory width must be a non-negative integer, not '{!r}'"
                             .format(width))
@@ -29,8 +29,9 @@ class Memory:
 
         # Array of signals for simulation.
         self._array = Array()
-        for addr in range(self.depth):
-            self._array.append(Signal(self.width, name="{}({})".format(name, addr)))
+        if simulate:
+            for addr in range(self.depth):
+                self._array.append(Signal(self.width, name="{}({})".format(name, addr)))
 
         self.init = init
 
@@ -45,7 +46,7 @@ class Memory:
             raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
                              .format(len(self.init), self.depth))
 
-        for addr in range(self.depth):
+        for addr in range(len(self._array)):
             if addr < len(self._init):
                 self._array[addr].reset = self._init[addr]
             else:
