@@ -361,7 +361,8 @@ class _RHSValueCompiler(_ValueCompiler):
         if isinstance(value.value, str):
             return "{}'{}".format(value.nbits, value.value)
         else:
-            return "{}'{:0{}b}".format(value.nbits, value.value, value.nbits)
+            value_twos_compl = value.value & ((1 << value.nbits) - 1)
+            return "{}'{:0{}b}".format(value.nbits, value_twos_compl, value.nbits)
 
     def on_Signal(self, value):
         wire_curr, wire_next = self.s.resolve(value)
