@@ -13,7 +13,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
            "DomainRenamer", "DomainLowerer",
-           "SwitchCleaner", "LHSGroupAnalyzer",
+           "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "CEInserter"]
 
 
@@ -286,7 +286,7 @@ class SwitchCleaner(StatementVisitor):
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
-        if any(len(s) for s in stmt.cases.values()):
+        if any(len(s) for s in cases.values()):
             return Switch(stmt.test, cases)
 
     def on_statements(self, stmts):
@@ -339,6 +339,18 @@ class LHSGroupAnalyzer(StatementVisitor):
     def __call__(self, stmts):
         self.on_statements(stmts)
         return self.groups()
+
+
+class LHSGroupFilter(SwitchCleaner):
+    def __init__(self, signals):
+        self.signals = signals
+
+    def on_Assign(self, stmt):
+        # The invariant provided by LHSGroupAnalyzer is that all signals that ever appear together
+        # on LHS are a part of the same group, so it is sufficient to check any of them.
+        any_lhs_signal = next(iter(stmt.lhs._lhs_signals()))
+        if any_lhs_signal in self.signals:
+            return stmt
 
 
 class _ControlInserter(FragmentTransformer):

@@ -168,7 +168,9 @@ class SwitchCleanerTestCase(FHDLTestCase):
                 1: a.eq(0),
                 0: [
                     b.eq(1),
-                    Switch(b, {1: []})
+                    Switch(b, {1: [
+                        Switch(a|b, {})
+                    ]})
                 ]
             })
         ]
@@ -243,6 +245,31 @@ class LHSGroupAnalyzerTestCase(FHDLTestCase):
             SignalSet((b,)),
         ])
 
+
+class LHSGroupFilterTestCase(FHDLTestCase):
+    def test_filter(self):
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        stmts = [
+            Switch(a, {
+                1: a.eq(0),
+                0: [
+                    b.eq(1),
+                    Switch(b, {1: []})
+                ]
+            })
+        ]
+
+        self.assertRepr(LHSGroupFilter(SignalSet((a,)))(stmts), """
+        (
+            (switch (sig a)
+                (case 1
+                    (eq (sig a) (const 1'd0)))
+                (case 0 )
+            )
+        )
+        """)
 
 
 class ResetInserterTestCase(FHDLTestCase):
