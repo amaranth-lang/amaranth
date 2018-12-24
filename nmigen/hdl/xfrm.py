@@ -13,7 +13,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
            "DomainRenamer", "DomainLowerer",
-           "LHSGroupAnalyzer",
+           "SwitchCleaner", "LHSGroupAnalyzer",
            "ResetInserter", "CEInserter"]
 
 
@@ -165,7 +165,7 @@ class StatementTransformer(StatementVisitor):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
     def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_statement(v)) for k, v in stmt.cases.items())
+        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
         return Switch(self.on_value(stmt.test), cases)
 
     def on_statements(self, stmts):
@@ -278,6 +278,20 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 raise DomainError("Signal {!r} refers to reset of reset-less domain '{}'"
                                   .format(value, value.domain))
         return cd.rst
+
+
+class SwitchCleaner(StatementVisitor):
+    def on_Assign(self, stmt):
+        return stmt
+
+    def on_Switch(self, stmt):
+        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
+        if any(len(s) for s in stmt.cases.values()):
+            return Switch(stmt.test, cases)
+
+    def on_statements(self, stmts):
+        stmts = flatten(self.on_statement(stmt) for stmt in stmts)
+        return _StatementList(stmt for stmt in stmts if stmt is not None)
 
 
 class LHSGroupAnalyzer(StatementVisitor):

@@ -158,6 +158,33 @@ class DomainLowererTestCase(FHDLTestCase):
             DomainLowerer({"sync": sync})(f)
 
 
+class SwitchCleanerTestCase(FHDLTestCase):
+    def test_clean(self):
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        stmts = [
+            Switch(a, {
+                1: a.eq(0),
+                0: [
+                    b.eq(1),
+                    Switch(b, {1: []})
+                ]
+            })
+        ]
+
+        self.assertRepr(SwitchCleaner()(stmts), """
+        (
+            (switch (sig a)
+                (case 1
+                    (eq (sig a) (const 1'd0)))
+                (case 0
+                    (eq (sig b) (const 1'd1)))
+            )
+        )
+        """)
+
+
 class LHSGroupAnalyzerTestCase(FHDLTestCase):
     def test_no_group_unrelated(self):
         a = Signal()

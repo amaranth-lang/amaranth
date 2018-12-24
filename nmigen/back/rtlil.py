@@ -620,6 +620,7 @@ def convert_fragment(builder, fragment, name, top):
         rhs_compiler   = _RHSValueCompiler(compiler_state)
         lhs_compiler   = _LHSValueCompiler(compiler_state)
         stmt_compiler  = _StatementCompiler(compiler_state, rhs_compiler, lhs_compiler)
+        switch_cleaner = xfrm.SwitchCleaner()
 
         verilog_trigger = None
         verilog_trigger_sync_emitted = False
@@ -720,7 +721,7 @@ def convert_fragment(builder, fragment, name, top):
                     stmt_compiler._group = group_signals
                     stmt_compiler._case = case
                     stmt_compiler._has_rhs = False
-                    stmt_compiler(fragment.statements)
+                    stmt_compiler(switch_cleaner(fragment.statements))
 
                     # Verilog `always @*` blocks will not run if `*` does not match anythng, i.e.
                     # if the implicit sensitivity list is empty. We check this while translating,
