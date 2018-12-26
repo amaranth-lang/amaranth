@@ -20,6 +20,7 @@ class Fragment:
         self.statements = []
         self.domains = OrderedDict()
         self.subfragments = []
+        self.generated = OrderedDict()
 
     def add_ports(self, *ports, dir):
         assert dir in ("i", "o", "io")
@@ -82,6 +83,26 @@ class Fragment:
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)
         self.subfragments.append((subfragment, name))
+
+    def find_subfragment(self, name_or_index):
+        if isinstance(name_or_index, int):
+            if name_or_index < len(self.subfragments):
+                subfragment, name = self.subfragments[name_or_index]
+                return subfragment
+            raise NameError("No subfragment at index #{}".format(name_or_index))
+        else:
+            for subfragment, name in self.subfragments:
+                if name == name_or_index:
+                    return subfragment
+            raise NameError("No subfragment with name '{}'".format(name_or_index))
+
+    def find_generated(self, *path):
+        if len(path) > 1:
+            path_component, *path = path
+            return self.find_subfragment(path_component).find_generated(*path)
+        else:
+            item, = path
+            return self.generated[item]
 
     def get_fragment(self, platform):
         return self

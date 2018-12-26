@@ -7,6 +7,37 @@ from ..hdl.mem import *
 from .tools import *
 
 
+class FragmentGeneratedTestCase(FHDLTestCase):
+    def test_find_subfragment(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f1.add_subfragment(f2, "f2")
+
+        self.assertEqual(f1.find_subfragment(0), f2)
+        self.assertEqual(f1.find_subfragment("f2"), f2)
+
+    def test_find_subfragment_wrong(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f1.add_subfragment(f2, "f2")
+
+        with self.assertRaises(NameError,
+                msg="No subfragment at index #1"):
+            f1.find_subfragment(1)
+        with self.assertRaises(NameError,
+                msg="No subfragment with name 'fx'"):
+            f1.find_subfragment("fx")
+
+    def test_find_generated(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f2.generated["sig"] = sig = Signal()
+        f1.add_subfragment(f2, "f2")
+
+        self.assertEqual(SignalKey(f1.find_generated("f2", "sig")),
+                         SignalKey(sig))
+
+
 class FragmentDriversTestCase(FHDLTestCase):
     def test_empty(self):
         f = Fragment()
