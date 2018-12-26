@@ -7,6 +7,7 @@ from vcd.gtkw import GTKWSave
 
 from ..tools import flatten
 from ..hdl.ast import *
+from ..hdl.ir import *
 from ..hdl.xfrm import ValueVisitor, StatementVisitor
 
 
@@ -358,6 +359,9 @@ class Simulator:
         self._vcd_names       = list()        # int/slot -> str/name
         self._gtkw_file       = gtkw_file
         self._traces          = traces
+
+        while not isinstance(self._fragment, Fragment):
+            self._fragment = self._fragment.get_fragment(platform=None)
 
     @staticmethod
     def _check_process(process):
