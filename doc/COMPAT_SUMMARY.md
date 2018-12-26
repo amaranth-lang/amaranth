@@ -130,11 +130,11 @@ Compatibility summary
       - (−) `ElasticBuffer` ?
       - (−) `lcm` ?
       - (−) `Gearbox` ?
-    - (−) `coding` ?
-      - (−) `Encoder` ?
-      - (−) `PriorityEncoder` ?
-      - (−) `Decoder` ?
-      - (−) `PriorityDecoder` ?
+    - (⊕) `coding` id
+      - (⊕) `Encoder` id
+      - (⊕) `PriorityEncoder` id
+      - (⊕) `Decoder` id
+      - (⊕) `PriorityDecoder` id
     - (−) `divider` ?
       - (−) `Divider` ?
     - (−) `fifo` ?
