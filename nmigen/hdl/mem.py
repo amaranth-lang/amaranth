@@ -5,6 +5,9 @@ from .ast import *
 from .ir import Instance
 
 
+__all__ = ["Memory"]
+
+
 class Memory:
     def __init__(self, width, depth, init=None, name=None, simulate=True):
         if not isinstance(width, int) or width < 0:
