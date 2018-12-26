@@ -260,17 +260,18 @@ class Module(_ModuleBuilderRoot):
 
     @next.setter
     def next(self, name):
-        for ctrl_name, ctrl_data in reversed(self._ctrl_stack):
-            if ctrl_name == "FSM":
-                if name not in ctrl_data["encoding"]:
-                    ctrl_data["encoding"][name] = len(ctrl_data["encoding"])
-                self._add_statement(
-                    assigns=[ctrl_data["signal"].eq(ctrl_data["encoding"][name])],
-                    domain=ctrl_data["domain"],
-                    depth=len(self._ctrl_stack))
-                break
-        else:
-            raise SyntaxError("`m.next = <...>` is only permitted inside an FSM")
+        if self._ctrl_context != "FSM":
+            for level, (ctrl_name, ctrl_data) in enumerate(reversed(self._ctrl_stack)):
+                if ctrl_name == "FSM":
+                    if name not in ctrl_data["encoding"]:
+                        ctrl_data["encoding"][name] = len(ctrl_data["encoding"])
+                    self._add_statement(
+                        assigns=[ctrl_data["signal"].eq(ctrl_data["encoding"][name])],
+                        domain=ctrl_data["domain"],
+                        depth=len(self._ctrl_stack))
+                    return
+
+        raise SyntaxError("`m.next = <...>` is only permitted inside an FSM state")
 
     def _pop_ctrl(self):
         name, data = self._ctrl_stack.pop()

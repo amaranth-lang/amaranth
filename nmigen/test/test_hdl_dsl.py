@@ -392,8 +392,12 @@ class DSLTestCase(FHDLTestCase):
                 msg="Only assignment to `m.next` is permitted"):
             m.next
         with self.assertRaises(SyntaxError,
-                msg="`m.next = <...>` is only permitted inside an FSM"):
+                msg="`m.next = <...>` is only permitted inside an FSM state"):
             m.next = "FOO"
+        with self.assertRaises(SyntaxError,
+                msg="`m.next = <...>` is only permitted inside an FSM state"):
+            with m.FSM():
+                m.next = "FOO"
 
     def test_auto_pop_ctrl(self):
         m = Module()
