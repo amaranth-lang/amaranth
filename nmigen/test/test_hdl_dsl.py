@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.dsl import *
@@ -337,6 +339,18 @@ class DSLTestCase(FHDLTestCase):
             "(sig fsm_state)": "sync",
             "(sig b)": "sync",
         })
+
+        frag = m.lower(platform=None)
+        fsm  = frag.find_generated("fsm")
+        self.assertIsInstance(fsm.state, Signal)
+        self.assertEqual(fsm.encoding, OrderedDict({
+            "FIRST": 0,
+            "SECOND": 1,
+        }))
+        self.assertEqual(fsm.decoding, OrderedDict({
+            0: "FIRST",
+            1: "SECOND"
+        }))
 
     def test_FSM_reset(self):
         a = Signal()

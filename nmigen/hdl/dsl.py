@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from contextlib import contextmanager
 
@@ -92,6 +92,9 @@ class _ModuleBuilderDomainSet:
         self._builder._add_domain(domain)
 
 
+_FSM = namedtuple("_FSM", ("state", "encoding", "decoding"))
+
+
 class Module(_ModuleBuilderRoot):
     def __init__(self):
         _ModuleBuilderRoot.__init__(self, self, depth=0)
@@ -105,6 +108,7 @@ class Module(_ModuleBuilderRoot):
         self._driving      = SignalDict()
         self._submodules   = []
         self._domains      = []
+        self._generated    = {}
 
     def _check_context(self, construct, context):
         if self._ctrl_context != context:
@@ -215,6 +219,7 @@ class Module(_ModuleBuilderRoot):
     def FSM(self, reset=None, domain="sync", name="fsm"):
         self._check_context("FSM", context=None)
         fsm_data = self._set_ctrl("FSM", {
+            "name":     name,
             "signal":   Signal(name="{}_state".format(name)),
             "domain":   domain,
             "encoding": OrderedDict(),
@@ -298,10 +303,13 @@ class Module(_ModuleBuilderRoot):
             fsm_signal, fsm_encoding, fsm_states = data["signal"], data["encoding"], data["states"]
             fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
             # The FSM is encoded such that the state with encoding 0 is always the reset state.
-            fsm_decoding = {n: s for s, n in fsm_encoding.items()}
+            fsm_decoding = OrderedDict({n: s for s, n in fsm_encoding.items()})
             fsm_signal.decoder = lambda n: "{}/{}".format(fsm_decoding[n], n)
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items())))
+
+            fsm_name = data["name"]
+            self._generated[fsm_name] = _FSM(fsm_signal, fsm_encoding, fsm_decoding)
 
     def _add_statement(self, assigns, domain, depth, compat_mode=False):
         def domain_name(domain):
@@ -354,6 +362,7 @@ class Module(_ModuleBuilderRoot):
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
         fragment.add_domains(self._domains)
+        fragment.generated.update(self._generated)
         return fragment
 
     get_fragment = lower
