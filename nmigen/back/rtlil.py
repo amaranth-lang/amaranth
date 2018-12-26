@@ -710,11 +710,11 @@ def convert_fragment(builder, fragment, name, top):
                     stmt_compiler._has_rhs = False
                     stmt_compiler(lhs_group_filter(fragment.statements))
 
-                    # Verilog `always @*` blocks will not run if `*` does not match anythng, i.e.
+                    # Verilog `always @*` blocks will not run if `*` does not match anything, i.e.
                     # if the implicit sensitivity list is empty. We check this while translating,
-                    # by looking at any signals on RHS. If this is not true, we add some logic
+                    # by looking for any signals on RHS. If there aren't any, we add some logic
                     # whose only purpose is to trigger Verilog simulators when it converts
-                    # through RTLIL and to Verilog.
+                    # through RTLIL and to Verilog, by populating the sensitivity list.
                     if not stmt_compiler._has_rhs:
                         if verilog_trigger is None:
                             verilog_trigger = \
@@ -730,6 +730,8 @@ def convert_fragment(builder, fragment, name, top):
                         wire_curr, wire_next = compiler_state.resolve(signal)
                         sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.nbits)))
 
+                    # The Verilog simulator trigger needs to change at time 0, so if we haven't
+                    # yet done that in some process, do it.
                     if verilog_trigger and not verilog_trigger_sync_emitted:
                         sync.update(verilog_trigger, "1'0")
                         verilog_trigger_sync_emitted = True
