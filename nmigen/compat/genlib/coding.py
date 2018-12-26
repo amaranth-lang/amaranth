@@ -1,4 +1,4 @@
-from ...lib.cdc import *
+from ...lib.coding import *
 
 
 __all__ = ["Encoder", "PriorityEncoder", "Decoder", "PriorityDecoder"]
