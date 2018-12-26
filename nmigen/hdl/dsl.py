@@ -298,6 +298,8 @@ class Module(_ModuleBuilderRoot):
             fsm_signal, fsm_encoding, fsm_states = data["signal"], data["encoding"], data["states"]
             fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
             # The FSM is encoded such that the state with encoding 0 is always the reset state.
+            fsm_decoding = {n: s for s, n in fsm_encoding.items()}
+            fsm_signal.decoder = lambda v: "{}/{}".format(fsm_decoding[n], n)
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items())))
 
