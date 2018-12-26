@@ -301,6 +301,86 @@ class DSLTestCase(FHDLTestCase):
                 with m.If(self.s2):
                     pass
 
+    def test_FSM_basic(self):
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        m = Module()
+        with m.FSM():
+            with m.State("FIRST"):
+                m.d.comb += a.eq(1)
+                m.next = "SECOND"
+            with m.State("SECOND"):
+                m.d.sync += b.eq(~b)
+                with m.If(c):
+                    m.next = "FIRST"
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig fsm_state)
+                (case 0
+                    (eq (sig a) (const 1'd1))
+                    (eq (sig fsm_state) (const 1'd1))
+                )
+                (case 1
+                    (eq (sig b) (~ (sig b)))
+                    (switch (cat (sig c))
+                        (case 1
+                            (eq (sig fsm_state) (const 1'd0)))
+                    )
+                )
+            )
+        )
+        """)
+        self.assertEqual({repr(k): v for k, v in m._driving.items()}, {
+            "(sig a)": None,
+            "(sig fsm_state)": "sync",
+            "(sig b)": "sync",
+        })
+
+    def test_FSM_reset(self):
+        a = Signal()
+        m = Module()
+        with m.FSM(reset="SECOND"):
+            with m.State("FIRST"):
+                m.d.comb += a.eq(0)
+                m.next = "SECOND"
+            with m.State("SECOND"):
+                m.next = "FIRST"
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig fsm_state)
+                (case 1
+                    (eq (sig a) (const 1'd0))
+                    (eq (sig fsm_state) (const 1'd0))
+                )
+                (case 0
+                    (eq (sig fsm_state) (const 1'd1))
+                )
+            )
+        )
+        """)
+
+    def test_FSM_wrong_redefined(self):
+        m = Module()
+        with m.FSM():
+            with m.State("FOO"):
+                pass
+            with self.assertRaises(SyntaxError,
+                    msg="FSM state 'FOO' is already defined"):
+                with m.State("FOO"):
+                    pass
+
+    def test_FSM_wrong_next(self):
+        m = Module()
+        with self.assertRaises(SyntaxError,
+                msg="Only assignment to `m.next` is permitted"):
+            m.next
+        with self.assertRaises(SyntaxError,
+                msg="`m.next = <...>` is only permitted inside an FSM"):
+            m.next = "FOO"
+
     def test_auto_pop_ctrl(self):
         m = Module()
         with m.If(self.w1):
