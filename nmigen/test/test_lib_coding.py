@@ -28,6 +28,7 @@ class EncoderTestCase(FHDLTestCase):
                 self.assertEqual((yield enc.o), 0)
 
             sim.add_process(process)
+            sim.run()
 
 
 class PriorityEncoderTestCase(FHDLTestCase):
@@ -54,6 +55,7 @@ class PriorityEncoderTestCase(FHDLTestCase):
                 self.assertEqual((yield enc.o), 1)
 
             sim.add_process(process)
+            sim.run()
 
 
 class DecoderTestCase(FHDLTestCase):
@@ -61,18 +63,19 @@ class DecoderTestCase(FHDLTestCase):
         dec = Decoder(4)
         with Simulator(dec) as sim:
             def process():
-                self.assertEqual((yield enc.o), 0b0001)
+                self.assertEqual((yield dec.o), 0b0001)
 
-                yield enc.i.eq(1)
+                yield dec.i.eq(1)
                 yield Delay()
-                self.assertEqual((yield enc.o), 0b0010)
+                self.assertEqual((yield dec.o), 0b0010)
 
-                yield enc.i.eq(3)
+                yield dec.i.eq(3)
                 yield Delay()
-                self.assertEqual((yield enc.o), 0b1000)
+                self.assertEqual((yield dec.o), 0b1000)
 
-                yield enc.n.eq(1)
+                yield dec.n.eq(1)
                 yield Delay()
-                self.assertEqual((yield enc.o), 0b0000)
+                self.assertEqual((yield dec.o), 0b0000)
 
             sim.add_process(process)
+            sim.run()

@@ -69,7 +69,7 @@ class PriorityEncoder:
         m = Module()
         for j, b in enumerate(reversed(self.i)):
             with m.If(b):
-                m.d.comb += self.o.eq(j)
+                m.d.comb += self.o.eq(len(self.i) - j - 1)
         m.d.comb += self.n.eq(self.i == 0)
         return m.lower(platform)
 
@@ -105,9 +105,8 @@ class Decoder:
             for j in range(len(self.o)):
                 with m.Case(j):
                     m.d.comb += self.o.eq(1 << j)
-            with m.Case():
-                with m.If(self.n):
-                    m.d.comb += self.o.eq(0)
+        with m.If(self.n):
+            m.d.comb += self.o.eq(0)
         return m.lower(platform)
 
 
