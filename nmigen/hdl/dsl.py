@@ -92,7 +92,16 @@ class _ModuleBuilderDomainSet:
         self._builder._add_domain(domain)
 
 
-_FSM = namedtuple("_FSM", ("state", "encoding", "decoding"))
+class FSM:
+    def __init__(self, state, encoding, decoding):
+        self.state    = state
+        self.encoding = encoding
+        self.decoding = decoding
+
+    def ongoing(self, name):
+        if name not in self.encoding:
+            self.encoding[name] = len(self.encoding)
+        return self.state == self.encoding[name]
 
 
 class Module(_ModuleBuilderRoot):
@@ -221,16 +230,18 @@ class Module(_ModuleBuilderRoot):
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
             "signal":   Signal(name="{}_state".format(name)),
+            "reset":    reset,
             "domain":   domain,
             "encoding": OrderedDict(),
+            "decoding": OrderedDict(),
             "states":   OrderedDict(),
         })
-        if reset is not None:
-            fsm_data["encoding"][reset] = 0
+        self._generated[name] = fsm = \
+            FSM(fsm_data["signal"], fsm_data["encoding"], fsm_data["decoding"])
         try:
             self._ctrl_context = "FSM"
             self.domain._depth += 1
-            yield
+            yield fsm
         finally:
             self.domain._depth -= 1
             self._ctrl_context = None
@@ -301,16 +312,18 @@ class Module(_ModuleBuilderRoot):
             self._statements.append(Switch(switch_test, switch_cases))
 
         if name == "FSM":
-            fsm_signal, fsm_encoding, fsm_states = data["signal"], data["encoding"], data["states"]
+            fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
+                data["signal"], data["reset"], data["encoding"], data["decoding"], data["states"]
             fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
+            if fsm_reset is None:
+                fsm_signal.reset = fsm_encoding[next(iter(fsm_states))]
+            else:
+                fsm_signal.reset = fsm_encoding[fsm_reset]
             # The FSM is encoded such that the state with encoding 0 is always the reset state.
-            fsm_decoding = OrderedDict({n: s for s, n in fsm_encoding.items()})
+            fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
             fsm_signal.decoder = lambda n: "{}/{}".format(fsm_decoding[n], n)
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items())))
-
-            fsm_name = data["name"]
-            self._generated[fsm_name] = _FSM(fsm_signal, fsm_encoding, fsm_decoding)
 
     def _add_statement(self, assigns, domain, depth, compat_mode=False):
         def domain_name(domain):

@@ -365,12 +365,39 @@ class DSLTestCase(FHDLTestCase):
         self.assertRepr(m._statements, """
         (
             (switch (sig fsm_state)
-                (case 1
+                (case 0
                     (eq (sig a) (const 1'd0))
+                    (eq (sig fsm_state) (const 1'd1))
+                )
+                (case 1
                     (eq (sig fsm_state) (const 1'd0))
                 )
+            )
+        )
+        """)
+
+    def test_FSM_ongoing(self):
+        a = Signal()
+        b = Signal()
+        m = Module()
+        with m.FSM() as fsm:
+            m.d.comb += b.eq(fsm.ongoing("SECOND"))
+            with m.State("FIRST"):
+                pass
+            m.d.comb += a.eq(fsm.ongoing("FIRST"))
+            with m.State("SECOND"):
+                pass
+        m._flush()
+        self.assertEqual(m._generated["fsm"].state.reset, 1)
+        self.maxDiff = 10000
+        self.assertRepr(m._statements, """
+        (
+            (eq (sig b) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig a) (== (sig fsm_state) (const 1'd1)))
+            (switch (sig fsm_state)
+                (case 1
+                )
                 (case 0
-                    (eq (sig fsm_state) (const 1'd1))
                 )
             )
         )

@@ -24,7 +24,7 @@ class UARTReceiver:
             m.d.sync += ctr.eq(ctr - 1)
 
         bit = Signal(3)
-        with m.FSM():
+        with m.FSM() as fsm:
             with m.State("START"):
                 with m.If(~self.i):
                     m.next = "DATA"
@@ -46,12 +46,16 @@ class UARTReceiver:
                         m.next = "DONE"
                     with m.Else():
                         m.next = "ERROR"
+
             with m.State("DONE"):
                 m.d.comb += self.rdy.eq(1)
                 with m.If(self.ack):
                     m.next = "START"
+
+            m.d.comb += self.err.eq(fsm.ongoing("ERROR"))
             with m.State("ERROR"):
-                m.d.comb += self.err.eq(1)
+                pass
+
         return m.lower(platform)
 
 
