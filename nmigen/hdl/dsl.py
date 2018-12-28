@@ -336,9 +336,9 @@ class Module(_ModuleBuilderRoot):
             self._pop_ctrl()
 
         for assign in Statement.wrap(assigns):
-            if not compat_mode and not isinstance(assign, Assign):
+            if not compat_mode and not isinstance(assign, (Assign, Assert, Assume)):
                 raise SyntaxError(
-                    "Only assignments may be appended to d.{}"
+                    "Only assignments, asserts, and assumes may be appended to d.{}"
                     .format(domain_name(domain)))
 
             for signal in assign._lhs_signals():
