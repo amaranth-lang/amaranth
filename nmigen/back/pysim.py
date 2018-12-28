@@ -72,7 +72,12 @@ class _State:
 normalize = Const.normalize
 
 
-class _RHSValueCompiler(ValueVisitor):
+class _ValueCompiler(ValueVisitor):
+    def on_Record(self, value):
+        return self(Cat(value.fields.values()))
+
+
+class _RHSValueCompiler(_ValueCompiler):
     def __init__(self, signal_slots, sensitivity=None, mode="rhs"):
         self.signal_slots = signal_slots
         self.sensitivity  = sensitivity
@@ -202,7 +207,7 @@ class _RHSValueCompiler(ValueVisitor):
         return eval
 
 
-class _LHSValueCompiler(ValueVisitor):
+class _LHSValueCompiler(_ValueCompiler):
     def __init__(self, signal_slots, rhs_compiler):
         self.signal_slots = signal_slots
         self.rhs_compiler = rhs_compiler

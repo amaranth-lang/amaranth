@@ -305,6 +305,9 @@ class _ValueCompiler(xfrm.ValueVisitor):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
+    def on_Record(self, value):
+        return self(Cat(value.fields.values()))
+
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.parts])))
 

@@ -7,6 +7,7 @@ from .ast import *
 from .ast import _StatementList
 from .cd import *
 from .ir import *
+from .rec import *
 
 
 __all__ = ["ValueVisitor", "ValueTransformer",
@@ -24,6 +25,10 @@ class ValueVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def on_Signal(self, value):
+        pass # :nocov:
+
+    @abstractmethod
+    def on_Record(self, value):
         pass # :nocov:
 
     @abstractmethod
@@ -66,6 +71,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Const(value)
         elif type(value) is Signal:
             new_value = self.on_Signal(value)
+        elif type(value) is Record:
+            new_value = self.on_Record(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
         elif type(value) is ResetSignal:
@@ -98,6 +105,9 @@ class ValueTransformer(ValueVisitor):
         return value
 
     def on_Signal(self, value):
+        return value
+
+    def on_Record(self, value):
         return value
 
     def on_ClockSignal(self, value):

@@ -162,13 +162,15 @@ Compatibility summary
       - (−) `timeline` ?
       - (−) `WaitTimer` ?
       - (−) `BitSlip` ?
-    - (−) `record` ?
-      - (−) `DIR_NONE`/`DIR_S_TO_M`/`DIR_M_TO_S` ?
-      - (−) `set_layout_parameters` ?
-      - (−) `layout_len` ?
-      - (−) `layout_get` ?
-      - (−) `layout_partial` ?
-      - (−) `Record` ?
+    - (−) `record` **obs** → `.hdl.rec.Record`
+      - (−) `DIR_NONE` id
+      - (−) `DIR_M_TO_S` → `DIR_FANOUT`
+      - (−) `DIR_S_TO_M` → `DIR_FANIN`
+      - (−) `set_layout_parameters` **brk**
+      - (−) `layout_len` **brk**
+      - (−) `layout_get` **brk**
+      - (−) `layout_partial` **brk**
+      - (−) `Record` id
     - (−) `resetsync` ?
       - (−) `AsyncResetSynchronizer` ?
     - (−) `roundrobin` ?

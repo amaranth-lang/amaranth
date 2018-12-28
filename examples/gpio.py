@@ -10,20 +10,19 @@ class GPIO:
 
     def get_fragment(self, platform):
         m = Module()
-        m.d.comb += self.bus.dat_r.eq(self.pins[self.bus.adr])
+        m.d.comb += self.bus.r_data.eq(self.pins[self.bus.addr])
         with m.If(self.bus.we):
-            m.d.sync += self.pins[self.bus.adr].eq(self.bus.dat_w)
+            m.d.sync += self.pins[self.bus.addr].eq(self.bus.w_data)
         return m.lower(platform)
 
 
 if __name__ == "__main__":
-    # TODO: use Record
-    bus = SimpleNamespace(
-        adr  =Signal(name="adr", max=8),
-        dat_r=Signal(name="dat_r"),
-        dat_w=Signal(name="dat_w"),
-        we   =Signal(name="we"),
-    )
+    bus = Record([
+        ("addr",   3),
+        ("r_data", 1),
+        ("w_data", 1),
+        ("we",     1),
+    ])
     pins = Signal(8)
     gpio = GPIO(Array(pins), bus)
-    main(gpio, ports=[pins, bus.adr, bus.dat_r, bus.dat_w, bus.we])
+    main(gpio, ports=[pins, bus.addr, bus.r_data, bus.w_data, bus.we])

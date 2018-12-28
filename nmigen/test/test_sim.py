@@ -5,6 +5,7 @@ from ..tools import flatten, union
 from ..hdl.ast import *
 from ..hdl.cd import  *
 from ..hdl.mem import *
+from ..hdl.rec import *
 from ..hdl.dsl import  *
 from ..hdl.ir import *
 from ..back.pysim import *
@@ -172,6 +173,14 @@ class SimulatorUnitTestCase(FHDLTestCase):
         n = Signal(3)
         stmt = lambda y, a: [Cat(l, m, n).eq(a), y.eq(Cat(n, m, l))]
         self.assertStatement(stmt, [C(0b100101110, 9)], C(0b110101100, 9))
+
+    def test_record(self):
+        rec = Record([
+            ("l", 1),
+            ("m", 2),
+        ])
+        stmt = lambda y, a: [rec.eq(a), y.eq(rec)]
+        self.assertStatement(stmt, [C(0b101, 3)], C(0b101, 3))
 
     def test_repl(self):
         stmt = lambda y, a: y.eq(Repl(a, 3))
