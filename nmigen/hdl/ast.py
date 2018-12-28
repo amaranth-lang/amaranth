@@ -39,12 +39,7 @@ class Value(metaclass=ABCMeta):
 
     def __init__(self, src_loc_at=0):
         super().__init__()
-
-        tb = traceback.extract_stack(limit=3 + src_loc_at)
-        if len(tb) < src_loc_at:
-            self.src_loc = None
-        else:
-            self.src_loc = (tb[0].filename, tb[0].lineno)
+        self.src_loc = tracer.get_src_loc(1 + src_loc_at)
 
     def __bool__(self):
         raise TypeError("Attempted to convert nMigen value to boolean")
@@ -721,8 +716,7 @@ class Array(MutableSequence):
     def __getitem__(self, index):
         if isinstance(index, Value):
             if self._mutable:
-                tb = traceback.extract_stack(limit=2)
-                self._proxy_at = (tb[0].filename, tb[0].lineno)
+                self._proxy_at = tracer.get_src_loc()
                 self._mutable  = False
             return ArrayProxy(self, index)
         else:

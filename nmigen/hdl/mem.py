@@ -1,5 +1,3 @@
-import traceback
-
 from .. import tracer
 from .ast import *
 from .ir import Instance
@@ -17,15 +15,13 @@ class Memory:
             raise TypeError("Memory depth must be a non-negative integer, not '{!r}'"
                             .format(depth))
 
-        tb = traceback.extract_stack(limit=2)
-        self.src_loc = (tb[0].filename, tb[0].lineno)
-
         if name is None:
             try:
                 name = tracer.get_var_name(depth=2)
             except tracer.NameNotFound:
                 name = "$memory"
-        self.name = name
+        self.name    = name
+        self.src_loc = tracer.get_src_loc()
 
         self.width = width
         self.depth = depth
