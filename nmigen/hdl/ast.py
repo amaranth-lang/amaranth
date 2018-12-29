@@ -860,7 +860,7 @@ class Delay(Statement):
 
 
 class Tick(Statement):
-    def __init__(self, domain):
+    def __init__(self, domain="sync"):
         self.domain = str(domain)
 
     def _rhs_signals(self):

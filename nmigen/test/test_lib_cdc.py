@@ -21,6 +21,7 @@ class MultiRegTestCase(FHDLTestCase):
                 yield Tick()
                 self.assertEqual((yield o), 1)
             sim.add_process(process)
+            sim.run()
 
     def test_basic(self):
         i = Signal(reset=1)
@@ -38,3 +39,4 @@ class MultiRegTestCase(FHDLTestCase):
                 yield Tick()
                 self.assertEqual((yield o), 0)
             sim.add_process(process)
+            sim.run()
