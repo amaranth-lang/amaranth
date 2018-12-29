@@ -1,5 +1,6 @@
 import math
 import inspect
+import warnings
 from contextlib import contextmanager
 from bitarray import bitarray
 from vcd import VCDWriter
@@ -364,6 +365,8 @@ class Simulator:
         self._vcd_names       = list()        # int/slot -> str/name
         self._gtkw_file       = gtkw_file
         self._traces          = traces
+
+        self._run_called      = False
 
         while not isinstance(self._fragment, Fragment):
             self._fragment = self._fragment.get_fragment(platform=None)
@@ -755,10 +758,14 @@ class Simulator:
         return False
 
     def run(self):
+        self._run_called = True
+
         while self.step():
             pass
 
     def run_until(self, deadline, run_passive=False):
+        self._run_called = True
+
         while self._timestamp < deadline:
             if not self.step(run_passive):
                 return False
@@ -766,6 +773,9 @@ class Simulator:
         return True
 
     def __exit__(self, *args):
+        if not self._run_called:
+            warnings.warn("Simulation created, but not run", UserWarning)
+
         if self._vcd_writer:
             vcd_timestamp = (self._timestamp + self._delta) / self._epsilon
             self._vcd_writer.close(vcd_timestamp)

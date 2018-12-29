@@ -530,3 +530,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
             sim.add_process(process)
+
+    def test_wrong_not_run(self):
+        with self.assertWarns(UserWarning,
+                msg="Simulation created, but not run"):
+            with Simulator(Fragment()) as sim:
+                pass
