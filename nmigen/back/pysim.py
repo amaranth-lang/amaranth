@@ -297,6 +297,12 @@ class _StatementCompiler(StatementVisitor):
             lhs(state, normalize(rhs(state), shape))
         return run
 
+    def on_Assert(self, stmt):
+        raise NotImplementedError("Asserts not yet implemented for Simulator backend.") # :nocov:
+
+    def on_Assume(self, stmt):
+        pass # :nocov:
+
     def on_Switch(self, stmt):
         test  = self.rrhs_compiler(stmt.test)
         cases = []

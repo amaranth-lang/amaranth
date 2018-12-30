@@ -142,6 +142,14 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
+    def on_Assert(self, stmt):
+        pass # :nocov:
+
+    @abstractmethod
+    def on_Assume(self, stmt):
+        pass # :nocov:
+
+    @abstractmethod
     def on_Switch(self, stmt):
         pass # :nocov:
 
@@ -155,6 +163,10 @@ class StatementVisitor(metaclass=ABCMeta):
     def on_statement(self, stmt):
         if type(stmt) is Assign:
             return self.on_Assign(stmt)
+        elif type(stmt) is Assert:
+            return self.on_Assert(stmt)
+        elif type(stmt) is Assume:
+            return self.on_Assume(stmt)
         elif isinstance(stmt, Switch):
             # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
             return self.on_Switch(stmt)
@@ -173,6 +185,12 @@ class StatementTransformer(StatementVisitor):
 
     def on_Assign(self, stmt):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
+
+    def on_Assert(self, stmt):
+        return Assert(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en)
+
+    def on_Assume(self, stmt):
+        return Assume(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en)
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
@@ -294,6 +312,10 @@ class SwitchCleaner(StatementVisitor):
     def on_Assign(self, stmt):
         return stmt
 
+    on_Assert = on_Assign
+
+    on_Assume = on_Assign
+
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
         if any(len(s) for s in cases.values()):
@@ -338,6 +360,10 @@ class LHSGroupAnalyzer(StatementVisitor):
     def on_Assign(self, stmt):
         self.unify(*stmt._lhs_signals())
 
+    on_Assert = on_Assign
+
+    on_Assume = on_Assign
+
     def on_Switch(self, stmt):
         for case_stmts in stmt.cases.values():
             self.on_statements(case_stmts)
@@ -361,6 +387,13 @@ class LHSGroupFilter(SwitchCleaner):
         any_lhs_signal = next(iter(stmt.lhs._lhs_signals()))
         if any_lhs_signal in self.signals:
             return stmt
+
+    def on_Assert(self, stmt):
+        any_lhs_signal = next(iter(stmt._lhs_signals()))
+        if any_lhs_signal in self.signals:
+            return stmt
+
+    on_Assume = on_Assert
 
 
 class _ControlInserter(FragmentTransformer):
