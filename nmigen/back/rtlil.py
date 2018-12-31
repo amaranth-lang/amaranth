@@ -328,9 +328,10 @@ class _ValueCompiler(xfrm.ValueVisitor):
         index = self.s.expand(value.index)
         if isinstance(index, ast.Const):
             if index.value < len(value.elems):
-                return self(value.elems[index.value])
+                elem = value.elems[index.value]
             else:
-                return self(value.elems[-1])
+                elem = value.elems[-1]
+            return self.match_shape(elem, *value.shape())
         else:
             raise LegalizeValue(value.index, range(len(value.elems)))
 
@@ -502,6 +503,10 @@ class _LHSValueCompiler(_ValueCompiler):
 
     def on_Operator(self, value):
         raise TypeError # :nocov:
+
+    def match_shape(self, value, new_bits, new_sign):
+        assert value.shape() == (new_bits, new_sign)
+        return self(value)
 
     def on_Signal(self, value):
         wire_curr, wire_next = self.s.resolve(value)
