@@ -557,7 +557,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         else:
             # In RTLIL, LHS and RHS of assignment must have exactly same width.
             rhs_sigspec = self.rhs_compiler.match_shape(
-                stmt.rhs, lhs_bits, rhs_sign)
+                stmt.rhs, lhs_bits, lhs_sign)
         self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
     def on_Switch(self, stmt):
