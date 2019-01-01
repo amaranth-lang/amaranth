@@ -78,3 +78,12 @@ class RecordTestCase(FHDLTestCase):
 
         self.assertEqual(repr(r), "(rec <unnamed> stb)")
         self.assertEqual(r.stb.name, "stb")
+
+    def test_wrong_field(self):
+        r = Record([
+            ("stb", 1),
+            ("ack", 1),
+        ])
+        with self.assertRaises(NameError,
+                msg="Record does not have a field 'en'. Did you mean one of: stb, ack?"):
+            r.en

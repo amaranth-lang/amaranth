@@ -87,10 +87,14 @@ class Record(Value):
                 self.fields[field_name] = Signal(field_shape, name=concat(name, field_name))
 
     def __getattr__(self, name):
-        return self.fields[name]
+        return self[name]
 
     def __getitem__(self, name):
-        return self.fields[name]
+        try:
+            return self.fields[name]
+        except KeyError:
+            raise NameError("Record does not have a field '{}'. Did you mean one of: {}?"
+                            .format(name, ", ".join(self.fields))) from None
 
     def shape(self):
         return sum(len(f) for f in self.fields.values()), False
