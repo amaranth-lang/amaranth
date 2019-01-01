@@ -107,3 +107,21 @@ class MemoryTestCase(FHDLTestCase):
         with self.assertRaises(ValueError,
                 msg="Write port granularity must divide memory width evenly"):
             mem.write_port(granularity=3)
+
+
+class DummyPortTestCase(FHDLTestCase):
+    def test_name(self):
+        p1 = DummyPort(width=8, addr_bits=2)
+        self.assertEqual(p1.addr.name, "p1_addr")
+        p2 = [DummyPort(width=8, addr_bits=2)][0]
+        self.assertEqual(p2.addr.name, "dummy_addr")
+        p3 = DummyPort(width=8, addr_bits=2, name="foo")
+        self.assertEqual(p3.addr.name, "foo_addr")
+
+    def test_sizes(self):
+        p1 = DummyPort(width=8, addr_bits=2)
+        self.assertEqual(p1.addr.nbits, 2)
+        self.assertEqual(p1.data.nbits, 8)
+        self.assertEqual(p1.en.nbits, 1)
+        p2 = DummyPort(width=8, addr_bits=2, granularity=2)
+        self.assertEqual(p2.en.nbits, 4)

@@ -3,7 +3,7 @@ from .ast import *
 from .ir import Instance
 
 
-__all__ = ["Memory"]
+__all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
 class Memory:
@@ -179,3 +179,29 @@ class WritePort:
         for signal in self.memory._array:
             f.add_driver(signal, self.domain)
         return f
+
+
+class DummyPort:
+    """Dummy memory port.
+
+    This port can be used in place of either a read or a write port for testing and verification.
+    It does not include any read/write port specific attributes, i.e. none besides ``"domain"``;
+    any such attributes may be set manually.
+    """
+    def __init__(self, width, addr_bits, domain="sync", name=None, granularity=None):
+        self.domain = domain
+
+        if granularity is None:
+            granularity = width
+        if name is None:
+            try:
+                name = tracer.get_var_name(depth=2)
+            except tracer.NameNotFound:
+                name = "dummy"
+
+        self.addr = Signal(addr_bits,
+                           name="{}_addr".format(name))
+        self.data = Signal(width,
+                           name="{}_data".format(name))
+        self.en   = Signal(width // granularity,
+                           name="{}_en".format(name))
