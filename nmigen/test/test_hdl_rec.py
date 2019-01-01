@@ -85,5 +85,14 @@ class RecordTestCase(FHDLTestCase):
             ("ack", 1),
         ])
         with self.assertRaises(NameError,
-                msg="Record does not have a field 'en'. Did you mean one of: stb, ack?"):
+                msg="Record 'r' does not have a field 'en'. Did you mean one of: stb, ack?"):
+            r.en
+
+    def test_wrong_field_unnamed(self):
+        r = [Record([
+            ("stb", 1),
+            ("ack", 1),
+        ])][0]
+        with self.assertRaises(NameError,
+                msg="Unnamed record does not have a field 'en'. Did you mean one of: stb, ack?"):
             r.en

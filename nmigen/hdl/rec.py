@@ -93,8 +93,12 @@ class Record(Value):
         try:
             return self.fields[name]
         except KeyError:
-            raise NameError("Record does not have a field '{}'. Did you mean one of: {}?"
-                            .format(name, ", ".join(self.fields))) from None
+            if self.name is None:
+                reference = "Unnamed record"
+            else:
+                reference = "Record '{}'".format(self.name)
+            raise NameError("{} does not have a field '{}'. Did you mean one of: {}?"
+                            .format(reference, name, ", ".join(self.fields))) from None
 
     def shape(self):
         return sum(len(f) for f in self.fields.values()), False
