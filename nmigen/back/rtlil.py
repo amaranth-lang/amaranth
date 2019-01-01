@@ -565,6 +565,28 @@ class _StatementCompiler(xfrm.StatementVisitor):
                 stmt.rhs, lhs_bits, lhs_sign)
         self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
+    def on_Assert(self, stmt):
+        self(stmt._check.eq(stmt.test))
+        self(stmt._en.eq(1))
+
+        en_wire = self.rhs_compiler(stmt._en)
+        check_wire = self.rhs_compiler(stmt._check)
+        self.state.rtlil.cell("$assert", ports={
+            "\\A": check_wire,
+            "\\EN": en_wire,
+        }, src=src(stmt.test.src_loc))
+
+    def on_Assume(self, stmt):
+        self(stmt._check.eq(stmt.test))
+        self(stmt._en.eq(1))
+
+        en_wire = self.rhs_compiler(stmt._en)
+        check_wire = self.rhs_compiler(stmt._check)
+        self.state.rtlil.cell("$assume", ports={
+            "\\A": check_wire,
+            "\\EN": en_wire,
+        }, src=src(stmt.test.src_loc))
+
     def on_Switch(self, stmt):
         self._check_rhs(stmt.test)
 
