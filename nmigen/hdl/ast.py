@@ -192,6 +192,9 @@ class Value(metaclass=ABCMeta):
     def _rhs_signals(self):
         pass # :nocov:
 
+    def _as_const(self):
+        raise TypeError("Value {!r} cannot be evaluated as constant".format(self))
+
     __hash__ = None
 
 
@@ -239,6 +242,9 @@ class Const(Value):
 
     def _rhs_signals(self):
         return ValueSet()
+
+    def _as_const(self):
+        return self.value
 
     def __repr__(self):
         return "(const {}'{}d{})".format(self.nbits, "s" if self.signed else "", self.value)
@@ -435,13 +441,20 @@ class Cat(Value):
         self.parts = [Value.wrap(v) for v in flatten(args)]
 
     def shape(self):
-        return sum(len(op) for op in self.parts), False
+        return sum(len(part) for part in self.parts), False
 
     def _lhs_signals(self):
-        return union(op._lhs_signals() for op in self.parts)
+        return union(part._lhs_signals() for part in self.parts)
 
     def _rhs_signals(self):
-        return union(op._rhs_signals() for op in self.parts)
+        return union(part._rhs_signals() for part in self.parts)
+
+    def _as_const(self):
+        value = 0
+        for part in reversed(self.parts):
+            value <<= len(part)
+            value |= part._as_const()
+        return value
 
     def __repr__(self):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
