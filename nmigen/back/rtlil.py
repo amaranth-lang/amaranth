@@ -306,7 +306,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
         raise NotImplementedError # :nocov:
 
     def on_Record(self, value):
-        return self(Cat(value.fields.values()))
+        return self(ast.Cat(value.fields.values()))
 
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.parts])))
