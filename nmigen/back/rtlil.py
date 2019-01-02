@@ -319,7 +319,9 @@ class _ValueCompiler(xfrm.ValueVisitor):
             return self(value.value)
 
         sigspec = self._prepare_value_for_Slice(value.value)
-        if value.start + 1 == value.end:
+        if value.start == value.end:
+            return "{}"
+        elif value.start + 1 == value.end:
             return "{} [{}]".format(sigspec, value.start)
         else:
             return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
