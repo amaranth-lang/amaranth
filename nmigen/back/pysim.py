@@ -448,7 +448,7 @@ class Simulator:
                     add_fragment(subfragment, (*scope, "#{}".format(index)))
                 else:
                     add_fragment(subfragment, (*scope, name))
-        add_fragment(root_fragment)
+        add_fragment(root_fragment, scope=("top",))
 
         def add_signal(signal):
             if signal not in self._signals:
