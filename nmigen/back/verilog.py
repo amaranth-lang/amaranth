@@ -29,9 +29,6 @@ proc_dff
 proc_clean
 memory_collect
 write_verilog -norename
-# Make sure there are no undriven wires in generated RTLIL.
-proc
-select -assert-none w:* i:* %a %d o:* %a %ci* %d c:* %co* %a %d n:$* %d
 """.format(il_text))
     if popen.returncode:
         raise YosysError(error.strip())
