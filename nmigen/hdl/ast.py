@@ -882,6 +882,7 @@ class Switch(Statement):
         for key, stmts in cases.items():
             if isinstance(key, (bool, int)):
                 key = "{:0{}b}".format(key, len(self.test))
+                assert len(key) <= len(self.test)
             elif isinstance(key, str):
                 assert len(key) == len(self.test)
             else:

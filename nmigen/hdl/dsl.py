@@ -1,6 +1,7 @@
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from contextlib import contextmanager
+import warnings
 
 from ..tools import flatten, bits_for
 from .ast import *
@@ -8,10 +9,14 @@ from .ir import *
 from .xfrm import *
 
 
-__all__ = ["Module", "SyntaxError"]
+__all__ = ["Module", "SyntaxError", "SyntaxWarning"]
 
 
 class SyntaxError(Exception):
+    pass
+
+
+class SyntaxWarning(Warning):
     pass
 
 
@@ -195,7 +200,7 @@ class Module(_ModuleBuilderRoot):
     @contextmanager
     def Switch(self, test):
         self._check_context("Switch", context=None)
-        switch_data = self._set_ctrl("Switch", {"test": test, "cases": OrderedDict()})
+        switch_data = self._set_ctrl("Switch", {"test": Value.wrap(test), "cases": OrderedDict()})
         try:
             self._ctrl_context = "Switch"
             self.domain._depth += 1
@@ -211,9 +216,14 @@ class Module(_ModuleBuilderRoot):
         switch_data = self._get_ctrl("Switch")
         if value is None:
             value = "-" * len(switch_data["test"])
-        if isinstance(value, str) and len(switch_data["test"]) != len(value):
+        if isinstance(value, str) and len(value) != len(switch_data["test"]):
             raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
                               .format(value, len(switch_data["test"])))
+        if isinstance(value, int) and bits_for(value) > len(switch_data["test"]):
+            warnings.warn("Case value '{:b}' is wider than test (which has width {}); "
+                          "comparison will be made against truncated value"
+                          .format(value, len(switch_data["test"])), SyntaxWarning, stacklevel=3)
+            value &= (1 << len(switch_data["test"])) - 1
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None

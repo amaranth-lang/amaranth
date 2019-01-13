@@ -287,6 +287,18 @@ class DSLTestCase(FHDLTestCase):
                     msg="Case value '--' must have the same width as test (which is 4)"):
                 with m.Case("--"):
                     pass
+            with self.assertWarns(SyntaxWarning,
+                    msg="Case value '10110' is wider than test (which has width 4); comparison "
+                        "will be made against truncated value"):
+                with m.Case(0b10110):
+                    pass
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig w1)
+                (case 0110 )
+            )
+        )
+        """)
 
     def test_Case_outside_Switch_wrong(self):
         m = Module()
