@@ -289,14 +289,12 @@ class DSLTestCase(FHDLTestCase):
                     pass
             with self.assertWarns(SyntaxWarning,
                     msg="Case value '10110' is wider than test (which has width 4); comparison "
-                        "will be made against truncated value"):
+                        "will never be true"):
                 with m.Case(0b10110):
                     pass
         self.assertRepr(m._statements, """
         (
-            (switch (sig w1)
-                (case 0110 )
-            )
+            (switch (sig w1) )
         )
         """)
 

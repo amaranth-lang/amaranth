@@ -219,17 +219,19 @@ class Module(_ModuleBuilderRoot):
         if isinstance(value, str) and len(value) != len(switch_data["test"]):
             raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
                               .format(value, len(switch_data["test"])))
+        omit_case = False
         if isinstance(value, int) and bits_for(value) > len(switch_data["test"]):
             warnings.warn("Case value '{:b}' is wider than test (which has width {}); "
-                          "comparison will be made against truncated value"
+                          "comparison will never be true"
                           .format(value, len(switch_data["test"])), SyntaxWarning, stacklevel=3)
-            value &= (1 << len(switch_data["test"])) - 1
+            omit_case = True
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            switch_data["cases"][value] = self._statements
+            if not omit_case:
+                switch_data["cases"][value] = self._statements
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
