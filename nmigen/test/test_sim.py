@@ -531,6 +531,20 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_process(process)
 
+    def test_memory_read_only(self):
+        self.m = Module()
+        self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
+        self.m.submodules.rdport = self.rdport = self.memory.read_port()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                self.assertEqual((yield self.rdport.data), 0xaa)
+                yield self.rdport.addr.eq(1)
+                yield
+                yield
+                self.assertEqual((yield self.rdport.data), 0x55)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
     def test_wrong_not_run(self):
         with self.assertWarns(UserWarning,
                 msg="Simulation created, but not run"):

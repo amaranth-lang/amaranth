@@ -90,6 +90,9 @@ class _RHSValueCompiler(_ValueCompiler):
     def on_Signal(self, value):
         if self.sensitivity is not None:
             self.sensitivity.add(value)
+        if value not in self.signal_slots:
+            # A signal that is neither driven nor a port always remains at its reset state.
+            return lambda state: value.reset
         value_slot = self.signal_slots[value]
         if self.signal_mode == "rhs":
             return lambda state: state.curr[value_slot]
@@ -551,7 +554,8 @@ class Simulator:
             funclet = compiler(statements)
 
             def add_funclet(signal, funclet):
-                self._funclets[self._signal_slots[signal]].add(funclet)
+                if signal in self._signal_slots:
+                    self._funclets[self._signal_slots[signal]].add(funclet)
 
             for signal in compiler.sensitivity:
                 add_funclet(signal, funclet)
