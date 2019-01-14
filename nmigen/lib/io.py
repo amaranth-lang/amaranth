@@ -1,7 +1,7 @@
 from .. import *
 
 
-__all__ = ["TSTriple"]
+__all__ = ["TSTriple", "Tristate"]
 
 
 class TSTriple:
@@ -19,3 +19,26 @@ class TSTriple:
 
     def get_fragment(self, platform):
         return Fragment()
+
+    def get_tristate(self, io):
+        return Tristate(self, io)
+
+
+class Tristate:
+    def __init__(self, triple, io):
+        self.triple = triple
+        self.io     = io
+
+    def get_fragment(self, platform):
+        if hasattr(platform, "get_tristate"):
+            return platform.get_tristate(self.triple)
+
+        m = Module()
+        m.d.comb += self.triple.i.eq(self.io)
+        m.submodules += Instance("$tribuf",
+            p_WIDTH=len(self.io),
+            i_EN=self.triple.oe,
+            i_A=self.triple.o,
+            o_Y=self.io,
+        )
+        return m.lower(platform)

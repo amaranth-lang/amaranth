@@ -7,3 +7,4 @@ from .hdl.rec import Record
 from .hdl.xfrm import ResetInserter, CEInserter
 
 from .lib.cdc import MultiReg
+from .lib.io import TSTriple
