@@ -1,0 +1,19 @@
+from nmigen import *
+from nmigen.cli import main
+
+
+m = Module()
+cd_por  = ClockDomain(reset_less=True)
+cd_sync = ClockDomain()
+m.domains += cd_por, cd_sync
+
+delay = Signal(max=255, reset=255)
+with m.If(delay != 0):
+    m.d.por += delay.eq(delay - 1)
+m.d.comb += [
+    ClockSignal().eq(cd_por.clk),
+    ResetSignal().eq(delay == 0),
+]
+
+if __name__ == "__main__":
+    main(m.lower(platform=None), ports=[cd_por.clk])

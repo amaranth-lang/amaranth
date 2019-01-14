@@ -293,6 +293,10 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                               .format(context, domain))
         return self.domains[domain]
 
+    def map_drivers(self, fragment, new_fragment):
+        for domain, signal in fragment.iter_drivers():
+            new_fragment.add_driver(self.on_value(signal), domain)
+
     def on_ClockSignal(self, value):
         cd = self._resolve(value.domain, value)
         return cd.clk

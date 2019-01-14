@@ -135,6 +135,18 @@ class DomainLowererTestCase(FHDLTestCase):
         )
         """)
 
+    def test_lower_drivers(self):
+        pix = ClockDomain()
+        f = Fragment()
+        f.add_driver(ClockSignal("pix"), None)
+        f.add_driver(ResetSignal("pix"), "sync")
+
+        f = DomainLowerer({"pix": pix})(f)
+        self.assertEqual(f.drivers, {
+            None: SignalSet((pix.clk,)),
+            "sync": SignalSet((pix.rst,))
+        })
+
     def test_lower_wrong_domain(self):
         sync = ClockDomain()
         f = Fragment()

@@ -635,6 +635,9 @@ class ClockSignal(Value):
     def shape(self):
         return 1, False
 
+    def _lhs_signals(self):
+        return ValueSet((self,))
+
     def _rhs_signals(self):
         raise NotImplementedError("ClockSignal must be lowered to a concrete signal") # :nocov:
 
@@ -665,6 +668,9 @@ class ResetSignal(Value):
 
     def shape(self):
         return 1, False
+
+    def _lhs_signals(self):
+        return ValueSet((self,))
 
     def _rhs_signals(self):
         raise NotImplementedError("ResetSignal must be lowered to a concrete signal") # :nocov:
@@ -1038,6 +1044,8 @@ class ValueKey:
             return hash(self.value.value)
         elif isinstance(self.value, Signal):
             return hash(self.value.duid)
+        elif isinstance(self.value, (ClockSignal, ResetSignal)):
+            return hash(self.value.domain)
         elif isinstance(self.value, Operator):
             return hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
         elif isinstance(self.value, Slice):
@@ -1064,6 +1072,8 @@ class ValueKey:
             return self.value.value == other.value.value
         elif isinstance(self.value, Signal):
             return self.value is other.value
+        elif isinstance(self.value, (ClockSignal, ResetSignal)):
+            return self.value.domain == other.value.domain
         elif isinstance(self.value, Operator):
             return (self.value.op == other.value.op and
                     len(self.value.operands) == len(other.value.operands) and
@@ -1123,22 +1133,28 @@ class ValueSet(_MappedKeySet):
 
 class SignalKey:
     def __init__(self, signal):
-        if type(signal) is not Signal:
+        if type(signal) is Signal:
+            self._intern = (0, signal.duid)
+        elif type(signal) is ClockSignal:
+            self._intern = (1, signal.domain)
+        elif type(signal) is ResetSignal:
+            self._intern = (2, signal.domain)
+        else:
             raise TypeError("Object '{!r}' is not an nMigen signal".format(signal))
         self.signal = signal
 
     def __hash__(self):
-        return hash(self.signal.duid)
+        return hash(self._intern)
 
     def __eq__(self, other):
         if type(other) is not SignalKey:
             return False
-        return self.signal is other.signal
+        return self._intern == other._intern
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
             raise TypeError("Object '{!r}' cannot be compared to a SignalKey".format(signal))
-        return self.signal.duid < other.signal.duid
+        return self._intern < other._intern
 
     def __repr__(self):
         return "<{}.SignalKey {!r}>".format(__name__, self.signal)

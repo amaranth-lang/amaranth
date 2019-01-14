@@ -95,6 +95,24 @@ class DSLTestCase(FHDLTestCase):
                 msg="'Module' object has no attribute 'nonexistentattr'"):
             m.nonexistentattr
 
+    def test_clock_signal(self):
+        m = Module()
+        m.d.comb += ClockSignal("pix").eq(ClockSignal())
+        self.assertRepr(m._statements, """
+        (
+            (eq (clk pix) (clk sync))
+        )
+        """)
+
+    def test_reset_signal(self):
+        m = Module()
+        m.d.comb += ResetSignal("pix").eq(1)
+        self.assertRepr(m._statements, """
+        (
+            (eq (rst pix) (const 1'd1))
+        )
+        """)
+
     def test_If(self):
         m = Module()
         with m.If(self.s1):
