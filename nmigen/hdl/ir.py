@@ -21,6 +21,7 @@ class Fragment:
         self.domains = OrderedDict()
         self.subfragments = []
         self.generated = OrderedDict()
+        self.flatten = False
 
     def add_ports(self, *ports, dir):
         assert dir in ("i", "o", "io")
@@ -141,7 +142,16 @@ class Fragment:
         for domain, signal in self.iter_drivers():
             add_subfrag(driver_subfrags, signal, (None, hierarchy))
 
+        flatten_subfrags = set()
         for i, (subfrag, name) in enumerate(self.subfragments):
+            if name is None:
+                name = "<unnamed #{}>".format(i)
+            subfrag_hierarchy = hierarchy + (name,)
+
+            if subfrag.flatten:
+                # Always flatten subfragments that explicitly request it.
+                flatten_subfrags.add((subfrag, subfrag_hierarchy))
+
             if isinstance(subfrag, Instance):
                 # For memories (which are subfragments, but semantically a part of superfragment),
                 # record that this fragment is driving it.
@@ -153,9 +163,6 @@ class Fragment:
                 continue
 
             # First, recurse into subfragments and let them detect driver conflicts as well.
-            if name is None:
-                name = "<unnamed #{}>".format(i)
-            subfrag_hierarchy = hierarchy + (name,)
             subfrag_drivers, subfrag_memories = \
                 subfrag._resolve_hierarchy_conflicts(subfrag_hierarchy, mode)
 
@@ -167,7 +174,6 @@ class Fragment:
 
         # Find out the set of subfragments that needs to be flattened into this fragment
         # to resolve driver-driver conflicts.
-        flatten_subfrags = set()
         def flatten_subfrags_if_needed(subfrags):
             if len(subfrags) == 1:
                 return []

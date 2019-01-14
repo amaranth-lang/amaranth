@@ -509,6 +509,15 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
                     "top.<unnamed #1>; hierarchy will be flattened"):
             self.f1._resolve_hierarchy_conflicts(mode="warn")
 
+    def test_explicit_flatten(self):
+        self.f1 = Fragment()
+        self.f2 = Fragment()
+        self.f2.flatten = True
+        self.f1.add_subfragment(self.f2)
+
+        self.f1._resolve_hierarchy_conflicts(mode="silent")
+        self.assertEqual(self.f1.subfragments, [])
+
 
 class InstanceTestCase(FHDLTestCase):
     def setUp_cpu(self):

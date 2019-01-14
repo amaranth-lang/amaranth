@@ -237,6 +237,7 @@ class FragmentTransformer:
             self.map_named_ports(fragment, new_fragment)
         else:
             new_fragment = Fragment()
+            new_fragment.flatten = fragment.flatten
         self.map_ports(fragment, new_fragment)
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)

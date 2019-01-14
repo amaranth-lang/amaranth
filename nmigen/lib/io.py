@@ -41,4 +41,7 @@ class Tristate:
             i_A=self.triple.o,
             o_Y=self.io,
         )
-        return m.lower(platform)
+
+        f = m.lower(platform)
+        f.flatten = True
+        return f
