@@ -31,7 +31,7 @@ class Tristate:
 
     def get_fragment(self, platform):
         if hasattr(platform, "get_tristate"):
-            return platform.get_tristate(self.triple)
+            return platform.get_tristate(self.triple, self.io)
 
         m = Module()
         m.d.comb += self.triple.i.eq(self.io)
