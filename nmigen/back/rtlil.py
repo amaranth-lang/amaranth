@@ -370,6 +370,26 @@ class _RHSValueCompiler(_ValueCompiler):
             value_twos_compl = value.value & ((1 << value.nbits) - 1)
             return "{}'{:0{}b}".format(value.nbits, value_twos_compl, value.nbits)
 
+    def on_AnyConst(self, value):
+        res_bits, res_sign = value.shape()
+        res = self.s.rtlil.wire(width=res_bits)
+        self.s.rtlil.cell("$anyconst", ports={
+            "\\Y": res,
+        }, params={
+            "Y_WIDTH": res_bits,
+        }, src=src(value.src_loc))
+        return res
+
+    def on_AnySeq(self, value):
+        res_bits, res_sign = value.shape()
+        res = self.s.rtlil.wire(width=res_bits)
+        self.s.rtlil.cell("$anyseq", ports={
+            "\\Y": res,
+        }, params={
+            "Y_WIDTH": res_bits,
+        }, src=src(value.src_loc))
+        return res
+
     def on_Signal(self, value):
         wire_curr, wire_next = self.s.resolve(value)
         return wire_curr
@@ -501,6 +521,12 @@ class _RHSValueCompiler(_ValueCompiler):
 
 class _LHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
+        raise TypeError # :nocov:
+
+    def on_AnyConst(self, value):
+        raise TypeError # :nocov:
+
+    def on_AnySeq(self, value):
         raise TypeError # :nocov:
 
     def on_Operator(self, value):
