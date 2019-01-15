@@ -87,6 +87,12 @@ class _RHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
         return lambda state: value.value
 
+    def on_AnyConst(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_AnySeq(self, value):
+        raise NotImplementedError # :nocov:
+
     def on_Signal(self, value):
         if self.sensitivity is not None:
             self.sensitivity.add(value)
@@ -217,6 +223,12 @@ class _LHSValueCompiler(_ValueCompiler):
         self.rhs_compiler = rhs_compiler
 
     def on_Const(self, value):
+        raise TypeError # :nocov:
+
+    def on_AnyConst(self, value):
+        raise TypeError # :nocov:
+
+    def on_AnySeq(self, value):
         raise TypeError # :nocov:
 
     def on_Signal(self, value):

@@ -24,6 +24,14 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
+    def on_AnyConst(self, value):
+        pass # :nocov:
+
+    @abstractmethod
+    def on_AnySeq(self, value):
+        pass # :nocov:
+
+    @abstractmethod
     def on_Signal(self, value):
         pass # :nocov:
 
@@ -69,6 +77,10 @@ class ValueVisitor(metaclass=ABCMeta):
     def on_value(self, value):
         if type(value) is Const:
             new_value = self.on_Const(value)
+        elif type(value) is AnyConst:
+            new_value = self.on_AnyConst(value)
+        elif type(value) is AnySeq:
+            new_value = self.on_AnySeq(value)
         elif type(value) is Signal:
             new_value = self.on_Signal(value)
         elif type(value) is Record:
@@ -102,6 +114,12 @@ class ValueVisitor(metaclass=ABCMeta):
 
 class ValueTransformer(ValueVisitor):
     def on_Const(self, value):
+        return value
+
+    def on_AnyConst(self, value):
+        return value
+
+    def on_AnySeq(self, value):
         return value
 
     def on_Signal(self, value):
