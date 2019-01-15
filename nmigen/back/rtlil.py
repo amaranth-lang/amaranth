@@ -376,7 +376,7 @@ class _RHSValueCompiler(_ValueCompiler):
         self.s.rtlil.cell("$anyconst", ports={
             "\\Y": res,
         }, params={
-            "Y_WIDTH": res_bits,
+            "WIDTH": res_bits,
         }, src=src(value.src_loc))
         return res
 
@@ -386,7 +386,7 @@ class _RHSValueCompiler(_ValueCompiler):
         self.s.rtlil.cell("$anyseq", ports={
             "\\Y": res,
         }, params={
-            "Y_WIDTH": res_bits,
+            "WIDTH": res_bits,
         }, src=src(value.src_loc))
         return res
 
