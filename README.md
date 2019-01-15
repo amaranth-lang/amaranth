@@ -16,8 +16,11 @@ nMigen is a direct descendant of [Migen][] rewritten from scratch to address man
 
 nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend depends on [Yosys][]; currently, the `master` branch of Yosys is required.
 
+Thanks [LambdaConcept][] for being a sponsor of this project! Contact sb [at] m-labs.hk if you also wish to support this work.
+
 [migen]: https://m-labs.hk/migen
 [yosys]: http://www.clifford.at/yosys/
+[lambdaconcept]: http://lambdaconcept.com/
 
 ### Installation
 
