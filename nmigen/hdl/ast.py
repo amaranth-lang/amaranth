@@ -9,7 +9,7 @@ from ..tools import *
 
 
 __all__ = [
-    "Value", "Const", "C", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
+    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "Statement", "Assign", "Assert", "Assume", "Switch", "Delay", "Tick",
@@ -252,6 +252,32 @@ class Const(Value):
 
 
 C = Const  # shorthand
+
+
+class AnyValue(Value):
+    def __init__(self, shape):
+        super().__init__(src_loc_at=0)
+        if isinstance(shape, int):
+            shape = shape, False
+        self.nbits, self.signed = shape
+        if not isinstance(self.nbits, int) or self.nbits < 0:
+            raise TypeError("Width must be a non-negative integer, not '{!r}'", self.nbits)
+
+    def shape(self):
+        return self.nbits, self.signed
+
+    def _rhs_signals(self):
+        return ValueSet()
+
+
+class AnyConst(AnyValue):
+    def __repr__(self):
+        return "(anyconst {}'{})".format(self.nbits, "s" if self.signed else "")
+
+
+class AnySeq(AnyValue):
+    def __repr__(self):
+        return "(anyseq {}'{})".format(self.nbits, "s" if self.signed else "")
 
 
 class Operator(Value):
