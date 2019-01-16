@@ -611,7 +611,7 @@ class Signal(Value, DUID):
         self.decoder = decoder
 
     @classmethod
-    def like(cls, other, src_loc_at=0, **kwargs):
+    def like(cls, other, name=None, src_loc_at=0, **kwargs):
         """Create Signal based on another.
 
         Parameters
@@ -619,8 +619,12 @@ class Signal(Value, DUID):
         other : Value
             Object to base this Signal on.
         """
-        kw = dict(shape=cls.wrap(other).shape(),
-                  name=tracer.get_var_name(depth=2 + src_loc_at))
+        if name is None:
+            try:
+                name = tracer.get_var_name(depth=2 + src_loc_at)
+            except tracer.NameNotFound:
+                name = "$like"
+        kw = dict(shape=cls.wrap(other).shape(), name=name)
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)

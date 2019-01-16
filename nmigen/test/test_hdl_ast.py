@@ -458,6 +458,8 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s5.decoder, str)
         s6 = Signal.like(10)
         self.assertEqual(s6.shape(), (4, False))
+        s7 = [Signal.like(Signal(4))][0]
+        self.assertEqual(s7.name, "$like")
 
 
 class ClockSignalTestCase(FHDLTestCase):
