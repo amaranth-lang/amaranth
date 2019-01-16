@@ -7,12 +7,18 @@ cache:
   directories:
     - "$HOME/.ccache"
     - "$HOME/.local"
+addons:
+  apt:
+    packages:
+      - gperf
 before_install:
   - export PATH="/usr/lib/ccache:$HOME/.local/bin:$PATH"
 install:
   - pip install coverage codecov pyvcd bitarray
   - git clone https://github.com/YosysHQ/yosys
   - (cd yosys && if ! yosys -V || [ $(git rev-parse HEAD $(yosys -V | awk 'match($0,/sha1 ([0-9a-f]+)/,m) { print m[1] }') | uniq | wc -l) != 1 ]; then make CONFIG=gcc ENABLE_ABC=0 PREFIX=$HOME/.local install; fi)
+  - (git clone https://github.com/YosysHQ/SymbiYosys && cd SymbiYosys && make PREFIX=$HOME/.local install)
+  - if ! yices -V; then (git clone https://github.com/SRI-CSL/yices2.git && cd yices2 && autoconf && ./configure --prefix=$HOME/.local && make && make install); fi
 script:
   - coverage run -m unittest discover
   - codecov
