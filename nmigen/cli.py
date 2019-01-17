@@ -16,6 +16,7 @@ def main_parser(parser=None):
         help="generate RTLIL or Verilog from the design")
     p_generate.add_argument("-t", "--type", dest="generate_type",
         metavar="LANGUAGE", choices=["il", "v"],
+        default="v",
         help="generate LANGUAGE (il for RTLIL, v for Verilog; default: %(default)s)")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
