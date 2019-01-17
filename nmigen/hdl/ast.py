@@ -10,7 +10,7 @@ from ..tools import *
 
 __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
-    "Array", "ArrayProxy",
+    "Array", "ArrayProxy", "Sample",
     "Signal", "ClockSignal", "ResetSignal",
     "Statement", "Assign", "Assert", "Assume", "Switch", "Delay", "Tick",
     "Passive", "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
@@ -831,6 +831,30 @@ class ArrayProxy(Value):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
 
 
+class Sample(Value):
+    def __init__(self, value, clocks, domain):
+        super().__init__(src_loc_at=1)
+        self.value  = Value.wrap(value)
+        self.clocks = int(clocks)
+        self.domain = domain
+        if not isinstance(self.value, (Const, Signal)):
+            raise TypeError("Sampled value may only be a signal or a constant, not {!r}"
+                            .format(self.value))
+        if self.clocks < 0:
+            raise ValueError("Cannot sample a value {} cycles in the future"
+                             .format(-self.clocks))
+
+    def shape(self):
+        return self.value.shape()
+
+    def _rhs_signals(self):
+        return ValueSet((self,))
+
+    def __repr__(self):
+        return "(sample {!r} @ {}[{}])".format(
+            self.value, "<default>" if self.domain is None else self.domain, self.clocks)
+
+
 class _StatementList(list):
     def __repr__(self):
         return "({})".format(" ".join(map(repr, self)))
@@ -1088,6 +1112,8 @@ class ValueKey:
         elif isinstance(self.value, ArrayProxy):
             return hash((ValueKey(self.value.index),
                          tuple(ValueKey(e) for e in self.value._iter_as_values())))
+        elif isinstance(self.value, Sample):
+            return hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
@@ -1126,6 +1152,10 @@ class ValueKey:
                     all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value._iter_as_values(),
                                         other.value._iter_as_values())))
+        elif isinstance(self.value, Sample):
+            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
+                    self.value.clocks == other.value.clocks and
+                    self.value.domain == self.value.domain)
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
