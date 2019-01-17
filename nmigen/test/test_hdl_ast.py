@@ -504,8 +504,10 @@ class SampleTestCase(FHDLTestCase):
         self.assertEqual(s.shape(), (1, False))
 
     def test_signal(self):
-        s = Sample(Signal(2), 1, "sync")
-        self.assertEqual(s.shape(), (2, False))
+        s1 = Sample(Signal(2), 1, "sync")
+        self.assertEqual(s1.shape(), (2, False))
+        s2 = Sample(ClockSignal(), 1, "sync")
+        s3 = Sample(ResetSignal(), 1, "sync")
 
     def test_wrong_value_operator(self):
         with self.assertRaises(TypeError,

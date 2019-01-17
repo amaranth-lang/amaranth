@@ -844,7 +844,7 @@ class Sample(Value):
         self.value  = Value.wrap(expr)
         self.clocks = int(clocks)
         self.domain = domain
-        if not isinstance(self.value, (Const, Signal)):
+        if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal)):
             raise TypeError("Sampled value may only be a signal or a constant, not {!r}"
                             .format(self.value))
         if self.clocks < 0:

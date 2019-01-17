@@ -364,6 +364,10 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             return "c${}".format(value.value), value.value
         elif isinstance(value, Signal):
             return "s${}".format(value.name), value.reset
+        elif isinstance(value, ClockSignal):
+            return "clk", 0
+        elif isinstance(value, ResetSignal):
+            return "rst", 1
         else:
             raise NotImplementedError # :nocov:
 
