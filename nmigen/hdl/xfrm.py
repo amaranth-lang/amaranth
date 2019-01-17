@@ -13,7 +13,8 @@ from .rec import *
 __all__ = ["ValueVisitor", "ValueTransformer",
            "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
-           "DomainRenamer", "DomainLowerer", "SampleLowerer",
+           "DomainRenamer", "DomainLowerer",
+           "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "CEInserter"]
 
@@ -338,6 +339,19 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 raise DomainError("Signal {!r} refers to reset of reset-less domain '{}'"
                                   .format(value, value.domain))
         return cd.rst
+
+
+class SampleDomainInjector(ValueTransformer, StatementTransformer):
+    def __init__(self, domain):
+        self.domain = domain
+
+    def on_Sample(self, value):
+        if value.domain is not None:
+            return value
+        return Sample(value.value, value.clocks, self.domain)
+
+    def __call__(self, stmts):
+        return self.on_statement(stmts)
 
 
 class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):

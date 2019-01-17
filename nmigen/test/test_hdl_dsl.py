@@ -113,6 +113,24 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    def test_sample_domain(self):
+        m = Module()
+        i = Signal()
+        o1 = Signal()
+        o2 = Signal()
+        o3 = Signal()
+        m.d.sync += o1.eq(Past(i))
+        m.d.pix  += o2.eq(Past(i))
+        m.d.pix  += o3.eq(Past(i, domain="sync"))
+        f = m.lower(platform=None)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig o1) (sample (sig i) @ sync[1]))
+            (eq (sig o2) (sample (sig i) @ pix[1]))
+            (eq (sig o3) (sample (sig i) @ sync[1]))
+        )
+        """)
+
     def test_If(self):
         m = Module()
         with m.If(self.s1):

@@ -363,9 +363,9 @@ class Fragment:
                 SignalSet(self.iter_ports("io")))
 
     def prepare(self, ports=(), ensure_sync_exists=True):
-        from .xfrm import FragmentTransformer
+        from .xfrm import SampleLowerer
 
-        fragment = FragmentTransformer()(self)
+        fragment = SampleLowerer()(self)
         fragment._propagate_domains(ensure_sync_exists)
         fragment._resolve_hierarchy_conflicts()
         fragment = fragment._insert_domain_resets()

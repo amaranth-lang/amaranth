@@ -545,6 +545,52 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
 
+    def test_sample_helpers(self):
+        m = Module()
+        s = Signal(2)
+        def mk(x):
+            y = Signal.like(x)
+            m.d.comb += y.eq(x)
+            return y
+        p0, r0, f0, s0 = mk(Past(s, 0)), mk(Rose(s)),    mk(Fell(s)),    mk(Stable(s))
+        p1, r1, f1, s1 = mk(Past(s)),    mk(Rose(s, 1)), mk(Fell(s, 1)), mk(Stable(s, 1))
+        p2, r2, f2, s2 = mk(Past(s, 2)), mk(Rose(s, 2)), mk(Fell(s, 2)), mk(Stable(s, 2))
+        p3, r3, f3, s3 = mk(Past(s, 3)), mk(Rose(s, 3)), mk(Fell(s, 3)), mk(Stable(s, 3))
+        with self.assertSimulation(m) as sim:
+            def process_gen():
+                yield s.eq(0b10)
+                yield
+                yield
+                yield s.eq(0b01)
+                yield
+            def process_check():
+                yield
+                yield
+                yield
+
+                self.assertEqual((yield p0), 0b01)
+                self.assertEqual((yield p1), 0b10)
+                self.assertEqual((yield p2), 0b10)
+                self.assertEqual((yield p3), 0b00)
+
+                self.assertEqual((yield s0), 0b0)
+                self.assertEqual((yield s1), 0b1)
+                self.assertEqual((yield s2), 0b0)
+                self.assertEqual((yield s3), 0b1)
+
+                self.assertEqual((yield r0), 0b01)
+                self.assertEqual((yield r1), 0b00)
+                self.assertEqual((yield r2), 0b10)
+                self.assertEqual((yield r3), 0b00)
+
+                self.assertEqual((yield f0), 0b10)
+                self.assertEqual((yield f1), 0b00)
+                self.assertEqual((yield f2), 0b00)
+                self.assertEqual((yield f3), 0b00)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process_gen)
+            sim.add_sync_process(process_check)
+
     def test_wrong_not_run(self):
         with self.assertWarns(UserWarning,
                 msg="Simulation created, but not run"):

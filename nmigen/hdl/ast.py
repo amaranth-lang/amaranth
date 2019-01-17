@@ -10,7 +10,8 @@ from ..tools import *
 
 __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
-    "Array", "ArrayProxy", "Sample",
+    "Array", "ArrayProxy",
+    "Sample", "Past", "Stable", "Rose", "Fell",
     "Signal", "ClockSignal", "ResetSignal",
     "Statement", "Assign", "Assert", "Assume", "Switch", "Delay", "Tick",
     "Passive", "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
@@ -471,10 +472,10 @@ class Cat(Value):
         return sum(len(part) for part in self.parts), False
 
     def _lhs_signals(self):
-        return union(part._lhs_signals() for part in self.parts)
+        return union((part._lhs_signals() for part in self.parts), start=ValueSet())
 
     def _rhs_signals(self):
-        return union(part._rhs_signals() for part in self.parts)
+        return union((part._rhs_signals() for part in self.parts), start=ValueSet())
 
     def _as_const(self):
         value = 0
@@ -832,9 +833,15 @@ class ArrayProxy(Value):
 
 
 class Sample(Value):
-    def __init__(self, value, clocks, domain):
+    """Value from the past.
+
+    A ``Sample`` of an expression is equal to the value of the expression ``clocks`` clock edges
+    of the ``domain`` clock back. If that moment is before the beginning of time, it is equal
+    to the value of the expression calculated as if each signal had its reset value.
+    """
+    def __init__(self, expr, clocks, domain):
         super().__init__(src_loc_at=1)
-        self.value  = Value.wrap(value)
+        self.value  = Value.wrap(expr)
         self.clocks = int(clocks)
         self.domain = domain
         if not isinstance(self.value, (Const, Signal)):
@@ -853,6 +860,22 @@ class Sample(Value):
     def __repr__(self):
         return "(sample {!r} @ {}[{}])".format(
             self.value, "<default>" if self.domain is None else self.domain, self.clocks)
+
+
+def Past(expr, clocks=1, domain=None):
+    return Sample(expr, clocks, domain)
+
+
+def Stable(expr, clocks=0, domain=None):
+    return Sample(expr, clocks + 1, domain) == Sample(expr, clocks, domain)
+
+
+def Rose(expr, clocks=0, domain=None):
+    return ~Sample(expr, clocks + 1, domain) & Sample(expr, clocks, domain)
+
+
+def Fell(expr, clocks=0, domain=None):
+    return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
 
 
 class _StatementList(list):

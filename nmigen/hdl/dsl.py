@@ -353,6 +353,7 @@ class Module(_ModuleBuilderRoot):
                     "Only assignments, asserts, and assumes may be appended to d.{}"
                     .format(domain_name(domain)))
 
+            assign = SampleDomainInjector(domain)(assign)
             for signal in assign._lhs_signals():
                 if signal not in self._driving:
                     self._driving[signal] = domain
@@ -384,7 +385,8 @@ class Module(_ModuleBuilderRoot):
         fragment = Fragment()
         for submodule, name in self._submodules:
             fragment.add_subfragment(submodule.get_fragment(platform), name)
-        fragment.add_statements(self._statements)
+        statements = SampleDomainInjector("sync")(self._statements)
+        fragment.add_statements(statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
         fragment.add_domains(self._domains)
