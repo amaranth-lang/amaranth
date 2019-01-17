@@ -170,6 +170,52 @@ class DomainLowererTestCase(FHDLTestCase):
             DomainLowerer({"sync": sync})(f)
 
 
+class SampleLowererTestCase(FHDLTestCase):
+    def setUp(self):
+        self.i = Signal()
+        self.o1 = Signal()
+        self.o2 = Signal()
+        self.o3 = Signal()
+
+    def test_lower_signal(self):
+        f = Fragment()
+        f.add_statements(
+            self.o1.eq(Sample(self.i, 2, "sync")),
+            self.o2.eq(Sample(self.i, 1, "sync")),
+            self.o3.eq(Sample(self.i, 1, "pix")),
+        )
+
+        f = SampleLowerer()(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig o1) (sig $sample$s$i$sync$2))
+            (eq (sig o2) (sig $sample$s$i$sync$1))
+            (eq (sig o3) (sig $sample$s$i$pix$1))
+            (eq (sig $sample$s$i$sync$1) (sig i))
+            (eq (sig $sample$s$i$sync$2) (sig $sample$s$i$sync$1))
+            (eq (sig $sample$s$i$pix$1) (sig i))
+        )
+        """)
+        self.assertEqual(len(f.drivers["sync"]), 2)
+        self.assertEqual(len(f.drivers["pix"]), 1)
+
+    def test_lower_const(self):
+        f = Fragment()
+        f.add_statements(
+            self.o1.eq(Sample(1, 2, "sync")),
+        )
+
+        f = SampleLowerer()(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig o1) (sig $sample$c$1$sync$2))
+            (eq (sig $sample$c$1$sync$1) (const 1'd1))
+            (eq (sig $sample$c$1$sync$2) (sig $sample$c$1$sync$1))
+        )
+        """)
+        self.assertEqual(len(f.drivers["sync"]), 2)
+
+
 class SwitchCleanerTestCase(FHDLTestCase):
     def test_clean(self):
         a = Signal()

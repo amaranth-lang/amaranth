@@ -74,6 +74,15 @@ normalize = Const.normalize
 
 
 class _ValueCompiler(ValueVisitor):
+    def on_AnyConst(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_AnySeq(self, value):
+        raise NotImplementedError # :nocov:
+
+    def on_Sample(self, value):
+        raise NotImplementedError # :nocov:
+
     def on_Record(self, value):
         return self(Cat(value.fields.values()))
 
@@ -86,12 +95,6 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Const(self, value):
         return lambda state: value.value
-
-    def on_AnyConst(self, value):
-        raise NotImplementedError # :nocov:
-
-    def on_AnySeq(self, value):
-        raise NotImplementedError # :nocov:
 
     def on_Signal(self, value):
         if self.sensitivity is not None:
@@ -223,12 +226,6 @@ class _LHSValueCompiler(_ValueCompiler):
         self.rhs_compiler = rhs_compiler
 
     def on_Const(self, value):
-        raise TypeError # :nocov:
-
-    def on_AnyConst(self, value):
-        raise TypeError # :nocov:
-
-    def on_AnySeq(self, value):
         raise TypeError # :nocov:
 
     def on_Signal(self, value):
