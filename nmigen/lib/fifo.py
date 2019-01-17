@@ -1,6 +1,7 @@
 """First-in first-out queues."""
 
 from .. import *
+from ..formal import *
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered"]

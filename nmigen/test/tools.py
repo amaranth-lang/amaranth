@@ -1,9 +1,15 @@
+import os
 import re
+import shutil
+import subprocess
+import textwrap
+import traceback
 import unittest
 import warnings
 from contextlib import contextmanager
 
 from ..hdl.ast import *
+from ..back import rtlil
 
 
 __all__ = ["FHDLTestCase"]
@@ -43,3 +49,42 @@ class FHDLTestCase(unittest.TestCase):
         self.assertEqual(warns[0].category, category)
         if msg is not None:
             self.assertEqual(str(warns[0].message), msg)
+
+    def assertFormal(self, spec, mode="bmc", depth=1):
+        caller, *_ = traceback.extract_stack(limit=2)
+        spec_root, _ = os.path.splitext(caller.filename)
+        spec_dir = os.path.dirname(spec_root)
+        spec_name = "{}_{}".format(
+            os.path.basename(spec_root).replace("test_", "spec_"),
+            caller.name.replace("test_", "")
+        )
+
+        # The sby -f switch seems not fully functional when sby is reading from stdin.
+        if os.path.exists(os.path.join(spec_dir, spec_name)):
+            shutil.rmtree(os.path.join(spec_dir, spec_name))
+
+        config = textwrap.dedent("""\
+        [options]
+        mode {mode}
+        depth {depth}
+
+        [engines]
+        smtbmc
+
+        [script]
+        read_ilang top.il
+        prep
+
+        [file top.il]
+        {rtlil}
+        """).format(
+            mode=mode,
+            depth=depth,
+            rtlil=rtlil.convert(spec.get_fragment("formal"))
+        )
+        with subprocess.Popen(["sby", "-f", "-d", spec_name], cwd=spec_dir,
+                              universal_newlines=True,
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
+            stdout, stderr = proc.communicate(config)
+            if proc.returncode != 0:
+                self.fail("Formal verification failed:\n" + stdout)

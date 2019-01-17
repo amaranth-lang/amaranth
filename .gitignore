@@ -4,5 +4,6 @@
 *.v
 *.vcd
 *.gtkw
+**/test/spec_*/
 /.coverage
 /htmlcov
