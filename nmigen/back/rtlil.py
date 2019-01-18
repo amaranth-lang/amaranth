@@ -227,6 +227,7 @@ class _ValueCompilerState:
         self.wires  = ast.SignalDict()
         self.driven = ast.SignalDict()
         self.ports  = ast.SignalDict()
+        self.anys   = ast.ValueDict()
 
         self.expansions = ast.ValueDict()
 
@@ -377,6 +378,9 @@ class _RHSValueCompiler(_ValueCompiler):
             return "{}'{:0{}b}".format(value.nbits, value_twos_compl, value.nbits)
 
     def on_AnyConst(self, value):
+        if value in self.s.anys:
+            return self.s.anys[value]
+
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits)
         self.s.rtlil.cell("$anyconst", ports={
@@ -384,9 +388,13 @@ class _RHSValueCompiler(_ValueCompiler):
         }, params={
             "WIDTH": res_bits,
         }, src=src(value.src_loc))
+        self.s.anys[value] = res
         return res
 
     def on_AnySeq(self, value):
+        if value in self.s.anys:
+            return self.s.anys[value]
+
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits)
         self.s.rtlil.cell("$anyseq", ports={
@@ -394,6 +402,7 @@ class _RHSValueCompiler(_ValueCompiler):
         }, params={
             "WIDTH": res_bits,
         }, src=src(value.src_loc))
+        self.s.anys[value] = res
         return res
 
     def on_Signal(self, value):

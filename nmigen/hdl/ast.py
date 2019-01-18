@@ -255,7 +255,7 @@ class Const(Value):
 C = Const  # shorthand
 
 
-class AnyValue(Value):
+class AnyValue(Value, DUID):
     def __init__(self, shape):
         super().__init__(src_loc_at=0)
         if isinstance(shape, int):
@@ -1119,7 +1119,7 @@ class ValueKey:
     def __hash__(self):
         if isinstance(self.value, Const):
             return hash(self.value.value)
-        elif isinstance(self.value, Signal):
+        elif isinstance(self.value, (Signal, AnyValue)):
             return hash(self.value.duid)
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
             return hash(self.value.domain)
@@ -1149,7 +1149,7 @@ class ValueKey:
 
         if isinstance(self.value, Const):
             return self.value.value == other.value.value
-        elif isinstance(self.value, Signal):
+        elif isinstance(self.value, (Signal, AnyValue)):
             return self.value is other.value
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
             return self.value.domain == other.value.domain
@@ -1191,7 +1191,7 @@ class ValueKey:
 
         if isinstance(self.value, Const):
             return self.value < other.value
-        elif isinstance(self.value, Signal):
+        elif isinstance(self.value, (Signal, AnyValue)):
             return self.value.duid < other.value.duid
         elif isinstance(self.value, Slice):
             return (ValueKey(self.value.value) < ValueKey(other.value.value) and
