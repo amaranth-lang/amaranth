@@ -134,6 +134,16 @@ class Value(metaclass=ABCMeta):
         """
         return Operator("b", [self])
 
+    def implies(premise, conclusion):
+        """Implication.
+
+        Returns
+        -------
+        Value, out
+            ``0`` if ``premise`` is true and ``conclusion`` is not, ``1`` otherwise.
+        """
+        return ~premise | conclusion
+
     def part(self, offset, width):
         """Indexed part-select.
 
