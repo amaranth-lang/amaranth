@@ -63,11 +63,10 @@ class FIFOInterface:
     def read(self):
         """Read method for simulation."""
         assert (yield self.readable)
-        value = (yield self.dout)
         yield self.re.eq(1)
         yield
+        value = (yield self.dout)
         yield self.re.eq(0)
-        yield
         return value
 
     def write(self, data):
@@ -77,7 +76,6 @@ class FIFOInterface:
         yield self.we.eq(1)
         yield
         yield self.we.eq(0)
-        yield
 
 
 def _incr(signal, modulo):
