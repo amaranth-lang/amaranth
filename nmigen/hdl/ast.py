@@ -910,19 +910,21 @@ class Assign(Statement):
         return "(eq {!r} {!r})".format(self.lhs, self.rhs)
 
 
-class Assert(Statement):
+class Property(Statement):
     def __init__(self, test, _check=None, _en=None):
+        self.src_loc = tracer.get_src_loc()
+
         self.test = Value.wrap(test)
 
         self._check = _check
         if self._check is None:
-            self._check = Signal(reset_less=True, name="$assert$check")
-            self._check.src_loc = self.test.src_loc
+            self._check = Signal(reset_less=True, name="${}$check".format(self._kind))
+            self._check.src_loc = self.src_loc
 
         self._en = _en
         if _en is None:
-            self._en = Signal(reset_less=True, name="$assert$en")
-            self._en.src_loc = self.test.src_loc
+            self._en = Signal(reset_less=True, name="${}$en".format(self._kind))
+            self._en.src_loc = self.src_loc
 
     def _lhs_signals(self):
         return ValueSet((self._en, self._check))
@@ -931,31 +933,15 @@ class Assert(Statement):
         return self.test._rhs_signals()
 
     def __repr__(self):
-        return "(assert {!r})".format(self.test)
+        return "({} {!r})".format(self._kind, self.test)
 
 
-class Assume(Statement):
-    def __init__(self, test, _check=None, _en=None):
-        self.test = Value.wrap(test)
+class Assert(Property):
+    _kind = "assert"
 
-        self._check = _check
-        if self._check is None:
-            self._check = Signal(reset_less=True, name="$assume$check")
-            self._check.src_loc = self.test.src_loc
 
-        self._en = _en
-        if self._en is None:
-            self._en = Signal(reset_less=True, name="$assume$en")
-            self._en.src_loc = self.test.src_loc
-
-    def _lhs_signals(self):
-        return ValueSet((self._en, self._check))
-
-    def _rhs_signals(self):
-        return self.test._rhs_signals()
-
-    def __repr__(self):
-        return "(assume {!r})".format(self.test)
+class Assume(Property):
+    _kind = "assume"
 
 
 class Switch(Statement):

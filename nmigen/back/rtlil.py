@@ -617,7 +617,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self.state.rtlil.cell("$assert", ports={
             "\\A": check_wire,
             "\\EN": en_wire,
-        }, src=src(stmt.test.src_loc))
+        }, src=src(stmt.src_loc))
 
     def on_Assume(self, stmt):
         self(stmt._check.eq(stmt.test))
@@ -628,7 +628,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self.state.rtlil.cell("$assume", ports={
             "\\A": check_wire,
             "\\EN": en_wire,
-        }, src=src(stmt.test.src_loc))
+        }, src=src(stmt.src_loc))
 
     def on_Switch(self, stmt):
         self._check_rhs(stmt.test)
