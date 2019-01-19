@@ -14,6 +14,7 @@ API change legend:
   - *a=→b=*: parameter *a* renamed to *b*
   - *a=∼*: parameter *a* removed
   - *.a=→.b*: attribute *a* renamed to *b*
+  - *.a=∼*: attribute *a* removed
   - *?*: no decision made yet
 
 When describing renames or replacements, `mod` refers to a 3rd-party package `mod` (no nMigen implementation provided), `.mod.item` refers to `nmigen.mod.item`, and "(import `.item`)" means that, while `item` is provided under `nmigen.mod.item`, it is aliased to, and should be imported from a shorter path for readability.
@@ -49,18 +50,18 @@ Compatibility summary
       - (−) `FullMemoryWE` ?
       - (−) `MemoryToArray` ?
       - (−) `SplitMemory` ?
-    - (−) `specials` **obs**
-      - (−) `Special` ?
-      - (−) `Tristate` ?
-      - (+) `TSTriple` → `.lib.io.TSTriple`, `bits_sign=`→`shape=`
-      - (−) `Instance` ?
-      - (+) `Memory` id
-        - (+) `.get_port` **obs** → `.read_port()` + `.write_port()`
-      - (+) `_MemoryPort` **obs**
+    - (⊕) `specials` **obs**
+      - (⊙) `Special` **brk**
+      - (⊕) `Tristate` → `.lib.io.Tristate`, `target=`→`io=`
+      - (⊕) `TSTriple` → `.lib.io.TSTriple`, `bits_sign=`→`shape=`
+      - (⊕) `Instance` → `.hdl.ir.Instance`
+      - (⊕) `Memory` id
+        - (⊕) `.get_port` **obs** → `.read_port()` + `.write_port()`
+      - (⊕) `_MemoryPort` **obs**
         <br>Note: nMigen separates read and write ports.
-      - (+) `READ_FIRST`/`WRITE_FIRST` **obs**
+      - (⊕) `READ_FIRST`/`WRITE_FIRST` **obs**
         <br>Note: `READ_FIRST` corresponds to `mem.read_port(transparent=False)`, and `WRITE_FIRST` to `mem.read_port(transparent=True)`.
-      - (-) `NO_CHANGE` **brk**
+      - (⊙) `NO_CHANGE` **brk**
         <br>Note: in designs using `NO_CHANGE`, repalce it with an asynchronous read port and logic implementing required semantics explicitly.
     - (−) `structure` → `.hdl.ast`
       - (+) `DUID` id
@@ -79,7 +80,7 @@ Compatibility summary
       - (+) `ResetSignal` id, `cd=`→`domain=`
       - (+) `_Statement` → `Statement`
       - (+) `_Assign` → `Assign`, `l=`→`lhs=`, `r=`→`rhs=`
-      - (-) `_check_statement` **obs** → `Statement.wrap`
+      - (+) `_check_statement` **obs** → `Statement.wrap`
       - (+) `If` **obs** → `.hdl.dsl.Module.If`
       - (+) `Case` **obs** → `.hdl.dsl.Module.Switch`
       - (+) `_ArrayProxy` → `.hdl.ast.ArrayProxy`, `choices=`→`elems=`, `key=`→`index=`
@@ -122,7 +123,7 @@ Compatibility summary
   - (−) `genlib` → `.lib`
     - (−) `cdc` ?
       - (−) `MultiRegImpl` ?
-      - (+) `MultiReg` id
+      - (⊕) `MultiReg` id
       - (−) `PulseSynchronizer` ?
       - (−) `BusSynchronizer` ?
       - (−) `GrayCounter` ?
@@ -138,11 +139,11 @@ Compatibility summary
     - (−) `divider` ?
       - (−) `Divider` ?
     - (−) `fifo` ?
-      - (−) `SyncFIFO` ?
-      - (−) `SyncFIFOBuffered` ?
+      - (⊕) `_FIFOInterface` → `FIFOInterface`
+      - (⊕) `SyncFIFO` id, `.fifo=`∼
+      - (⊕) `SyncFIFOBuffered` id, `.fifo=`∼
       - (−) `AsyncFIFO` ?
       - (−) `AsyncFIFOBuffered` ?
-      - (−) `_FIFOInterface` ?
     - (+) `fsm` **obs**
       - (+) `AnonymousState` **obs**
       - (+) `NextState` **obs**
