@@ -173,16 +173,31 @@ class SyncFIFO(FIFOInterface):
             m.d.sync += self.level.eq(self.level - 1)
 
         if platform == "formal":
-            m.d.comb += [
-                Assert(produce < self.depth),
-                Assert(consume < self.depth),
-            ]
-            with m.If(produce == consume):
-                m.d.comb += Assert((self.level == 0) | (self.level == self.depth))
-            with m.If(produce > consume):
-                m.d.comb += Assert(self.level == (produce - consume))
-            with m.If(produce < consume):
-                m.d.comb += Assert(self.level == (self.depth + produce - consume))
+            # TODO: move this logic to SymbiYosys
+            initstate = Signal()
+            m.submodules += Instance("$initstate", o_Y=initstate)
+            with m.If(initstate):
+                m.d.comb += [
+                    Assume(produce < self.depth),
+                    Assume(consume < self.depth),
+                ]
+                with m.If(produce == consume):
+                    m.d.comb += Assume((self.level == 0) | (self.level == self.depth))
+                with m.If(produce > consume):
+                    m.d.comb += Assume(self.level == (produce - consume))
+                with m.If(produce < consume):
+                    m.d.comb += Assume(self.level == (self.depth + produce - consume))
+            with m.Else():
+                m.d.comb += [
+                    Assert(produce < self.depth),
+                    Assert(consume < self.depth),
+                ]
+                with m.If(produce == consume):
+                    m.d.comb += Assert((self.level == 0) | (self.level == self.depth))
+                with m.If(produce > consume):
+                    m.d.comb += Assert(self.level == (produce - consume))
+                with m.If(produce < consume):
+                    m.d.comb += Assert(self.level == (self.depth + produce - consume))
 
         return m.lower(platform)
 

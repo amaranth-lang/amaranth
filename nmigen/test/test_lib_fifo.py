@@ -1,6 +1,7 @@
 from .tools import *
 from ..hdl.ast import *
 from ..hdl.dsl import *
+from ..hdl.ir import *
 from ..back.pysim import *
 from ..lib.fifo import *
 
@@ -29,6 +30,67 @@ class FIFOSmokeTestCase(FHDLTestCase):
     def test_sync_buffered(self):
         fifo = SyncFIFO(width=8, depth=4, fwft=True)
         self.assertSyncFIFOWorks(SyncFIFOBuffered(width=8, depth=4))
+
+
+class FIFOContract:
+    def __init__(self, fifo, fwft, bound):
+        self.fifo  = fifo
+        self.fwft  = fwft
+        self.bound = bound
+
+    def get_fragment(self, platform):
+        m = Module()
+        m.submodules.dut = fifo = self.fifo
+
+        m.d.comb += ResetSignal().eq(0)
+        if hasattr(fifo, "replace"):
+            m.d.comb += fifo.replace.eq(0)
+
+        entry_1 = AnyConst(fifo.width)
+        entry_2 = AnyConst(fifo.width)
+
+        with m.FSM() as write_fsm:
+            with m.State("WRITE-1"):
+                with m.If(fifo.writable):
+                    m.d.comb += [
+                        fifo.din.eq(entry_1),
+                        fifo.we.eq(1)
+                    ]
+                    m.next = "WRITE-2"
+            with m.State("WRITE-2"):
+                with m.If(fifo.writable):
+                    m.d.comb += [
+                        fifo.din.eq(entry_2),
+                        fifo.we.eq(1)
+                    ]
+                    m.next = "DONE"
+
+        with m.FSM() as read_fsm:
+            read_1 = Signal(fifo.width)
+            read_2 = Signal(fifo.width)
+            with m.State("READ"):
+                m.d.comb += fifo.re.eq(1)
+                with m.If(fifo.readable if fifo.fwft else Past(fifo.readable)):
+                    m.d.sync += [
+                        read_1.eq(read_2),
+                        read_2.eq(fifo.dout),
+                    ]
+                with m.If((read_1 == entry_1) & (read_2 == entry_2)):
+                    m.next = "DONE"
+
+        cycle = Signal(max=self.bound + 1, reset=1)
+        m.d.sync += cycle.eq(cycle + 1)
+        with m.If(cycle == self.bound):
+            m.d.comb += Assert(read_fsm.ongoing("DONE"))
+
+        initstate = Signal()
+        m.submodules += Instance("$initstate", o_Y=initstate)
+        with m.If(initstate):
+            m.d.comb += Assume(write_fsm.ongoing("WRITE-1"))
+            m.d.comb += Assume(read_fsm.ongoing("READ"))
+            m.d.comb += Assume(cycle == 1)
+
+        return m.lower(platform)
 
 
 class SyncFIFOInvariants:
@@ -125,37 +187,29 @@ class SyncFIFOBufferedInvariants:
 
 
 class FIFOFormalCase(FHDLTestCase):
-    def test_sync_fwft_pot(self):
-        fifo = SyncFIFO(width=8, depth=4, fwft=True)
-        self.assertFormal(SyncFIFOInvariants(fifo),
+    def check_fifo(self, fifo, invariants_cls):
+        self.assertFormal(FIFOContract(fifo, fwft=fifo.fwft, bound=fifo.depth * 2 + 1),
+                          mode="hybrid", depth=fifo.depth * 2 + 1)
+        self.assertFormal(invariants_cls(fifo),
                           mode="prove", depth=fifo.depth * 2)
+
+    def test_sync_fwft_pot(self):
+        self.check_fifo(SyncFIFO(width=8, depth=4, fwft=True), SyncFIFOInvariants)
 
     def test_sync_fwft_npot(self):
-        fifo = SyncFIFO(width=8, depth=5, fwft=True)
-        self.assertFormal(SyncFIFOInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFO(width=8, depth=5, fwft=True), SyncFIFOInvariants)
 
     def test_sync_not_fwft_pot(self):
-        fifo = SyncFIFO(width=8, depth=4, fwft=False)
-        self.assertFormal(SyncFIFOInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFO(width=8, depth=4, fwft=False), SyncFIFOInvariants)
 
     def test_sync_not_fwft_npot(self):
-        fifo = SyncFIFO(width=8, depth=5, fwft=False)
-        self.assertFormal(SyncFIFOInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFO(width=8, depth=5, fwft=False), SyncFIFOInvariants)
 
     def test_sync_buffered_pot(self):
-        fifo = SyncFIFOBuffered(width=8, depth=4)
-        self.assertFormal(SyncFIFOBufferedInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFOBuffered(width=8, depth=4), SyncFIFOBufferedInvariants)
 
     def test_sync_buffered_potp1(self):
-        fifo = SyncFIFOBuffered(width=8, depth=5)
-        self.assertFormal(SyncFIFOBufferedInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFOBuffered(width=8, depth=5), SyncFIFOBufferedInvariants)
 
     def test_sync_buffered_potm1(self):
-        fifo = SyncFIFOBuffered(width=8, depth=3)
-        self.assertFormal(SyncFIFOBufferedInvariants(fifo),
-                          mode="prove", depth=fifo.depth * 2)
+        self.check_fifo(SyncFIFOBuffered(width=8, depth=3), SyncFIFOBufferedInvariants)
