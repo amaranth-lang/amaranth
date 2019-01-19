@@ -1,6 +1,7 @@
 from .tools import *
 from ..hdl.ast import *
 from ..hdl.dsl import *
+from ..hdl.mem import *
 from ..hdl.ir import *
 from ..back.pysim import *
 from ..lib.fifo import *
@@ -47,31 +48,36 @@ class FIFOModel(FIFOInterface):
     def get_fragment(self, platform):
         m = Module()
 
-        storage = Array(Signal(self.width, reset_less=True, name="storage<{}>".format(n))
-                        for n in range(self.depth))
+        storage = Memory(self.width, self.depth)
+        wrport  = m.submodules.wrport = storage.write_port()
+        rdport  = m.submodules.rdport = storage.read_port(synchronous=False)
+
+        produce = Signal(max=self.depth)
+        consume = Signal(max=self.depth)
 
         m.d.comb += self.readable.eq(self.level > 0)
-        with m.If(self.readable):
-            with m.If(self.re):
-                for (entry0, entry1) in zip(storage[:], storage[1:]):
-                    m.d.sync += entry0.eq(entry1)
-            if self.fwft:
-                m.d.comb += self.dout.eq(storage[0])
-            else:
-                with m.If(self.re):
-                    m.d.sync += self.dout.eq(storage[0])
+        m.d.comb += rdport.addr.eq((consume + 1) % self.depth)
+        if self.fwft:
+            m.d.comb += self.dout.eq(rdport.data)
+        with m.If(self.re & self.readable):
+            if not self.fwft:
+                m.d.sync += self.dout.eq(rdport.data)
+            m.d.sync += consume.eq(rdport.addr)
 
         m.d.comb += self.writable.eq(self.level < self.depth)
-        write_at = self.level - (self.readable & self.re)
+        m.d.comb += wrport.data.eq(self.din)
         with m.If(self.we):
             with m.If(~self.replace & self.writable):
-                m.d.sync += storage[write_at].eq(self.din)
+                m.d.comb += wrport.addr.eq((produce + 1) % self.depth)
+                m.d.comb += wrport.en.eq(1)
+                m.d.sync += produce.eq(wrport.addr)
             with m.If(self.replace):
                 # The result of trying to replace an element in an empty queue is irrelevant.
                 # The result of trying to replace the element that is currently being read
                 # is undefined.
-                m.d.comb += Assume(write_at > 0)
-                m.d.sync += storage[write_at - 1].eq(self.din)
+                m.d.comb += Assume(self.level > 0)
+                m.d.comb += wrport.addr.eq(produce)
+                m.d.comb += wrport.en.eq(1)
 
         m.d.sync += self.level.eq(self.level
             + (self.writable & self.we & ~self.replace)
@@ -184,7 +190,7 @@ class FIFOContractSpec:
 class FIFOFormalCase(FHDLTestCase):
     def check_fifo(self, fifo):
         self.assertFormal(FIFOModelEquivalenceSpec(fifo),
-                          mode="bmc", depth=fifo.depth * 2)
+                          mode="bmc", depth=fifo.depth + 1)
         self.assertFormal(FIFOContractSpec(fifo, bound=fifo.depth * 2 + 1),
                           mode="hybrid", depth=fifo.depth * 2 + 1)
 
