@@ -4,7 +4,7 @@ from ...tools import deprecated, extend
 from ...hdl.ast import *
 from ...hdl.mem import Memory as NativeMemory
 from ...hdl.ir import Fragment
-from ...lib.io import TSTriple as NativeTSTriple
+from ...lib.io import TSTriple as NativeTSTriple, Tristate as NativeTristate
 from .module import Module as CompatModule
 
 
@@ -18,11 +18,24 @@ class CompatTSTriple(NativeTSTriple):
                          reset_o=reset_o, reset_oe=reset_oe, reset_i=reset_i,
                          name=name)
 
-    def get_tristate(self, target):
-        raise NotImplementedError("TODO")
+
+class CompatTristate(NativeTristate):
+    def __init__(self, target, o, oe, i=None):
+        triple = TSTriple()
+        triple.o = o
+        triple.oe = oe
+        if i is not None:
+            triple.i = i
+        super().__init__(triple, target)
+
+    @property
+    @deprecated("instead of `Tristate.target`, use `Tristate.io`")
+    def target(self):
+        return self.io
 
 
 TSTriple = CompatTSTriple
+Tristate = CompatTristate
 
 
 (READ_FIRST, WRITE_FIRST, NO_CHANGE) = range(3)
