@@ -78,17 +78,13 @@ class FIFOContract:
                 with m.If((read_1 == entry_1) & (read_2 == entry_2)):
                     m.next = "DONE"
 
-        cycle = Signal(max=self.bound + 1, reset=1)
-        m.d.sync += cycle.eq(cycle + 1)
-        with m.If(cycle == self.bound):
-            m.d.comb += Assert(read_fsm.ongoing("DONE"))
-
         initstate = Signal()
         m.submodules += Instance("$initstate", o_Y=initstate)
         with m.If(initstate):
             m.d.comb += Assume(write_fsm.ongoing("WRITE-1"))
             m.d.comb += Assume(read_fsm.ongoing("READ"))
-            m.d.comb += Assume(cycle == 1)
+        with m.If(Past(initstate, self.bound - 1)):
+            m.d.comb += Assert(read_fsm.ongoing("DONE"))
 
         return m.lower(platform)
 

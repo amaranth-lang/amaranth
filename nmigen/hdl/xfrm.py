@@ -385,6 +385,7 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             sampled_name, sampled_reset = self._name_reset(value.value)
             name = "$sample${}${}${}".format(sampled_name, value.domain, value.clocks)
             sample = Signal.like(value.value, name=name, reset_less=True, reset=sampled_reset)
+            sample.attrs["nmigen.sample_reg"] = True
 
             prev_sample = self.on_Sample(Sample(value.value, value.clocks - 1, value.domain))
             if value.domain not in self.sample_stmts:

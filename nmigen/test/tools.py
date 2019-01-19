@@ -65,7 +65,7 @@ class FHDLTestCase(unittest.TestCase):
 
         if mode == "hybrid":
             # A mix of BMC and k-induction, as per personal communication with Clifford Wolf.
-            script = "setattr -unset init w:*"
+            script = "setattr -unset init w:* a:nmigen.sample_reg %d"
             mode   = "bmc"
         else:
             script = ""
