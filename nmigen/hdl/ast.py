@@ -341,6 +341,8 @@ class Operator(Value):
                     return a_bits + b_bits - 1, True
                 # one operand signed, the other unsigned (add sign bit)
                 return a_bits + b_bits + 1 - 1, True
+            if self.op == "%":
+                return a_bits, a_sign
             if self.op in ("<", "<=", "==", "!=", ">", ">=", "b"):
                 return 1, False
             if self.op in ("&", "^", "|"):
