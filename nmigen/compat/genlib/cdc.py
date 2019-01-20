@@ -2,6 +2,7 @@ from ...tools import deprecated
 from ...lib.cdc import MultiReg
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule
+from ..fhdl.structure import If
 
 
 __all__ = ["MultiReg", "GrayCounter", "GrayDecoder"]
