@@ -24,6 +24,8 @@ class Encoder:
         Invalid: either none or multiple input bits are asserted.
     """
     def __init__(self, width):
+        self.width = width
+
         self.i = Signal(width)
         self.o = Signal(max=max(2, width))
         self.n = Signal()
@@ -31,7 +33,7 @@ class Encoder:
     def get_fragment(self, platform):
         m = Module()
         with m.Switch(self.i):
-            for j in range(len(self.i)):
+            for j in range(self.width):
                 with m.Case(1 << j):
                     m.d.comb += self.o.eq(j)
             with m.Case():
@@ -61,15 +63,17 @@ class PriorityEncoder:
         Invalid: no input bits are asserted.
     """
     def __init__(self, width):
+        self.width = width
+
         self.i = Signal(width)
         self.o = Signal(max=max(2, width))
         self.n = Signal()
 
     def get_fragment(self, platform):
         m = Module()
-        for j, b in enumerate(reversed(self.i)):
-            with m.If(b):
-                m.d.comb += self.o.eq(len(self.i) - j - 1)
+        for j in reversed(range(self.width)):
+            with m.If(self.i[j]):
+                m.d.comb += self.o.eq(j)
         m.d.comb += self.n.eq(self.i == 0)
         return m.lower(platform)
 
@@ -95,6 +99,8 @@ class Decoder:
         Invalid, no output bits are to be asserted.
     """
     def __init__(self, width):
+        self.width = width
+
         self.i = Signal(max=max(2, width))
         self.n = Signal()
         self.o = Signal(width)
