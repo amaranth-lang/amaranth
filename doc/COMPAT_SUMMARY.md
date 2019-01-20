@@ -126,8 +126,9 @@ Compatibility summary
       - (⊕) `MultiReg` id
       - (−) `PulseSynchronizer` ?
       - (−) `BusSynchronizer` ?
-      - (−) `GrayCounter` ?
-      - (−) `GrayDecoder` ?
+      - (⊕) `GrayCounter` **obs** → `.lib.coding.GrayEncoder`
+      - (⊕) `GrayDecoder` **obs** → `.lib.coding.GrayDecoder`
+        <br>Note: `.lib.coding.GrayEncoder` and `.lib.coding.GrayDecoder` are purely combinatorial.
       - (−) `ElasticBuffer` ?
       - (−) `lcm` ?
       - (−) `Gearbox` ?
