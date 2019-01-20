@@ -3,6 +3,13 @@
 from .. import *
 
 
+__all__ = [
+    "Encoder", "Decoder",
+    "PriorityEncoder", "PriorityDecoder",
+    "GrayEncoder", "GrayDecoder",
+]
+
+
 class Encoder:
     """Encode one-hot to binary.
 
@@ -121,3 +128,59 @@ class PriorityDecoder(Decoder):
 
     Identical to :class:`Decoder`.
     """
+
+
+class GrayEncoder:
+    """Encode binary to Gray code.
+
+    Parameters
+    ----------
+    width : int
+        Bit width.
+
+    Attributes
+    ----------
+    i : Signal(width), in
+        Input natural binary.
+    o : Signal(width), out
+        Encoded Gray code.
+    """
+    def __init__(self, width):
+        self.width = width
+
+        self.i = Signal(width)
+        self.o = Signal(width)
+
+    def get_fragment(self, platform):
+        m = Module()
+        m.d.comb += self.o.eq(self.i ^ self.i[1:])
+        return m.lower(platform)
+
+
+class GrayDecoder:
+    """Decode Gray code to binary.
+
+    Parameters
+    ----------
+    width : int
+        Bit width.
+
+    Attributes
+    ----------
+    i : Signal(width), in
+        Input Gray code.
+    o : Signal(width), out
+        Decoded natural binary.
+    """
+    def __init__(self, width):
+        self.width = width
+
+        self.i = Signal(width)
+        self.o = Signal(width)
+
+    def get_fragment(self, platform):
+        m = Module()
+        m.d.comb += self.o[-1].eq(self.i[-1])
+        for i in reversed(range(self.width - 1)):
+            m.d.comb += self.o[i].eq(self.o[i + 1] ^ self.i[i])
+        return m.lower(platform)
