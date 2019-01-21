@@ -2,9 +2,11 @@
 
 from .. import *
 from ..formal import *
+from ..tools import log2_int
+from .coding import GrayEncoder
 
 
-__all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered"]
+__all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
 
 
 class FIFOInterface:
@@ -21,6 +23,7 @@ class FIFOInterface:
 
     Attributes
     ----------
+    {attributes}
     din : in, width
         Input data.
     writable : out
@@ -45,12 +48,19 @@ class FIFOInterface:
     """,
     parameters="",
     dout_valid="The conditions in which ``dout`` is valid depends on the type of the queue.",
+    attributes="""
+    fwft : bool
+        First-word fallthrough. If set, when ``readable`` rises, the first entry is already
+        available, i.e. ``dout`` is valid. Otherwise, after ``readable`` rises, it is necessary
+        to strobe ``re`` for ``dout`` to become valid.
+    """.strip(),
     w_attributes="",
     r_attributes="")
 
-    def __init__(self, width, depth):
+    def __init__(self, width, depth, fwft):
         self.width = width
         self.depth = depth
+        self.fwft  = fwft
 
         self.din      = Signal(width, reset_less=True)
         self.writable = Signal() # not full
@@ -110,6 +120,7 @@ class SyncFIFO(FIFOInterface):
     For FWFT queues, valid if ``readable`` is asserted. For non-FWFT queues, valid on the next
     cycle after ``readable`` and ``re`` have been asserted.
     """.strip(),
+    attributes="",
     r_attributes="""
     level : out
         Number of unread entries.
@@ -122,9 +133,7 @@ class SyncFIFO(FIFOInterface):
     """.strip())
 
     def __init__(self, width, depth, fwft=True):
-        super().__init__(width, depth)
-
-        self.fwft    = fwft
+        super().__init__(width, depth, fwft)
 
         self.level   = Signal(max=depth + 1)
         self.replace = Signal()
@@ -201,7 +210,8 @@ class SyncFIFO(FIFOInterface):
 
 
 class SyncFIFOBuffered(FIFOInterface):
-    """
+    __doc__ = FIFOInterface._doc_template.format(
+    description="""
     Buffered synchronous first in, first out queue.
 
     This queue's interface is identical to :class:`SyncFIFO` configured as ``fwft=True``, but it
@@ -209,11 +219,21 @@ class SyncFIFOBuffered(FIFOInterface):
 
     In exchange, the latency between an entry being written to an empty queue and that entry
     becoming available on the output is increased to one cycle.
-    """
-    def __init__(self, width, depth):
-        super().__init__(width, depth)
+    """.strip(),
+    parameters="""
+    fwft : bool
+        Always set.
+    """.strip(),
+    attributes="",
+    dout_valid="Valid if ``readable`` is asserted.",
+    r_attributes="""
+    level : out
+        Number of unread entries.
+    """.strip(),
+    w_attributes="")
 
-        self.fwft  = True
+    def __init__(self, width, depth):
+        super().__init__(width, depth, fwft=True)
 
         self.level = Signal(max=depth + 1)
 
@@ -241,5 +261,134 @@ class SyncFIFOBuffered(FIFOInterface):
             m.d.sync += self.readable.eq(0)
 
         m.d.comb += self.level.eq(fifo.level + self.readable)
+
+        return m.lower(platform)
+
+
+class AsyncFIFO(FIFOInterface):
+    __doc__ = FIFOInterface._doc_template.format(
+    description="""
+    Asynchronous first in, first out queue.
+
+    Read and write interfaces are accessed from different clock domains, called ``read``
+    and ``write``; use :class:`ClockDomainsRenamer` to rename them as appropriate for the design.
+    """.strip(),
+    parameters="""
+    fwft : bool
+        Always set.
+    """.strip(),
+    attributes="",
+    dout_valid="Valid if ``readable`` is asserted.",
+    r_attributes="",
+    w_attributes="")
+
+    def __init__(self, width, depth):
+        super().__init__(width, depth, fwft=True)
+
+        try:
+            self._ctr_bits = log2_int(depth, need_pow2=True) + 1
+        except ValueError as e:
+            raise ValueError("AsyncFIFO only supports power-of-2 depths") from e
+
+    def get_fragment(self, platform):
+        # The design of this queue is the "style #2" from Clifford E. Cummings' paper "Simulation
+        # and Synthesis Techniques for Asynchronous FIFO Design":
+        # http://www.sunburst-design.com/papers/CummingsSNUG2002SJ_FIFO1.pdf
+
+        m = Module()
+
+        produce_w_bin = Signal(self._ctr_bits)
+        produce_w_gry = Signal(self._ctr_bits)
+        produce_r_gry = Signal(self._ctr_bits)
+        produce_enc = m.submodules.produce_enc = \
+            GrayEncoder(self._ctr_bits)
+        produce_cdc = m.submodules.produce_cdc = \
+            MultiReg(produce_w_gry, produce_r_gry, odomain="read")
+        m.d.comb += [
+            produce_enc.i.eq(produce_w_bin),
+            produce_w_gry.eq(produce_enc.o),
+        ]
+
+        consume_r_bin = Signal(self._ctr_bits)
+        consume_r_gry = Signal(self._ctr_bits)
+        consume_w_gry = Signal(self._ctr_bits)
+        consume_enc = m.submodules.consume_enc = \
+            GrayEncoder(self._ctr_bits)
+        consume_cdc = m.submodules.consume_cdc = \
+            MultiReg(consume_r_gry, consume_w_gry, odomain="write")
+        m.d.comb += [
+            consume_enc.i.eq(consume_r_bin),
+            consume_r_gry.eq(consume_enc.o),
+        ]
+
+        m.d.comb += [
+            self.writable.eq(
+                (produce_w_gry[-1]  == consume_w_gry[-1]) |
+                (produce_w_gry[-2]  == consume_w_gry[-2]) |
+                (produce_w_gry[:-2] != consume_w_gry[:-2])),
+            self.readable.eq(consume_r_gry != produce_r_gry)
+        ]
+
+        do_write = self.writable & self.we
+        do_read  = self.readable & self.re
+        m.d.write += produce_w_bin.eq(produce_w_bin + do_write)
+        m.d.read  += consume_r_bin.eq(consume_r_bin + do_read)
+
+        storage = Memory(self.width, self.depth)
+        wrport  = m.submodules.wrport = storage.write_port(domain="write")
+        rdport  = m.submodules.rdport = storage.read_port (domain="read")
+        m.d.comb += [
+            wrport.addr.eq(produce_w_bin[:-1]),
+            wrport.data.eq(self.din),
+            wrport.en.eq(do_write)
+        ]
+        m.d.comb += [
+            rdport.addr.eq((consume_r_bin + do_read)[:-1]),
+            self.dout.eq(rdport.data),
+        ]
+
+        return m.lower(platform)
+
+
+class AsyncFIFOBuffered(FIFOInterface):
+    __doc__ = FIFOInterface._doc_template.format(
+    description="""
+    Buffered asynchronous first in, first out queue.
+
+    This queue's interface is identical to :class:`AsyncFIFO`, but it has an additional register
+    on the output, improving timing in case of block RAM that has large clock-to-output delay.
+
+    In exchange, the latency between an entry being written to an empty queue and that entry
+    becoming available on the output is increased to one cycle.
+    """.strip(),
+    parameters="""
+    fwft : bool
+        Always set.
+    """.strip(),
+    attributes="",
+    dout_valid="Valid if ``readable`` is asserted.",
+    r_attributes="",
+    w_attributes="")
+
+    def __init__(self, width, depth):
+        super().__init__(width, depth, fwft=True)
+
+    def get_fragment(self, platform):
+        m = Module()
+        m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1)
+
+        m.d.comb += [
+            fifo.din.eq(self.din),
+            self.writable.eq(fifo.writable),
+            fifo.we.eq(self.we),
+        ]
+
+        with m.If(self.re | ~self.readable):
+            m.d.read += [
+                self.dout.eq(fifo.dout),
+                self.readable.eq(fifo.readable)
+            ]
+            m.d.comb += \
+                fifo.re.eq(1)
 
         return m.lower(platform)
