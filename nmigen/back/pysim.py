@@ -638,13 +638,6 @@ class Simulator:
             while curr_domains:
                 domain = curr_domains.pop()
 
-                # Take the computed value (at the start of this delta cycle) of every sync signal
-                # in this domain and update the value for this delta cycle. This can trigger more
-                # synchronous logic, so record that.
-                for signal_slot in self._state.iter_next_dirty():
-                    if self._domain_signals[domain][signal_slot]:
-                        self._commit_signal(signal_slot, domains)
-
                 # Wake up any simulator processes that wait for a domain tick.
                 for process, wait_domain in list(self._wait_tick.items()):
                     if domain == wait_domain:
@@ -657,6 +650,13 @@ class Simulator:
                         # a value from the previous clock cycle, simulator processes observe signal
                         # values from the previous clock cycle on a tick, too.
                         self._run_process(process)
+
+                # Take the computed value (at the start of this delta cycle) of every sync signal
+                # in this domain and update the value for this delta cycle. This can trigger more
+                # synchronous logic, so record that.
+                for signal_slot in self._state.iter_next_dirty():
+                    if self._domain_signals[domain][signal_slot]:
+                        self._commit_signal(signal_slot, domains)
 
             # Unless handling synchronous logic above has triggered more synchronous logic (which
             # can happen e.g. if a domain is clocked off a clock divisor in fabric), we're done.

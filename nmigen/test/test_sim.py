@@ -282,6 +282,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual((yield self.count), 4)
                 self.assertEqual((yield self.sync.clk), 0)
                 yield
+                self.assertEqual((yield self.count), 4)
+                self.assertEqual((yield self.sync.clk), 1)
+                yield
                 self.assertEqual((yield self.count), 5)
                 self.assertEqual((yield self.sync.clk), 1)
                 for _ in range(3):
@@ -317,11 +320,14 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 yield self.b.eq(1)
                 yield
                 self.assertEqual((yield self.x), 4)
+                yield
                 self.assertEqual((yield self.o), 6)
                 yield self.s.eq(1)
                 yield
+                yield
                 self.assertEqual((yield self.o), 4)
                 yield self.s.eq(2)
+                yield
                 yield
                 self.assertEqual((yield self.o), 0)
             sim.add_sync_process(process)
@@ -487,9 +493,11 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 yield self.wrport.en.eq(1)
                 yield self.rdport.en.eq(1)
                 yield
+                self.assertEqual((yield self.rdport.data), 0x00)
+                yield
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield Delay(1e-6) # let comb propagate
-                self.assertEqual((yield self.rdport.data), 0xaa)
+                self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
 
