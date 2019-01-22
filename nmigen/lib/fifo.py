@@ -72,9 +72,9 @@ class FIFOInterface:
 
     def read(self):
         """Read method for simulation."""
+        assert (yield self.readable)
         yield self.re.eq(1)
         yield
-        assert (yield self.readable)
         value = (yield self.dout)
         yield self.re.eq(0)
         return value

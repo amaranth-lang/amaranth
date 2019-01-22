@@ -280,9 +280,6 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6, domain="sync")
             def process():
                 self.assertEqual((yield self.count), 4)
-                self.assertEqual((yield self.sync.clk), 0)
-                yield
-                self.assertEqual((yield self.count), 4)
                 self.assertEqual((yield self.sync.clk), 1)
                 yield
                 self.assertEqual((yield self.count), 5)
