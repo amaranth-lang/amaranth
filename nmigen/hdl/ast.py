@@ -333,14 +333,7 @@ class Operator(Value):
                 bits, sign = self._bitwise_binary_shape(*op_shapes)
                 return bits + 1, sign
             if self.op == "*":
-                if not a_sign and not b_sign:
-                    # both operands unsigned
-                    return a_bits + b_bits, False
-                if a_sign and b_sign:
-                    # both operands signed
-                    return a_bits + b_bits - 1, True
-                # one operand signed, the other unsigned (add sign bit)
-                return a_bits + b_bits + 1 - 1, True
+                return a_bits + b_bits, a_sign or b_sign
             if self.op == "%":
                 return a_bits, a_sign
             if self.op in ("<", "<=", "==", "!=", ">", ">=", "b"):

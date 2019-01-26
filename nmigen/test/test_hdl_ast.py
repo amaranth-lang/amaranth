@@ -137,7 +137,7 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(repr(v1), "(* (const 4'd0) (const 6'd0))")
         self.assertEqual(v1.shape(), (10, False))
         v2 = Const(0, (4, True)) * Const(0, (6, True))
-        self.assertEqual(v2.shape(), (9, True))
+        self.assertEqual(v2.shape(), (10, True))
         v3 = Const(0, (4, True)) * Const(0, (4, False))
         self.assertEqual(v3.shape(), (8, True))
         v5 = 10 * Const(0, 4)
