@@ -8,12 +8,12 @@ class GPIO:
         self.pins = pins
         self.bus  = bus
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += self.bus.r_data.eq(self.pins[self.bus.addr])
         with m.If(self.bus.we):
             m.d.sync += self.pins[self.bus.addr].eq(self.bus.w_data)
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

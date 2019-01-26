@@ -14,6 +14,14 @@ class DriverConflict(UserWarning):
 
 
 class Fragment:
+    @staticmethod
+    def get(obj, platform):
+        if isinstance(obj, Fragment):
+            return obj
+        if not hasattr(obj, "elaborate"): # :deprecated:
+            return Fragment.get(obj.get_fragment(platform), platform)
+        return Fragment.get(obj.elaborate(platform), platform)
+
     def __init__(self):
         self.ports = SignalDict()
         self.drivers = OrderedDict()
@@ -105,7 +113,7 @@ class Fragment:
             item, = path
             return self.generated[item]
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         return self
 
     def _merge_subfragment(self, subfragment):

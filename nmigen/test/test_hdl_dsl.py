@@ -122,7 +122,7 @@ class DSLTestCase(FHDLTestCase):
         m.d.sync += o1.eq(Past(i))
         m.d.pix  += o2.eq(Past(i))
         m.d.pix  += o3.eq(Past(i, domain="sync"))
-        f = m.lower(platform=None)
+        f = m.elaborate(platform=None)
         self.assertRepr(f.statements, """
         (
             (eq (sig o1) (sample (sig i) @ sync[1]))
@@ -386,7 +386,7 @@ class DSLTestCase(FHDLTestCase):
             "(sig b)": "sync",
         })
 
-        frag = m.lower(platform=None)
+        frag = m.elaborate(platform=None)
         fsm  = frag.find_generated("fsm")
         self.assertIsInstance(fsm.state, Signal)
         self.assertEqual(fsm.encoding, OrderedDict({
@@ -508,10 +508,10 @@ class DSLTestCase(FHDLTestCase):
     def test_submodule_wrong(self):
         m = Module()
         with self.assertRaises(TypeError,
-                msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
+                msg="Trying to add '1', which does not implement .elaborate(), as a submodule"):
             m.submodules.foo = 1
         with self.assertRaises(TypeError,
-                msg="Trying to add '1', which does not implement .get_fragment(), as a submodule"):
+                msg="Trying to add '1', which does not implement .elaborate(), as a submodule"):
             m.submodules += 1
 
     def test_domain_named_implicit(self):
@@ -533,7 +533,7 @@ class DSLTestCase(FHDLTestCase):
         m2.d.sync += self.c3.eq(self.s3)
         m1.submodules.foo = m2
 
-        f1 = m1.lower(platform=None)
+        f1 = m1.elaborate(platform=None)
         self.assertRepr(f1.statements, """
         (
             (eq (sig c1) (sig s1))

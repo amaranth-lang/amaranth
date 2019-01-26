@@ -10,7 +10,7 @@ class ParMux:
         self.c = Signal(width)
         self.o = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         with m.Switch(self.s):
             with m.Case("--1"):
@@ -21,7 +21,7 @@ class ParMux:
                 m.d.comb += self.o.eq(self.c)
             with m.Case():
                 m.d.comb += self.o.eq(0)
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

@@ -7,11 +7,11 @@ class Counter:
         self.v = Signal(width, reset=2**width-1)
         self.o = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.sync += self.v.eq(self.v + 1)
         m.d.comb += self.o.eq(self.v[-1])
-        return m.lower(platform)
+        return m
 
 
 ctr = Counter(width=16)

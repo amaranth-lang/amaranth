@@ -37,7 +37,7 @@ class Encoder:
         self.o = Signal(max=max(2, width))
         self.n = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         with m.Switch(self.i):
             for j in range(self.width):
@@ -45,7 +45,7 @@ class Encoder:
                     m.d.comb += self.o.eq(j)
             with m.Case():
                 m.d.comb += self.n.eq(1)
-        return m.lower(platform)
+        return m
 
 
 class PriorityEncoder:
@@ -76,13 +76,13 @@ class PriorityEncoder:
         self.o = Signal(max=max(2, width))
         self.n = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         for j in reversed(range(self.width)):
             with m.If(self.i[j]):
                 m.d.comb += self.o.eq(j)
         m.d.comb += self.n.eq(self.i == 0)
-        return m.lower(platform)
+        return m
 
 
 class Decoder:
@@ -112,7 +112,7 @@ class Decoder:
         self.n = Signal()
         self.o = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         with m.Switch(self.i):
             for j in range(len(self.o)):
@@ -120,7 +120,7 @@ class Decoder:
                     m.d.comb += self.o.eq(1 << j)
         with m.If(self.n):
             m.d.comb += self.o.eq(0)
-        return m.lower(platform)
+        return m
 
 
 class PriorityDecoder(Decoder):
@@ -151,10 +151,10 @@ class GrayEncoder:
         self.i = Signal(width)
         self.o = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += self.o.eq(self.i ^ self.i[1:])
-        return m.lower(platform)
+        return m
 
 
 class GrayDecoder:
@@ -178,9 +178,9 @@ class GrayDecoder:
         self.i = Signal(width)
         self.o = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += self.o[-1].eq(self.i[-1])
         for i in reversed(range(self.width - 1)):
             m.d.comb += self.o[i].eq(self.o[i + 1] ^ self.i[i])
-        return m.lower(platform)
+        return m

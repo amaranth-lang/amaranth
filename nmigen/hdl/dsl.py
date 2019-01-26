@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 import warnings
 
-from ..tools import flatten, bits_for
+from ..tools import flatten, bits_for, deprecated
 from .ast import *
 from .ir import *
 from .xfrm import *
@@ -367,9 +367,15 @@ class Module(_ModuleBuilderRoot):
             self._statements.append(assign)
 
     def _add_submodule(self, submodule, name=None):
-        if not hasattr(submodule, "get_fragment"):
-            raise TypeError("Trying to add '{!r}', which does not implement .get_fragment(), as "
-                            "a submodule".format(submodule))
+        if not hasattr(submodule, "elaborate"):
+            if hasattr(submodule, "get_fragment"): # :deprecated:
+                warnings.warn("Adding '{!r}', which implements .get_fragment() but not "
+                              ".elaborate(), as a submodule. .get_fragment() is deprecated, "
+                              "and .elaborate() should be provided instead.".format(submodule),
+                              DeprecationWarning, stacklevel=2)
+            else:
+                raise TypeError("Trying to add '{!r}', which does not implement .elaborate(), as "
+                                "a submodule".format(submodule))
         self._submodules.append((submodule, name))
 
     def _add_domain(self, cd):
@@ -379,12 +385,20 @@ class Module(_ModuleBuilderRoot):
         while self._ctrl_stack:
             self._pop_ctrl()
 
-    def lower(self, platform):
+    @deprecated("`m.get_fragment(...)` is deprecated; use `m` instead")
+    def get_fragment(self, platform): # :deprecated:
+        return self.elaborate(platform)
+
+    @deprecated("`m.lower(...)` is deprecated; use `m` instead")
+    def lower(self, platform): # :deprecated:
+        return self.elaborate(platform)
+
+    def elaborate(self, platform):
         self._flush()
 
         fragment = Fragment()
         for submodule, name in self._submodules:
-            fragment.add_subfragment(submodule.get_fragment(platform), name)
+            fragment.add_subfragment(Fragment.get(submodule, platform), name)
         statements = SampleDomainInjector("sync")(self._statements)
         fragment.add_statements(statements)
         for signal, domain in self._driving.items():
@@ -392,5 +406,3 @@ class Module(_ModuleBuilderRoot):
         fragment.add_domains(self._domains)
         fragment.generated.update(self._generated)
         return fragment
-
-    get_fragment = lower

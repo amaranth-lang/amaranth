@@ -9,7 +9,7 @@ class System:
         self.dat_w = Signal(8)
         self.we    = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.cpu = Instance("CPU",
             p_RESET_ADDR=0xfff0,
@@ -18,7 +18,7 @@ class System:
             o_d_dat_w=self.dat_w,
             i_d_we   =self.we,
         )
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

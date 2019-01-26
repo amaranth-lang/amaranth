@@ -91,7 +91,7 @@ class ReadPort:
         else:
             self.en = Const(1)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         f = Instance("$memrd",
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,
@@ -154,7 +154,7 @@ class WritePort:
         self.en   = Signal(memory.width // granularity,
                            name="{}_w_en".format(memory.name))
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         f = Instance("$memwr",
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,

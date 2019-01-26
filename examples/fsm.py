@@ -12,7 +12,7 @@ class UARTReceiver:
         self.ack  = Signal()
         self.err  = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
 
         ctr = Signal(max=self.divisor)
@@ -56,7 +56,7 @@ class UARTReceiver:
             with m.State("ERROR"):
                 pass
 
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

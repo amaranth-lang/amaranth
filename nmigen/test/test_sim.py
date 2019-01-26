@@ -238,7 +238,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
 class SimulatorIntegrationTestCase(FHDLTestCase):
     @contextmanager
     def assertSimulation(self, module, deadline=None):
-        with Simulator(module.lower(platform=None)) as sim:
+        with Simulator(module.elaborate(platform=None)) as sim:
             yield sim
             if deadline is None:
                 sim.run()

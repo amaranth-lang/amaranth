@@ -138,7 +138,7 @@ class SyncFIFO(FIFOInterface):
         self.level   = Signal(max=depth + 1)
         self.replace = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += [
             self.writable.eq(self.level != self.depth),
@@ -206,7 +206,7 @@ class SyncFIFO(FIFOInterface):
                 with m.If(produce < consume):
                     m.d.comb += Assert(self.level == (self.depth + produce - consume))
 
-        return m.lower(platform)
+        return m
 
 
 class SyncFIFOBuffered(FIFOInterface):
@@ -237,7 +237,7 @@ class SyncFIFOBuffered(FIFOInterface):
 
         self.level = Signal(max=depth + 1)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
 
         # Effectively, this queue treats the output register of the non-FWFT inner queue as
@@ -262,7 +262,7 @@ class SyncFIFOBuffered(FIFOInterface):
 
         m.d.comb += self.level.eq(fifo.level + self.readable)
 
-        return m.lower(platform)
+        return m
 
 
 class AsyncFIFO(FIFOInterface):
@@ -290,7 +290,7 @@ class AsyncFIFO(FIFOInterface):
         except ValueError as e:
             raise ValueError("AsyncFIFO only supports power-of-2 depths") from e
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         # The design of this queue is the "style #2" from Clifford E. Cummings' paper "Simulation
         # and Synthesis Techniques for Asynchronous FIFO Design":
         # http://www.sunburst-design.com/papers/CummingsSNUG2002SJ_FIFO1.pdf
@@ -347,7 +347,7 @@ class AsyncFIFO(FIFOInterface):
             self.dout.eq(rdport.data),
         ]
 
-        return m.lower(platform)
+        return m
 
 
 class AsyncFIFOBuffered(FIFOInterface):
@@ -373,7 +373,7 @@ class AsyncFIFOBuffered(FIFOInterface):
     def __init__(self, width, depth):
         super().__init__(width, depth, fwft=True)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1)
 
@@ -391,4 +391,4 @@ class AsyncFIFOBuffered(FIFOInterface):
             m.d.comb += \
                 fifo.re.eq(1)
 
-        return m.lower(platform)
+        return m

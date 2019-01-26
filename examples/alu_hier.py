@@ -8,10 +8,10 @@ class Adder:
         self.b   = Signal(width)
         self.o   = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += self.o.eq(self.a + self.b)
-        return m.lower(platform)
+        return m
 
 
 class Subtractor:
@@ -20,10 +20,10 @@ class Subtractor:
         self.b   = Signal(width)
         self.o   = Signal(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.comb += self.o.eq(self.a - self.b)
-        return m.lower(platform)
+        return m
 
 
 class ALU:
@@ -36,7 +36,7 @@ class ALU:
         self.add = Adder(width)
         self.sub = Subtractor(width)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.add = self.add
         m.submodules.sub = self.sub
@@ -50,7 +50,7 @@ class ALU:
             m.d.comb += self.o.eq(self.sub.o)
         with m.Else():
             m.d.comb += self.o.eq(self.add.o)
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

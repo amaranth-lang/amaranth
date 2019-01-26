@@ -12,7 +12,7 @@ def run_simulation(fragment_or_module, generators, clocks={"sync": 10}, vcd_name
     assert not special_overrides
 
     if hasattr(fragment_or_module, "get_fragment"):
-        fragment = fragment_or_module.get_fragment().get_fragment(platform=None)
+        fragment = fragment_or_module.get_fragment()
     else:
         fragment = fragment_or_module
 

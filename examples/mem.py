@@ -10,7 +10,7 @@ class RegisterFile:
         self.we    = Signal()
         self.mem   = Memory(width=8, depth=16, init=[0xaa, 0x55])
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.rdport = rdport = self.mem.read_port()
         m.submodules.wrport = wrport = self.mem.write_port()
@@ -21,7 +21,7 @@ class RegisterFile:
             wrport.data.eq(self.dat_w),
             wrport.en.eq(self.we),
         ]
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

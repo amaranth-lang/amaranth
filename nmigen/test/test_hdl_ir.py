@@ -474,8 +474,8 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
 
     def setUp_memory(self):
         self.m = Memory(width=8, depth=4)
-        self.fr = self.m.read_port().get_fragment(platform=None)
-        self.fw = self.m.write_port().get_fragment(platform=None)
+        self.fr = self.m.read_port().elaborate(platform=None)
+        self.fw = self.m.write_port().elaborate(platform=None)
         self.f1 = Fragment()
         self.f2 = Fragment()
         self.f2.add_subfragment(self.fr)

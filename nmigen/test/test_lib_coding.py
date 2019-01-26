@@ -88,7 +88,7 @@ class ReversibleSpec:
         self.decoder_cls = decoder_cls
         self.coder_args  = args
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         enc, dec = self.encoder_cls(*self.coder_args), self.decoder_cls(*self.coder_args)
         m.submodules += enc, dec
@@ -96,7 +96,7 @@ class ReversibleSpec:
             dec.i.eq(enc.o),
             Assert(enc.i == dec.o)
         ]
-        return m.lower(platform)
+        return m
 
 
 class HammingDistanceSpec:
@@ -105,7 +105,7 @@ class HammingDistanceSpec:
         self.encoder_cls = encoder_cls
         self.coder_args  = args
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         enc1, enc2 = self.encoder_cls(*self.coder_args), self.encoder_cls(*self.coder_args)
         m.submodules += enc1, enc2
@@ -113,7 +113,7 @@ class HammingDistanceSpec:
             Assume(enc1.i + 1 == enc2.i),
             Assert(sum(enc1.o ^ enc2.o) == self.distance)
         ]
-        return m.lower(platform)
+        return m
 
 
 class GrayCoderTestCase(FHDLTestCase):

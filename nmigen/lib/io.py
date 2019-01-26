@@ -17,7 +17,7 @@ class TSTriple:
     def __len__(self):
         return len(self.o)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         return Fragment()
 
     def get_tristate(self, io):
@@ -29,7 +29,7 @@ class Tristate:
         self.triple = triple
         self.io     = io
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         if hasattr(platform, "get_tristate"):
             return platform.get_tristate(self.triple, self.io)
 
@@ -42,6 +42,6 @@ class Tristate:
             o_Y=self.io,
         )
 
-        f = m.lower(platform)
+        f = m.elaborate(platform)
         f.flatten = True
         return f

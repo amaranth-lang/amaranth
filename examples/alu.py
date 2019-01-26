@@ -10,7 +10,7 @@ class ALU:
         self.o   = Signal(width)
         self.co  = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         with m.If(self.sel == 0b00):
             m.d.comb += self.o.eq(self.a | self.b)
@@ -20,7 +20,7 @@ class ALU:
             m.d.comb += self.o.eq(self.a ^ self.b)
         with m.Else():
             m.d.comb += Cat(self.o, self.co).eq(self.a - self.b)
-        return m.lower(platform)
+        return m
 
 
 if __name__ == "__main__":

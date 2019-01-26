@@ -347,7 +347,7 @@ class _StatementCompiler(StatementVisitor):
 
 class Simulator:
     def __init__(self, fragment, vcd_file=None, gtkw_file=None, traces=()):
-        self._fragment        = fragment
+        self._fragment        = Fragment.get(fragment, platform=None)
 
         self._signal_slots    = SignalDict()  # Signal -> int/slot
         self._slot_signals    = list()        # int/slot -> Signal
@@ -385,9 +385,6 @@ class Simulator:
         self._traces          = traces
 
         self._run_called      = False
-
-        while not isinstance(self._fragment, Fragment):
-            self._fragment = self._fragment.get_fragment(platform=None)
 
     @staticmethod
     def _check_process(process):

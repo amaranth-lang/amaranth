@@ -14,7 +14,7 @@ class MultiReg:
                              reset=reset, reset_less=True, attrs={"no_retiming": True})
                       for i in range(n)]
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         if hasattr(platform, "get_multi_reg"):
             return platform.get_multi_reg(self)
 
@@ -22,4 +22,4 @@ class MultiReg:
         for i, o in zip((self.i, *self._regs), self._regs):
             m.d[self.odomain] += o.eq(i)
         m.d.comb += self.o.eq(self._regs[-1])
-        return m.lower(platform)
+        return m

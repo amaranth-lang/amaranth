@@ -57,7 +57,7 @@ class _MemoryPort(CompatModule):
 
 @extend(NativeMemory)
 @deprecated("it is not necessary or permitted to add Memory as a special or submodule")
-def get_fragment(self, platform):
+def elaborate(self, platform):
     return Fragment()
 
 

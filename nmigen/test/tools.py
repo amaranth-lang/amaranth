@@ -9,6 +9,7 @@ import warnings
 from contextlib import contextmanager
 
 from ..hdl.ast import *
+from ..hdl.ir import *
 from ..back import rtlil
 
 
@@ -90,7 +91,7 @@ class FHDLTestCase(unittest.TestCase):
             mode=mode,
             depth=depth,
             script=script,
-            rtlil=rtlil.convert(spec.get_fragment("formal"))
+            rtlil=rtlil.convert(Fragment.get(spec, platform="formal"))
         )
         with subprocess.Popen(["sby", "-f", "-d", spec_name], cwd=spec_dir,
                               universal_newlines=True,

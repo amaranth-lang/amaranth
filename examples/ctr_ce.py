@@ -8,7 +8,7 @@ class Counter:
         self.o = Signal()
         self.ce = Signal()
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.d.sync += self.v.eq(self.v + 1)
         m.d.comb += self.o.eq(self.v[-1])
@@ -16,7 +16,7 @@ class Counter:
 
 
 ctr  = Counter(width=16)
-frag = ctr.get_fragment(platform=None)
+frag = ctr.elaborate(platform=None)
 
 # print(rtlil.convert(frag, ports=[ctr.o, ctr.ce]))
 print(verilog.convert(frag, ports=[ctr.o, ctr.ce]))

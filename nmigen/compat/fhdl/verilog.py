@@ -1,5 +1,6 @@
 import warnings
 
+from ...hdl import Fragment
 from ...back import verilog
 from .conv_output import ConvOutput
 
@@ -16,7 +17,7 @@ def convert(fi, ios=None, name="top", special_overrides=dict(),
     # TODO: attr_translate
 
     v_output = verilog.convert(
-        fragment=fi.get_fragment().get_fragment(platform=None),
+        fragment=Fragment.get(fi.get_fragment(), platform=None),
         name=name,
         ports=ios or (),
         ensure_sync_exists=create_clock_domains

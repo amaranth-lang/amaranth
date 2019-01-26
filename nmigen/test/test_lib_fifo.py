@@ -11,7 +11,7 @@ from ..lib.fifo import *
 
 class FIFOSmokeTestCase(FHDLTestCase):
     def assertSyncFIFOWorks(self, fifo, xfrm=lambda x: x):
-        with Simulator(xfrm(fifo.get_fragment(None)), vcd_file=open("test.vcd", "w")) as sim:
+        with Simulator(xfrm(Fragment.get(fifo, None)), vcd_file=open("test.vcd", "w")) as sim:
             sim.add_clock(1e-6)
             def process():
                 yield from fifo.write(1)
@@ -58,7 +58,7 @@ class FIFOModel(FIFOInterface):
         self.replace = Signal()
         self.level   = Signal(max=self.depth + 1)
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
 
         storage = Memory(self.width, self.depth)
@@ -101,7 +101,7 @@ class FIFOModel(FIFOInterface):
 
         m.d.comb += Assert(ResetSignal(self.rdomain) == ResetSignal(self.wdomain))
 
-        return m.lower(platform)
+        return m
 
 
 class FIFOModelEquivalenceSpec:
@@ -116,7 +116,7 @@ class FIFOModelEquivalenceSpec:
         self.rdomain = rdomain
         self.wdomain = wdomain
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.dut  = dut  = self.fifo
         m.submodules.gold = gold = FIFOModel(dut.width, dut.depth, dut.fwft,
@@ -145,7 +145,7 @@ class FIFOModelEquivalenceSpec:
                                 Past(dut.re, domain=self.rdomain))
                                .implies(dut.dout == gold.dout))
 
-        return m.lower(platform)
+        return m
 
 
 class FIFOContractSpec:
@@ -160,7 +160,7 @@ class FIFOContractSpec:
         self.wdomain = wdomain
         self.bound   = bound
 
-    def get_fragment(self, platform):
+    def elaborate(self, platform):
         m = Module()
         m.submodules.dut = fifo = self.fifo
 
@@ -224,7 +224,7 @@ class FIFOContractSpec:
             m.d.comb += Assume(Rose(ClockSignal(self.wdomain)) |
                                Rose(ClockSignal(self.rdomain)))
 
-        return m.lower(platform)
+        return m
 
 
 class FIFOFormalCase(FHDLTestCase):
