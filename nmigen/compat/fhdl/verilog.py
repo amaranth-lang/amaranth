@@ -1,6 +1,6 @@
 import warnings
 
-from ...hdl import Fragment
+from ...hdl.ir import Fragment
 from ...back import verilog
 from .conv_output import ConvOutput
 
