@@ -3,12 +3,12 @@ import warnings
 from ...tools import deprecated, extend
 from ...hdl.ast import *
 from ...hdl.mem import Memory as NativeMemory
-from ...hdl.ir import Fragment
+from ...hdl.ir import Fragment, Instance
 from ...lib.io import TSTriple as NativeTSTriple, Tristate as NativeTristate
 from .module import Module as CompatModule
 
 
-__all__ = ["TSTriple", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE", "_MemoryPort", "Memory"]
+__all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE"]
 
 
 class CompatTSTriple(NativeTSTriple):
