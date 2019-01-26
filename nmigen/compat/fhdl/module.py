@@ -54,7 +54,7 @@ class _CompatModuleSync(_CompatModuleProxy):
         return _CompatModuleSyncCD(self._cm, name)
 
     def __setattr__(self, name, value):
-        if not isinstance(value, _ModuleSyncCD):
+        if not isinstance(value, _CompatModuleSyncCD):
             raise AttributeError("Attempted to assign sync property - use += instead")
 
 
