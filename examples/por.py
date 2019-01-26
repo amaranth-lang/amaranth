@@ -16,4 +16,4 @@ m.d.comb += [
 ]
 
 if __name__ == "__main__":
-    main(m.lower(platform=None), ports=[cd_por.clk])
+    main(m, ports=[cd_por.clk])

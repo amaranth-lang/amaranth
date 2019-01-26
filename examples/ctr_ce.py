@@ -15,13 +15,11 @@ class Counter:
         return CEInserter(self.ce)(m.lower(platform))
 
 
-ctr  = Counter(width=16)
-frag = ctr.elaborate(platform=None)
+ctr = Counter(width=16)
 
-# print(rtlil.convert(frag, ports=[ctr.o, ctr.ce]))
-print(verilog.convert(frag, ports=[ctr.o, ctr.ce]))
+print(verilog.convert(ctr, ports=[ctr.o, ctr.ce]))
 
-with pysim.Simulator(frag,
+with pysim.Simulator(ctr,
         vcd_file=open("ctrl.vcd", "w"),
         gtkw_file=open("ctrl.gtkw", "w"),
         traces=[ctr.ce, ctr.v, ctr.o]) as sim:

@@ -7,4 +7,4 @@ m = Module()
 m.submodules += MultiReg(i, o)
 
 if __name__ == "__main__":
-    main(m.lower(platform=None), ports=[i, o])
+    main(m, ports=[i, o])
