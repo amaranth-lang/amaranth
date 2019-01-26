@@ -844,7 +844,7 @@ def convert_fragment(builder, fragment, name, top):
 
 
 def convert(fragment, name="top", **kwargs):
-    fragment = fragment.prepare(**kwargs)
+    fragment = ir.Fragment.get(fragment, platform=None).prepare(**kwargs)
     builder = _Builder()
     convert_fragment(builder, fragment, name=name, top=True)
     return str(builder)
