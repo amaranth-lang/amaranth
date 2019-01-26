@@ -454,7 +454,7 @@ class Simulator:
             hierarchy[fragment] = scope
             for index, (subfragment, name) in enumerate(fragment.subfragments):
                 if name is None:
-                    add_fragment(subfragment, (*scope, "#{}".format(index)))
+                    add_fragment(subfragment, (*scope, "U{}".format(index)))
                 else:
                     add_fragment(subfragment, (*scope, name))
         add_fragment(root_fragment, scope=("top",))
@@ -504,9 +504,9 @@ class Simulator:
 
                 signal_slot = self._signal_slots[signal]
 
-                for subfragment, name in fragment.subfragments:
+                for i, (subfragment, name) in enumerate(fragment.subfragments):
                     if signal in subfragment.ports:
-                        var_name = "{}_{}".format(name, signal.name)
+                        var_name = "{}_{}".format(name or "U{}".format(i), signal.name)
                         break
                 else:
                     var_name = signal.name
