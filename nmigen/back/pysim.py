@@ -550,10 +550,21 @@ class Simulator:
                     self._domain_signals[domain] |= signals_bits
 
             statements = []
-            for signal in fragment.iter_comb():
-                statements.append(signal.eq(signal.reset))
-            for domain, signal in fragment.iter_sync():
-                statements.append(signal.eq(signal))
+            for domain, signals in fragment.drivers.items():
+                reset_stmts = []
+                hold_stmts  = []
+                for signal in signals:
+                    reset_stmts.append(signal.eq(signal.reset))
+                    hold_stmts .append(signal.eq(signal))
+
+                if domain is None:
+                    statements += reset_stmts
+                else:
+                    if self._domains[domain].async_reset:
+                        statements.append(Switch(self._domains[domain].rst,
+                            {0: hold_stmts, 1: reset_stmts}))
+                    else:
+                        statements += hold_stmts
             statements += fragment.statements
 
             compiler = _StatementCompiler(self._signal_slots)
