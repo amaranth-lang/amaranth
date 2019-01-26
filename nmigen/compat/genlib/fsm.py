@@ -1,6 +1,6 @@
-import warnings
 from collections import OrderedDict
 
+from ...tools import _ignore_deprecated
 from ...hdl.xfrm import ValueTransformer, StatementTransformer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule, CompatFinalizeError
@@ -153,6 +153,7 @@ class FSM(CompatModule):
         self.sync += signal.eq(self.before_leaving(state))
         return signal
 
+    @_ignore_deprecated
     def do_finalize(self):
         nstates = len(self.actions)
         self.encoding = dict((s, n) for n, s in enumerate(self.actions.keys()))
@@ -178,11 +179,10 @@ class FSM(CompatModule):
 
     def _finalize_sync(self, ls):
         cases = dict((self.encoding[k], ls.on_statement(v)) for k, v in self.actions.items() if v)
-        with warnings.catch_warnings():
-            self.comb += [
-                self.next_state.eq(self.state),
-                Case(self.state, cases).makedefault(self.encoding[self.reset_state])
-            ]
-            self.sync += self.state.eq(self.next_state)
-            for register, next_value_ce, next_value in ls.registers:
-                self.sync += If(next_value_ce, register.eq(next_value))
+        self.comb += [
+            self.next_state.eq(self.state),
+            Case(self.state, cases).makedefault(self.encoding[self.reset_state])
+        ]
+        self.sync += self.state.eq(self.next_state)
+        for register, next_value_ce, next_value in ls.registers:
+            self.sync += If(next_value_ce, register.eq(next_value))

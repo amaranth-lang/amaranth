@@ -1,6 +1,8 @@
-from collections.abc import Iterable
+import contextlib
 import functools
 import warnings
+from collections.abc import Iterable
+from contextlib import contextmanager
 
 
 __all__ = ["flatten", "union", "log2_int", "bits_for", "deprecated"]
@@ -52,6 +54,23 @@ def deprecated(message, stacklevel=2):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def _ignore_deprecated(f=None):
+    if f is None:
+        @contextlib.contextmanager
+        def context_like():
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+                yield
+        return context_like()
+    else:
+        @functools.wraps(f)
+        def decorator_like(*args, **kwargs):
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+                f(*args, **kwargs)
+        return decorator_like
 
 
 def extend(cls):
