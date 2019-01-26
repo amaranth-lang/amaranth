@@ -1,6 +1,6 @@
 import functools
-import collections
 import inspect
+from collections.abc import Iterable
 from ...back.pysim import *
 
 
@@ -23,7 +23,7 @@ def run_simulation(fragment_or_module, generators, clocks={"sync": 10}, vcd_name
         for domain, period in clocks.items():
             sim.add_clock(period / 1e9, domain=domain)
         for domain, processes in generators.items():
-            if isinstance(processes, collections.Iterable) and not inspect.isgenerator(processes):
+            if isinstance(processes, Iterable) and not inspect.isgenerator(processes):
                 for process in processes:
                     sim.add_sync_process(process, domain=domain)
             else:
