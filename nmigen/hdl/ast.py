@@ -1122,7 +1122,7 @@ class ValueKey:
             return hash((ValueKey(self.value.value), ValueKey(self.value.offset),
                          self.value.width))
         elif isinstance(self.value, Cat):
-            return hash(tuple(ValueKey(o) for o in self.value.operands))
+            return hash(tuple(ValueKey(o) for o in self.value.parts))
         elif isinstance(self.value, ArrayProxy):
             return hash((ValueKey(self.value.index),
                          tuple(ValueKey(e) for e in self.value._iter_as_values())))
@@ -1159,7 +1159,7 @@ class ValueKey:
                     self.value.width == other.value.width)
         elif isinstance(self.value, Cat):
             return all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.operands, other.value.operands))
+                        for a, b in zip(self.value.parts, other.value.parts))
         elif isinstance(self.value, ArrayProxy):
             return (ValueKey(self.value.index) == ValueKey(other.value.index) and
                     len(self.value.elems) == len(other.value.elems) and
