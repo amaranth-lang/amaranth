@@ -114,9 +114,14 @@ class _ModuleBuilder(_Namer, _Bufferer):
             if isinstance(value, str):
                 self._append("    parameter \\{} \"{}\"\n",
                              param, value.translate(self._escape_map))
-            else:
+            elif isinstance(value, int):
                 self._append("    parameter \\{} {:d}\n",
                              param, value)
+            elif isinstance(value, ast.Const):
+                self._append("    parameter \\{} {}'{:b}\n",
+                             param, len(value), value.value)
+            else:
+                assert False
         for port, wire in ports.items():
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
