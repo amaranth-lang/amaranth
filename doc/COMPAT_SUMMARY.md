@@ -173,8 +173,8 @@ Compatibility summary
       - (−) `layout_get` **brk**
       - (−) `layout_partial` **brk**
       - (−) `Record` id
-    - (−) `resetsync` ?
-      - (−) `AsyncResetSynchronizer` ?
+    - (+) `resetsync` ?
+      - (+) `AsyncResetSynchronizer` **obs** → `.lib.cdc.ResetSynchronizer`
     - (−) `roundrobin` ?
       - (−) `SP_WITHDRAW`/`SP_CE` ?
       - (−) `RoundRobin` ?
