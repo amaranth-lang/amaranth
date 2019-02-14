@@ -18,9 +18,13 @@ class Fragment:
     def get(obj, platform):
         if isinstance(obj, Fragment):
             return obj
-        if not hasattr(obj, "elaborate"): # :deprecated:
-            return Fragment.get(obj.get_fragment(platform), platform)
-        return Fragment.get(obj.elaborate(platform), platform)
+        if hasattr(obj, "elaborate"):
+            frag = obj.elaborate(platform)
+        elif hasattr(obj, "get_fragment"): # :deprecated:
+            frag = obj.get_fragment(platform)
+        else:
+            raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
+        return Fragment.get(frag, platform)
 
     def __init__(self):
         self.ports = SignalDict()

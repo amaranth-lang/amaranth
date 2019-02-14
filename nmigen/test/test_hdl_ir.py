@@ -7,6 +7,13 @@ from ..hdl.mem import *
 from .tools import *
 
 
+class FragmentGetTestCase(FHDLTestCase):
+    def test_get_wrong(self):
+        with self.assertRaises(AttributeError,
+                msg="Object 'None' cannot be elaborated"):
+            Fragment.get(None, platform=None)
+
+
 class FragmentGeneratedTestCase(FHDLTestCase):
     def test_find_subfragment(self):
         f1 = Fragment()
