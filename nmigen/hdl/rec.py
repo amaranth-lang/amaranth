@@ -64,10 +64,8 @@ class Layout:
 class Record(Value):
     def __init__(self, layout, name=None):
         if name is None:
-            try:
-                name = tracer.get_var_name()
-            except tracer.NameNotFound:
-                pass
+            name = tracer.get_var_name(default=None)
+
         self.name    = name
         self.src_loc = tracer.get_src_loc()
 

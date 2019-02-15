@@ -10,7 +10,10 @@ class NameNotFound(Exception):
     pass
 
 
-def get_var_name(depth=2):
+_raise_exception = object()
+
+
+def get_var_name(depth=2, default=_raise_exception):
     frame = inspect.currentframe()
     for _ in range(depth):
         frame = frame.f_back
@@ -37,7 +40,10 @@ def get_var_name(depth=2):
                      "DUP_TOP", "BUILD_LIST"):
             index += 2
         else:
-            raise NameNotFound
+            if default is _raise_exception:
+                raise NameNotFound
+            else:
+                return default
 
 
 def get_src_loc(src_loc_at=0):

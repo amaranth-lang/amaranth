@@ -581,12 +581,7 @@ class Signal(Value, DUID):
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
-        if name is None:
-            try:
-                name = tracer.get_var_name(depth=2 + src_loc_at)
-            except tracer.NameNotFound:
-                name = "$signal"
-        self.name = name
+        self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
 
         if shape is None:
             if min is None:
@@ -625,12 +620,8 @@ class Signal(Value, DUID):
         other : Value
             Object to base this Signal on.
         """
-        if name is None:
-            try:
-                name = tracer.get_var_name(depth=2 + src_loc_at)
-            except tracer.NameNotFound:
-                name = "$like"
-        kw = dict(shape=cls.wrap(other).shape(), name=name)
+        name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$like")
+        kw   = dict(shape=cls.wrap(other).shape(), name=name)
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)

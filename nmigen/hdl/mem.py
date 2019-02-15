@@ -15,12 +15,7 @@ class Memory:
             raise TypeError("Memory depth must be a non-negative integer, not '{!r}'"
                             .format(depth))
 
-        if name is None:
-            try:
-                name = tracer.get_var_name(depth=2)
-            except tracer.NameNotFound:
-                name = "$memory"
-        self.name    = name
+        self.name    = name or tracer.get_var_name(depth=2, default="$memory")
         self.src_loc = tracer.get_src_loc()
 
         self.width = width
@@ -194,10 +189,7 @@ class DummyPort:
         if granularity is None:
             granularity = width
         if name is None:
-            try:
-                name = tracer.get_var_name(depth=2)
-            except tracer.NameNotFound:
-                name = "dummy"
+            name = tracer.get_var_name(depth=2, default="dummy")
 
         self.addr = Signal(addr_bits,
                            name="{}_addr".format(name))
