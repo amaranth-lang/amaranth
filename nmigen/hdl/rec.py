@@ -62,8 +62,6 @@ class Layout:
 
 
 class Record(Value):
-    __slots__ = ("fields",)
-
     def __init__(self, layout, name=None):
         if name is None:
             try:
