@@ -16,6 +16,7 @@ setup(
     license="BSD",
     install_requires=["pyvcd>=0.1.4", "bitarray"],
     packages=find_packages(),
+    python_requires=">=3.6",
     project_urls={
         #"Documentation": "https://glasgow.readthedocs.io/",
         "Source Code": "https://github.com/m-labs/nmigen",
