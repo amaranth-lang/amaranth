@@ -297,29 +297,37 @@ class AsyncFIFO(FIFOInterface):
 
         m = Module()
 
+        do_write = self.writable & self.we
+        do_read  = self.readable & self.re
+
+        # TODO: extract this pattern into lib.cdc.GrayCounter
         produce_w_bin = Signal(self._ctr_bits)
+        produce_w_nxt = Signal(self._ctr_bits)
+        m.d.comb  += produce_w_nxt.eq(produce_w_bin + do_write)
+        m.d.write += produce_w_bin.eq(produce_w_nxt)
+
+        consume_r_bin = Signal(self._ctr_bits)
+        consume_r_nxt = Signal(self._ctr_bits)
+        m.d.comb  += consume_r_nxt.eq(consume_r_bin + do_read)
+        m.d.read  += consume_r_bin.eq(consume_r_nxt)
+
         produce_w_gry = Signal(self._ctr_bits)
         produce_r_gry = Signal(self._ctr_bits)
         produce_enc = m.submodules.produce_enc = \
             GrayEncoder(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
             MultiReg(produce_w_gry, produce_r_gry, odomain="read")
-        m.d.comb += [
-            produce_enc.i.eq(produce_w_bin),
-            produce_w_gry.eq(produce_enc.o),
-        ]
+        m.d.comb  += produce_enc.i.eq(produce_w_nxt),
+        m.d.write += produce_w_gry.eq(produce_enc.o)
 
-        consume_r_bin = Signal(self._ctr_bits)
         consume_r_gry = Signal(self._ctr_bits)
         consume_w_gry = Signal(self._ctr_bits)
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
             MultiReg(consume_r_gry, consume_w_gry, odomain="write")
-        m.d.comb += [
-            consume_enc.i.eq(consume_r_bin),
-            consume_r_gry.eq(consume_enc.o),
-        ]
+        m.d.comb  += consume_enc.i.eq(consume_r_nxt)
+        m.d.read  += consume_r_gry.eq(consume_enc.o)
 
         m.d.comb += [
             self.writable.eq(
@@ -328,11 +336,6 @@ class AsyncFIFO(FIFOInterface):
                 (produce_w_gry[:-2] != consume_w_gry[:-2])),
             self.readable.eq(consume_r_gry != produce_r_gry)
         ]
-
-        do_write = self.writable & self.we
-        do_read  = self.readable & self.re
-        m.d.write += produce_w_bin.eq(produce_w_bin + do_write)
-        m.d.read  += consume_r_bin.eq(consume_r_bin + do_read)
 
         storage = Memory(self.width, self.depth)
         wrport  = m.submodules.wrport = storage.write_port(domain="write")
@@ -346,6 +349,14 @@ class AsyncFIFO(FIFOInterface):
             rdport.addr.eq((consume_r_bin + do_read)[:-1]),
             self.dout.eq(rdport.data),
         ]
+
+        if platform == "formal":
+            # TODO: move this logic elsewhere
+            initstate = Signal()
+            m.submodules += Instance("$initstate", o_Y=initstate)
+            with m.If(initstate):
+                m.d.comb += Assume(produce_w_gry == (produce_w_bin ^ produce_w_bin[1:]))
+                m.d.comb += Assume(consume_r_gry == (consume_r_bin ^ consume_r_bin[1:]))
 
         return m
 
