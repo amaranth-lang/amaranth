@@ -12,7 +12,7 @@ with m.If(delay != 0):
     m.d.por += delay.eq(delay - 1)
 m.d.comb += [
     ClockSignal().eq(cd_por.clk),
-    ResetSignal().eq(delay == 0),
+    ResetSignal().eq(delay != 0),
 ]
 
 if __name__ == "__main__":
