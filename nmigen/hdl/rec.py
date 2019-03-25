@@ -72,7 +72,7 @@ class Record(Value):
         def concat(a, b):
             if a is None:
                 return b
-            return "{}_{}".format(a, b)
+            return "{}__{}".format(a, b)
 
         self.layout = Layout.wrap(layout)
         self.fields = OrderedDict()

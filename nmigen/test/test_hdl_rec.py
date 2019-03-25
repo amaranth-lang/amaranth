@@ -65,11 +65,11 @@ class RecordTestCase(FHDLTestCase):
             ])
         ])
 
-        self.assertEqual(repr(r), "(rec r stb data (rec r_info a b))")
+        self.assertEqual(repr(r), "(rec r stb data (rec r__info a b))")
         self.assertEqual(len(r),  35)
         self.assertIsInstance(r.stb, Signal)
-        self.assertEqual(r.stb.name, "r_stb")
-        self.assertEqual(r["stb"].name, "r_stb")
+        self.assertEqual(r.stb.name, "r__stb")
+        self.assertEqual(r["stb"].name, "r__stb")
 
     def test_unnamed(self):
         r = [Record([
