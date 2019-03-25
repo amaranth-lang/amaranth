@@ -984,7 +984,7 @@ class Delay(Statement):
         if self.interval is None:
             return "(delay ε)"
         else:
-            return "(delay {:.3}us)".format(self.interval * 10e6)
+            return "(delay {:.3}us)".format(self.interval * 1e6)
 
 
 class Tick(Statement):
