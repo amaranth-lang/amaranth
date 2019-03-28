@@ -376,9 +376,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(Module(), deadline=100e-6) as sim:
             sim.add_clock(1e-6)
             def process():
-                for _ in range(100):
-                    yield
+                for _ in range(101):
+                    yield Delay(1e-6)
                 self.fail()
+            sim.add_process(process)
 
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
