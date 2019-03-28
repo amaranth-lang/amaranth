@@ -571,7 +571,7 @@ class _LHSValueCompiler(_ValueCompiler):
         if isinstance(offset, ast.Const):
             return self(ast.Slice(value.value, offset.value, offset.value + value.width))
         else:
-            raise LegalizeValue(value.offset, range((1 << len(value.offset)) - 1))
+            raise LegalizeValue(value.offset, range((1 << len(value.offset))))
 
     def on_Repl(self, value):
         raise TypeError # :nocov:
