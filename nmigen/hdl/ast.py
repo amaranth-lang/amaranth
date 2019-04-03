@@ -581,6 +581,8 @@ class Signal(Value, DUID):
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Name must be a string, not '{!r}'".format(name))
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
 
         if shape is None:

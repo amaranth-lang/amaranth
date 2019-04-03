@@ -429,6 +429,12 @@ class SignalTestCase(FHDLTestCase):
         s2 = Signal(name="sig")
         self.assertEqual(s2.name, "sig")
 
+    def test_name_bad(self):
+        with self.assertRaises(TypeError,
+                msg="Name must be a string, not 'True'"):
+            # A common typo: forgetting to put parens around width and signedness
+            Signal(1, True)
+
     def test_reset(self):
         s1 = Signal(4, reset=0b111, reset_less=True)
         self.assertEqual(s1.reset, 0b111)
