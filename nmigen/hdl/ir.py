@@ -20,8 +20,6 @@ class Fragment:
             return obj
         if hasattr(obj, "elaborate"):
             frag = obj.elaborate(platform)
-        elif hasattr(obj, "get_fragment"): # :deprecated:
-            frag = obj.get_fragment(platform)
         else:
             raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
         return Fragment.get(frag, platform)
