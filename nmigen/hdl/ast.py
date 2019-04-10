@@ -246,7 +246,8 @@ class Const(Value):
             shape = shape, self.value < 0
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a non-negative integer, not '{!r}'", self.nbits)
+            raise TypeError("Width must be a non-negative integer, not '{!r}'"
+                            .format(self.nbits))
         self.value = self.normalize(self.value, shape)
 
     def shape(self):
@@ -272,7 +273,8 @@ class AnyValue(Value, DUID):
             shape = shape, False
         self.nbits, self.signed = shape
         if not isinstance(self.nbits, int) or self.nbits < 0:
-            raise TypeError("Width must be a non-negative integer, not '{!r}'", self.nbits)
+            raise TypeError("Width must be a non-negative integer, not '{!r}'"
+                            .format(self.nbits))
 
     def shape(self):
         return self.nbits, self.signed
