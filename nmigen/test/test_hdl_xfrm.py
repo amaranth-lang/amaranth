@@ -486,3 +486,49 @@ class CEInserterTestCase(FHDLTestCase):
             )
         )
         """)
+
+
+class _MockElaboratable:
+    def __init__(self):
+        self.s1 = Signal()
+
+    def elaborate(self, platform):
+        f = Fragment()
+        f.add_statements(
+            self.s1.eq(1)
+        )
+        f.add_driver(self.s1, "sync")
+        return f
+
+
+class TransformedElaboratableTestCase(FHDLTestCase):
+    def setUp(self):
+        self.c1 = Signal()
+        self.c2 = Signal()
+
+    def test_getattr(self):
+        e = _MockElaboratable()
+        te = CEInserter(self.c1)(e)
+
+        self.assertIs(te.s1, e.s1)
+
+    def test_composition(self):
+        e = _MockElaboratable()
+        te1 = CEInserter(self.c1)(e)
+        te2 = ResetInserter(self.c2)(te1)
+
+        self.assertIsInstance(te1, TransformedElaboratable)
+        self.assertIs(te1, te2)
+
+        f = Fragment.get(te2, None)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig s1) (const 1'd1))
+            (switch (sig c1)
+                (case 0 (eq (sig s1) (sig s1)))
+            )
+            (switch (sig c2)
+                (case 1 (eq (sig s1) (const 1'd0)))
+            )
+        )
+        """)

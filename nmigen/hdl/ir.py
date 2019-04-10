@@ -18,7 +18,7 @@ class Fragment:
     def get(obj, platform):
         if isinstance(obj, Fragment):
             return obj
-        if hasattr(obj, "elaborate"):
+        elif hasattr(obj, "elaborate"):
             frag = obj.elaborate(platform)
         else:
             raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))

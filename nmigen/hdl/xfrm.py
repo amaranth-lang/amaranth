@@ -13,6 +13,7 @@ from .rec import *
 __all__ = ["ValueVisitor", "ValueTransformer",
            "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
+           "TransformedElaboratable",
            "DomainRenamer", "DomainLowerer",
            "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
@@ -277,7 +278,36 @@ class FragmentTransformer:
         return new_fragment
 
     def __call__(self, value):
-        return self.on_fragment(value)
+        if isinstance(value, Fragment):
+            return self.on_fragment(value)
+        elif isinstance(value, TransformedElaboratable):
+            value._transforms_.append(self)
+            return value
+        elif hasattr(value, "elaborate"):
+            value = TransformedElaboratable(value)
+            value._transforms_.append(self)
+            return value
+        else:
+            raise AttributeError("Object '{!r}' cannot be elaborated".format(value))
+
+
+class TransformedElaboratable:
+    def __init__(self, elaboratable):
+        assert hasattr(elaboratable, "elaborate")
+
+        # Fields prefixed and suffixed with underscore to avoid as many conflicts with the inner
+        # object as possible, since we're forwarding attribute requests to it.
+        self._elaboratable_ = elaboratable
+        self._transforms_   = []
+
+    def __getattr__(self, attr):
+        return getattr(self._elaboratable_, attr)
+
+    def elaborate(self, platform):
+        fragment = Fragment.get(self._elaboratable_, platform)
+        for transform in self._transforms_:
+            fragment = transform(fragment)
+        return fragment
 
 
 class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer):
