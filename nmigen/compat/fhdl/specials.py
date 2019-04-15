@@ -4,38 +4,57 @@ from ...tools import deprecated, extend
 from ...hdl.ast import *
 from ...hdl.mem import Memory as NativeMemory
 from ...hdl.ir import Fragment, Instance
-from ...lib.io import TSTriple as NativeTSTriple, Tristate as NativeTristate
 from .module import Module as CompatModule
 
 
 __all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE"]
 
 
-class CompatTSTriple(NativeTSTriple):
+class TSTriple:
     def __init__(self, bits_sign=None, min=None, max=None, reset_o=0, reset_oe=0, reset_i=0,
                  name=None):
-        super().__init__(shape=bits_sign, min=min, max=max,
-                         reset_o=reset_o, reset_oe=reset_oe, reset_i=reset_i,
-                         name=name)
+        self.o  = Signal(shape, min=min, max=max, reset=reset_o,
+                         name=None if name is None else name + "_o")
+        self.oe = Signal(reset=reset_oe,
+                         name=None if name is None else name + "_oe")
+        self.i  = Signal(shape, min=min, max=max, reset=reset_i,
+                         name=None if name is None else name + "_i")
+
+    def __len__(self):
+        return len(self.o)
+
+    def elaborate(self, platform):
+        return Fragment()
+
+    def get_tristate(self, io):
+        return Tristate(io, self.o, self.oe, self.i)
 
 
-class CompatTristate(NativeTristate):
+class Tristate:
     def __init__(self, target, o, oe, i=None):
-        triple = TSTriple()
-        triple.o = o
-        triple.oe = oe
+        self.target = target
+        self.triple = TSTriple()
+        self.triple.o = o
+        self.triple.oe = oe
         if i is not None:
-            triple.i = i
-        super().__init__(triple, target)
+            self.triple.i = i
 
-    @property
-    @deprecated("instead of `Tristate.target`, use `Tristate.io`")
-    def target(self):
-        return self.io
+    def elaborate(self, platform):
+        if hasattr(platform, "get_tristate"):
+            return platform.get_tristate(self.triple, self.io)
 
+        m = Module()
+        m.d.comb += self.triple.i.eq(self.io)
+        m.submodules += Instance("$tribuf",
+            p_WIDTH=len(self.io),
+            i_EN=self.triple.oe,
+            i_A=self.triple.o,
+            o_Y=self.io,
+        )
 
-TSTriple = CompatTSTriple
-Tristate = CompatTristate
+        f = m.elaborate(platform)
+        f.flatten = True
+        return f
 
 
 (READ_FIRST, WRITE_FIRST, NO_CHANGE) = range(3)
