@@ -89,7 +89,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_AnySeq(value)
         elif type(value) is Signal:
             new_value = self.on_Signal(value)
-        elif type(value) is Record:
+        elif isinstance(value, Record):
+            # Uses `isinstance()` and not `type() is` to allow inheriting from Record.
             new_value = self.on_Record(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
