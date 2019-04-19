@@ -85,16 +85,19 @@ class Record(Value):
     def __getattr__(self, name):
         return self[name]
 
-    def __getitem__(self, name):
-        try:
-            return self.fields[name]
-        except KeyError:
-            if self.name is None:
-                reference = "Unnamed record"
-            else:
-                reference = "Record '{}'".format(self.name)
-            raise NameError("{} does not have a field '{}'. Did you mean one of: {}?"
-                            .format(reference, name, ", ".join(self.fields))) from None
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            try:
+                return self.fields[item]
+            except KeyError:
+                if self.name is None:
+                    reference = "Unnamed record"
+                else:
+                    reference = "Record '{}'".format(self.name)
+                raise NameError("{} does not have a field '{}'. Did you mean one of: {}?"
+                                .format(reference, item, ", ".join(self.fields))) from None
+        else:
+            return super().__getitem__(item)
 
     def shape(self):
         return sum(len(f) for f in self.fields.values()), False

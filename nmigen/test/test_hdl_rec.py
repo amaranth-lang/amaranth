@@ -79,6 +79,15 @@ class RecordTestCase(FHDLTestCase):
         self.assertEqual(repr(r), "(rec <unnamed> stb)")
         self.assertEqual(r.stb.name, "stb")
 
+    def test_iter(self):
+        r = Record([
+            ("data", 4),
+            ("stb",  1),
+        ])
+
+        self.assertEqual(repr(r[0]),   "(slice (rec r data stb) 0:1)")
+        self.assertEqual(repr(r[0:3]), "(slice (rec r data stb) 0:3)")
+
     def test_wrong_field(self):
         r = Record([
             ("stb", 1),
