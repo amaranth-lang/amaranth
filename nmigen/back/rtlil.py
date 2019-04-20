@@ -4,7 +4,7 @@ from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 
 from ..tools import bits_for
-from ..hdl import ast, ir, mem, xfrm
+from ..hdl import ast, rec, ir, mem, xfrm
 
 
 __all__ = ["convert"]
@@ -563,7 +563,7 @@ class _LHSValueCompiler(_ValueCompiler):
         return wire_next
 
     def _prepare_value_for_Slice(self, value):
-        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat))
+        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat, rec.Record))
         return self(value)
 
     def on_Part(self, value):
