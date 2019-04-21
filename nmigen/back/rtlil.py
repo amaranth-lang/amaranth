@@ -666,7 +666,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self.on_statement(stmt)
 
 
-def convert_fragment(builder, fragment, name, top):
+def convert_fragment(builder, fragment, hierarchy):
     if isinstance(fragment, ir.Instance):
         port_map = OrderedDict()
         for port_name, value in fragment.named_ports.items():
@@ -677,7 +677,13 @@ def convert_fragment(builder, fragment, name, top):
         else:
             return "\\{}".format(fragment.type), port_map
 
-    with builder.module(name or "anonymous", attrs={"top": 1} if top else {}) as module:
+    module_name  = hierarchy[-1] or "anonymous"
+    module_attrs = {}
+    if len(hierarchy) == 1:
+        module_attrs["top"] = 1
+    module_attrs["nmigen.hierarchy"] = ".".join(name or "anonymous" for name in hierarchy)
+
+    with builder.module(module_name, attrs=module_attrs) as module:
         compiler_state = _ValueCompilerState(module)
         rhs_compiler   = _RHSValueCompiler(compiler_state)
         lhs_compiler   = _LHSValueCompiler(compiler_state)
@@ -746,7 +752,7 @@ def convert_fragment(builder, fragment, name, top):
                     sub_params[param_name] = param_value
 
             sub_type, sub_port_map = \
-                convert_fragment(builder, subfragment, top=False, name=sub_name)
+                convert_fragment(builder, subfragment, hierarchy=hierarchy + (sub_name,))
 
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
@@ -851,5 +857,5 @@ def convert_fragment(builder, fragment, name, top):
 def convert(fragment, name="top", **kwargs):
     fragment = ir.Fragment.get(fragment, platform=None).prepare(**kwargs)
     builder = _Builder()
-    convert_fragment(builder, fragment, name=name, top=True)
+    convert_fragment(builder, fragment, hierarchy=(name,))
     return str(builder)
