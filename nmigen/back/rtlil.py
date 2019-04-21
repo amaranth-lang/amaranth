@@ -299,9 +299,6 @@ class _ValueCompiler(xfrm.ValueVisitor):
     def __init__(self, state):
         self.s = state
 
-    def on_value(self, value):
-        return super().on_value(self.s.expand(value))
-
     def on_unknown(self, value):
         if value is None:
             return None
@@ -374,6 +371,9 @@ class _RHSValueCompiler(_ValueCompiler):
         (2, ">="):   "$ge",
         (3, "m"):    "$mux",
     }
+
+    def on_value(self, value):
+        return super().on_value(self.s.expand(value))
 
     def on_Const(self, value):
         if isinstance(value.value, str):
