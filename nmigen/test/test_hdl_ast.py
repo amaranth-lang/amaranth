@@ -8,11 +8,13 @@ class ValueTestCase(FHDLTestCase):
         self.assertIsInstance(Value.wrap(True), Const)
         c = Const(0)
         self.assertIs(Value.wrap(c), c)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Object ''str'' is not an nMigen value"):
             Value.wrap("str")
 
     def test_bool(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Attempted to convert nMigen value to boolean"):
             if Const(0):
                 pass
 
@@ -28,7 +30,8 @@ class ValueTestCase(FHDLTestCase):
         self.assertIsInstance(s2, Slice)
         self.assertEqual(s2.start, 3)
         self.assertEqual(s2.end, 4)
-        with self.assertRaises(IndexError):
+        with self.assertRaises(IndexError,
+                msg="Cannot index 5 bits into 4-bit value"):
             Const(10)[5]
 
     def test_getitem_slice(self):
@@ -53,7 +56,8 @@ class ValueTestCase(FHDLTestCase):
         self.assertEqual(s3.parts[2].end, 5)
 
     def test_getitem_wrong(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Cannot index value with 'str'"):
             Const(31)["str"]
 
 
@@ -69,7 +73,8 @@ class ConstTestCase(FHDLTestCase):
         self.assertEqual(Const(0, (0, False)).shape(), (0, False))
 
     def test_shape_bad(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Width must be a non-negative integer, not '-1'"):
             Const(1, -1)
 
     def test_normalization(self):
@@ -263,18 +268,23 @@ class SliceTestCase(FHDLTestCase):
         self.assertEqual((s1.start, s1.end), (4, 7))
 
     def test_start_end_wrong(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Slice start must be an integer, not ''x''"):
             Slice(0, "x", 1)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Slice end must be an integer, not ''x''"):
             Slice(0, 1, "x")
 
     def test_start_end_out_of_range(self):
         c = Const(0, 8)
-        with self.assertRaises(IndexError):
+        with self.assertRaises(IndexError,
+                msg="Cannot start slice 10 bits into 8-bit value"):
             Slice(c, 10, 12)
-        with self.assertRaises(IndexError):
+        with self.assertRaises(IndexError,
+                msg="Cannot end slice 12 bits into 8-bit value"):
             Slice(c, 0, 12)
-        with self.assertRaises(IndexError):
+        with self.assertRaises(IndexError,
+                msg="Slice start 4 must be less than slice end 2"):
             Slice(c, 4, 2)
 
     def test_repr(self):
@@ -480,7 +490,8 @@ class ClockSignalTestCase(FHDLTestCase):
         s2 = ClockSignal("pix")
         self.assertEqual(s2.domain, "pix")
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Clock domain name must be a string, not '1'"):
             ClockSignal(1)
 
     def test_shape(self):
@@ -498,7 +509,8 @@ class ResetSignalTestCase(FHDLTestCase):
         s2 = ResetSignal("pix")
         self.assertEqual(s2.domain, "pix")
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Clock domain name must be a string, not '1'"):
             ResetSignal(1)
 
     def test_shape(self):
