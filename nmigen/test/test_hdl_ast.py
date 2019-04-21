@@ -414,13 +414,18 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s8.shape(), (6, True))
         s9 = Signal(0)
         self.assertEqual(s9.shape(), (0, False))
+        s10 = Signal(max=1)
+        self.assertEqual(s10.shape(), (0, False))
 
     def test_shape_bad(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError,
+                msg="Lower bound 10 should be less or equal to higher bound 4"):
             Signal(min=10, max=4)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError,
+                msg="Only one of bits/signedness or bounds may be specified"):
             Signal(2, min=10)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError,
+                msg="Width must be a non-negative integer, not '-10'"):
             Signal(-10)
 
     def test_name(self):
