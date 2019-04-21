@@ -105,3 +105,121 @@ class RecordTestCase(FHDLTestCase):
         with self.assertRaises(NameError,
                 msg="Unnamed record does not have a field 'en'. Did you mean one of: stb, ack?"):
             r.en
+
+
+class ConnectTestCase(FHDLTestCase):
+    def setUp_flat(self):
+        self.core_layout = [
+            ("addr",   32, DIR_FANOUT),
+            ("data_r", 32, DIR_FANIN),
+            ("data_w", 32, DIR_FANIN),
+        ]
+        self.periph_layout = [
+            ("addr",   32, DIR_FANOUT),
+            ("data_r", 32, DIR_FANIN),
+            ("data_w", 32, DIR_FANIN),
+        ]
+
+    def setUp_nested(self):
+        self.core_layout = [
+            ("addr",   32, DIR_FANOUT),
+            ("data", [
+                ("r",  32, DIR_FANIN),
+                ("w",  32, DIR_FANIN),
+            ]),
+        ]
+        self.periph_layout = [
+            ("addr",   32, DIR_FANOUT),
+            ("data", [
+                ("r",  32, DIR_FANIN),
+                ("w",  32, DIR_FANIN),
+            ]),
+        ]
+
+    def test_flat(self):
+        self.setUp_flat()
+
+        core    = Record(self.core_layout)
+        periph1 = Record(self.periph_layout)
+        periph2 = Record(self.periph_layout)
+
+        stmts = core.connect(periph1, periph2)
+        self.assertRepr(stmts, """(
+            (eq (sig periph1__addr) (sig core__addr))
+            (eq (sig periph2__addr) (sig core__addr))
+            (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
+            (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
+        )""")
+
+    def test_flat_include(self):
+        self.setUp_flat()
+
+        core    = Record(self.core_layout)
+        periph1 = Record(self.periph_layout)
+        periph2 = Record(self.periph_layout)
+
+        stmts = core.connect(periph1, periph2, include={"addr": True})
+        self.assertRepr(stmts, """(
+            (eq (sig periph1__addr) (sig core__addr))
+            (eq (sig periph2__addr) (sig core__addr))
+        )""")
+
+    def test_flat_exclude(self):
+        self.setUp_flat()
+
+        core    = Record(self.core_layout)
+        periph1 = Record(self.periph_layout)
+        periph2 = Record(self.periph_layout)
+
+        stmts = core.connect(periph1, periph2, exclude={"addr": True})
+        self.assertRepr(stmts, """(
+            (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
+            (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
+        )""")
+
+    def test_nested(self):
+        self.setUp_nested()
+
+        core    = Record(self.core_layout)
+        periph1 = Record(self.periph_layout)
+        periph2 = Record(self.periph_layout)
+
+        stmts = core.connect(periph1, periph2)
+        self.maxDiff = None
+        self.assertRepr(stmts, """(
+            (eq (sig periph1__addr) (sig core__addr))
+            (eq (sig periph2__addr) (sig core__addr))
+            (eq (sig core__data__r) (| (sig periph1__data__r) (sig periph2__data__r)))
+            (eq (sig core__data__w) (| (sig periph1__data__w) (sig periph2__data__w)))
+        )""")
+
+    def test_wrong_include_exclude(self):
+        self.setUp_flat()
+
+        core   = Record(self.core_layout)
+        periph = Record(self.periph_layout)
+
+        with self.assertRaises(AttributeError,
+                msg="Cannot include field 'foo' because it is not present in record 'core'"):
+            core.connect(periph, include={"foo": True})
+
+        with self.assertRaises(AttributeError,
+                msg="Cannot exclude field 'foo' because it is not present in record 'core'"):
+            core.connect(periph, exclude={"foo": True})
+
+    def test_wrong_direction(self):
+        recs = [Record([("x", 1)]) for _ in range(2)]
+
+        with self.assertRaises(TypeError,
+                msg="Cannot connect field 'x' of unnamed record because it does not have "
+                    "a direction"):
+            recs[0].connect(recs[1])
+
+    def test_wrong_missing_field(self):
+        core   = Record([("addr", 32, DIR_FANOUT)])
+        periph = Record([])
+
+        with self.assertRaises(AttributeError,
+                msg="Cannot connect field 'addr' of record 'core' to subordinate record 'periph' "
+                    "because the subordinate record does not have this field"):
+            core.connect(periph)
