@@ -1,12 +1,30 @@
-import warnings
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict, OrderedDict
+import warnings
+import traceback
+import sys
 
 from ..tools import *
 from .ast import *
 from .cd import *
 
 
-__all__ = ["Fragment", "Instance", "DriverConflict"]
+__all__ = ["Elaboratable", "DriverConflict", "Fragment", "Instance"]
+
+
+class Elaboratable(metaclass=ABCMeta):
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls)
+        self._Elaboratable__traceback = traceback.extract_stack()[:-1]
+        self._Elaboratable__used      = False
+        return self
+
+    def __del__(self):
+        if hasattr(self, "_Elaboratable__used") and not self._Elaboratable__used:
+            print("Elaboratable created but never used\n",
+                  "Traceback (most recent call last):\n",
+                  *traceback.format_list(self._Elaboratable__traceback),
+                  file=sys.stderr, sep="")
 
 
 class DriverConflict(UserWarning):
@@ -16,13 +34,22 @@ class DriverConflict(UserWarning):
 class Fragment:
     @staticmethod
     def get(obj, platform):
-        if isinstance(obj, Fragment):
-            return obj
-        elif hasattr(obj, "elaborate"):
-            frag = obj.elaborate(platform)
-        else:
-            raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
-        return Fragment.get(frag, platform)
+        while True:
+            if isinstance(obj, Fragment):
+                return obj
+            elif isinstance(obj, Elaboratable):
+                obj._Elaboratable__used = True
+                obj = obj.elaborate(platform)
+            elif hasattr(obj, "elaborate"):
+                warnings.warn(
+                    message="Class {!r} is an elaboratable that does not explicitly inherit from "
+                            "Elaboratable; doing so would improve diagnostics"
+                            .format(type(obj)),
+                    category=RuntimeWarning,
+                    stacklevel=2)
+                obj = obj.elaborate(platform)
+            else:
+                raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
 
     def __init__(self):
         self.ports = SignalDict()

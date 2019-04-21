@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class ClockDivisor:
+class ClockDivisor(Elaboratable):
     def __init__(self, factor):
         self.v = Signal(factor)
         self.o = Signal()

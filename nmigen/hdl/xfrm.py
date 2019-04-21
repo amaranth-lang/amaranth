@@ -292,7 +292,7 @@ class FragmentTransformer:
             raise AttributeError("Object '{!r}' cannot be elaborated".format(value))
 
 
-class TransformedElaboratable:
+class TransformedElaboratable(Elaboratable):
     def __init__(self, elaboratable):
         assert hasattr(elaboratable, "elaborate")
 

@@ -4,7 +4,7 @@ from .. import *
 __all__ = ["MultiReg", "ResetSynchronizer"]
 
 
-class MultiReg:
+class MultiReg(Elaboratable):
     """Resynchronise a signal to a different clock domain.
 
     Consists of a chain of flip-flops. Eliminates metastabilities at the output, but provides
@@ -69,7 +69,7 @@ class MultiReg:
         return m
 
 
-class ResetSynchronizer:
+class ResetSynchronizer(Elaboratable):
     def __init__(self, arst, domain="sync", n=2):
         self.arst = arst
         self.domain = domain

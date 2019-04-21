@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class RegisterFile:
+class RegisterFile(Elaboratable):
     def __init__(self):
         self.adr   = Signal(4)
         self.dat_r = Signal(8)

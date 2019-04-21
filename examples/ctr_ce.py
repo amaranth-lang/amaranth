@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.back import rtlil, verilog, pysim
 
 
-class Counter:
+class Counter(Elaboratable):
     def __init__(self, width):
         self.v = Signal(width, reset=2**width-1)
         self.o = Signal()

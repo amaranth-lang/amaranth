@@ -9,7 +9,7 @@ from .ir import *
 from .xfrm import *
 
 
-__all__ = ["Module", "SyntaxError", "SyntaxWarning"]
+__all__ = ["SyntaxError", "SyntaxWarning", "Module"]
 
 
 class SyntaxError(Exception):
@@ -109,7 +109,7 @@ class FSM:
         return self.state == self.encoding[name]
 
 
-class Module(_ModuleBuilderRoot):
+class Module(_ModuleBuilderRoot, Elaboratable):
     def __init__(self):
         _ModuleBuilderRoot.__init__(self, self, depth=0)
         self.submodules    = _ModuleBuilderSubmodules(self)

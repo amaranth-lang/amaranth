@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class ALU:
+class ALU(Elaboratable):
     def __init__(self, width):
         self.sel = Signal(2)
         self.a   = Signal(width)

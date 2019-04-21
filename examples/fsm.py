@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class UARTReceiver:
+class UARTReceiver(Elaboratable):
     def __init__(self, divisor):
         self.divisor = divisor
 

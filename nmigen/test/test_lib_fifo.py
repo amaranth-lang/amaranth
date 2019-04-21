@@ -45,7 +45,7 @@ class FIFOSmokeTestCase(FHDLTestCase):
         self.assertAsyncFIFOWorks(AsyncFIFOBuffered(width=8, depth=3))
 
 
-class FIFOModel(FIFOInterface):
+class FIFOModel(Elaboratable, FIFOInterface):
     """
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
     """
@@ -104,7 +104,7 @@ class FIFOModel(FIFOInterface):
         return m
 
 
-class FIFOModelEquivalenceSpec:
+class FIFOModelEquivalenceSpec(Elaboratable):
     """
     The first-in first-out queue model equivalence specification: for any inputs and control
     signals, the behavior of the implementation under test exactly matches the ideal model,
@@ -148,7 +148,7 @@ class FIFOModelEquivalenceSpec:
         return m
 
 
-class FIFOContractSpec:
+class FIFOContractSpec(Elaboratable):
     """
     The first-in first-out queue contract specification: if two elements are written to the queue
     consecutively, they must be read out consecutively at some later point, no matter all other

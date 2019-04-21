@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class ParMux:
+class ParMux(Elaboratable):
     def __init__(self, width):
         self.s = Signal(3)
         self.a = Signal(width)

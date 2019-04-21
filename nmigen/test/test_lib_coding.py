@@ -1,6 +1,7 @@
 from .tools import *
 from ..hdl.ast import *
 from ..hdl.dsl import *
+from ..hdl.ir import *
 from ..back.pysim import *
 from ..lib.coding import *
 
@@ -82,7 +83,7 @@ class DecoderTestCase(FHDLTestCase):
             sim.run()
 
 
-class ReversibleSpec:
+class ReversibleSpec(Elaboratable):
     def __init__(self, encoder_cls, decoder_cls, args):
         self.encoder_cls = encoder_cls
         self.decoder_cls = decoder_cls
@@ -99,7 +100,7 @@ class ReversibleSpec:
         return m
 
 
-class HammingDistanceSpec:
+class HammingDistanceSpec(Elaboratable):
     def __init__(self, distance, encoder_cls, args):
         self.distance    = distance
         self.encoder_cls = encoder_cls

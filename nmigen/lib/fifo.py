@@ -102,7 +102,7 @@ def _decr(signal, modulo):
         return Mux(signal == 0, modulo - 1, signal - 1)
 
 
-class SyncFIFO(FIFOInterface):
+class SyncFIFO(Elaboratable, FIFOInterface):
     __doc__ = FIFOInterface._doc_template.format(
     description="""
     Synchronous first in, first out queue.
@@ -209,7 +209,7 @@ class SyncFIFO(FIFOInterface):
         return m
 
 
-class SyncFIFOBuffered(FIFOInterface):
+class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     __doc__ = FIFOInterface._doc_template.format(
     description="""
     Buffered synchronous first in, first out queue.
@@ -265,7 +265,7 @@ class SyncFIFOBuffered(FIFOInterface):
         return m
 
 
-class AsyncFIFO(FIFOInterface):
+class AsyncFIFO(Elaboratable, FIFOInterface):
     __doc__ = FIFOInterface._doc_template.format(
     description="""
     Asynchronous first in, first out queue.
@@ -361,7 +361,7 @@ class AsyncFIFO(FIFOInterface):
         return m
 
 
-class AsyncFIFOBuffered(FIFOInterface):
+class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     __doc__ = FIFOInterface._doc_template.format(
     description="""
     Buffered asynchronous first in, first out queue.

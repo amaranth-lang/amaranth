@@ -1,6 +1,6 @@
 from .. import tracer
 from .ast import *
-from .ir import Instance
+from .ir import Elaboratable, Instance
 
 
 __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
@@ -70,7 +70,7 @@ class Memory:
         return self._array[index]
 
 
-class ReadPort:
+class ReadPort(Elaboratable):
     def __init__(self, memory, domain, synchronous, transparent):
         self.memory      = memory
         self.domain      = domain
@@ -135,7 +135,7 @@ class ReadPort:
         return f
 
 
-class WritePort:
+class WritePort(Elaboratable):
     def __init__(self, memory, domain, priority, granularity):
         self.memory       = memory
         self.domain       = domain

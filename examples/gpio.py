@@ -3,7 +3,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class GPIO:
+class GPIO(Elaboratable):
     def __init__(self, pins, bus):
         self.pins = pins
         self.bus  = bus

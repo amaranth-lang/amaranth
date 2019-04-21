@@ -2,7 +2,7 @@ from nmigen import *
 from nmigen.cli import main
 
 
-class System:
+class System(Elaboratable):
     def __init__(self):
         self.adr   = Signal(16)
         self.dat_r = Signal(8)

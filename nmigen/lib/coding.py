@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 
-class Encoder:
+class Encoder(Elaboratable):
     """Encode one-hot to binary.
 
     If one bit in ``i`` is asserted, ``n`` is low and ``o`` indicates the asserted bit.
@@ -48,7 +48,7 @@ class Encoder:
         return m
 
 
-class PriorityEncoder:
+class PriorityEncoder(Elaboratable):
     """Priority encode requests to binary.
 
     If any bit in ``i`` is asserted, ``n`` is low and ``o`` indicates the least significant
@@ -85,7 +85,7 @@ class PriorityEncoder:
         return m
 
 
-class Decoder:
+class Decoder(Elaboratable):
     """Decode binary to one-hot.
 
     If ``n`` is low, only the ``i``th bit in ``o`` is asserted.
@@ -130,7 +130,7 @@ class PriorityDecoder(Decoder):
     """
 
 
-class GrayEncoder:
+class GrayEncoder(Elaboratable):
     """Encode binary to Gray code.
 
     Parameters
@@ -157,7 +157,7 @@ class GrayEncoder:
         return m
 
 
-class GrayDecoder:
+class GrayDecoder(Elaboratable):
     """Decode Gray code to binary.
 
     Parameters

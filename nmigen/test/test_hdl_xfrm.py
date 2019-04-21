@@ -488,7 +488,7 @@ class CEInserterTestCase(FHDLTestCase):
         """)
 
 
-class _MockElaboratable:
+class _MockElaboratable(Elaboratable):
     def __init__(self):
         self.s1 = Signal()
 
