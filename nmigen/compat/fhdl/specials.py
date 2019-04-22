@@ -2,6 +2,7 @@ import warnings
 
 from ...tools import deprecated, extend
 from ...hdl.ast import *
+from ...hdl.ir import Elaboratable
 from ...hdl.mem import Memory as NativeMemory
 from ...hdl.ir import Fragment, Instance
 from .module import Module as CompatModule
@@ -10,7 +11,7 @@ from .module import Module as CompatModule
 __all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE"]
 
 
-class TSTriple:
+class TSTriple(Elaboratable):
     def __init__(self, bits_sign=None, min=None, max=None, reset_o=0, reset_oe=0, reset_i=0,
                  name=None):
         self.o  = Signal(bits_sign, min=min, max=max, reset=reset_o,
@@ -30,7 +31,7 @@ class TSTriple:
         return Tristate(io, self.o, self.oe, self.i)
 
 
-class Tristate:
+class Tristate(Elaboratable):
     def __init__(self, target, o, oe, i=None):
         self.target = target
         self.triple = TSTriple()
@@ -49,7 +50,7 @@ class Tristate:
             p_WIDTH=len(self.target),
             i_EN=self.triple.oe,
             i_A=self.triple.o,
-            o_Y=self.io,
+            o_Y=self.target,
         )
 
         f = m.elaborate(platform)
