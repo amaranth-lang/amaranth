@@ -13,11 +13,11 @@ __all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CH
 class TSTriple:
     def __init__(self, bits_sign=None, min=None, max=None, reset_o=0, reset_oe=0, reset_i=0,
                  name=None):
-        self.o  = Signal(shape, min=min, max=max, reset=reset_o,
+        self.o  = Signal(bits_sign, min=min, max=max, reset=reset_o,
                          name=None if name is None else name + "_o")
         self.oe = Signal(reset=reset_oe,
                          name=None if name is None else name + "_oe")
-        self.i  = Signal(shape, min=min, max=max, reset=reset_i,
+        self.i  = Signal(bits_sign, min=min, max=max, reset=reset_i,
                          name=None if name is None else name + "_i")
 
     def __len__(self):
