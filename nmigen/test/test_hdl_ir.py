@@ -531,11 +531,14 @@ class InstanceTestCase(FHDLTestCase):
         self.rst = Signal()
         self.stb = Signal()
         self.pins = Signal(8)
+        self.datal = Signal(4)
+        self.datah = Signal(4)
         self.inst = Instance("cpu",
             p_RESET=0x1234,
             i_clk=ClockSignal(),
             i_rst=self.rst,
             o_stb=self.stb,
+            o_data=Cat(self.datal, self.datah),
             io_pins=self.pins
         )
 
@@ -544,22 +547,18 @@ class InstanceTestCase(FHDLTestCase):
         f = self.inst
         self.assertEqual(f.type, "cpu")
         self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
-        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "pins"])
-        self.assertEqual(f.ports, SignalDict([
-            (self.stb, "o"),
-            (self.pins, "io"),
-        ]))
+        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "data", "pins"])
+        self.assertEqual(f.ports, SignalDict([]))
 
     def test_prepare(self):
         self.setUp_cpu()
         f = self.inst.prepare()
         clk = f.domains["sync"].clk
-        self.assertEqual(f.type, "cpu")
-        self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
-        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "pins"])
         self.assertEqual(f.ports, SignalDict([
             (clk, "i"),
             (self.rst, "i"),
             (self.stb, "o"),
+            (self.datal, "o"),
+            (self.datah, "o"),
             (self.pins, "io"),
         ]))

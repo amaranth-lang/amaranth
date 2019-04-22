@@ -344,16 +344,19 @@ class Fragment:
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
         if isinstance(self, Instance):
-            # Named ports contain signals for input, output and bidirectional ports. Output
-            # and bidirectional ports are already added to the main port dict, however, for
-            # input ports this has to be done lazily as any expression is valid there, including
-            # ones with deferred resolution to signals, such as ClockSignal().
             self_driven = SignalSet()
             self_used   = SignalSet()
-            for named_port_used in union((p._rhs_signals() for p in self.named_ports.values()),
-                                         start=SignalSet()):
-                if named_port_used not in self.ports:
-                    self_used.add(named_port_used)
+            for port_name, (value, dir) in self.named_ports.items():
+                if dir == "i":
+                    for signal in value._rhs_signals():
+                        self_used.add(signal)
+                        self.add_ports(signal, dir="i")
+                if dir == "o":
+                    for signal in value._lhs_signals():
+                        self_driven.add(signal)
+                        self.add_ports(signal, dir="o")
+                if dir == "io":
+                    self.add_ports(value, dir="io")
         else:
             self_driven = union((s._lhs_signals() for s in self.statements), start=SignalSet())
             self_used   = union((s._rhs_signals() for s in self.statements), start=SignalSet())
@@ -415,24 +418,19 @@ class Instance(Fragment):
     def __init__(self, type, **kwargs):
         super().__init__()
 
-        self.type = type
-        self.parameters = OrderedDict()
+        self.type        = type
+        self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
 
         for kw, arg in kwargs.items():
             if kw.startswith("p_"):
                 self.parameters[kw[2:]] = arg
             elif kw.startswith("i_"):
-                self.named_ports[kw[2:]] = arg
-                # Unlike with "o_" and "io_", "i_" ports can be assigned an arbitrary value;
-                # this includes unresolved ClockSignals etc. We rely on Fragment.prepare to
-                # populate fragment ports for these named ports.
+                self.named_ports[kw[2:]] = (arg, "i")
             elif kw.startswith("o_"):
-                self.named_ports[kw[2:]] = arg
-                self.add_ports(arg, dir="o")
+                self.named_ports[kw[2:]] = (arg, "o")
             elif kw.startswith("io_"):
-                self.named_ports[kw[3:]] = arg
-                self.add_ports(arg, dir="io")
+                self.named_ports[kw[3:]] = (arg, "io")
             else:
                 raise NameError("Instance argument '{}' does not start with p_, i_, o_, or io_"
                                 .format(arg))

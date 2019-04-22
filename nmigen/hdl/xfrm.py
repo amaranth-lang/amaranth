@@ -244,8 +244,8 @@ class FragmentTransformer:
 
     def map_named_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
-            for name, value in fragment.named_ports.items():
-                new_fragment.named_ports[name] = self.on_value(value)
+            for name, (value, dir) in fragment.named_ports.items():
+                new_fragment.named_ports[name] = self.on_value(value), dir
         else:
             new_fragment.named_ports = OrderedDict(fragment.named_ports.items())
 

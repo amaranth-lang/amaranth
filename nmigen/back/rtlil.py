@@ -669,7 +669,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
 def convert_fragment(builder, fragment, hierarchy):
     if isinstance(fragment, ir.Instance):
         port_map = OrderedDict()
-        for port_name, value in fragment.named_ports.items():
+        for port_name, (value, dir) in fragment.named_ports.items():
             port_map["\\{}".format(port_name)] = value
 
         if fragment.type[0] == "$":
