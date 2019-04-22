@@ -41,12 +41,12 @@ class Tristate:
 
     def elaborate(self, platform):
         if hasattr(platform, "get_tristate"):
-            return platform.get_tristate(self.triple, self.io)
+            return platform.get_tristate(self.triple, self.target)
 
         m = Module()
-        m.d.comb += self.triple.i.eq(self.io)
+        m.d.comb += self.triple.i.eq(self.target)
         m.submodules += Instance("$tribuf",
-            p_WIDTH=len(self.io),
+            p_WIDTH=len(self.target),
             i_EN=self.triple.oe,
             i_A=self.triple.o,
             o_Y=self.io,
