@@ -27,7 +27,7 @@ class DiffPairs:
                             "and {!r} do not"
                             .format(self.p, self.n))
 
-        self.dir = self.p.dir
+        self.dir = dir
 
     def __repr__(self):
         return "(diffpairs {} {})".format(self.p, self.n)
@@ -73,8 +73,9 @@ class Subsignal:
 
 class Resource(Subsignal):
     def __init__(self, name, number, *io, extras=()):
-        self.number = number
         super().__init__(name, *io, extras=extras)
+
+        self.number = number
 
     def __repr__(self):
         return "(resource {} {} {} {})".format(self.name, self.number,
