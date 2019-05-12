@@ -210,6 +210,7 @@ class Value(metaclass=ABCMeta):
     __hash__ = None
 
 
+@final
 class Const(Value):
     """A constant, literal integer value.
 
@@ -283,16 +284,19 @@ class AnyValue(Value, DUID):
         return ValueSet()
 
 
+@final
 class AnyConst(AnyValue):
     def __repr__(self):
         return "(anyconst {}'{})".format(self.nbits, "s" if self.signed else "")
 
 
+@final
 class AnySeq(AnyValue):
     def __repr__(self):
         return "(anyseq {}'{})".format(self.nbits, "s" if self.signed else "")
 
 
+@final
 class Operator(Value):
     def __init__(self, op, operands, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
@@ -387,6 +391,7 @@ def Mux(sel, val1, val0):
     return Operator("m", [sel, val1, val0], src_loc_at=1)
 
 
+@final
 class Slice(Value):
     def __init__(self, value, start, end):
         if not isinstance(start, int):
@@ -424,6 +429,7 @@ class Slice(Value):
         return "(slice {} {}:{})".format(repr(self.value), self.start, self.end)
 
 
+@final
 class Part(Value):
     def __init__(self, value, offset, width):
         if not isinstance(width, int) or width < 0:
@@ -447,6 +453,7 @@ class Part(Value):
         return "(part {} {} {})".format(repr(self.value), repr(self.offset), self.width)
 
 
+@final
 class Cat(Value):
     """Concatenate values.
 
@@ -495,6 +502,7 @@ class Cat(Value):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
 
 
+@final
 class Repl(Value):
     """Replicate a value
 
@@ -534,6 +542,7 @@ class Repl(Value):
         return "(repl {!r} {})".format(self.value, self.count)
 
 
+@final
 class Signal(Value, DUID):
     """A varying integer value.
 
@@ -649,6 +658,7 @@ class Signal(Value, DUID):
         return "(sig {})".format(self.name)
 
 
+@final
 class ClockSignal(Value):
     """Clock signal for a clock domain.
 
@@ -680,6 +690,7 @@ class ClockSignal(Value):
         return "(clk {})".format(self.domain)
 
 
+@final
 class ResetSignal(Value):
     """Reset signal for a clock domain.
 
@@ -802,6 +813,7 @@ class Array(MutableSequence):
                                        ", ".join(map(repr, self._inner)))
 
 
+@final
 class ArrayProxy(Value):
     def __init__(self, elems, index):
         super().__init__(src_loc_at=1)
@@ -836,6 +848,7 @@ class ArrayProxy(Value):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
 
 
+@final
 class Sample(Value):
     """Value from the past.
 
@@ -899,6 +912,7 @@ class Statement:
                 raise TypeError("Object '{!r}' is not an nMigen statement".format(obj))
 
 
+@final
 class Assign(Statement):
     def __init__(self, lhs, rhs):
         self.lhs = Value.wrap(lhs)
@@ -940,14 +954,17 @@ class Property(Statement):
         return "({} {!r})".format(self._kind, self.test)
 
 
+@final
 class Assert(Property):
     _kind = "assert"
 
 
+@final
 class Assume(Property):
     _kind = "assume"
 
 
+# @final
 class Switch(Statement):
     def __init__(self, test, cases):
         self.test  = Value.wrap(test)
@@ -981,6 +998,7 @@ class Switch(Statement):
         return "(switch {!r} {})".format(self.test, " ".join(cases))
 
 
+@final
 class Delay(Statement):
     def __init__(self, interval=None):
         self.interval = None if interval is None else float(interval)
@@ -995,6 +1013,7 @@ class Delay(Statement):
             return "(delay {:.3}us)".format(self.interval * 1e6)
 
 
+@final
 class Tick(Statement):
     def __init__(self, domain="sync"):
         self.domain = str(domain)
@@ -1006,6 +1025,7 @@ class Tick(Statement):
         return "(tick {})".format(self.domain)
 
 
+@final
 class Passive(Statement):
     def _rhs_signals(self):
         return ValueSet()

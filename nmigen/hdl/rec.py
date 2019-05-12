@@ -62,6 +62,7 @@ class Layout:
             yield (name, shape, dir)
 
 
+# Unlike most Values, Record *can* be subclassed.
 class Record(Value):
     def __init__(self, layout, name=None):
         if name is None:

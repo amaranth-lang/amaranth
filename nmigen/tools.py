@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 
 
-__all__ = ["flatten", "union", "log2_int", "bits_for", "memoize", "deprecated"]
+__all__ = ["flatten", "union", "log2_int", "bits_for", "memoize", "final", "deprecated"]
 
 
 def flatten(i):
@@ -55,6 +55,14 @@ def memoize(f):
             memo[args] = f(*args)
         return memo[args]
     return g
+
+
+def final(cls):
+    def init_subclass():
+        raise TypeError("Subclassing {}.{} is not supported"
+                        .format(cls.__module__, cls.__name__))
+    cls.__init_subclass__ = init_subclass
+    return cls
 
 
 def deprecated(message, stacklevel=2):
