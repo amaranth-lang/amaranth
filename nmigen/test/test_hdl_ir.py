@@ -65,7 +65,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f = Fragment()
         self.assertEqual(list(f.iter_ports()), [])
 
-        f._propagate_ports(ports=())
+        f._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([]))
 
     def test_iter_signals(self):
@@ -80,7 +80,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.s1.eq(self.c1)
         )
 
-        f._propagate_ports(ports=())
+        f._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([]))
 
     def test_infer_input(self):
@@ -89,7 +89,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
 
-        f._propagate_ports(ports=())
+        f._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([
             (self.s1, "i")
         ]))
@@ -100,7 +100,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
 
-        f._propagate_ports(ports=(self.c1,))
+        f._propagate_ports(ports=(self.c1,), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([
             (self.s1, "i"),
             (self.c1, "o")
@@ -116,7 +116,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.s1.eq(0)
         )
         f1.add_subfragment(f2)
-        f1._propagate_ports(ports=())
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict())
         self.assertEqual(f2.ports, SignalDict([
             (self.s1, "o"),
@@ -129,7 +129,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             self.c1.eq(self.s1)
         )
         f1.add_subfragment(f2)
-        f1._propagate_ports(ports=())
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict([
             (self.s1, "i"),
         ]))
@@ -148,7 +148,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         f1.add_subfragment(f2)
 
-        f1._propagate_ports(ports=(self.c2,))
+        f1._propagate_ports(ports=(self.c2,), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict([
             (self.c2, "o"),
         ]))
@@ -170,7 +170,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f3.add_driver(self.c2)
         f1.add_subfragment(f3)
 
-        f1._propagate_ports(ports=())
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict())
 
     def test_output_input_sibling(self):
@@ -187,7 +187,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         f1.add_subfragment(f3)
 
-        f1._propagate_ports(ports=())
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict())
 
     def test_input_cd(self):
@@ -199,7 +199,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_domains(sync)
         f.add_driver(self.c1, "sync")
 
-        f._propagate_ports(ports=())
+        f._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([
             (self.s1,  "i"),
             (sync.clk, "i"),
@@ -215,7 +215,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f.add_domains(sync)
         f.add_driver(self.c1, "sync")
 
-        f._propagate_ports(ports=())
+        f._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f.ports, SignalDict([
             (self.s1,  "i"),
             (sync.clk, "i"),
@@ -224,11 +224,10 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_inout(self):
         s = Signal()
         f1 = Fragment()
-        f2 = Fragment()
-        f2.add_ports(s, dir="io")
+        f2 = Instance("foo", io_x=s)
         f1.add_subfragment(f2)
 
-        f1._propagate_ports(ports=())
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
         self.assertEqual(f1.ports, SignalDict([
             (s, "io")
         ]))
@@ -557,8 +556,14 @@ class InstanceTestCase(FHDLTestCase):
         self.assertEqual(f.ports, SignalDict([
             (clk, "i"),
             (self.rst, "i"),
+            (self.pins, "io"),
+        ]))
+
+    def test_prepare_explicit_ports(self):
+        self.setUp_cpu()
+        f = self.inst.prepare(ports=[self.rst, self.stb])
+        self.assertEqual(f.ports, SignalDict([
+            (self.rst, "i"),
             (self.stb, "o"),
-            (self.datal, "o"),
-            (self.datah, "o"),
             (self.pins, "io"),
         ]))
