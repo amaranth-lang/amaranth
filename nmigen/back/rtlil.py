@@ -3,7 +3,7 @@ import textwrap
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 
-from ..tools import bits_for
+from ..tools import bits_for, flatten
 from ..hdl import ast, rec, ir, mem, xfrm
 
 
@@ -843,6 +843,30 @@ def convert_fragment(builder, fragment, hierarchy):
                             for signal in signals:
                                 wire_curr, wire_next = compiler_state.resolve(signal)
                                 sync.update(wire_curr, wire_next)
+
+        # Any signals that are used but neither driven nor connected to an input port always
+        # assume their reset values. We need to assign the reset value explicitly, since only
+        # driven sync signals are handled by the logic above.
+        #
+        # Because this assignment is done at a late stage, a single Signal object can get assigned
+        # many times, once in each module it is used. This is a deliberate decision; the possible
+        # alternatives are to add ports for undriven signals (which requires choosing one module
+        # to drive it to reset value arbitrarily) or to replace them with their reset value (which
+        # removes valuable source location information).
+        driven = ast.SignalSet()
+        for domain, signals in fragment.iter_drivers():
+            driven.update(flatten(signal._lhs_signals() for signal in signals))
+        driven.update(fragment.iter_ports(dir="i"))
+        driven.update(fragment.iter_ports(dir="io"))
+        for subfragment, sub_name in fragment.subfragments:
+            driven.update(subfragment.iter_ports(dir="o"))
+            driven.update(subfragment.iter_ports(dir="io"))
+
+        for wire in compiler_state.wires:
+            if wire in driven:
+                continue
+            wire_curr, _ = compiler_state.wires[wire]
+            module.connect(wire_curr, rhs_compiler(ast.Const(wire.reset, wire.nbits)))
 
     # Finally, collect the names we've given to our ports in RTLIL, and correlate these with
     # the signals represented by these ports. If we are a submodule, this will be necessary
