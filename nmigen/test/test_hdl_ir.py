@@ -156,6 +156,27 @@ class FragmentPortsTestCase(FHDLTestCase):
             (self.c2, "o"),
         ]))
 
+    def test_output_from_subfragment_2(self):
+        f1 = Fragment()
+        f1.add_statements(
+            self.c1.eq(self.s1)
+        )
+        f2 = Fragment()
+        f2.add_statements(
+            self.c2.eq(self.s1)
+        )
+        f1.add_subfragment(f2)
+        f3 = Fragment()
+        f3.add_statements(
+            self.s1.eq(0)
+        )
+        f2.add_subfragment(f3)
+
+        f1._propagate_ports(ports=(), all_undef_as_ports=True)
+        self.assertEqual(f2.ports, SignalDict([
+            (self.s1, "o"),
+        ]))
+
     def test_input_output_sibling(self):
         f1 = Fragment()
         f2 = Fragment()

@@ -445,11 +445,6 @@ class Fragment:
         for sig in uses:
             if sig in defs:
                 lca  = reduce(lca_of, uses[sig], defs[sig])
-
-                frag = defs[sig]
-                while frag != lca:
-                    frag.add_ports(sig, dir="o")
-                    frag = parent[frag]
             else:
                 lca  = reduce(lca_of, uses[sig])
 
@@ -458,6 +453,12 @@ class Fragment:
                     continue
                 while frag != lca:
                     frag.add_ports(sig, dir="i")
+                    frag = parent[frag]
+
+            if sig in defs:
+                frag = defs[sig]
+                while frag != lca:
+                    frag.add_ports(sig, dir="o")
                     frag = parent[frag]
 
         for sig in ios:
