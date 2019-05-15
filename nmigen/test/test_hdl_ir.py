@@ -573,9 +573,9 @@ class InstanceTestCase(FHDLTestCase):
     def test_prepare(self):
         self.setUp_cpu()
         f = self.inst.prepare()
-        clk = f.domains["sync"].clk
+        sync_clk = f.domains["sync"].clk
         self.assertEqual(f.ports, SignalDict([
-            (clk, "i"),
+            (sync_clk, "i"),
             (self.rst, "i"),
             (self.pins, "io"),
         ]))
@@ -583,7 +583,11 @@ class InstanceTestCase(FHDLTestCase):
     def test_prepare_explicit_ports(self):
         self.setUp_cpu()
         f = self.inst.prepare(ports=[self.rst, self.stb])
+        sync_clk = f.domains["sync"].clk
+        sync_rst = f.domains["sync"].rst
         self.assertEqual(f.ports, SignalDict([
+            (sync_clk, "i"),
+            (sync_rst, "i"),
             (self.rst, "i"),
             (self.stb, "o"),
             (self.pins, "io"),

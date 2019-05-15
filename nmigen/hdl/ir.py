@@ -327,8 +327,13 @@ class Fragment:
     def _propagate_domains(self, ensure_sync_exists):
         self._propagate_domains_up()
         if ensure_sync_exists and not self.domains:
-            self.add_domains(ClockDomain("sync"))
+            cd_sync = ClockDomain()
+            self.add_domains(cd_sync)
+            new_domains = (cd_sync,)
+        else:
+            new_domains = ()
         self._propagate_domains_down()
+        return new_domains
 
     def _insert_domain_resets(self):
         from .xfrm import ResetInserter
@@ -479,14 +484,19 @@ class Fragment:
         from .xfrm import SampleLowerer
 
         fragment = SampleLowerer()(self)
-        fragment._propagate_domains(ensure_sync_exists)
+        new_domains = fragment._propagate_domains(ensure_sync_exists)
         fragment._resolve_hierarchy_conflicts()
         fragment = fragment._insert_domain_resets()
         fragment = fragment._lower_domain_signals()
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
-            fragment._propagate_ports(ports=ports, all_undef_as_ports=False)
+            new_ports = []
+            for cd in new_domains:
+                new_ports.append(cd.clk)
+                if cd.rst is not None:
+                    new_ports.append(cd.rst)
+            fragment._propagate_ports(ports=(*ports, *new_ports), all_undef_as_ports=False)
         return fragment
 
 
