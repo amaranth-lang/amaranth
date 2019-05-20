@@ -5,6 +5,7 @@ from ...hdl.ast import *
 from ...hdl.ir import Elaboratable
 from ...hdl.mem import Memory as NativeMemory
 from ...hdl.ir import Fragment, Instance
+from ...hdl.dsl import Module
 from .module import Module as CompatModule
 
 
