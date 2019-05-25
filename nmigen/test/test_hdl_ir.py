@@ -561,6 +561,8 @@ class InstanceTestCase(FHDLTestCase):
             o_data=Cat(self.datal, self.datah),
             io_pins=self.pins
         )
+        self.wrap = Fragment()
+        self.wrap.add_subfragment(self.inst)
 
     def test_init(self):
         self.setUp_cpu()
@@ -572,7 +574,7 @@ class InstanceTestCase(FHDLTestCase):
 
     def test_prepare(self):
         self.setUp_cpu()
-        f = self.inst.prepare()
+        f = self.wrap.prepare()
         sync_clk = f.domains["sync"].clk
         self.assertEqual(f.ports, SignalDict([
             (sync_clk, "i"),
@@ -582,7 +584,7 @@ class InstanceTestCase(FHDLTestCase):
 
     def test_prepare_explicit_ports(self):
         self.setUp_cpu()
-        f = self.inst.prepare(ports=[self.rst, self.stb])
+        f = self.wrap.prepare(ports=[self.rst, self.stb])
         sync_clk = f.domains["sync"].clk
         sync_rst = f.domains["sync"].rst
         self.assertEqual(f.ports, SignalDict([
@@ -591,4 +593,14 @@ class InstanceTestCase(FHDLTestCase):
             (self.rst, "i"),
             (self.stb, "o"),
             (self.pins, "io"),
+        ]))
+
+    def test_prepare_slice_in_port(self):
+        s = Signal(2)
+        f = Fragment()
+        f.add_subfragment(Instance("foo", o_O=s[0]))
+        f.add_subfragment(Instance("foo", o_O=s[1]))
+        fp = f.prepare(ports=[s], ensure_sync_exists=False)
+        self.assertEqual(fp.ports, SignalDict([
+            (s, "o"),
         ]))

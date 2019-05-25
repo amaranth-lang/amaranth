@@ -366,31 +366,34 @@ class Fragment:
 
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        if isinstance(self, Instance):
-            for port_name, (value, dir) in self.named_ports.items():
-                if dir == "i":
-                    add_uses(value._rhs_signals())
-                if dir == "o":
-                    add_defs(value._lhs_signals())
-                if dir == "io":
-                    add_io(value)
-        else:
-            for stmt in self.statements:
-                add_uses(stmt._rhs_signals())
-                add_defs(stmt._lhs_signals())
+        for stmt in self.statements:
+            add_uses(stmt._rhs_signals())
+            add_defs(stmt._lhs_signals())
 
-            for domain, _ in self.iter_sync():
-                cd = self.domains[domain]
-                add_uses(cd.clk)
-                if cd.rst is not None:
-                    add_uses(cd.rst)
+        for domain, _ in self.iter_sync():
+            cd = self.domains[domain]
+            add_uses(cd.clk)
+            if cd.rst is not None:
+                add_uses(cd.rst)
 
         # Repeat for subfragments.
         for subfrag, name in self.subfragments:
-            parent[subfrag] = self
-            level [subfrag] = level[self] + 1
+            if isinstance(subfrag, Instance):
+                for port_name, (value, dir) in subfrag.named_ports.items():
+                    if dir == "i":
+                        subfrag.add_ports(value._rhs_signals(), dir=dir)
+                        add_uses(value._rhs_signals())
+                    if dir == "o":
+                        subfrag.add_ports(value._lhs_signals(), dir=dir)
+                        add_defs(value._lhs_signals())
+                    if dir == "io":
+                        subfrag.add_ports(value, dir=dir)
+                        add_io(value)
+            else:
+                parent[subfrag] = self
+                level [subfrag] = level[self] + 1
 
-            subfrag._prepare_use_def_graph(parent, level, uses, defs, ios, top)
+                subfrag._prepare_use_def_graph(parent, level, uses, defs, ios, top)
 
     def _propagate_ports(self, ports, all_undef_as_ports):
         # Take this fragment graph:
