@@ -52,6 +52,8 @@ class Layout:
             if name in self.fields:
                 raise NameError("Field {!r} has a name that is already present in the layout"
                                 .format(field))
+            if isinstance(shape, int):
+                shape = (shape, False)
             self.fields[name] = (shape, direction)
 
     def __getitem__(self, name):
@@ -61,10 +63,13 @@ class Layout:
         for name, (shape, dir) in self.fields.items():
             yield (name, shape, dir)
 
+    def __eq__(self, other):
+        return self.fields == other.fields
+
 
 # Unlike most Values, Record *can* be subclassed.
 class Record(Value):
-    def __init__(self, layout, name=None):
+    def __init__(self, layout, name=None, *, fields=None):
         if name is None:
             name = tracer.get_var_name(default=None)
 
@@ -79,10 +84,18 @@ class Record(Value):
         self.layout = Layout.wrap(layout)
         self.fields = OrderedDict()
         for field_name, field_shape, field_dir in self.layout:
-            if isinstance(field_shape, Layout):
-                self.fields[field_name] = Record(field_shape, name=concat(name, field_name))
+            if fields is not None and field_name in fields:
+                field = fields[field_name]
+                if isinstance(field_shape, Layout):
+                    assert isinstance(field, Record) and field_shape == field.layout
+                else:
+                    assert isinstance(field, Signal) and field_shape == field.shape()
+                self.fields[field_name] = field
             else:
-                self.fields[field_name] = Signal(field_shape, name=concat(name, field_name))
+                if isinstance(field_shape, Layout):
+                    self.fields[field_name] = Record(field_shape, name=concat(name, field_name))
+                else:
+                    self.fields[field_name] = Signal(field_shape, name=concat(name, field_name))
 
     def __getattr__(self, name):
         return self[name]

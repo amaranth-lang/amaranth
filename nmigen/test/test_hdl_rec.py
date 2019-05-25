@@ -16,14 +16,14 @@ class LayoutTestCase(FHDLTestCase):
             ])
         ])
 
-        self.assertEqual(layout["cyc"], (1, DIR_NONE))
+        self.assertEqual(layout["cyc"], ((1, False), DIR_NONE))
         self.assertEqual(layout["data"], ((32, True), DIR_NONE))
-        self.assertEqual(layout["stb"], (1, DIR_FANOUT))
-        self.assertEqual(layout["ack"], (1, DIR_FANIN))
+        self.assertEqual(layout["stb"], ((1, False), DIR_FANOUT))
+        self.assertEqual(layout["ack"], ((1, False), DIR_FANIN))
         sublayout = layout["info"][0]
         self.assertEqual(layout["info"][1], DIR_NONE)
-        self.assertEqual(sublayout["a"], (1, DIR_NONE))
-        self.assertEqual(sublayout["b"], (1, DIR_NONE))
+        self.assertEqual(sublayout["a"], ((1, False), DIR_NONE))
+        self.assertEqual(sublayout["b"], ((1, False), DIR_NONE))
 
     def test_wrong_field(self):
         with self.assertRaises(TypeError,
@@ -105,6 +105,23 @@ class RecordTestCase(FHDLTestCase):
         with self.assertRaises(NameError,
                 msg="Unnamed record does not have a field 'en'. Did you mean one of: stb, ack?"):
             r.en
+
+    def test_construct_with_fields(self):
+        ns = Signal(1)
+        nr = Record([
+            ("burst", 1)
+        ])
+        r = Record([
+            ("stb", 1),
+            ("info", [
+                ("burst", 1)
+            ])
+        ], fields={
+            "stb":  ns,
+            "info": nr
+        })
+        self.assertIs(r.stb, ns)
+        self.assertIs(r.info, nr)
 
 
 class ConnectTestCase(FHDLTestCase):
