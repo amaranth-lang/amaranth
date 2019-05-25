@@ -14,7 +14,7 @@ class Pins:
         self.dir = dir
 
     def __repr__(self):
-        return "(pins {} {})".format(" ".join(self.names), self.dir)
+        return "(pins {} {})".format(self.dir, " ".join(self.names))
 
 
 class DiffPairs:
@@ -30,7 +30,8 @@ class DiffPairs:
         self.dir = dir
 
     def __repr__(self):
-        return "(diffpairs {} {})".format(self.p, self.n)
+        return "(diffpairs {} (p {}) (n {}))".format(
+            self.dir, " ".join(self.p.names), " ".join(self.n.names))
 
 
 class Subsignal:
