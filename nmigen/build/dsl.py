@@ -13,6 +13,12 @@ class Pins:
                             .format(dir))
         self.dir = dir
 
+    def __len__(self):
+        return len(self.names)
+
+    def __iter__(self):
+        return iter(self.names)
+
     def __repr__(self):
         return "(pins {} {})".format(self.dir, " ".join(self.names))
 
@@ -28,6 +34,12 @@ class DiffPairs:
                             .format(self.p, self.n))
 
         self.dir = dir
+
+    def __len__(self):
+        return len(self.p.names)
+
+    def __iter__(self):
+        return zip(self.p.names, self.n.names)
 
     def __repr__(self):
         return "(diffpairs {} (p {}) (n {}))".format(

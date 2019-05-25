@@ -8,6 +8,7 @@ class PinsTestCase(FHDLTestCase):
         self.assertEqual(repr(p), "(pins io A0 A1 A2)")
         self.assertEqual(len(p.names), 3)
         self.assertEqual(p.dir, "io")
+        self.assertEqual(list(p), ["A0", "A1", "A2"])
 
     def test_wrong_names(self):
         with self.assertRaises(TypeError,
@@ -27,6 +28,7 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.p.names, ["A0", "A1"])
         self.assertEqual(dp.n.names, ["B0", "B1"])
         self.assertEqual(dp.dir, "io")
+        self.assertEqual(list(dp), [("A0", "B0"), ("A1", "B1")])
 
     def test_dir(self):
         dp = DiffPairs("A0", "B0", dir="o")
