@@ -1,3 +1,7 @@
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
+
 from .hdl.ast import Value, Const, C, Mux, Cat, Repl, Array, Signal, ClockSignal, ResetSignal
 from .hdl.dsl import Module
 from .hdl.cd import ClockDomain
