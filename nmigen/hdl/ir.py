@@ -14,6 +14,8 @@ __all__ = ["Elaboratable", "DriverConflict", "Fragment", "Instance"]
 
 
 class Elaboratable(metaclass=ABCMeta):
+    _Elaboratable__silence = False
+
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         self._Elaboratable__traceback = traceback.extract_stack()[:-1]
@@ -21,11 +23,22 @@ class Elaboratable(metaclass=ABCMeta):
         return self
 
     def __del__(self):
+        if self._Elaboratable__silence:
+            return
         if hasattr(self, "_Elaboratable__used") and not self._Elaboratable__used:
             print("Elaboratable created but never used\n",
                   "Traceback (most recent call last):\n",
                   *traceback.format_list(self._Elaboratable__traceback),
                   file=sys.stderr, sep="")
+
+
+_old_excepthook = sys.excepthook
+def _silence_elaboratable(type, value, traceback):
+    # Don't show anything if the interpreter crashed; that'd just obscure the exception
+    # traceback instead of helping.
+    Elaboratable._Elaboratable__silence = True
+    _old_excepthook(type, value, traceback)
+sys.excepthook = _silence_elaboratable
 
 
 class DriverConflict(UserWarning):
