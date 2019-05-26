@@ -878,8 +878,8 @@ def convert_fragment(builder, fragment, hierarchy):
     return module.name, port_map
 
 
-def convert(fragment, name="top", **kwargs):
-    fragment = ir.Fragment.get(fragment, platform=None).prepare(**kwargs)
+def convert(fragment, name="top", platform=None, **kwargs):
+    fragment = ir.Fragment.get(fragment, platform).prepare(**kwargs)
     builder = _Builder()
     convert_fragment(builder, fragment, hierarchy=(name,))
     return str(builder)
