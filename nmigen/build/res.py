@@ -21,8 +21,8 @@ class ConstraintManager:
         self.clocks     = OrderedDict()
 
         self._ports     = []
-        self._tristates = []
-        self._diffpairs = []
+        self._se_pins   = []
+        self._dp_pins   = []
 
         self.add_resources(resources)
         for name_number, frequency in clocks:
@@ -133,19 +133,16 @@ class ConstraintManager:
                 yield (value, subsignal.io[0], subsignal.extras)
 
         for (pin, io, extras) in match_constraints(value, resource):
-            if isinstance(io, DiffPairs):
-                p = Signal(pin.width, name="{}_p".format(pin.name))
-                n = Signal(pin.width, name="{}_n".format(pin.name))
-                self._diffpairs.append((pin, p, n))
-                self._ports.append((p, io.p.names, extras))
-                self._ports.append((n, io.n.names, extras))
-            elif isinstance(io, Pins):
-                if pin.dir == "io":
-                    port = Signal(pin.width, name="{}_io".format(pin.name))
-                    self._tristates.append((pin, port))
-                else:
-                    port = getattr(pin, pin.dir)
+            if isinstance(io, Pins):
+                port = Signal(pin.width, name="{}_io".format(pin.name))
+                self._se_pins.append((pin, port))
                 self._ports.append((port, io.names, extras))
+            elif isinstance(io, DiffPairs):
+                p_port = Signal(pin.width, name="{}_p".format(pin.name))
+                n_port = Signal(pin.width, name="{}_n".format(pin.name))
+                self._dp_pins.append((pin, p_port, n_port))
+                self._ports.append((p_port, io.p.names, extras))
+                self._ports.append((n_port, io.n.names, extras))
             else:
                 assert False # :nocov:
 
@@ -169,8 +166,10 @@ class ConstraintManager:
                 raise ConstraintError("Cannot constrain frequency of resource {}#{} because "
                                       "it has been requested as a tristate buffer"
                                       .format(name, number))
-            if isinstance(resource.io[0], DiffPairs):
+            if isinstance(resource.io[0], Pins):
+                port_name = "{}_io".format(pin.name)
+            elif isinstance(resource.io[0], DiffPairs):
                 port_name = "{}_p".format(pin.name)
             else:
-                port_name = getattr(pin, pin.dir).name
+                assert False
             yield (port_name, period)

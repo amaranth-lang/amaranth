@@ -64,10 +64,9 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
         ports = list(self.cm.iter_ports())
         self.assertEqual(len(ports), 1)
-        self.assertIs(user_led.o, ports[0])
 
         self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("user_led_0__o", ["A0"], [])
+            ("user_led_0_io", ["A0"], [])
         ])
 
     def test_request_with_dir(self):
@@ -82,13 +81,16 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
         ports = list(self.cm.iter_ports())
         self.assertEqual(len(ports), 2)
-        self.assertIs(i2c.scl.o, ports[0]),
+        scl, sda = ports
         self.assertEqual(ports[1].name, "i2c_0__sda_io")
         self.assertEqual(ports[1].nbits, 1)
 
-        self.assertEqual(self.cm._tristates, [(i2c.sda, ports[1])])
+        self.assertEqual(self.cm._se_pins, [
+            (i2c.scl, scl),
+            (i2c.sda, sda),
+        ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("i2c_0__scl__o", ["N10"], []),
+            ("i2c_0__scl_io", ["N10"], []),
             ("i2c_0__sda_io", ["N11"], [])
         ])
 
@@ -106,7 +108,9 @@ class ConstraintManagerTestCase(FHDLTestCase):
         self.assertEqual(n.name, "clk100_0_n")
         self.assertEqual(n.nbits, clk100.width)
 
-        self.assertEqual(self.cm._diffpairs, [(clk100, p, n)])
+        self.assertEqual(self.cm._dp_pins, [
+            (clk100, p, n),
+        ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("clk100_0_p", ["H1"], []),
             ("clk100_0_n", ["H2"], [])
@@ -121,7 +125,7 @@ class ConstraintManagerTestCase(FHDLTestCase):
         clk50 = self.cm.request("clk50", 0, dir="i")
         self.assertEqual(list(sorted(self.cm.iter_clock_constraints())), [
             ("clk100_0_p", 10e6),
-            ("clk50_0__i", 5e6)
+            ("clk50_0_io", 5e6)
         ])
 
     def test_wrong_resources(self):
