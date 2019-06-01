@@ -17,14 +17,23 @@ class ConstraintManagerTestCase(FHDLTestCase):
                 Subsignal("sda", Pins("N11"))
             )
         ]
-        self.cm = ConstraintManager(self.resources)
+        self.cm = ConstraintManager(self.resources, [])
 
     def test_basic(self):
+        self.clocks = [
+            ("clk100",      100),
+            (("clk50", 0),  50),
+        ]
+        self.cm = ConstraintManager(self.resources, self.clocks)
         self.assertEqual(self.cm.resources, {
             ("clk100",   0): self.resources[0],
             ("clk50",    0): self.resources[1],
             ("user_led", 0): self.resources[2],
             ("i2c",      0): self.resources[3]
+        })
+        self.assertEqual(self.cm.clocks, {
+            ("clk100", 0): 100,
+            ("clk50",  0): 50,
         })
 
     def test_add_resources(self):

@@ -15,7 +15,7 @@ class ConstraintError(Exception):
 
 
 class ConstraintManager:
-    def __init__(self, resources):
+    def __init__(self, resources, clocks):
         self.resources  = OrderedDict()
         self.requested  = OrderedDict()
         self.clocks     = OrderedDict()
@@ -25,6 +25,10 @@ class ConstraintManager:
         self._diffpairs = []
 
         self.add_resources(resources)
+        for name_number, frequency in clocks:
+            if not isinstance(name_number, tuple):
+                name_number = (name_number, 0)
+            self.add_clock(*name_number, frequency)
 
     def add_resources(self, resources):
         for r in resources:
