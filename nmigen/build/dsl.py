@@ -1,4 +1,4 @@
-__all__ = ["Pins", "Subsignal", "DiffPairs", "Resource"]
+__all__ = ["Pins", "DiffPairs", "Subsignal", "Resource"]
 
 
 class Pins:

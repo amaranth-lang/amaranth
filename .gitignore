@@ -7,3 +7,4 @@
 **/test/spec_*/
 /.coverage
 /htmlcov
+/build
