@@ -14,7 +14,7 @@ addons:
 before_install:
   - export PATH="/usr/lib/ccache:$HOME/.local/bin:$PATH"
 install:
-  - pip install coverage codecov pyvcd bitarray
+  - pip install coverage codecov pyvcd bitarray Jinja2
   - git clone https://github.com/YosysHQ/yosys
   - (cd yosys && if ! yosys -V || [ $(git rev-parse HEAD $(yosys -V | awk 'match($0,/sha1 ([0-9a-f]+)/,m) { print m[1] }') | uniq | wc -l) != 1 ]; then make CONFIG=gcc ENABLE_ABC=0 PREFIX=$HOME/.local install; fi)
   - (git clone https://github.com/YosysHQ/SymbiYosys && cd SymbiYosys && make PREFIX=$HOME/.local install)
