@@ -6,7 +6,7 @@ import tempfile
 from ...build import *
 
 
-__all__ = ["LatticeICE40Platform", "IceStormProgrammerMixin", "IceBurnProgrammerMixin"]
+__all__ = ["LatticeICE40Platform", "IceStormProgrammerMixin", "IceBurnProgrammerMixin", "TinyProgrammerMixin"]
 
 
 class LatticeICE40Platform(TemplatedPlatform):
@@ -132,3 +132,13 @@ class IceBurnProgrammerMixin:
         with tempfile.NamedTemporaryFile(prefix="nmigen_iceburn_") as bitstream_file:
             bitstream_file.write(bitstream)
             subprocess.run([iceburn, "-evw", bitstream_file.name], check=True)
+
+
+class TinyProgrammerMixin:
+    def toolchain_program(self, products, name):
+        tinyprog  = os.environ.get("TINYPROG", "tinyprog")
+        options   = ["-p"]
+        bitstream = products.get("{}.bin".format(name))
+        with tempfile.NamedTemporaryFile(prefix="nmigen_tinyprog_") as bitstream_file:
+            bitstream_file.write(bitstream)
+            subprocess.run([tinyprog, *options, bitstream_file.name], check=True)
