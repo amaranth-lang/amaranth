@@ -66,7 +66,7 @@ class ConstraintManagerTestCase(FHDLTestCase):
         self.assertEqual(len(ports), 1)
 
         self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("user_led_0_io", ["A0"], [])
+            ("user_led_0_io", ["A0"], {})
         ])
 
     def test_request_with_dir(self):
@@ -90,8 +90,8 @@ class ConstraintManagerTestCase(FHDLTestCase):
             (i2c.sda, sda),
         ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("i2c_0__scl_io", ["N10"], []),
-            ("i2c_0__sda_io", ["N11"], [])
+            ("i2c_0__scl_io", ["N10"], {}),
+            ("i2c_0__sda_io", ["N11"], {})
         ])
 
     def test_request_diffpairs(self):
@@ -112,8 +112,8 @@ class ConstraintManagerTestCase(FHDLTestCase):
             (clk100, p, n),
         ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("clk100_0_p", ["H1"], []),
-            ("clk100_0_n", ["H2"], [])
+            ("clk100_0_p", ["H1"], {}),
+            ("clk100_0_n", ["H2"], {})
         ])
 
     def test_add_clock(self):

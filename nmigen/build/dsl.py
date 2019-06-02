@@ -47,7 +47,7 @@ class DiffPairs:
 
 
 class Subsignal:
-    def __init__(self, name, *io, extras=()):
+    def __init__(self, name, *io, extras=None):
         self.name = name
 
         if not io:
@@ -67,25 +67,35 @@ class Subsignal:
                     raise TypeError("A Subsignal can only be followed by more Subsignals, but "
                                     "{!r} is followed by {!r}"
                                     .format(io[0], c))
-        self.io = io
+        self.io     = io
+        self.extras = {}
 
-        for c in extras:
-            if not isinstance(c, str):
-                raise TypeError("Extra constraint must be a string, not {!r}".format(c))
-        self.extras = list(extras)
+        if extras is not None:
+            if not isinstance(extras, dict):
+                raise TypeError("Extra constraints must be a dict, not {!r}"
+                                .format(extras))
+            for extra_key, extra_value in extras.items():
+                if not isinstance(extra_key, str):
+                    raise TypeError("Extra constraint key must be a string, not {!r}"
+                                    .format(extra_key))
+                if not isinstance(extra_value, str):
+                    raise TypeError("Extra constraint value must be a string, not {!r}"
+                                    .format(extra_value))
+                self.extras[extra_key] = extra_value
 
         if isinstance(self.io[0], Subsignal):
             for sub in self.io:
-                sub.extras += self.extras
+                sub.extras.update(self.extras)
 
     def __repr__(self):
         return "(subsignal {} {} {})".format(self.name,
                                              " ".join(map(repr, self.io)),
-                                             " ".join(self.extras))
+                                             " ".join("{}={}".format(k, v)
+                                                      for k, v in self.extras.items()))
 
 
 class Resource(Subsignal):
-    def __init__(self, name, number, *io, extras=()):
+    def __init__(self, name, number, *io, extras=None):
         super().__init__(name, *io, extras=extras)
 
         self.number = number
@@ -93,4 +103,5 @@ class Resource(Subsignal):
     def __repr__(self):
         return "(resource {} {} {} {})".format(self.name, self.number,
                                                " ".join(map(repr, self.io)),
-                                               " ".join(self.extras))
+                                               " ".join("{}={}".format(k, v)
+                                                        for k, v in self.extras.items()))

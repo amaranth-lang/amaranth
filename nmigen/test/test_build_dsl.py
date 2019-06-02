@@ -45,7 +45,7 @@ class DiffPairsTestCase(FHDLTestCase):
 
 class SubsignalTestCase(FHDLTestCase):
     def test_basic_pins(self):
-        s = Subsignal("a", Pins("A0"), extras=["IOSTANDARD=LVCMOS33"])
+        s = Subsignal("a", Pins("A0"), extras={"IOSTANDARD": "LVCMOS33"})
         self.assertEqual(repr(s), "(subsignal a (pins io A0) IOSTANDARD=LVCMOS33)")
 
     def test_basic_diffpairs(self):
@@ -62,11 +62,11 @@ class SubsignalTestCase(FHDLTestCase):
     def test_extras(self):
         s = Subsignal("a",
                 Subsignal("b", Pins("A0")),
-                Subsignal("c", Pins("A0"), extras=["SLEW=FAST"]),
-                extras=["IOSTANDARD=LVCMOS33"])
-        self.assertEqual(s.extras, ["IOSTANDARD=LVCMOS33"])
-        self.assertEqual(s.io[0].extras, ["IOSTANDARD=LVCMOS33"])
-        self.assertEqual(s.io[1].extras, ["SLEW=FAST", "IOSTANDARD=LVCMOS33"])
+                Subsignal("c", Pins("A0"), extras={"SLEW": "FAST"}),
+                extras={"IOSTANDARD": "LVCMOS33"})
+        self.assertEqual(s.extras, {"IOSTANDARD": "LVCMOS33"})
+        self.assertEqual(s.io[0].extras, {"IOSTANDARD": "LVCMOS33"})
+        self.assertEqual(s.io[1].extras, {"SLEW": "FAST", "IOSTANDARD": "LVCMOS33"})
 
     def test_empty_io(self):
         with self.assertRaises(TypeError, msg="Missing I/O constraints"):
@@ -98,8 +98,14 @@ class SubsignalTestCase(FHDLTestCase):
 
     def test_wrong_extras(self):
         with self.assertRaises(TypeError,
-                msg="Extra constraint must be a string, not (pins io B0)"):
+                msg="Extra constraints must be a dict, not [(pins io B0)]"):
             s = Subsignal("a", Pins("A0"), extras=[Pins("B0")])
+        with self.assertRaises(TypeError,
+                msg="Extra constraint key must be a string, not 1"):
+            s = Subsignal("a", Pins("A0"), extras={1: 2})
+        with self.assertRaises(TypeError,
+                msg="Extra constraint value must be a string, not 2"):
+            s = Subsignal("a", Pins("A0"), extras={"1": 2})
 
 
 class ResourceTestCase(FHDLTestCase):
@@ -107,7 +113,7 @@ class ResourceTestCase(FHDLTestCase):
         r = Resource("serial", 0,
                 Subsignal("tx", Pins("A0", dir="o")),
                 Subsignal("rx", Pins("A1", dir="i")),
-                extras=["IOSTANDARD=LVCMOS33"])
+                extras={"IOSTANDARD": "LVCMOS33"})
         self.assertEqual(repr(r), "(resource serial 0"
                                   " (subsignal tx (pins o A0) IOSTANDARD=LVCMOS33)"
                                   " (subsignal rx (pins i A1) IOSTANDARD=LVCMOS33)"
