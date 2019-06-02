@@ -12,13 +12,13 @@ class ICEStickPlatform(IceStormProgrammerMixin, LatticeICE40Platform):
         ("clk12", 12e6),
     ]
     resources = [
-        Resource("clk12", 0, Pins("21", dir="i"), extras=["IO_STANDARD=LVCMOS33"]),
+        Resource("clk12", 0, Pins("21", dir="i"), extras=["IO_STANDARD=SB_LVCMOS33"]),
 
-        Resource("user_led", 0, Pins("99", dir="o"), extras=["IO_STANDARD=LVCMOS33"]),
-        Resource("user_led", 1, Pins("98", dir="o"), extras=["IO_STANDARD=LVCMOS33"]),
-        Resource("user_led", 2, Pins("97", dir="o"), extras=["IO_STANDARD=LVCMOS33"]),
-        Resource("user_led", 3, Pins("96", dir="o"), extras=["IO_STANDARD=LVCMOS33"]),
-        Resource("user_led", 4, Pins("95", dir="o"), extras=["IO_STANDARD=LVCMOS33"]),
+        Resource("user_led", 0, Pins("99", dir="o"), extras=["IO_STANDARD=SB_LVCMOS33"]),
+        Resource("user_led", 1, Pins("98", dir="o"), extras=["IO_STANDARD=SB_LVCMOS33"]),
+        Resource("user_led", 2, Pins("97", dir="o"), extras=["IO_STANDARD=SB_LVCMOS33"]),
+        Resource("user_led", 3, Pins("96", dir="o"), extras=["IO_STANDARD=SB_LVCMOS33"]),
+        Resource("user_led", 4, Pins("95", dir="o"), extras=["IO_STANDARD=SB_LVCMOS33"]),
 
         Resource("serial", 0,
             Subsignal("rx",  Pins("9", dir="i")),
