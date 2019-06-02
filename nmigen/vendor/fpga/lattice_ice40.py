@@ -120,7 +120,8 @@ class IceStormProgrammerMixin:
             options = ["-S"]
         if mode == "flash":
             options = []
-        with tempfile.NamedTemporaryFile(prefix="nmigen_iceprog_") as bitstream_file:
+        with tempfile.NamedTemporaryFile(prefix="nmigen_iceprog_",
+                                         suffix=".bin") as bitstream_file:
             bitstream_file.write(bitstream)
             subprocess.run([iceprog, *options, bitstream_file.name], check=True)
 
@@ -129,7 +130,8 @@ class IceBurnProgrammerMixin:
     def toolchain_program(self, products, name):
         iceburn   = os.environ.get("ICEBURN", "iCEburn")
         bitstream = products.get("{}.bin".format(name))
-        with tempfile.NamedTemporaryFile(prefix="nmigen_iceburn_") as bitstream_file:
+        with tempfile.NamedTemporaryFile(prefix="nmigen_iceburn_",
+                                         suffix=".bin") as bitstream_file:
             bitstream_file.write(bitstream)
             subprocess.run([iceburn, "-evw", bitstream_file.name], check=True)
 
@@ -139,6 +141,7 @@ class TinyProgrammerMixin:
         tinyprog  = os.environ.get("TINYPROG", "tinyprog")
         options   = ["-p"]
         bitstream = products.get("{}.bin".format(name))
-        with tempfile.NamedTemporaryFile(prefix="nmigen_tinyprog_") as bitstream_file:
+        with tempfile.NamedTemporaryFile(prefix="nmigen_tinyprog_",
+                                         suffix=".bin") as bitstream_file:
             bitstream_file.write(bitstream)
             subprocess.run([tinyprog, *options, bitstream_file.name], check=True)
