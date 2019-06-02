@@ -2,10 +2,10 @@ from ..build import *
 from .fpga.lattice_ice40 import LatticeICE40Platform, TinyProgrammerMixin
 
 
-__all__ = ["TinyFPGABPlatform"]
+__all__ = ["TinyFPGABXPlatform"]
 
 
-class TinyFPGABPlatform(TinyProgrammerMixin, LatticeICE40Platform):
+class TinyFPGABXPlatform(TinyProgrammerMixin, LatticeICE40Platform):
     device    = "lp8k"
     package   = "cm81"
     clocks    = [
