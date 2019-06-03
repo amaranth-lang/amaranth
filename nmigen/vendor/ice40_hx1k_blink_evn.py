@@ -6,12 +6,12 @@ __all__ = ["ICE40HX1KBlinkEVNPlatform"]
 
 
 class ICE40HX1KBlinkEVNPlatform(IceBurnProgrammerMixin, LatticeICE40Platform):
-    device    = "hx1k"
-    package   = "vq100"
-    clocks    = [
+    device     = "hx1k"
+    package    = "vq100"
+    clocks     = [
         ("clk3p3", 3.3e6),
     ]
-    resources = [
+    resources  = [
         Resource("clk3p3", 0, Pins("13", dir="i"),
                  extras={"GLOBAL": "1", "IO_STANDARD": "SB_LVCMOS33"}),
 
@@ -24,4 +24,11 @@ class ICE40HX1KBlinkEVNPlatform(IceBurnProgrammerMixin, LatticeICE40Platform):
         Resource("user_btn", 1, Pins("57"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
         Resource("user_btn", 2, Pins("54"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
         Resource("user_btn", 3, Pins("52"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
+    ]
+    connectors = [
+        Connector("pmod",  1, "10  9  8  7 - -  4  3  2  1 - -"), # J1
+        Connector("pmod",  5, "40 42 62 64 - - 37 41 63 45 - -"), # J5
+        Connector("pmod",  6, "25 24 21 20 - - 26 27 28 33 - -"), # J6
+        Connector("pmod", 11, "49 45 46 48 - -"), # J11
+        Connector("pmod", 12, "59 56 53 51 - -"), # J12
     ]
