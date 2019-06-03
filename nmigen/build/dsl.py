@@ -1,17 +1,29 @@
-__all__ = ["Pins", "DiffPairs", "Subsignal", "Resource"]
+from collections import OrderedDict
+
+
+__all__ = ["Pins", "DiffPairs", "Subsignal", "Resource", "Connector"]
 
 
 class Pins:
-    def __init__(self, names, dir="io"):
+    def __init__(self, names, *, dir="io", conn=None):
         if not isinstance(names, str):
             raise TypeError("Names must be a whitespace-separated string, not {!r}"
                             .format(names))
-        self.names = names.split()
+        names = names.split()
+
+        if conn is not None:
+            conn_name, conn_number = conn
+            if not (isinstance(conn_name, str) and isinstance(conn_number, int)):
+                raise TypeError("Connector must be None or a pair of string and integer, not {!r}"
+                                .format(conn))
+            names = ["{}_{}:{}".format(conn_name, conn_number, name) for name in names]
 
         if dir not in ("i", "o", "io"):
             raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
                             .format(dir))
-        self.dir = dir
+
+        self.names = names
+        self.dir   = dir
 
     def __len__(self):
         return len(self.names)
@@ -19,14 +31,23 @@ class Pins:
     def __iter__(self):
         return iter(self.names)
 
+    def map_names(self, mapping, resource):
+        for name in self.names:
+            while ":" in name:
+                if name not in mapping:
+                    raise NameError("Resource {!r} refers to nonexistent connector pin {}"
+                                    .format(resource, name))
+                name = mapping[name]
+            yield name
+
     def __repr__(self):
         return "(pins {} {})".format(self.dir, " ".join(self.names))
 
 
 class DiffPairs:
-    def __init__(self, p, n, dir="io"):
-        self.p = Pins(p, dir=dir)
-        self.n = Pins(n, dir=dir)
+    def __init__(self, p, n, *, dir="io", conn=None):
+        self.p = Pins(p, dir=dir, conn=conn)
+        self.n = Pins(n, dir=dir, conn=conn)
 
         if len(self.p.names) != len(self.n.names):
             raise TypeError("Positive and negative pins must have the same width, but {!r} "
@@ -105,3 +126,42 @@ class Resource(Subsignal):
                                                " ".join(map(repr, self.io)),
                                                " ".join("{}={}".format(k, v)
                                                         for k, v in self.extras.items()))
+
+
+class Connector:
+    def __init__(self, name, number, io):
+        self.name    = name
+        self.number  = number
+        self.mapping = OrderedDict()
+
+        if isinstance(io, dict):
+            for conn_pin, plat_pin in io.items():
+                if not isinstance(conn_pin, str):
+                    raise TypeError("Connector pin name must be a string, not {!r}"
+                                    .format(conn_pin))
+                if not isinstance(plat_pin, str):
+                    raise TypeError("Platform pin name must be a string, not {!r}"
+                                    .format(plat_pin))
+                self.mapping[conn_pin] = plat_pin
+
+        elif isinstance(io, str):
+            for conn_pin, plat_pin in enumerate(io.split(), start=1):
+                if plat_pin == "-":
+                    continue
+                self.mapping[str(conn_pin)] = plat_pin
+
+        else:
+            raise TypeError("Connector I/Os must be a dictionary or a string, not {!r}"
+                            .format(io))
+
+    def __repr__(self):
+        return "(connector {} {} {})".format(self.name, self.number,
+                                             " ".join("{}=>{}".format(conn, plat)
+                                                      for conn, plat in self.mapping.items()))
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __iter__(self):
+        for conn_pin, plat_pin in self.mapping.items():
+            yield "{}_{}:{}".format(self.name, self.number, conn_pin), plat_pin

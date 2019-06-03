@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from ..build.dsl import *
 from .tools import *
 
@@ -10,6 +12,27 @@ class PinsTestCase(FHDLTestCase):
         self.assertEqual(p.dir, "io")
         self.assertEqual(list(p), ["A0", "A1", "A2"])
 
+    def test_conn(self):
+        p = Pins("0 1 2", conn=("pmod", 0))
+        self.assertEqual(list(p), ["pmod_0:0", "pmod_0:1", "pmod_0:2"])
+
+    def test_map_names(self):
+        p = Pins("0 1 2", conn=("pmod", 0))
+        mapping = {
+            "pmod_0:0": "A0",
+            "pmod_0:1": "A1",
+            "pmod_0:2": "A2",
+        }
+        self.assertEqual(list(p.map_names(mapping, p)), ["A0", "A1", "A2"])
+
+    def test_map_names_recur(self):
+        p = Pins("0", conn=("pmod", 0))
+        mapping = {
+            "pmod_0:0": "ext_0:1",
+            "ext_0:1":  "A1",
+        }
+        self.assertEqual(list(p.map_names(mapping, p)), ["A1"])
+
     def test_wrong_names(self):
         with self.assertRaises(TypeError,
                 msg="Names must be a whitespace-separated string, not ['A0', 'A1', 'A2']"):
@@ -20,6 +43,16 @@ class PinsTestCase(FHDLTestCase):
                 msg="Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not 'wrong'"):
             p = Pins("A0 A1", dir="wrong")
 
+    def test_wrong_map_names(self):
+        p = Pins("0 1 2", conn=("pmod", 0))
+        mapping = {
+            "pmod_0:0": "A0",
+        }
+        with self.assertRaises(NameError,
+                msg="Resource (pins io pmod_0:0 pmod_0:1 pmod_0:2) refers to nonexistent "
+                    "connector pin pmod_0:1"):
+            list(p.map_names(mapping, p))
+
 
 class DiffPairsTestCase(FHDLTestCase):
     def test_basic(self):
@@ -29,6 +62,14 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.n.names, ["B0", "B1"])
         self.assertEqual(dp.dir, "io")
         self.assertEqual(list(dp), [("A0", "B0"), ("A1", "B1")])
+
+    def test_conn(self):
+        dp = DiffPairs(p="0 1 2", n="3 4 5", conn=("pmod", 0))
+        self.assertEqual(list(dp), [
+            ("pmod_0:0", "pmod_0:3"),
+            ("pmod_0:1", "pmod_0:4"),
+            ("pmod_0:2", "pmod_0:5"),
+        ])
 
     def test_dir(self):
         dp = DiffPairs("A0", "B0", dir="o")
@@ -118,3 +159,54 @@ class ResourceTestCase(FHDLTestCase):
                                   " (subsignal tx (pins o A0) IOSTANDARD=LVCMOS33)"
                                   " (subsignal rx (pins i A1) IOSTANDARD=LVCMOS33)"
                                   " IOSTANDARD=LVCMOS33)")
+
+
+class ConnectorTestCase(FHDLTestCase):
+    def test_string(self):
+        c = Connector("pmod", 0, "A0 A1 A2 A3 - - A4 A5 A6 A7 - -")
+        self.assertEqual(c.name, "pmod")
+        self.assertEqual(c.number, 0)
+        self.assertEqual(c.mapping, OrderedDict([
+            ("1", "A0"),
+            ("2", "A1"),
+            ("3", "A2"),
+            ("4", "A3"),
+            ("7", "A4"),
+            ("8", "A5"),
+            ("9", "A6"),
+            ("10", "A7"),
+        ]))
+        self.assertEqual(list(c), [
+            ("pmod_0:1", "A0"),
+            ("pmod_0:2", "A1"),
+            ("pmod_0:3", "A2"),
+            ("pmod_0:4", "A3"),
+            ("pmod_0:7", "A4"),
+            ("pmod_0:8", "A5"),
+            ("pmod_0:9", "A6"),
+            ("pmod_0:10", "A7"),
+        ])
+        self.assertEqual(repr(c),
+            "(connector pmod 0 1=>A0 2=>A1 3=>A2 4=>A3 7=>A4 8=>A5 9=>A6 10=>A7)")
+
+    def test_dict(self):
+        c = Connector("ext", 1, {"DP0": "A0", "DP1": "A1"})
+        self.assertEqual(c.name, "ext")
+        self.assertEqual(c.number, 1)
+        self.assertEqual(c.mapping, OrderedDict([
+            ("DP0", "A0"),
+            ("DP1", "A1"),
+        ]))
+
+    def test_wrong_io(self):
+        with self.assertRaises(TypeError,
+                msg="Connector I/Os must be a dictionary or a string, not []"):
+            Connector("pmod", 0, [])
+
+    def test_wrong_dict_key_value(self):
+        with self.assertRaises(TypeError,
+                msg="Connector pin name must be a string, not 0"):
+            Connector("pmod", 0, {0: "A"})
+        with self.assertRaises(TypeError,
+                msg="Platform pin name must be a string, not 0"):
+            Connector("pmod", 0, {"A": 0})
