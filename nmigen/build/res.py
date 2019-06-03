@@ -84,13 +84,14 @@ class ConstraintManager:
                     dir = subsignal.io[0].dir
                 if xdr is None:
                     xdr = 1
-                if dir not in ("i", "o", "io"):
-                    raise TypeError("Direction must be one of \"i\", \"o\" or \"io\", not {!r}"
+                if dir not in ("i", "o", "io", "-"):
+                    raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"-\", "
+                                    "not {!r}"
                                     .format(dir))
-                if subsignal.io[0].dir != "io" and dir != subsignal.io[0].dir:
+                if dir != subsignal.io[0].dir and not (subsignal.io[0].dir == "io" or dir == "-"):
                     raise ValueError("Direction of {!r} cannot be changed from \"{}\" to \"{}\"; "
-                                     "direction can be changed from \"io\" to \"i\" or from \"io\""
-                                     "to \"o\""
+                                     "direction can be changed from \"io\" to \"i\", from \"io\""
+                                     "to \"o\", or from anything to \"-\""
                                      .format(subsignal.io[0], subsignal.io[0].dir, dir))
                 if not isinstance(xdr, int) or xdr < 1:
                     raise ValueError("Data rate of {!r} must be a positive integer, not {!r}"
@@ -109,14 +110,19 @@ class ConstraintManager:
 
             elif isinstance(subsignal.io[0], (Pins, DiffPairs)):
                 phys = subsignal.io[0]
-                pin  = Pin(len(phys), dir, xdr, name=name)
                 if isinstance(phys, Pins):
-                    port = Signal(pin.width, name="{}__io".format(pin.name))
+                    port = Record([("io", len(phys))], name=name)
                 if isinstance(phys, DiffPairs):
-                    port = (Signal(pin.width, name="{}__p".format(pin.name)),
-                            Signal(pin.width, name="{}__n".format(pin.name)))
-                self._ports.append((subsignal, pin, port))
-                return pin
+                    port = Record([("p", len(phys)),
+                                   ("n", len(phys))], name=name)
+                if dir == "-":
+                    self._ports.append((subsignal, None, port))
+                    return port
+                else:
+                    pin  = Pin(len(phys), dir, xdr, name=name)
+                    self._ports.append((subsignal, pin, port))
+                    return pin
+
             else:
                 assert False # :nocov:
 
@@ -128,38 +134,39 @@ class ConstraintManager:
 
     def iter_single_ended_pins(self):
         for resource, pin, port in self._ports:
+            if pin is None:
+                continue
             if isinstance(resource.io[0], Pins):
-                yield pin, port, resource.extras
+                yield pin, port.io, resource.extras
 
     def iter_differential_pins(self):
         for resource, pin, port in self._ports:
+            if pin is None:
+                continue
             if isinstance(resource.io[0], DiffPairs):
-                p_port, n_port = port
-                yield pin, p_port, n_port, resource.extras
+                yield pin, port.p, port.n, resource.extras
 
     def iter_ports(self):
         for resource, pin, port in self._ports:
             if isinstance(resource.io[0], Pins):
-                yield port
+                yield port.io
             elif isinstance(resource.io[0], DiffPairs):
-                p_port, n_port = port
-                yield p_port
-                yield n_port
+                yield port.p
+                yield port.n
             else:
                 assert False
 
     def iter_port_constraints(self, diff_pins="pn"):
         for resource, pin, port in self._ports:
             if isinstance(resource.io[0], Pins):
-                yield port.name, resource.io[0].names, resource.extras
+                yield port.io.name, resource.io[0].names, resource.extras
             elif isinstance(resource.io[0], DiffPairs):
-                p_port, n_port = port
                 # On some FPGAs like iCE40, only one pin out of two in a differential pair may be
                 # constrained. The other has to be completely disconnected.
                 if "p" in diff_pins:
-                    yield p_port.name, resource.io[0].p.names, resource.extras
+                    yield port.p.name, resource.io[0].p.names, resource.extras
                 if "n" in diff_pins:
-                    yield n_port.name, resource.io[0].n.names, resource.extras
+                    yield port.n.name, resource.io[0].n.names, resource.extras
             else:
                 assert False
 

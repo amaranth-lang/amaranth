@@ -122,6 +122,26 @@ class ConstraintManagerTestCase(FHDLTestCase):
             ("clk100_0__n", ["H2"], {}),
         ])
 
+    def test_request_raw(self):
+        clk50 = self.cm.request("clk50", 0, dir="-")
+        self.assertIsInstance(clk50, Record)
+        self.assertIsInstance(clk50.io, Signal)
+
+        ports = list(self.cm.iter_ports())
+        self.assertEqual(len(ports), 1)
+        self.assertIs(ports[0], clk50.io)
+
+    def test_request_raw_diffpairs(self):
+        clk100 = self.cm.request("clk100", 0, dir="-")
+        self.assertIsInstance(clk100, Record)
+        self.assertIsInstance(clk100.p, Signal)
+        self.assertIsInstance(clk100.n, Signal)
+
+        ports = list(self.cm.iter_ports())
+        self.assertEqual(len(ports), 2)
+        self.assertIs(ports[0], clk100.p)
+        self.assertIs(ports[1], clk100.n)
+
     def test_add_clock(self):
         self.cm.add_clock("clk100", 0, 10e6)
         self.assertEqual(self.cm.clocks["clk100", 0], 10e6)
@@ -177,13 +197,14 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
     def test_wrong_request_with_dir(self):
         with self.assertRaises(TypeError,
-                msg="Direction must be one of \"i\", \"o\" or \"io\", not 'wrong'"):
+                msg="Direction must be one of \"i\", \"o\", \"io\", or \"-\", not 'wrong'"):
             user_led = self.cm.request("user_led", 0, dir="wrong")
 
     def test_wrong_request_with_dir_io(self):
         with self.assertRaises(ValueError,
                 msg="Direction of (pins o A0) cannot be changed from \"o\" to \"i\"; direction "
-                    "can be changed from \"io\" to \"i\" or from \"io\"to \"o\""):
+                    "can be changed from \"io\" to \"i\", from \"io\"to \"o\", or from anything "
+                    "to \"-\""):
             user_led = self.cm.request("user_led", 0, dir="i")
 
     def test_wrong_request_with_dir_dict(self):
