@@ -6,12 +6,12 @@ __all__ = ["ICEStickPlatform"]
 
 
 class ICEStickPlatform(IceStormProgrammerMixin, LatticeICE40Platform):
-    device    = "hx1k"
-    package   = "tq144"
-    clocks    = [
+    device     = "hx1k"
+    package    = "tq144"
+    clocks     = [
         ("clk12", 12e6),
     ]
-    resources = [
+    resources  = [
         Resource("clk12", 0, Pins("21", dir="i"),
                  extras={"GLOBAL": "1", "IO_STANDARD": "SB_LVCMOS33"}),
 
@@ -42,9 +42,15 @@ class ICEStickPlatform(IceStormProgrammerMixin, LatticeICE40Platform):
         Resource("spiflash", 0,
             Subsignal("cs_n", Pins("71", dir="o")),
             Subsignal("clk",  Pins("70", dir="o")),
-            Subsignal("mosi", Pins("67", dir="io")),
-            Subsignal("miso", Pins("68", dir="io")),
+            Subsignal("mosi", Pins("67", dir="o")),
+            Subsignal("miso", Pins("68", dir="i")),
             extras={"IO_STANDARD": "SB_LVCMOS33"}
         ),
     ]
-    prog_mode = "flash"
+    connectors = [
+        Connector("pmod", 0, "78 79 80 81 - - 87 88 90 91 - -"),  # J2
+
+        Connector("j", 1, "- - 112 113 114 115 116 117 118 119"), # J1
+        Connector("j", 3, "- -  62  61  60  56  48  47  45  44"), # J3
+    ]
+    prog_mode  = "flash"
