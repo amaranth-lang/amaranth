@@ -12,7 +12,8 @@ class TinyFPGABXPlatform(TinyProgrammerMixin, LatticeICE40Platform):
         ("clk16", 16e6),
     ]
     resources = [
-        Resource("clk16", 0, Pins("B2", dir="i"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
+        Resource("clk16", 0, Pins("B2", dir="i"),
+                 extras={"GLOBAL": 1, "IO_STANDARD": "SB_LVCMOS33"}),
 
         Resource("user_led", 0, Pins("B3", dir="o"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
 

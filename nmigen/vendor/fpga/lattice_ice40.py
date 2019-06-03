@@ -119,6 +119,12 @@ class LatticeICE40Platform(TemplatedPlatform):
     def _get_io_buffer(self, pin, port, extras):
         m = Module()
 
+        if "GLOBAL" in extras:
+            is_global_input = bool(extras["GLOBAL"])
+            del extras["GLOBAL"]
+        else:
+            is_global_input = False
+
         if "i" in pin.dir and pin.xdr == 2:
             i0_ff = Signal.like(pin.i0, name="{}_ff".format(pin.i0.name))
             i1_ff = Signal.like(pin.i1, name="{}_ff".format(pin.i1.name))
@@ -162,9 +168,11 @@ class LatticeICE40Platform(TemplatedPlatform):
                 io_args.append(("i", "OUTPUT_CLK", pin.o_clk))
 
             if "i" in pin.dir:
-                if pin.xdr < 2:
+                if pin.xdr == 0 and is_global_input:
+                    io_args.append(("o", "GLOBAL_BUFFER_OUTPUT", pin.i[bit]))
+                elif pin.xdr < 2:
                     io_args.append(("o", "D_IN_0",  pin.i[bit]))
-                if pin.xdr == 2:
+                elif pin.xdr == 2:
                     # Re-register both inputs before they enter fabric. This increases hold time
                     # to an entire cycle, and adds one cycle of latency.
                     io_args.append(("o", "D_IN_0",  i0_ff))
@@ -172,7 +180,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 if pin.xdr < 2:
                     io_args.append(("i", "D_OUT_0", pin.o[bit]))
-                if pin.xdr == 2:
+                elif pin.xdr == 2:
                     # Re-register negedge output after it leaves fabric. This increases setup time
                     # to an entire cycle, and doesn't add latency.
                     io_args.append(("i", "D_OUT_0", pin.o0[bit]))
@@ -181,7 +189,10 @@ class LatticeICE40Platform(TemplatedPlatform):
             if pin.dir in ("oe", "io"):
                 io_args.append(("i", "OUTPUT_ENABLE", pin.oe))
 
-            m.submodules += Instance("SB_IO", *io_args)
+            if is_global_input:
+                m.submodules += Instance("SB_GB_IO", *io_args)
+            else:
+                m.submodules += Instance("SB_IO", *io_args)
 
         return m
 

@@ -12,7 +12,8 @@ class ICEStickPlatform(IceStormProgrammerMixin, LatticeICE40Platform):
         ("clk12", 12e6),
     ]
     resources = [
-        Resource("clk12", 0, Pins("21", dir="i"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
+        Resource("clk12", 0, Pins("21", dir="i"),
+                 extras={"GLOBAL": "1", "IO_STANDARD": "SB_LVCMOS33"}),
 
         Resource("user_led", 0, Pins("99", dir="o"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
         Resource("user_led", 1, Pins("98", dir="o"), extras={"IO_STANDARD": "SB_LVCMOS33"}),

@@ -12,7 +12,8 @@ class ICE40HX1KBlinkEVNPlatform(IceBurnProgrammerMixin, LatticeICE40Platform):
         ("clk3p3", 3.3e6),
     ]
     resources = [
-        Resource("clk3p3", 0, Pins("13", dir="i"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
+        Resource("clk3p3", 0, Pins("13", dir="i"),
+                 extras={"GLOBAL": "1", "IO_STANDARD": "SB_LVCMOS33"}),
 
         Resource("user_led", 0, Pins("59", dir="o"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
         Resource("user_led", 1, Pins("56", dir="o"), extras={"IO_STANDARD": "SB_LVCMOS33"}),
