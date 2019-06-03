@@ -27,6 +27,19 @@ class PinLayoutCombTestCase(FHDLTestCase):
             "o": ((2, False), DIR_NONE),
         })
 
+    def test_pin_layout_oe(self):
+        layout_1 = pin_layout(1, dir="oe")
+        self.assertEqual(layout_1.fields, {
+            "o":  ((1, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="oe")
+        self.assertEqual(layout_2.fields, {
+            "o":  ((2, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
     def test_pin_layout_io(self):
         layout_1 = pin_layout(1, dir="io")
         self.assertEqual(layout_1.fields, {
@@ -64,6 +77,19 @@ class PinLayoutSDRTestCase(FHDLTestCase):
         layout_2 = pin_layout(2, dir="o", xdr=1)
         self.assertEqual(layout_2.fields, {
             "o": ((2, False), DIR_NONE),
+        })
+
+    def test_pin_layout_oe(self):
+        layout_1 = pin_layout(1, dir="oe", xdr=1)
+        self.assertEqual(layout_1.fields, {
+            "o":  ((1, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="oe", xdr=1)
+        self.assertEqual(layout_2.fields, {
+            "o":  ((2, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
         })
 
     def test_pin_layout_io(self):
@@ -107,6 +133,21 @@ class PinLayoutDDRTestCase(FHDLTestCase):
         self.assertEqual(layout_2.fields, {
             "o0": ((2, False), DIR_NONE),
             "o1": ((2, False), DIR_NONE),
+        })
+
+    def test_pin_layout_oe(self):
+        layout_1 = pin_layout(1, dir="oe", xdr=2)
+        self.assertEqual(layout_1.fields, {
+            "o0": ((1, False), DIR_NONE),
+            "o1": ((1, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="oe", xdr=2)
+        self.assertEqual(layout_2.fields, {
+            "o0": ((2, False), DIR_NONE),
+            "o1": ((2, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
         })
 
     def test_pin_layout_io(self):
