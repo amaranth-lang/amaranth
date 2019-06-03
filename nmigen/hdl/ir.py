@@ -373,9 +373,12 @@ class Fragment:
                 else:
                     assert defs[sig] is self
 
-        def add_io(sig):
-            assert sig not in ios
-            ios[sig] = self
+        def add_io(*sigs):
+            for sig in flatten(sigs):
+                if sig not in ios:
+                    ios[sig] = self
+                else:
+                    assert ios[sig] is self
 
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
@@ -400,8 +403,8 @@ class Fragment:
                         subfrag.add_ports(value._lhs_signals(), dir=dir)
                         add_defs(value._lhs_signals())
                     if dir == "io":
-                        subfrag.add_ports(value, dir=dir)
-                        add_io(value)
+                        subfrag.add_ports(value._lhs_signals(), dir=dir)
+                        add_io(value._lhs_signals())
             else:
                 parent[subfrag] = self
                 level [subfrag] = level[self] + 1

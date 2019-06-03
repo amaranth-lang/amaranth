@@ -603,7 +603,7 @@ class InstanceTestCase(FHDLTestCase):
             i_rst=self.rst,
             o_stb=self.stb,
             o_data=Cat(self.datal, self.datah),
-            io_pins=self.pins
+            io_pins=self.pins[:]
         )
         self.wrap = Fragment()
         self.wrap.add_subfragment(self.inst)
