@@ -1,5 +1,5 @@
-from ..build import *
-from .fpga.lattice_ice40 import LatticeICE40Platform, IceStormProgrammerMixin
+from ...build import *
+from ..fpga.lattice_ice40 import LatticeICE40Platform, IceStormProgrammerMixin
 
 
 __all__ = ["ICEStickPlatform"]

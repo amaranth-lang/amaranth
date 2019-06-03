@@ -1,5 +1,5 @@
-from ..build import *
-from .fpga.lattice_ice40 import LatticeICE40Platform, TinyProgrammerMixin
+from ...build import *
+from ..fpga.lattice_ice40 import LatticeICE40Platform, TinyProgrammerMixin
 
 
 __all__ = ["TinyFPGABXPlatform"]
