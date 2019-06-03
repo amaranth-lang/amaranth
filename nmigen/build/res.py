@@ -111,10 +111,10 @@ class ConstraintManager:
                 phys = subsignal.io[0]
                 pin  = Pin(len(phys), dir, xdr, name=name)
                 if isinstance(phys, Pins):
-                    port = Signal(pin.width, name="{}_io".format(pin.name))
+                    port = Signal(pin.width, name="{}__io".format(pin.name))
                 if isinstance(phys, DiffPairs):
-                    port = (Signal(pin.width, name="{}_p".format(pin.name)),
-                            Signal(pin.width, name="{}_n".format(pin.name)))
+                    port = (Signal(pin.width, name="{}__p".format(pin.name)),
+                            Signal(pin.width, name="{}__n".format(pin.name)))
                 self._ports.append((subsignal, pin, port))
                 return pin
             else:
@@ -173,9 +173,9 @@ class ConstraintManager:
                                       "it has been requested as a tristate buffer"
                                       .format(name, number))
             if isinstance(resource.io[0], Pins):
-                port_name = "{}_io".format(pin.name)
+                port_name = "{}__io".format(pin.name)
             elif isinstance(resource.io[0], DiffPairs):
-                port_name = "{}_p".format(pin.name)
+                port_name = "{}__p".format(pin.name)
             else:
                 assert False
             yield (port_name, period)

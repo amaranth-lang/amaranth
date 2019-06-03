@@ -3,6 +3,9 @@ import os
 import subprocess
 import tempfile
 
+from ...hdl.ast import *
+from ...hdl.dsl import *
+from ...hdl.ir import *
 from ...build import *
 
 
@@ -103,6 +106,38 @@ class LatticeICE40Platform(TemplatedPlatform):
             {{name}}.bin
         """
     ]
+
+    def _get_io_buffer(self, port, extras, fn):
+        m = Module()
+        for bit in range(len(port)):
+            m.submodules += Instance("SB_IO",
+                ("io", "PACKAGE_PIN", port[bit]),
+                *fn(bit),
+                *(("p", key, value) for key, value in extras.items()))
+        return m
+
+    def get_input(self, pin, port, extras):
+        return self._get_io_buffer(port, extras, lambda bit: [
+            # PIN_NO_OUTPUT|PIN_INPUT
+            ("p", "PIN_TYPE",       0b0000_01),
+            ("o", "D_IN_0",         pin.i[bit]),
+        ])
+
+    def get_output(self, pin, port, extras):
+        return self._get_io_buffer(port, extras, lambda bit: [
+            # PIN_OUTPUT|PIN_INPUT_REGISTERED
+            ("p", "PIN_TYPE",       0b0110_00),
+            ("i", "D_OUT_0",        pin.o[bit]),
+        ])
+
+    def get_tristate(self, pin, port, extras):
+        return self._get_io_buffer(port, extras, lambda bit: [
+            # PIN_OUTPUT_TRISTATE|PIN_INPUT_REGISTERED
+            ("p", "PIN_TYPE",       0b1010_00),
+            ("o", "D_IN_0",         pin.i[bit]),
+            ("i", "D_OUT_0",        pin.o[bit]),
+            ("i", "OUTPUT_ENABLE",  pin.oe),
+        ])
 
 
 class IceStormProgrammerMixin:
