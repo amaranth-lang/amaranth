@@ -64,7 +64,7 @@ class ConstraintManager:
             raise ConstraintError("Resource {}#{} has already been requested"
                                   .format(name, number))
 
-        def resolve_dir_xdr(subsignal, dir, xdr):
+        def merge_options(subsignal, dir, xdr):
             if isinstance(subsignal.io[0], Subsignal):
                 if dir is None:
                     dir = dict()
@@ -81,7 +81,7 @@ class ConstraintManager:
                 for sub in subsignal.io:
                     sub_dir = dir.get(sub.name, None)
                     sub_xdr = xdr.get(sub.name, None)
-                    dir[sub.name], xdr[sub.name] = resolve_dir_xdr(sub, sub_dir, sub_xdr)
+                    dir[sub.name], xdr[sub.name] = merge_options(sub, sub_dir, sub_xdr)
             else:
                 if dir is None:
                     dir = subsignal.io[0].dir
@@ -100,52 +100,39 @@ class ConstraintManager:
                                      .format(subsignal.io[0], xdr))
             return dir, xdr
 
-        dir, xdr = resolve_dir_xdr(resource, dir, xdr)
-
-        def get_value(subsignal, dir, xdr, name):
+        def resolve(subsignal, dir, xdr, name):
             if isinstance(subsignal.io[0], Subsignal):
                 fields = OrderedDict()
                 for sub in subsignal.io:
-                    fields[sub.name] = get_value(sub, dir[sub.name], xdr[sub.name],
-                                                 "{}__{}".format(name, sub.name))
-                rec = Record([
+                    fields[sub.name] = resolve(sub, dir[sub.name], xdr[sub.name],
+                                                 name="{}__{}".format(name, sub.name))
+                return Record([
                     (f_name, f.layout) for (f_name, f) in fields.items()
                 ], fields=fields, name=name)
-                return rec
-            elif isinstance(subsignal.io[0], DiffPairs):
-                pairs = subsignal.io[0]
-                return Pin(len(pairs), dir, xdr, name=name)
-            elif isinstance(subsignal.io[0], Pins):
-                pins = subsignal.io[0]
-                return Pin(len(pins), dir, xdr, name=name)
+
+            elif isinstance(subsignal.io[0], (Pins, DiffPairs)):
+                phys = subsignal.io[0]
+                pin  = Pin(len(phys), dir, xdr, name=name)
+
+                if isinstance(phys, Pins):
+                    port = Signal(pin.width, name="{}_io".format(pin.name))
+                    self._se_pins.append((pin, port))
+                    self._ports.append((port, phys.names, subsignal.extras))
+
+                if isinstance(phys, DiffPairs):
+                    p_port = Signal(pin.width, name="{}_p".format(pin.name))
+                    n_port = Signal(pin.width, name="{}_n".format(pin.name))
+                    self._dp_pins.append((pin, p_port, n_port))
+                    self._ports.append((p_port, phys.p.names, subsignal.extras))
+                    self._ports.append((n_port, phys.n.names, subsignal.extras))
+
+                return pin
             else:
                 assert False # :nocov:
 
-        value_name = "{}_{}".format(resource.name, resource.number)
-        value = get_value(resource, dir, xdr, value_name)
-
-        def match_constraints(value, subsignal):
-            if isinstance(subsignal.io[0], Subsignal):
-                for sub in subsignal.io:
-                    yield from match_constraints(value[sub.name], sub)
-            else:
-                assert isinstance(value, Pin)
-                yield (value, subsignal.io[0], subsignal.extras)
-
-        for (pin, io, extras) in match_constraints(value, resource):
-            if isinstance(io, Pins):
-                port = Signal(pin.width, name="{}_io".format(pin.name))
-                self._se_pins.append((pin, port))
-                self._ports.append((port, io.names, extras))
-            elif isinstance(io, DiffPairs):
-                p_port = Signal(pin.width, name="{}_p".format(pin.name))
-                n_port = Signal(pin.width, name="{}_n".format(pin.name))
-                self._dp_pins.append((pin, p_port, n_port))
-                self._ports.append((p_port, io.p.names, extras))
-                self._ports.append((n_port, io.n.names, extras))
-            else:
-                assert False # :nocov:
-
+        value = resolve(resource,
+            *merge_options(resource, dir, xdr),
+            name="{}_{}".format(resource.name, resource.number))
         self.requested[resource.name, resource.number] = value
         return value
 
