@@ -19,10 +19,7 @@ class ConstraintManager:
         self.resources  = OrderedDict()
         self.requested  = OrderedDict()
         self.clocks     = OrderedDict()
-
         self._ports     = []
-        self._se_pins   = []
-        self._dp_pins   = []
 
         self.add_resources(resources)
         for name_number, frequency in clocks:
@@ -113,19 +110,12 @@ class ConstraintManager:
             elif isinstance(subsignal.io[0], (Pins, DiffPairs)):
                 phys = subsignal.io[0]
                 pin  = Pin(len(phys), dir, xdr, name=name)
-
                 if isinstance(phys, Pins):
                     port = Signal(pin.width, name="{}_io".format(pin.name))
-                    self._se_pins.append((pin, port))
-                    self._ports.append((port, phys.names, subsignal.extras))
-
                 if isinstance(phys, DiffPairs):
-                    p_port = Signal(pin.width, name="{}_p".format(pin.name))
-                    n_port = Signal(pin.width, name="{}_n".format(pin.name))
-                    self._dp_pins.append((pin, p_port, n_port))
-                    self._ports.append((p_port, phys.p.names, subsignal.extras))
-                    self._ports.append((n_port, phys.n.names, subsignal.extras))
-
+                    port = (Signal(pin.width, name="{}_p".format(pin.name)),
+                            Signal(pin.width, name="{}_n".format(pin.name)))
+                self._ports.append((subsignal, pin, port))
                 return pin
             else:
                 assert False # :nocov:
@@ -136,13 +126,42 @@ class ConstraintManager:
         self.requested[resource.name, resource.number] = value
         return value
 
-    def iter_ports(self):
-        for port, pins, extras in self._ports:
-            yield port
+    def iter_single_ended_pins(self):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], Pins):
+                yield pin, port, resource.extras
 
-    def iter_port_constraints(self):
-        for port, pins, extras in self._ports:
-            yield (port.name, pins, extras)
+    def iter_differential_pins(self):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], DiffPairs):
+                p_port, n_port = port
+                yield pin, p_port, n_port, resource.extras
+
+    def iter_ports(self):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], Pins):
+                yield port
+            elif isinstance(resource.io[0], DiffPairs):
+                p_port, n_port = port
+                yield p_port
+                yield n_port
+            else:
+                assert False
+
+    def iter_port_constraints(self, diff_pins="pn"):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], Pins):
+                yield port.name, resource.io[0].names, resource.extras
+            elif isinstance(resource.io[0], DiffPairs):
+                p_port, n_port = port
+                # On some FPGAs like iCE40, only one pin out of two in a differential pair may be
+                # constrained. The other has to be completely disconnected.
+                if "p" in diff_pins:
+                    yield p_port.name, resource.io[0].p.names, resource.extras
+                if "n" in diff_pins:
+                    yield n_port.name, resource.io[0].n.names, resource.extras
+            else:
+                assert False
 
     def iter_clock_constraints(self):
         for name, number in self.clocks.keys() & self.requested.keys():
