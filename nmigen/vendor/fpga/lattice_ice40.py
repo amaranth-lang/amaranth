@@ -134,16 +134,29 @@ class LatticeICE40Platform(TemplatedPlatform):
             else:
                 assert False
 
-    def _get_dff(self, clk, d, q):
-        return Instance("$dff",
-            p_CLK_POLARITY=0,
-            p_WIDTH=len(d),
-            i_CLK=clk,
-            i_D=d,
-            o_Q=q)
+    def _get_io_buffer(self, m, pin, port, extras, o_invert=None):
+        def _get_dff(clk, d, q):
+            m.submodules += Instance("$dff",
+                p_CLK_POLARITY=0,
+                p_WIDTH=len(d),
+                i_CLK=clk,
+                i_D=d,
+                o_Q=q)
 
-    def _get_io_buffer(self, pin, port, extras):
-        m = Module()
+        def _get_inverter(a, invert):
+            if invert is None:
+                return a
+            else:
+                y = Signal.like(a, name="{}_x{}".format(a.name, 1 if invert else 0))
+                for bit in range(len(a)):
+                    m.submodules += Instance("SB_LUT4",
+                        p_LUT_INIT=0b01 if invert else 0b10,
+                        i_I0=a[bit],
+                        i_I1=Const(0),
+                        i_I2=Const(0),
+                        i_I3=Const(0),
+                        o_O=y[bit])
+                return y
 
         if "GLOBAL" in extras:
             is_global_input = bool(extras["GLOBAL"])
@@ -151,14 +164,21 @@ class LatticeICE40Platform(TemplatedPlatform):
         else:
             is_global_input = False
 
+        if "o" in pin.dir:
+            if pin.xdr < 2:
+                pin_o  = _get_inverter(pin.o,  o_invert)
+            elif pin.xdr == 2:
+                pin_o0 = _get_inverter(pin.o0, o_invert)
+                pin_o1 = _get_inverter(pin.o1, o_invert)
+
         if "i" in pin.dir and pin.xdr == 2:
             i0_ff = Signal.like(pin.i0, name="{}_ff".format(pin.i0.name))
             i1_ff = Signal.like(pin.i1, name="{}_ff".format(pin.i1.name))
-            m.submodules += self._get_dff(pin.i_clk, i0_ff, pin.i0)
-            m.submodules += self._get_dff(pin.i_clk, i1_ff, pin.i1)
+            _get_dff(pin.i_clk, i0_ff, pin.i0)
+            _get_dff(pin.i_clk, i1_ff, pin.i1)
         if "o" in pin.dir and pin.xdr == 2:
             o1_ff = Signal.like(pin.o1, name="{}_ff".format(pin.o1.name))
-            m.submodules += self._get_dff(pin.o_clk, pin.o1, o1_ff)
+            _get_dff(pin.o_clk, pin_o1, o1_ff)
 
         for bit in range(len(port)):
             io_args = [
@@ -205,11 +225,11 @@ class LatticeICE40Platform(TemplatedPlatform):
                     io_args.append(("o", "D_IN_1",  i1_ff))
             if "o" in pin.dir:
                 if pin.xdr < 2:
-                    io_args.append(("i", "D_OUT_0", pin.o[bit]))
+                    io_args.append(("i", "D_OUT_0", pin_o[bit]))
                 elif pin.xdr == 2:
                     # Re-register negedge output after it leaves fabric. This increases setup time
                     # to an entire cycle, and doesn't add latency.
-                    io_args.append(("i", "D_OUT_0", pin.o0[bit]))
+                    io_args.append(("i", "D_OUT_0", pin_o0[bit]))
                     io_args.append(("i", "D_OUT_1", o1_ff))
 
             if pin.dir in ("oe", "io"):
@@ -220,27 +240,33 @@ class LatticeICE40Platform(TemplatedPlatform):
             else:
                 m.submodules += Instance("SB_IO", *io_args)
 
-        return m
-
     def get_input(self, pin, port, extras):
         self._check_feature("single-ended input", pin, extras,
                             valid_xdrs=(0, 1, 2), valid_extras=True)
-        return self._get_io_buffer(pin, port, extras)
+        m = Module()
+        self._get_io_buffer(m, pin, port, extras)
+        return m
 
     def get_output(self, pin, port, extras):
         self._check_feature("single-ended output", pin, extras,
                             valid_xdrs=(0, 1, 2), valid_extras=True)
-        return self._get_io_buffer(pin, port, extras)
+        m = Module()
+        self._get_io_buffer(m, pin, port, extras)
+        return m
 
     def get_tristate(self, pin, port, extras):
         self._check_feature("single-ended tristate", pin, extras,
                             valid_xdrs=(0, 1, 2), valid_extras=True)
-        return self._get_io_buffer(pin, port, extras)
+        m = Module()
+        self._get_io_buffer(m, pin, port, extras)
+        return m
 
     def get_input_output(self, pin, port, extras):
         self._check_feature("single-ended input/output", pin, extras,
                             valid_xdrs=(0, 1, 2), valid_extras=True)
-        return self._get_io_buffer(pin, port, extras)
+        m = Module()
+        self._get_io_buffer(m, pin, port, extras)
+        return m
 
     def get_diff_input(self, pin, p_port, n_port, extras):
         self._check_feature("differential input", pin, extras,
@@ -250,7 +276,24 @@ class LatticeICE40Platform(TemplatedPlatform):
         # between LP/HX and UP series:
         #  * for LP/HX, z=0 is DPxxB   (B is non-inverting, A is inverting)
         #  * for UP,    z=0 is IOB_xxA (A is non-inverting, B is inverting)
-        return self._get_io_buffer(pin, p_port, extras)
+        m = Module()
+        self._get_io_buffer(m, pin, p_port, extras)
+        return m
+
+    def get_diff_output(self, pin, p_port, n_port, extras):
+        self._check_feature("differential output", pin, extras,
+                            valid_xdrs=(0, 1, 2), valid_extras=True)
+        m = Module()
+        # Note that the non-inverting output pin is not driven the same way as a regular
+        # output pin. The inverter introduces a delay, so for a non-inverting output pin,
+        # an identical delay is introduced by instantiating a LUT. This makes the waveform
+        # perfectly symmetric in the xdr=0 case.
+        self._get_io_buffer(m, pin, p_port, extras, o_invert=False)
+        self._get_io_buffer(m, pin, n_port, extras, o_invert=True)
+        return m
+
+    # Tristate and bidirectional buffers are not supported on iCE40 because it requires external
+    # termination, which is incompatible for input and output differential I/Os.
 
 
 class IceStormProgrammerMixin:
