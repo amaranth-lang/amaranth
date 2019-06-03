@@ -49,13 +49,13 @@ class ConstraintManager:
                                   .format(resource.name, resource.number, other / 1e6))
         self.clocks[resource.name, resource.number] = frequency
 
-    def lookup(self, name, number):
+    def lookup(self, name, number=0):
         if (name, number) not in self.resources:
             raise NameError("Resource {}#{} does not exist"
                             .format(name, number))
         return self.resources[name, number]
 
-    def request(self, name, number, dir=None, xdr=None):
+    def request(self, name, number=0, *, dir=None, xdr=None):
         resource = self.lookup(name, number)
         if (resource.name, resource.number) in self.requested:
             raise ConstraintError("Resource {}#{} has already been requested"

@@ -4,7 +4,7 @@ from nmigen.vendor.ice40_hx1k_blink_evn import *
 
 class Blinky(Elaboratable):
     def elaborate(self, platform):
-        clk3p3   = platform.request("clk3p3", 0)
+        clk3p3   = platform.request("clk3p3")
         user_led = platform.request("user_led", 0)
         counter  = Signal(20)
 
