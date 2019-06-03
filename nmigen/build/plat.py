@@ -74,11 +74,12 @@ class BuildProducts:
 
 
 class Platform(ConstraintManager, metaclass=ABCMeta):
-    resources = abstractproperty()
-    clocks    = abstractproperty()
+    resources  = abstractproperty()
+    connectors = abstractproperty()
+    clocks     = abstractproperty()
 
     def __init__(self):
-        super().__init__(self.resources, self.clocks)
+        super().__init__(self.resources, self.connectors, self.clocks)
 
         self.extra_files = OrderedDict()
 

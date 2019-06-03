@@ -15,26 +15,43 @@ class ConstraintError(Exception):
 
 
 class ConstraintManager:
-    def __init__(self, resources, clocks):
+    def __init__(self, resources, connectors, clocks):
         self.resources  = OrderedDict()
-        self.requested  = OrderedDict()
+        self.connectors = OrderedDict()
         self.clocks     = OrderedDict()
+
+        self._mapping   = OrderedDict()
+        self._requested = OrderedDict()
         self._ports     = []
 
         self.add_resources(resources)
+        self.add_connectors(connectors)
         for name_number, frequency in clocks:
             if not isinstance(name_number, tuple):
                 name_number = (name_number, 0)
             self.add_clock(*name_number, frequency)
 
     def add_resources(self, resources):
-        for r in resources:
-            if not isinstance(r, Resource):
-                raise TypeError("Object {!r} is not a Resource".format(r))
-            if (r.name, r.number) in self.resources:
+        for res in resources:
+            if not isinstance(res, Resource):
+                raise TypeError("Object {!r} is not a Resource".format(res))
+            if (res.name, res.number) in self.resources:
                 raise NameError("Trying to add {!r}, but {!r} has the same name and number"
-                                .format(r, self.resources[r.name, r.number]))
-            self.resources[r.name, r.number] = r
+                                .format(res, self.resources[res.name, res.number]))
+            self.resources[res.name, res.number] = res
+
+    def add_connectors(self, connectors):
+        for conn in connectors:
+            if not isinstance(conn, Connector):
+                raise TypeError("Object {!r} is not a Connector".format(conn))
+            if (conn.name, conn.number) in self.connectors:
+                raise NameError("Trying to add {!r}, but {!r} has the same name and number"
+                                .format(conn, self.connectors[conn.name, conn.number]))
+            self.connectors[conn.name, conn.number] = conn
+
+            for conn_pin, plat_pin in conn:
+                assert conn_pin not in self._mapping
+                self._mapping[conn_pin] = plat_pin
 
     def add_clock(self, name, number, frequency):
         resource = self.lookup(name, number)
@@ -57,7 +74,7 @@ class ConstraintManager:
 
     def request(self, name, number=0, *, dir=None, xdr=None):
         resource = self.lookup(name, number)
-        if (resource.name, resource.number) in self.requested:
+        if (resource.name, resource.number) in self._requested:
             raise ConstraintError("Resource {}#{} has already been requested"
                                   .format(name, number))
 
@@ -129,48 +146,48 @@ class ConstraintManager:
         value = resolve(resource,
             *merge_options(resource, dir, xdr),
             name="{}_{}".format(resource.name, resource.number))
-        self.requested[resource.name, resource.number] = value
+        self._requested[resource.name, resource.number] = value
         return value
 
     def iter_single_ended_pins(self):
-        for resource, pin, port in self._ports:
+        for res, pin, port in self._ports:
             if pin is None:
                 continue
-            if isinstance(resource.io[0], Pins):
-                yield pin, port.io, resource.extras
+            if isinstance(res.io[0], Pins):
+                yield pin, port.io, res.extras
 
     def iter_differential_pins(self):
-        for resource, pin, port in self._ports:
+        for res, pin, port in self._ports:
             if pin is None:
                 continue
-            if isinstance(resource.io[0], DiffPairs):
-                yield pin, port.p, port.n, resource.extras
+            if isinstance(res.io[0], DiffPairs):
+                yield pin, port.p, port.n, res.extras
 
     def iter_ports(self):
-        for resource, pin, port in self._ports:
-            if isinstance(resource.io[0], Pins):
+        for res, pin, port in self._ports:
+            if isinstance(res.io[0], Pins):
                 yield port.io
-            elif isinstance(resource.io[0], DiffPairs):
+            elif isinstance(res.io[0], DiffPairs):
                 yield port.p
                 yield port.n
             else:
                 assert False
 
     def iter_port_constraints(self):
-        for resource, pin, port in self._ports:
-            if isinstance(resource.io[0], Pins):
-                yield port.io.name, resource.io[0].names, resource.extras
-            elif isinstance(resource.io[0], DiffPairs):
-                yield port.p.name, resource.io[0].p.names, resource.extras
-                yield port.n.name, resource.io[0].n.names, resource.extras
+        for res, pin, port in self._ports:
+            if isinstance(res.io[0], Pins):
+                yield port.io.name, list(res.io[0].map_names(self._mapping, res)), res.extras
+            elif isinstance(res.io[0], DiffPairs):
+                yield port.p.name, list(res.io[0].p.map_names(self._mapping, res)), res.extras
+                yield port.n.name, list(res.io[0].n.map_names(self._mapping, res)), res.extras
             else:
                 assert False
 
     def iter_clock_constraints(self):
-        for name, number in self.clocks.keys() & self.requested.keys():
+        for name, number in self.clocks.keys() & self._requested.keys():
             resource = self.resources[name, number]
-            pin      = self.requested[name, number]
             period   = self.clocks[name, number]
+            pin      = self._requested[name, number]
             if pin.dir == "io":
                 raise ConstraintError("Cannot constrain frequency of resource {}#{} because "
                                       "it has been requested as a tristate buffer"

@@ -17,19 +17,25 @@ class ConstraintManagerTestCase(FHDLTestCase):
                 Subsignal("sda", Pins("N11"))
             )
         ]
-        self.cm = ConstraintManager(self.resources, [])
+        self.connectors = [
+            Connector("pmod", 0, "B0 B1 B2 B3 - -"),
+        ]
+        self.cm = ConstraintManager(self.resources, self.connectors, [])
 
     def test_basic(self):
         self.clocks = [
             ("clk100",      100),
             (("clk50", 0),  50),
         ]
-        self.cm = ConstraintManager(self.resources, self.clocks)
+        self.cm = ConstraintManager(self.resources, self.connectors, self.clocks)
         self.assertEqual(self.cm.resources, {
             ("clk100",   0): self.resources[0],
             ("clk50",    0): self.resources[1],
             ("user_led", 0): self.resources[2],
             ("i2c",      0): self.resources[3]
+        })
+        self.assertEqual(self.cm.connectors, {
+            ("pmod", 0): self.connectors[0],
         })
         self.assertEqual(self.cm.clocks, {
             ("clk100", 0): 100,
@@ -136,6 +142,23 @@ class ConstraintManagerTestCase(FHDLTestCase):
         self.assertIs(ports[0], clk100.p)
         self.assertIs(ports[1], clk100.n)
 
+    def test_request_via_connector(self):
+        self.cm.add_resources([
+            Resource("spi", 0,
+                Subsignal("ss",   Pins("1", conn=("pmod", 0))),
+                Subsignal("clk",  Pins("2", conn=("pmod", 0))),
+                Subsignal("miso", Pins("3", conn=("pmod", 0))),
+                Subsignal("mosi", Pins("4", conn=("pmod", 0))),
+            )
+        ])
+        spi0 = self.cm.request("spi", 0)
+        self.assertEqual(list(sorted(self.cm.iter_port_constraints())), [
+            ("spi_0__clk__io",  ["B1"], {}),
+            ("spi_0__miso__io", ["B2"], {}),
+            ("spi_0__mosi__io", ["B3"], {}),
+            ("spi_0__ss__io",   ["B0"], {}),
+        ])
+
     def test_add_clock(self):
         self.cm.add_clock("clk100", 0, 10e6)
         self.assertEqual(self.cm.clocks["clk100", 0], 10e6)
@@ -157,6 +180,16 @@ class ConstraintManagerTestCase(FHDLTestCase):
                 msg="Trying to add (resource user_led 0 (pins o A1) ), but "
                     "(resource user_led 0 (pins o A0) ) has the same name and number"):
             self.cm.add_resources([Resource("user_led", 0, Pins("A1", dir="o"))])
+
+    def test_wrong_connectors(self):
+        with self.assertRaises(TypeError, msg="Object 'wrong' is not a Connector"):
+            self.cm.add_connectors(['wrong'])
+
+    def test_wrong_connectors_duplicate(self):
+        with self.assertRaises(NameError,
+                msg="Trying to add (connector pmod 0 1=>1 2=>2), but "
+                    "(connector pmod 0 1=>B0 2=>B1 3=>B2 4=>B3) has the same name and number"):
+            self.cm.add_connectors([Connector("pmod", 0, "1 2")])
 
     def test_wrong_lookup(self):
         with self.assertRaises(NameError,

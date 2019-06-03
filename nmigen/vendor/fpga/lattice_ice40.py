@@ -109,11 +109,11 @@ class LatticeICE40Platform(TemplatedPlatform):
     ]
 
     def iter_ports(self):
-        for resource, pin, port in self._ports:
-            if isinstance(resource.io[0], Pins):
+        for res, pin, port in self._ports:
+            if isinstance(res.io[0], Pins):
                 yield port.io
-            elif isinstance(resource.io[0], DiffPairs):
-                if resource.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
+            elif isinstance(res.io[0], DiffPairs):
+                if res.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
                     yield port.p
                 else:
                     yield port.p
@@ -122,15 +122,15 @@ class LatticeICE40Platform(TemplatedPlatform):
                 assert False
 
     def iter_port_constraints(self):
-        for resource, pin, port in self._ports:
-            if isinstance(resource.io[0], Pins):
-                yield port.io.name, resource.io[0].names, resource.extras
-            elif isinstance(resource.io[0], DiffPairs):
-                if resource.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
-                    yield port.p.name, resource.io[0].p.names, resource.extras
+        for res, pin, port in self._ports:
+            if isinstance(res.io[0], Pins):
+                yield port.io.name, list(res.io[0].map_names(self._mapping, res)), res.extras
+            elif isinstance(res.io[0], DiffPairs):
+                if res.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
+                    yield port.p.name, list(res.io[0].p.map_names(self._mapping, res)), res.extras
                 else:
-                    yield port.p.name, resource.io[0].p.names, resource.extras
-                    yield port.n.name, resource.io[0].n.names, resource.extras
+                    yield port.p.name, list(res.io[0].p.map_names(self._mapping, res)), res.extras
+                    yield port.n.name, list(res.io[0].n.map_names(self._mapping, res)), res.extras
             else:
                 assert False
 
