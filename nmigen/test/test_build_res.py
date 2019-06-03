@@ -115,12 +115,6 @@ class ConstraintManagerTestCase(FHDLTestCase):
             ("clk100_0__p", ["H1"], {}),
             ("clk100_0__n", ["H2"], {}),
         ])
-        self.assertEqual(list(self.cm.iter_port_constraints(diff_pins="p")), [
-            ("clk100_0__p", ["H1"], {}),
-        ])
-        self.assertEqual(list(self.cm.iter_port_constraints(diff_pins="n")), [
-            ("clk100_0__n", ["H2"], {}),
-        ])
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")

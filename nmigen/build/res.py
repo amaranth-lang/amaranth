@@ -156,17 +156,13 @@ class ConstraintManager:
             else:
                 assert False
 
-    def iter_port_constraints(self, diff_pins="pn"):
+    def iter_port_constraints(self):
         for resource, pin, port in self._ports:
             if isinstance(resource.io[0], Pins):
                 yield port.io.name, resource.io[0].names, resource.extras
             elif isinstance(resource.io[0], DiffPairs):
-                # On some FPGAs like iCE40, only one pin out of two in a differential pair may be
-                # constrained. The other has to be completely disconnected.
-                if "p" in diff_pins:
-                    yield port.p.name, resource.io[0].p.names, resource.extras
-                if "n" in diff_pins:
-                    yield port.n.name, resource.io[0].n.names, resource.extras
+                yield port.p.name, resource.io[0].p.names, resource.extras
+                yield port.n.name, resource.io[0].n.names, resource.extras
             else:
                 assert False
 

@@ -134,13 +134,13 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
 
         for pin, p_port, n_port, extras in self.iter_differential_pins():
             if pin.dir == "i":
-                add_pin_fragment(pin, self.get_diff_input(pin, p_port, n_port))
+                add_pin_fragment(pin, self.get_diff_input(pin, p_port, n_port, extras))
             if pin.dir == "o":
-                add_pin_fragment(pin, self.get_diff_output(pin, p_port, n_port))
+                add_pin_fragment(pin, self.get_diff_output(pin, p_port, n_port, extras))
             if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_diff_tristate(pin, p_port, n_port))
+                add_pin_fragment(pin, self.get_diff_tristate(pin, p_port, n_port, extras))
             if pin.dir == "io":
-                add_pin_fragment(pin, self.get_diff_input_output(pin, p_port, n_port))
+                add_pin_fragment(pin, self.get_diff_input_output(pin, p_port, n_port, extras))
 
         return self.toolchain_prepare(fragment, name, **kwargs)
 

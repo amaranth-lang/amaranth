@@ -108,6 +108,32 @@ class LatticeICE40Platform(TemplatedPlatform):
         """
     ]
 
+    def iter_ports(self):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], Pins):
+                yield port.io
+            elif isinstance(resource.io[0], DiffPairs):
+                if resource.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
+                    yield port.p
+                else:
+                    yield port.p
+                    yield port.n
+            else:
+                assert False
+
+    def iter_port_constraints(self):
+        for resource, pin, port in self._ports:
+            if isinstance(resource.io[0], Pins):
+                yield port.io.name, resource.io[0].names, resource.extras
+            elif isinstance(resource.io[0], DiffPairs):
+                if resource.extras.get("IO_STANDARD", "SB_LVCMOS") == "SB_LVDS_INPUT":
+                    yield port.p.name, resource.io[0].p.names, resource.extras
+                else:
+                    yield port.p.name, resource.io[0].p.names, resource.extras
+                    yield port.n.name, resource.io[0].n.names, resource.extras
+            else:
+                assert False
+
     def _get_dff(self, clk, d, q):
         return Instance("$dff",
             p_CLK_POLARITY=0,
@@ -215,6 +241,16 @@ class LatticeICE40Platform(TemplatedPlatform):
         self._check_feature("single-ended input/output", pin, extras,
                             valid_xdrs=(0, 1, 2), valid_extras=True)
         return self._get_io_buffer(pin, port, extras)
+
+    def get_diff_input(self, pin, p_port, n_port, extras):
+        self._check_feature("differential input", pin, extras,
+                            valid_xdrs=(0, 1, 2), valid_extras=True)
+        # On iCE40, a differential input is placed by only instantiating an SB_IO primitive for
+        # the pin with z=0, which is the non-inverting pin. The pinout unfortunately differs
+        # between LP/HX and UP series:
+        #  * for LP/HX, z=0 is DPxxB   (B is non-inverting, A is inverting)
+        #  * for UP,    z=0 is IOB_xxA (A is non-inverting, B is inverting)
+        return self._get_io_buffer(pin, p_port, extras)
 
 
 class IceStormProgrammerMixin:
