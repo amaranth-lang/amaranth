@@ -71,6 +71,9 @@ class RecordTestCase(FHDLTestCase):
         self.assertEqual(r.stb.name, "r__stb")
         self.assertEqual(r["stb"].name, "r__stb")
 
+        self.assertTrue(hasattr(r, "stb"))
+        self.assertFalse(hasattr(r, "xxx"))
+
     def test_unnamed(self):
         r = [Record([
             ("stb", 1)
@@ -93,7 +96,10 @@ class RecordTestCase(FHDLTestCase):
             ("stb", 1),
             ("ack", 1),
         ])
-        with self.assertRaises(NameError,
+        with self.assertRaises(AttributeError,
+                msg="Record 'r' does not have a field 'en'. Did you mean one of: stb, ack?"):
+            r["en"]
+        with self.assertRaises(AttributeError,
                 msg="Record 'r' does not have a field 'en'. Did you mean one of: stb, ack?"):
             r.en
 
@@ -102,7 +108,7 @@ class RecordTestCase(FHDLTestCase):
             ("stb", 1),
             ("ack", 1),
         ])][0]
-        with self.assertRaises(NameError,
+        with self.assertRaises(AttributeError,
                 msg="Unnamed record does not have a field 'en'. Did you mean one of: stb, ack?"):
             r.en
 

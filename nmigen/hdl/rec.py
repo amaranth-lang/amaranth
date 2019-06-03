@@ -109,8 +109,8 @@ class Record(Value):
                     reference = "Unnamed record"
                 else:
                     reference = "Record '{}'".format(self.name)
-                raise NameError("{} does not have a field '{}'. Did you mean one of: {}?"
-                                .format(reference, item, ", ".join(self.fields))) from None
+                raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
+                                     .format(reference, item, ", ".join(self.fields))) from None
         else:
             return super().__getitem__(item)
 
