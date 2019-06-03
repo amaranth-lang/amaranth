@@ -17,7 +17,7 @@ class PinsTestCase(FHDLTestCase):
 
     def test_wrong_dir(self):
         with self.assertRaises(TypeError,
-                msg="Direction must be one of \"i\", \"o\" or \"io\", not 'wrong'"):
+                msg="Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not 'wrong'"):
             p = Pins("A0 A1", dir="wrong")
 
 

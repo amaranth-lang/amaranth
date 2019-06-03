@@ -84,14 +84,14 @@ class ConstraintManager:
                     dir = subsignal.io[0].dir
                 if xdr is None:
                     xdr = 0
-                if dir not in ("i", "o", "io", "-"):
-                    raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"-\", "
-                                    "not {!r}"
+                if dir not in ("i", "o", "oe", "io", "-"):
+                    raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", \"io\", "
+                                    "or \"-\", not {!r}"
                                     .format(dir))
                 if dir != subsignal.io[0].dir and not (subsignal.io[0].dir == "io" or dir == "-"):
                     raise ValueError("Direction of {!r} cannot be changed from \"{}\" to \"{}\"; "
-                                     "direction can be changed from \"io\" to \"i\", from \"io\""
-                                     "to \"o\", or from anything to \"-\""
+                                     "direction can be changed from \"io\" to \"i\", \"o\", or "
+                                     "\"oe\", or from anything to \"-\""
                                      .format(subsignal.io[0], subsignal.io[0].dir, dir))
                 if not isinstance(xdr, int) or xdr < 0:
                     raise ValueError("Data rate of {!r} must be a non-negative integer, not {!r}"

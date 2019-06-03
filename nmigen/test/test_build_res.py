@@ -197,13 +197,14 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
     def test_wrong_request_with_dir(self):
         with self.assertRaises(TypeError,
-                msg="Direction must be one of \"i\", \"o\", \"io\", or \"-\", not 'wrong'"):
+                msg="Direction must be one of \"i\", \"o\", \"oe\", \"io\", or \"-\", "
+                    "not 'wrong'"):
             user_led = self.cm.request("user_led", 0, dir="wrong")
 
     def test_wrong_request_with_dir_io(self):
         with self.assertRaises(ValueError,
                 msg="Direction of (pins o A0) cannot be changed from \"o\" to \"i\"; direction "
-                    "can be changed from \"io\" to \"i\", from \"io\"to \"o\", or from anything "
+                    "can be changed from \"io\" to \"i\", \"o\", or \"oe\", or from anything "
                     "to \"-\""):
             user_led = self.cm.request("user_led", 0, dir="i")
 

@@ -9,7 +9,7 @@ class Pins:
         self.names = names.split()
 
         if dir not in ("i", "o", "io"):
-            raise TypeError("Direction must be one of \"i\", \"o\" or \"io\", not {!r}"
+            raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
                             .format(dir))
         self.dir = dir
 

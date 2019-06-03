@@ -9,7 +9,8 @@ from ...hdl.ir import *
 from ...build import *
 
 
-__all__ = ["LatticeICE40Platform", "IceStormProgrammerMixin", "IceBurnProgrammerMixin", "TinyProgrammerMixin"]
+__all__ = ["LatticeICE40Platform",
+           "IceStormProgrammerMixin", "IceBurnProgrammerMixin", "TinyProgrammerMixin"]
 
 
 class LatticeICE40Platform(TemplatedPlatform):
@@ -140,6 +141,16 @@ class LatticeICE40Platform(TemplatedPlatform):
         return self._get_io_buffer(port, extras, lambda bit: [
             # PIN_OUTPUT_TRISTATE|PIN_INPUT_REGISTERED
             ("p", "PIN_TYPE",       0b1010_00),
+            ("i", "D_OUT_0",        pin.o[bit]),
+            ("i", "OUTPUT_ENABLE",  pin.oe),
+        ])
+
+    def get_input_output(self, pin, port, extras):
+        self._check_feature("single-ended input/output", pin, extras,
+                            valid_xdrs=(0,), valid_extras=True)
+        return self._get_io_buffer(port, extras, lambda bit: [
+            # PIN_OUTPUT_TRISTATE|PIN_INPUT
+            ("p", "PIN_TYPE",       0b1010_01),
             ("o", "D_IN_0",         pin.i[bit]),
             ("i", "D_OUT_0",        pin.o[bit]),
             ("i", "OUTPUT_ENABLE",  pin.oe),

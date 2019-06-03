@@ -127,16 +127,20 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
                 add_pin_fragment(pin, self.get_input(pin, port, extras))
             if pin.dir == "o":
                 add_pin_fragment(pin, self.get_output(pin, port, extras))
+            if pin.dir == "oe":
+                add_pin_fragment(pin, self.get_tristate(pin, port, extras))
             if pin.dir == "io":
-                add_pin_fragment(pin, self.get_input(pin, port, extras))
+                add_pin_fragment(pin, self.get_input_output(pin, port, extras))
 
         for pin, p_port, n_port, extras in self.iter_differential_pins():
             if pin.dir == "i":
                 add_pin_fragment(pin, self.get_diff_input(pin, p_port, n_port))
             if pin.dir == "o":
                 add_pin_fragment(pin, self.get_diff_output(pin, p_port, n_port))
-            if pin.dir == "io":
+            if pin.dir == "oe":
                 add_pin_fragment(pin, self.get_diff_tristate(pin, p_port, n_port))
+            if pin.dir == "io":
+                add_pin_fragment(pin, self.get_diff_input_output(pin, p_port, n_port))
 
         return self.toolchain_prepare(fragment, name, **kwargs)
 
@@ -194,6 +198,19 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
             i_A=pin.o,
             o_Y=port,
         )
+        return m
+
+    def get_input_output(self, pin, port, extras):
+        self._check_feature("single-ended input/output", pin, extras,
+                            valid_xdrs=(0,), valid_extras=None)
+
+        m = Module()
+        m.submodules += Instance("$tribuf",
+            p_WIDTH=pin.width,
+            i_EN=pin.oe,
+            i_A=pin.o,
+            o_Y=port,
+        )
         m.d.comb += pin.i.eq(port)
         return m
 
@@ -207,6 +224,10 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
 
     def get_diff_tristate(self, pin, p_port, n_port, extras):
         self._check_feature("differential tristate", pin, extras,
+                            valid_xdrs=(), valid_extras=None)
+
+    def get_diff_input_output(self, pin, p_port, n_port, extras):
+        self._check_feature("differential input/output", pin, extras,
                             valid_xdrs=(), valid_extras=None)
 
 
