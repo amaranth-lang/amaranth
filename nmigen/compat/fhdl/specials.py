@@ -12,7 +12,7 @@ from .module import Module as CompatModule
 __all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE"]
 
 
-class TSTriple(Elaboratable):
+class TSTriple:
     def __init__(self, bits_sign=None, min=None, max=None, reset_o=0, reset_oe=0, reset_i=0,
                  name=None):
         self.o  = Signal(bits_sign, min=min, max=max, reset=reset_o,
@@ -24,9 +24,6 @@ class TSTriple(Elaboratable):
 
     def __len__(self):
         return len(self.o)
-
-    def elaborate(self, platform):
-        return Fragment()
 
     def get_tristate(self, io):
         return Tristate(io, self.o, self.oe, self.i)
