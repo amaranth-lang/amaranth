@@ -5,7 +5,7 @@ from ..hdl.rec import *
 __all__ = ["pin_layout", "Pin"]
 
 
-def pin_layout(width, dir, xdr=1):
+def pin_layout(width, dir, xdr=0):
     """
     Layout of the platform interface of a pin or several pins, which may be used inside
     user-defined records.
@@ -24,12 +24,16 @@ def pin_layout(width, dir, xdr=1):
 
     fields = []
     if dir in ("i", "io"):
+        if xdr > 0:
+            fields.append(("i_clk", 1))
         if xdr in (0, 1):
             fields.append(("i", width))
         else:
             for n in range(xdr):
                 fields.append(("i{}".format(n), width))
     if dir in ("o", "oe", "io"):
+        if xdr > 0:
+            fields.append(("o_clk", 1))
         if xdr in (0, 1):
             fields.append(("o", width))
         else:
@@ -72,12 +76,16 @@ class Pin(Record):
 
     Attributes
     ----------
+    i_clk:
+        I/O buffer input clock. Synchronizes `i*`. Present if ``xdr`` is nonzero.
     i : Signal, out
         I/O buffer input, without gearing. Present if ``dir="i"`` or ``dir="io"``, and ``xdr`` is
         equal to 0 or 1.
     i0, i1, ... : Signal, out
         I/O buffer inputs, with gearing. Present if ``dir="i"`` or ``dir="io"``, and ``xdr`` is
         greater than 1.
+    o_clk:
+        I/O buffer output clock. Synchronizes `o*`, including `oe`. Present if ``xdr`` is nonzero.
     o : Signal, in
         I/O buffer output, without gearing. Present if ``dir="o"`` or ``dir="io"``, and ``xdr`` is
         equal to 0 or 1.
