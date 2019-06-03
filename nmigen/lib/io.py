@@ -18,19 +18,19 @@ def pin_layout(width, dir, xdr=1):
     if dir not in ("i", "o", "io"):
         raise TypeError("Direction must be one of \"i\", \"o\" or \"io\", not '{!r}'"""
                         .format(dir))
-    if not isinstance(xdr, int) or xdr < 1:
-        raise TypeError("Gearing ratio must be a positive integer, not '{!r}'"
+    if not isinstance(xdr, int) or xdr < 0:
+        raise TypeError("Gearing ratio must be a non-negative integer, not '{!r}'"
                         .format(xdr))
 
     fields = []
     if dir in ("i", "io"):
-        if xdr == 1:
+        if xdr in (0, 1):
             fields.append(("i", width))
         else:
             for n in range(xdr):
                 fields.append(("i{}".format(n), width))
     if dir in ("o", "io"):
-        if xdr == 1:
+        if xdr in (0, 1):
             fields.append(("o", width))
         else:
             for n in range(xdr):
@@ -60,7 +60,8 @@ class Pin(Record):
         is specified, both the ``i``/``iN`` and ``o``/``oN`` signals are present, and an ``oe``
         signal is present.
     xdr : int
-        Gearbox ratio. If equal to 1, the I/O buffer is SDR, and only ``i``/``o`` signals are
+        Gearbox ratio. If equal to 0, the I/O buffer is combinatorial, and only ``i``/``o``
+        signals are present. If equal to 1, the I/O buffer is SDR, and only ``i``/``o`` signals are
         present. If greater than 1, the I/O buffer includes a gearbox, and ``iN``/``oN`` signals
         are present instead, where ``N in range(0, N)``. For example, if ``xdr=2``, the I/O buffer
         is DDR; the signal ``i0`` reflects the value at the rising edge, and the signal ``i1``
@@ -72,13 +73,13 @@ class Pin(Record):
     ----------
     i : Signal, out
         I/O buffer input, without gearing. Present if ``dir="i"`` or ``dir="io"``, and ``xdr`` is
-        equal to 1.
+        equal to 0 or 1.
     i0, i1, ... : Signal, out
         I/O buffer inputs, with gearing. Present if ``dir="i"`` or ``dir="io"``, and ``xdr`` is
         greater than 1.
     o : Signal, in
         I/O buffer output, without gearing. Present if ``dir="o"`` or ``dir="io"``, and ``xdr`` is
-        equal to 1.
+        equal to 0 or 1.
     o0, o1, ... : Signal, in
         I/O buffer outputs, with gearing. Present if ``dir="o"`` or ``dir="io"``, and ``xdr`` is
         greater than 1.
@@ -86,7 +87,7 @@ class Pin(Record):
         I/O buffer output enable. Present if ``dir="io"``. Buffers generally cannot change
         direction more than once per cycle, so at most one output enable signal is present.
     """
-    def __init__(self, width, dir, xdr=1, name=None):
+    def __init__(self, width, dir, xdr=0, name=None):
         self.width = width
         self.dir   = dir
         self.xdr   = xdr

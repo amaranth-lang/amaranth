@@ -4,7 +4,7 @@ from ..hdl.rec import *
 from ..lib.io import *
 
 
-class PinLayoutSDRTestCase(FHDLTestCase):
+class PinLayoutCombTestCase(FHDLTestCase):
     def test_pin_layout_i(self):
         layout_1 = pin_layout(1, dir="i")
         self.assertEqual(layout_1.fields, {
@@ -36,6 +36,45 @@ class PinLayoutSDRTestCase(FHDLTestCase):
         })
 
         layout_2 = pin_layout(2, dir="io")
+        self.assertEqual(layout_2.fields, {
+            "i":  ((2, False), DIR_NONE),
+            "o":  ((2, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
+
+class PinLayoutSDRTestCase(FHDLTestCase):
+    def test_pin_layout_i(self):
+        layout_1 = pin_layout(1, dir="i", xdr=1)
+        self.assertEqual(layout_1.fields, {
+            "i": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="i", xdr=1)
+        self.assertEqual(layout_2.fields, {
+            "i": ((2, False), DIR_NONE),
+        })
+
+    def test_pin_layout_o(self):
+        layout_1 = pin_layout(1, dir="o", xdr=1)
+        self.assertEqual(layout_1.fields, {
+            "o": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="o", xdr=1)
+        self.assertEqual(layout_2.fields, {
+            "o": ((2, False), DIR_NONE),
+        })
+
+    def test_pin_layout_io(self):
+        layout_1 = pin_layout(1, dir="io", xdr=1)
+        self.assertEqual(layout_1.fields, {
+            "i":  ((1, False), DIR_NONE),
+            "o":  ((1, False), DIR_NONE),
+            "oe": ((1, False), DIR_NONE),
+        })
+
+        layout_2 = pin_layout(2, dir="io", xdr=1)
         self.assertEqual(layout_2.fields, {
             "i":  ((2, False), DIR_NONE),
             "o":  ((2, False), DIR_NONE),
