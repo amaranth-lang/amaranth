@@ -547,6 +547,50 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
 
 
 class InstanceTestCase(FHDLTestCase):
+    def test_construct(self):
+        s1 = Signal()
+        s2 = Signal()
+        s3 = Signal()
+        s4 = Signal()
+        s5 = Signal()
+        s6 = Signal()
+        inst = Instance("foo",
+            ("p", "PARAM1", 0x1234),
+            ("i", "s1", s1),
+            ("o", "s2", s2),
+            ("io", "s3", s3),
+            p_PARAM2=0x5678,
+            i_s4=s4,
+            o_s5=s5,
+            io_s6=s6,
+        )
+        self.assertEqual(inst.parameters, OrderedDict([
+            ("PARAM1", 0x1234),
+            ("PARAM2", 0x5678),
+        ]))
+        self.assertEqual(inst.named_ports, OrderedDict([
+            ("s1", (s1, "i")),
+            ("s2", (s2, "o")),
+            ("s3", (s3, "io")),
+            ("s4", (s4, "i")),
+            ("s5", (s5, "o")),
+            ("s6", (s6, "io")),
+        ]))
+
+    def test_wrong_construct_arg(self):
+        s = Signal()
+        with self.assertRaises(NameError,
+                msg="Instance argument ('', 's1', (sig s)) should be a tuple "
+                    "(kind, name, value) where kind is one of \"p\", \"i\", \"o\", or \"io\""):
+            Instance("foo", ("", "s1", s))
+
+    def test_wrong_construct_kwarg(self):
+        s = Signal()
+        with self.assertRaises(NameError,
+                msg="Instance keyword argument x_s1=(sig s) does not start with one of "
+                    "\"p_\", \"i_\", \"o_\", or \"io_\""):
+            Instance("foo", x_s1=s)
+
     def setUp_cpu(self):
         self.rst = Signal()
         self.stb = Signal()

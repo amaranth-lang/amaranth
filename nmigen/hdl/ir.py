@@ -517,12 +517,22 @@ class Fragment:
 
 
 class Instance(Fragment):
-    def __init__(self, type, **kwargs):
+    def __init__(self, type, *args, **kwargs):
         super().__init__()
 
         self.type        = type
         self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
+
+        for (kind, name, value) in args:
+            if kind == "p":
+                self.parameters[name] = value
+            elif kind in ("i", "o", "io"):
+                self.named_ports[name] = (value, kind)
+            else:
+                raise NameError("Instance argument {!r} should be a tuple (kind, name, value) "
+                                "where kind is one of \"p\", \"i\", \"o\", or \"io\""
+                                .format((kind, name, value)))
 
         for kw, arg in kwargs.items():
             if kw.startswith("p_"):
@@ -534,5 +544,6 @@ class Instance(Fragment):
             elif kw.startswith("io_"):
                 self.named_ports[kw[3:]] = (arg, "io")
             else:
-                raise NameError("Instance argument '{}' does not start with p_, i_, o_, or io_"
-                                .format(arg))
+                raise NameError("Instance keyword argument {}={!r} does not start with one of "
+                                "\"p_\", \"i_\", \"o_\", or \"io_\""
+                                .format(kw, arg))
