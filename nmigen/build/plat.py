@@ -169,7 +169,7 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
 
     def get_input(self, pin, port, extras):
         self._check_feature("single-ended input", pin, extras,
-                            valid_xdrs=(1,), valid_extras=None)
+                            valid_xdrs=(0,), valid_extras=None)
 
         m = Module()
         m.d.comb += pin.i.eq(port)
@@ -177,7 +177,7 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
 
     def get_output(self, pin, port, extras):
         self._check_feature("single-ended output", pin, extras,
-                            valid_xdrs=(1,), valid_extras=None)
+                            valid_xdrs=(0,), valid_extras=None)
 
         m = Module()
         m.d.comb += port.eq(pin.o)
@@ -185,7 +185,7 @@ class Platform(ConstraintManager, metaclass=ABCMeta):
 
     def get_tristate(self, pin, port, extras):
         self._check_feature("single-ended tristate", pin, extras,
-                            valid_xdrs=(1,), valid_extras=None)
+                            valid_xdrs=(0,), valid_extras=None)
 
         m = Module()
         m.submodules += Instance("$tribuf",

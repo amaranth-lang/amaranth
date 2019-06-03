@@ -117,6 +117,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         return m
 
     def get_input(self, pin, port, extras):
+        self._check_feature("single-ended input", pin, extras,
+                            valid_xdrs=(0,), valid_extras=True)
         return self._get_io_buffer(port, extras, lambda bit: [
             # PIN_NO_OUTPUT|PIN_INPUT
             ("p", "PIN_TYPE",       0b0000_01),
@@ -124,6 +126,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         ])
 
     def get_output(self, pin, port, extras):
+        self._check_feature("single-ended output", pin, extras,
+                            valid_xdrs=(0,), valid_extras=True)
         return self._get_io_buffer(port, extras, lambda bit: [
             # PIN_OUTPUT|PIN_INPUT_REGISTERED
             ("p", "PIN_TYPE",       0b0110_00),
@@ -131,6 +135,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         ])
 
     def get_tristate(self, pin, port, extras):
+        self._check_feature("single-ended tristate", pin, extras,
+                            valid_xdrs=(0,), valid_extras=True)
         return self._get_io_buffer(port, extras, lambda bit: [
             # PIN_OUTPUT_TRISTATE|PIN_INPUT_REGISTERED
             ("p", "PIN_TYPE",       0b1010_00),

@@ -215,8 +215,8 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
     def test_wrong_request_with_wrong_xdr(self):
         with self.assertRaises(ValueError,
-                msg="Data rate of (pins o A0) must be a positive integer, not 0"):
-            user_led = self.cm.request("user_led", 0, xdr=0)
+                msg="Data rate of (pins o A0) must be a non-negative integer, not -1"):
+            user_led = self.cm.request("user_led", 0, xdr=-1)
 
     def test_wrong_request_with_xdr_dict(self):
         with self.assertRaises(TypeError,
