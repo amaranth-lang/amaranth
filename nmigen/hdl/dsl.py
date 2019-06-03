@@ -83,6 +83,9 @@ class _ModuleBuilderSubmodules:
     def __setattr__(self, name, submodule):
         self._builder._add_submodule(submodule, name)
 
+    def __setitem__(self, name, value):
+        return self.__setattr__(name, value)
+
 
 class _ModuleBuilderDomainSet:
     def __init__(self, builder):

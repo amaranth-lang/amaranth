@@ -505,6 +505,12 @@ class DSLTestCase(FHDLTestCase):
         m1.submodules.foo = m2
         self.assertEqual(m1._submodules, [(m2, "foo")])
 
+    def test_submodule_named_index(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules["foo"] = m2
+        self.assertEqual(m1._submodules, [(m2, "foo")])
+
     def test_submodule_wrong(self):
         m = Module()
         with self.assertRaises(TypeError,
