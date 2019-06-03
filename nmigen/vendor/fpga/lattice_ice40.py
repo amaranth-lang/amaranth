@@ -51,7 +51,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                 {% if file.endswith(".v") -%}
                     read_verilog {{get_override("read_opts")|join(" ")}} {{file}}
                 {% elif file.endswith(".sv") -%}
-                    read_verilog {{get_override("read_opts")|join(" ")}} {{file}}
+                    read_verilog -sv {{get_override("read_opts")|join(" ")}} {{file}}
                 {% endif %}
             {% endfor %}
             read_ilang {{name}}.il
