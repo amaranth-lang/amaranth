@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from ...tools import flatten, deprecated
-from ...hdl import dsl
+from ...hdl import dsl, ir
 
 
 __all__ = ["Module", "FinalizeError"]
@@ -94,13 +94,16 @@ class _CompatModuleClockDomains(_CompatModuleProxy):
         return self
 
 
-class CompatModule:
+class CompatModule(ir.Elaboratable):
     # Actually returns nmigen.fhdl.Module, not a Fragment.
     def get_fragment(self):
         assert not self.get_fragment_called
         self.get_fragment_called = True
         self.finalize()
         return self._module
+
+    def elaborate(self, platform):
+        return self.get_fragment()
 
     def __getattr__(self, name):
         if name == "comb":
