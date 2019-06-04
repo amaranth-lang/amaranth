@@ -95,6 +95,8 @@ class _CompatModuleClockDomains(_CompatModuleProxy):
 
 
 class CompatModule(ir.Elaboratable):
+    _Elaboratable__silence = True
+
     # Actually returns nmigen.fhdl.Module, not a Fragment.
     def get_fragment(self):
         assert not self.get_fragment_called
