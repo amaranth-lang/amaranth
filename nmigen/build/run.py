@@ -1,7 +1,9 @@
 from collections import OrderedDict
+from contextlib import contextmanager
 import os
 import sys
 import subprocess
+import tempfile
 import zipfile
 
 
@@ -60,3 +62,22 @@ class BuildProducts:
         assert mode in "bt"
         with open(os.path.join(self._root, filename), "r" + mode) as f:
             return f.read()
+
+    @contextmanager
+    def extract(self, *filenames):
+        files = []
+        try:
+            for filename in filenames:
+                file = tempfile.NamedTemporaryFile(prefix="nmigen_", suffix="_" + filename)
+                files.append(file)
+                file.write(self.get(filename))
+
+            if len(files) == 0:
+                return (yield)
+            elif len(files) == 1:
+                return (yield files[0].name)
+            else:
+                return (yield [file.name for file in files])
+        finally:
+            for file in files:
+                file.close()

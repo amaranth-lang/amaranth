@@ -96,6 +96,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         """,
         r"""
         {{get_tool("icepack")}}
+            {{verbose("-v")}}
             {{name}}.asc
             {{name}}.bin
         """
@@ -298,34 +299,24 @@ class IceStormProgrammerMixin:
                              "specify it using .build(..., program_opts={\"mode\": \"<mode>\"})"
                              .format(mode))
 
-        iceprog   = os.environ.get("ICEPROG", "iceprog")
-        bitstream = products.get("{}.bin".format(name))
+        iceprog = os.environ.get("ICEPROG", "iceprog")
         if mode == "sram":
             options = ["-S"]
         if mode == "flash":
             options = []
-        with tempfile.NamedTemporaryFile(prefix="nmigen_iceprog_",
-                                         suffix=".bin") as bitstream_file:
-            bitstream_file.write(bitstream)
-            subprocess.run([iceprog, *options, bitstream_file.name], check=True)
+        with products.extract("{}.bin".format(name)) as bitstream_filename:
+            subprocess.run([iceprog, *options, bitstream_filename], check=True)
 
 
 class IceBurnProgrammerMixin:
     def toolchain_program(self, products, name):
-        iceburn   = os.environ.get("ICEBURN", "iCEburn")
-        bitstream = products.get("{}.bin".format(name))
-        with tempfile.NamedTemporaryFile(prefix="nmigen_iceburn_",
-                                         suffix=".bin") as bitstream_file:
-            bitstream_file.write(bitstream)
-            subprocess.run([iceburn, "-evw", bitstream_file.name], check=True)
+        iceburn = os.environ.get("ICEBURN", "iCEburn")
+        with products.extract("{}.bin".format(name)) as bitstream_filename:
+            subprocess.run([iceburn, "-evw", bitstream_filename], check=True)
 
 
 class TinyProgrammerMixin:
     def toolchain_program(self, products, name):
         tinyprog  = os.environ.get("TINYPROG", "tinyprog")
-        options   = ["-p"]
-        bitstream = products.get("{}.bin".format(name))
-        with tempfile.NamedTemporaryFile(prefix="nmigen_tinyprog_",
-                                         suffix=".bin") as bitstream_file:
-            bitstream_file.write(bitstream)
-            subprocess.run([tinyprog, *options, bitstream_file.name], check=True)
+        with products.extract("{}.bin".format(name)) as bitstream_filename:
+            subprocess.run([tinyprog, "-p", bitstream_filename], check=True)
