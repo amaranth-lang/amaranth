@@ -56,9 +56,9 @@ class ConstraintManager:
     def add_clock(self, name, number, frequency):
         resource = self.lookup(name, number)
         if isinstance(resource.io[0], Subsignal):
-            raise ConstraintError("Cannot constrain frequency of resource {}#{} because it has "
-                                  "subsignals"
-                                  .format(resource.name, resource.number, frequency))
+            raise TypeError("Cannot constrain frequency of resource {}#{} because it has "
+                            "subsignals"
+                            .format(resource.name, resource.number, frequency))
         if (resource.name, resource.number) in self.clocks:
             other = self.clocks[resource.name, resource.number]
             raise ConstraintError("Resource {}#{} is already constrained to a frequency of "
@@ -68,8 +68,8 @@ class ConstraintManager:
 
     def lookup(self, name, number=0):
         if (name, number) not in self.resources:
-            raise NameError("Resource {}#{} does not exist"
-                            .format(name, number))
+            raise ConstraintError("Resource {}#{} does not exist"
+                                  .format(name, number))
         return self.resources[name, number]
 
     def request(self, name, number=0, *, dir=None, xdr=None):

@@ -192,12 +192,12 @@ class ConstraintManagerTestCase(FHDLTestCase):
             self.cm.add_connectors([Connector("pmod", 0, "1 2")])
 
     def test_wrong_lookup(self):
-        with self.assertRaises(NameError,
+        with self.assertRaises(ConstraintError,
                 msg="Resource user_led#1 does not exist"):
             r = self.cm.lookup("user_led", 1)
 
     def test_wrong_frequency_subsignals(self):
-        with self.assertRaises(ConstraintError,
+        with self.assertRaises(TypeError,
                 msg="Cannot constrain frequency of resource i2c#0 because "
                     "it has subsignals"):
             self.cm.add_clock("i2c", 0, 10e6)
