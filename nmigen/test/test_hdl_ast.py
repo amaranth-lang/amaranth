@@ -314,6 +314,8 @@ class PartTestCase(FHDLTestCase):
 
 class CatTestCase(FHDLTestCase):
     def test_shape(self):
+        c0 = Cat()
+        self.assertEqual(c0.shape(), (0, False))
         c1 = Cat(Const(10))
         self.assertEqual(c1.shape(), (4, False))
         c2 = Cat(Const(10), Const(1))

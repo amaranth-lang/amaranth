@@ -485,7 +485,9 @@ class LHSGroupAnalyzer(StatementVisitor):
         return groups
 
     def on_Assign(self, stmt):
-        self.unify(*stmt._lhs_signals())
+        lhs_signals = stmt._lhs_signals()
+        if lhs_signals:
+            self.unify(*stmt._lhs_signals())
 
     on_Assert = on_Assign
 
@@ -511,9 +513,11 @@ class LHSGroupFilter(SwitchCleaner):
     def on_Assign(self, stmt):
         # The invariant provided by LHSGroupAnalyzer is that all signals that ever appear together
         # on LHS are a part of the same group, so it is sufficient to check any of them.
-        any_lhs_signal = next(iter(stmt.lhs._lhs_signals()))
-        if any_lhs_signal in self.signals:
-            return stmt
+        lhs_signals = stmt.lhs._lhs_signals()
+        if lhs_signals:
+            any_lhs_signal = next(iter(lhs_signals))
+            if any_lhs_signal in self.signals:
+                return stmt
 
     def on_Assert(self, stmt):
         any_lhs_signal = next(iter(stmt._lhs_signals()))

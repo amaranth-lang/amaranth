@@ -303,6 +303,15 @@ class LHSGroupAnalyzerTestCase(FHDLTestCase):
             SignalSet((b,)),
         ])
 
+    def test_lhs_empty(self):
+        stmts = [
+            Cat().eq(0)
+        ]
+
+        groups = LHSGroupAnalyzer()(stmts)
+        self.assertEqual(list(groups.values()), [
+        ])
+
 
 class LHSGroupFilterTestCase(FHDLTestCase):
     def test_filter(self):
@@ -328,6 +337,13 @@ class LHSGroupFilterTestCase(FHDLTestCase):
             )
         )
         """)
+
+    def test_lhs_empty(self):
+        stmts = [
+            Cat().eq(0)
+        ]
+
+        self.assertRepr(LHSGroupFilter(SignalSet())(stmts), "()")
 
 
 class ResetInserterTestCase(FHDLTestCase):
