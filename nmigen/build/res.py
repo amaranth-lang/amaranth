@@ -183,6 +183,14 @@ class ConstraintManager:
             else:
                 assert False
 
+    def iter_port_constraints_bits(self):
+        for port_name, pin_names, extras in self.iter_port_constraints():
+            if len(pin_names) == 1:
+                yield port_name, pin_names[0], extras
+            else:
+                for bit, pin_name in enumerate(pin_names):
+                    yield "{}[{}]".format(port_name, bit), pin_name, extras
+
     def iter_clock_constraints(self):
         for name, number in self.clocks.keys() & self._requested.keys():
             resource = self.resources[name, number]
