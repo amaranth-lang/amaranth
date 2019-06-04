@@ -1,7 +1,5 @@
 from .tools import *
-from ..hdl.ast import *
-from ..hdl.cd import *
-from ..hdl.dsl import *
+from ..hdl import *
 from ..back.pysim import *
 from ..lib.cdc import *
 

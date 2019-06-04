@@ -1,7 +1,6 @@
 from .tools import *
-from ..hdl.ast import *
-from ..hdl.dsl import *
-from ..hdl.ir import *
+from ..hdl import *
+from ..formal import *
 from ..back.pysim import *
 from ..lib.coding import *
 

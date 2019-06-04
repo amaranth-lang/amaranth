@@ -1,6 +1,7 @@
 from .tools import *
-from ..hdl.ast import *
+from ..hdl import *
 from ..hdl.rec import *
+from ..back.pysim import *
 from ..lib.io import *
 
 

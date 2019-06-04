@@ -3,9 +3,7 @@ import os
 import subprocess
 import tempfile
 
-from ...hdl.ast import *
-from ...hdl.dsl import *
-from ...hdl.ir import *
+from ...hdl import *
 from ...build import *
 
 
