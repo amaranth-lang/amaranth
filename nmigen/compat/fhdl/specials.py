@@ -7,6 +7,7 @@ from ...hdl.mem import Memory as NativeMemory
 from ...hdl.ir import Fragment, Instance
 from ...hdl.dsl import Module
 from .module import Module as CompatModule
+from ...lib.io import Pin
 
 
 __all__ = ["TSTriple", "Instance", "Memory", "READ_FIRST", "WRITE_FIRST", "NO_CHANGE"]
@@ -32,22 +33,25 @@ class TSTriple:
 class Tristate(Elaboratable):
     def __init__(self, target, o, oe, i=None):
         self.target = target
-        self.triple = TSTriple()
-        self.triple.o = o
-        self.triple.oe = oe
-        if i is not None:
-            self.triple.i = i
+        self.o = o
+        self.oe = oe
+        self.i = i if i is not None else None
 
     def elaborate(self, platform):
         if hasattr(platform, "get_input_output"):
-            return platform.get_input_output(self.triple, self.target, extras={})
+            pin = Pin(len(self.target), dir="oe" if self.i is None else "io")
+            pin.o = self.o
+            pin.oe = self.oe
+            if self.i is not None:
+                pin.i = self.i
+            return platform.get_input_output(pin, self.target, extras={})
 
         m = Module()
-        m.d.comb += self.triple.i.eq(self.target)
+        m.d.comb += self.i.eq(self.target)
         m.submodules += Instance("$tribuf",
             p_WIDTH=len(self.target),
-            i_EN=self.triple.oe,
-            i_A=self.triple.o,
+            i_EN=self.oe,
+            i_A=self.o,
             o_Y=self.target,
         )
 
