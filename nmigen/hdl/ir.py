@@ -26,8 +26,8 @@ class Elaboratable(metaclass=ABCMeta):
         if self._Elaboratable__silence:
             return
         if hasattr(self, "_Elaboratable__used") and not self._Elaboratable__used:
-            print("Elaboratable created but never used\n",
-                  "Traceback (most recent call last):\n",
+            print("Warning: elaboratable created but never used\n",
+                  "Constructor traceback (most recent call last):\n",
                   *traceback.format_list(self._Elaboratable__traceback),
                   file=sys.stderr, sep="")
 
