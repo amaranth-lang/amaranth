@@ -35,6 +35,18 @@ class LatticeICE40Platform(TemplatedPlatform):
     device  = abstractproperty()
     package = abstractproperty()
 
+    _nextpnr_device_options = {
+        "iCE40LP384": "--lp384",
+        "iCE40LP1K":  "--lp1k",
+        "iCE40LP4K":  "--lp8k",
+        "iCE40LP8K":  "--lp8k",
+        "iCE40HX1K":  "--hx1k",
+        "iCE40HX4K":  "--hx8k",
+        "iCE40HX8K":  "--hx8k",
+        "iCE40UP5K":  "--up5k",
+        "iCE5LP4K":   "--u4k",
+    }
+
     file_templates = {
         **TemplatedPlatform.build_script_templates,
         "{{name}}.il": r"""
@@ -83,8 +95,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             {{quiet("-q")}}
             {{get_override("nextpnr_opts")|default(["--placer","heap"])|join(" ")}}
             -l {{name}}.tim
-            --{{platform.device}}
-            --package {{platform.package}}
+            {{platform._nextpnr_device_options[platform.device]}}
+            --package {{platform.package|lower}}
             --json {{name}}.json
             --pcf {{name}}.pcf
             --pre-pack {{name}}_pre_pack.py
