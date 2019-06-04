@@ -39,8 +39,8 @@ class Tristate(Elaboratable):
             self.triple.i = i
 
     def elaborate(self, platform):
-        if hasattr(platform, "get_tristate"):
-            return platform.get_tristate(self.triple, self.target)
+        if hasattr(platform, "get_input_output"):
+            return platform.get_input_output(self.triple, self.target, extras={})
 
         m = Module()
         m.d.comb += self.triple.i.eq(self.target)
