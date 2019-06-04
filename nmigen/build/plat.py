@@ -222,7 +222,11 @@ class TemplatedPlatform(Platform):
         def get_override(var):
             var_env = "NMIGEN_{}".format(var)
             if var_env in os.environ:
-                return os.environ[var_env]
+                # On Windows, there is no way to define an "empty but set" variable; it is tempting
+                # to use a quoted empty string, but it doesn't do what one would expect. Recognize
+                # this as a useful pattern anyway, and treat `set VAR=""` on Windows the same way
+                # `export VAR=` is treated on Linux.
+                return re.sub(r'^\"\"$', "", os.environ[var_env])
             elif var in kwargs:
                 return kwargs[var]
             else:
