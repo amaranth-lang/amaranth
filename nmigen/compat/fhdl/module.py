@@ -83,12 +83,12 @@ class _CompatModuleSubmodules(_CompatModuleProxy):
 
 
 class _CompatModuleClockDomains(_CompatModuleProxy):
-    @deprecated("TODO")
+    @deprecated("instead of `self.clock_domains.<name> =`, use `m.domains.<name> =`")
     def __setattr__(self, name, value):
         self.__iadd__(value)
         setattr(self._cm, name, value)
 
-    @deprecated("TODO")
+    @deprecated("instead of `self.clock_domains +=`, use `m.domains +=`")
     def __iadd__(self, other):
         self._cm._module.domains += _flat_list(other)
         return self
