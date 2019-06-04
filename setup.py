@@ -19,7 +19,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.6",
     project_urls={
-        #"Documentation": "https://glasgow.readthedocs.io/",
+        #"Documentation": "https://nmigen.readthedocs.io/",
         "Source Code": "https://github.com/m-labs/nmigen",
         "Bug Tracker": "https://github.com/m-labs/nmigen/issues",
     },

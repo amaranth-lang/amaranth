@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.vendor.board.ice40_hx1k_blink_evn import *
+from nmigen_boards.ice40_hx1k_blink_evn import *
 
 
 class Blinky(Elaboratable):

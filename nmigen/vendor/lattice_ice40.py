@@ -1,14 +1,10 @@
 from abc import abstractproperty
-import os
-import subprocess
-import tempfile
 
-from ...hdl import *
-from ...build import *
+from ..hdl import *
+from ..build import *
 
 
-__all__ = ["LatticeICE40Platform",
-           "IceStormProgrammerMixin", "IceBurnProgrammerMixin", "TinyProgrammerMixin"]
+__all__ = ["LatticeICE40Platform"]
 
 
 class LatticeICE40Platform(TemplatedPlatform):
@@ -288,35 +284,3 @@ class LatticeICE40Platform(TemplatedPlatform):
 
     # Tristate and bidirectional buffers are not supported on iCE40 because it requires external
     # termination, which is incompatible for input and output differential I/Os.
-
-
-class IceStormProgrammerMixin:
-    def toolchain_program(self, products, name, *, mode=None):
-        if mode is None and hasattr(self, "prog_mode"):
-            mode = self.prog_mode
-        if mode not in ("sram", "flash"):
-            raise ValueError("iceprog mode must be one of \"sram\" or \"flash\", not {!r}; "
-                             "specify it using .build(..., program_opts={\"mode\": \"<mode>\"})"
-                             .format(mode))
-
-        iceprog = os.environ.get("ICEPROG", "iceprog")
-        if mode == "sram":
-            options = ["-S"]
-        if mode == "flash":
-            options = []
-        with products.extract("{}.bin".format(name)) as bitstream_filename:
-            subprocess.run([iceprog, *options, bitstream_filename], check=True)
-
-
-class IceBurnProgrammerMixin:
-    def toolchain_program(self, products, name):
-        iceburn = os.environ.get("ICEBURN", "iCEburn")
-        with products.extract("{}.bin".format(name)) as bitstream_filename:
-            subprocess.run([iceburn, "-evw", bitstream_filename], check=True)
-
-
-class TinyProgrammerMixin:
-    def toolchain_program(self, products, name):
-        tinyprog  = os.environ.get("TINYPROG", "tinyprog")
-        with products.extract("{}.bin".format(name)) as bitstream_filename:
-            subprocess.run([tinyprog, "-p", bitstream_filename], check=True)

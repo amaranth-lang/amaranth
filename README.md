@@ -25,6 +25,7 @@ Thanks [LambdaConcept][] for being a sponsor of this project! Contact sb [at] m-
 ### Installation
 
     pip install git+https://github.com/m-labs/nmigen.git
+    pip install git+https://github.com/m-labs/nmigen-boards.git
 
 ### Introduction
 
