@@ -68,9 +68,14 @@ class BuildProducts:
         files = []
         try:
             for filename in filenames:
-                file = tempfile.NamedTemporaryFile(prefix="nmigen_", suffix="_" + filename)
+                # On Windows, a named temporary file (as created by Python) is not accessible to
+                # others if it's still open within the Python process, so we close it and delete
+                # it manually.
+                file = tempfile.NamedTemporaryFile(prefix="nmigen_", suffix="_" + filename,
+                                                   delete=False)
                 files.append(file)
                 file.write(self.get(filename))
+                file.close()
 
             if len(files) == 0:
                 return (yield)
@@ -80,4 +85,4 @@ class BuildProducts:
                 return (yield [file.name for file in files])
         finally:
             for file in files:
-                file.close()
+                os.unlink(file.name)
