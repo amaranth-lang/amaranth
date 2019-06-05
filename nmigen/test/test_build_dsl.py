@@ -23,7 +23,7 @@ class PinsTestCase(FHDLTestCase):
             "pmod_0:1": "A1",
             "pmod_0:2": "A2",
         }
-        self.assertEqual(list(p.map_names(mapping, p)), ["A0", "A1", "A2"])
+        self.assertEqual(p.map_names(mapping, p), ["A0", "A1", "A2"])
 
     def test_map_names_recur(self):
         p = Pins("0", conn=("pmod", 0))
@@ -31,7 +31,7 @@ class PinsTestCase(FHDLTestCase):
             "pmod_0:0": "ext_0:1",
             "ext_0:1":  "A1",
         }
-        self.assertEqual(list(p.map_names(mapping, p)), ["A1"])
+        self.assertEqual(p.map_names(mapping, p), ["A1"])
 
     def test_wrong_names(self):
         with self.assertRaises(TypeError,
@@ -51,7 +51,7 @@ class PinsTestCase(FHDLTestCase):
         with self.assertRaises(NameError,
                 msg="Resource (pins io pmod_0:0 pmod_0:1 pmod_0:2) refers to nonexistent "
                     "connector pin pmod_0:1"):
-            list(p.map_names(mapping, p))
+            p.map_names(mapping, p)
 
 
 class DiffPairsTestCase(FHDLTestCase):
@@ -84,69 +84,78 @@ class DiffPairsTestCase(FHDLTestCase):
             dp = DiffPairs("A0", "B0 B1")
 
 
+class AttrsTestCase(FHDLTestCase):
+    def test_basic(self):
+        a = Attrs(IO_STANDARD="LVCMOS33", PULLUP="1")
+        self.assertEqual(a["IO_STANDARD"], "LVCMOS33")
+        self.assertEqual(repr(a), "(attrs IO_STANDARD=LVCMOS33 PULLUP=1)")
+
+    def test_wrong_value(self):
+        with self.assertRaises(TypeError,
+                msg="Attribute value must be a string, not 1"):
+            a = Attrs(FOO=1)
+
+
 class SubsignalTestCase(FHDLTestCase):
     def test_basic_pins(self):
-        s = Subsignal("a", Pins("A0"), extras={"IOSTANDARD": "LVCMOS33"})
-        self.assertEqual(repr(s), "(subsignal a (pins io A0) IOSTANDARD=LVCMOS33)")
+        s = Subsignal("a", Pins("A0"), Attrs(IOSTANDARD="LVCMOS33"))
+        self.assertEqual(repr(s),
+            "(subsignal a (pins io A0) (attrs IOSTANDARD=LVCMOS33))")
 
     def test_basic_diffpairs(self):
         s = Subsignal("a", DiffPairs("A0", "B0"))
-        self.assertEqual(repr(s), "(subsignal a (diffpairs io (p A0) (n B0)) )")
+        self.assertEqual(repr(s),
+            "(subsignal a (diffpairs io (p A0) (n B0)) (attrs ))")
 
     def test_basic_subsignals(self):
         s = Subsignal("a",
                 Subsignal("b", Pins("A0")),
                 Subsignal("c", Pins("A1")))
         self.assertEqual(repr(s),
-                "(subsignal a (subsignal b (pins io A0) ) (subsignal c (pins io A1) ) )")
+            "(subsignal a (subsignal b (pins io A0) (attrs )) "
+                         "(subsignal c (pins io A1) (attrs )) (attrs ))")
 
-    def test_extras(self):
+    def test_attrs(self):
         s = Subsignal("a",
                 Subsignal("b", Pins("A0")),
-                Subsignal("c", Pins("A0"), extras={"SLEW": "FAST"}),
-                extras={"IOSTANDARD": "LVCMOS33"})
-        self.assertEqual(s.extras, {"IOSTANDARD": "LVCMOS33"})
-        self.assertEqual(s.io[0].extras, {"IOSTANDARD": "LVCMOS33"})
-        self.assertEqual(s.io[1].extras, {"SLEW": "FAST", "IOSTANDARD": "LVCMOS33"})
+                Subsignal("c", Pins("A0"), Attrs(SLEW="FAST")),
+                Attrs(IOSTANDARD="LVCMOS33"))
+        self.assertEqual(s.attrs, {"IOSTANDARD": "LVCMOS33"})
+        self.assertEqual(s.ios[0].attrs, {})
+        self.assertEqual(s.ios[1].attrs, {"SLEW": "FAST"})
 
-    def test_empty_io(self):
-        with self.assertRaises(TypeError, msg="Missing I/O constraints"):
+    def test_attrs_many(self):
+        s = Subsignal("a", Pins("A0"), Attrs(SLEW="FAST"), Attrs(PULLUP="1"))
+        self.assertEqual(s.attrs, {"SLEW": "FAST", "PULLUP": "1"})
+
+    def test_wrong_empty_io(self):
+        with self.assertRaises(ValueError, msg="Missing I/O constraints"):
             s = Subsignal("a")
 
     def test_wrong_io(self):
         with self.assertRaises(TypeError,
-                msg="I/O constraint must be one of Pins, DiffPairs or Subsignal, not 'wrong'"):
+                msg="I/O constraint must be one of Pins, DiffPairs, Subsignal, or Attrs, "
+                    "not 'wrong'"):
             s = Subsignal("a", "wrong")
 
     def test_wrong_pins(self):
         with self.assertRaises(TypeError,
-                msg="Pins and DiffPairs cannot be followed by more I/O constraints, but "
-                    "(pins io A0) is followed by (pins io A1)"):
+                msg="Pins and DiffPairs are incompatible with other location or subsignal "
+                    "constraints, but (pins io A1) appears after (pins io A0)"):
             s = Subsignal("a", Pins("A0"), Pins("A1"))
 
     def test_wrong_diffpairs(self):
         with self.assertRaises(TypeError,
-                msg="Pins and DiffPairs cannot be followed by more I/O constraints, but "
-                    "(diffpairs io (p A0) (n B0)) is followed by "
-                    "(pins io A1)"):
+                msg="Pins and DiffPairs are incompatible with other location or subsignal "
+                    "constraints, but (pins io A1) appears after (diffpairs io (p A0) (n B0))"):
             s = Subsignal("a", DiffPairs("A0", "B0"), Pins("A1"))
 
     def test_wrong_subsignals(self):
         with self.assertRaises(TypeError,
-                msg="A Subsignal can only be followed by more Subsignals, but "
-                    "(subsignal b (pins io A0) ) is followed by (pins io B0)"):
+                msg="Pins and DiffPairs are incompatible with other location or subsignal "
+                    "constraints, but (pins io B0) appears after (subsignal b (pins io A0) "
+                    "(attrs ))"):
             s = Subsignal("a", Subsignal("b", Pins("A0")), Pins("B0"))
-
-    def test_wrong_extras(self):
-        with self.assertRaises(TypeError,
-                msg="Extra constraints must be a dict, not [(pins io B0)]"):
-            s = Subsignal("a", Pins("A0"), extras=[Pins("B0")])
-        with self.assertRaises(TypeError,
-                msg="Extra constraint key must be a string, not 1"):
-            s = Subsignal("a", Pins("A0"), extras={1: 2})
-        with self.assertRaises(TypeError,
-                msg="Extra constraint value must be a string, not 2"):
-            s = Subsignal("a", Pins("A0"), extras={"1": 2})
 
 
 class ResourceTestCase(FHDLTestCase):
@@ -154,11 +163,11 @@ class ResourceTestCase(FHDLTestCase):
         r = Resource("serial", 0,
                 Subsignal("tx", Pins("A0", dir="o")),
                 Subsignal("rx", Pins("A1", dir="i")),
-                extras={"IOSTANDARD": "LVCMOS33"})
+                Attrs(IOSTANDARD="LVCMOS33"))
         self.assertEqual(repr(r), "(resource serial 0"
-                                  " (subsignal tx (pins o A0) IOSTANDARD=LVCMOS33)"
-                                  " (subsignal rx (pins i A1) IOSTANDARD=LVCMOS33)"
-                                  " IOSTANDARD=LVCMOS33)")
+                                  " (subsignal tx (pins o A0) (attrs ))"
+                                  " (subsignal rx (pins i A1) (attrs ))"
+                                  " (attrs IOSTANDARD=LVCMOS33))")
 
 
 class ConnectorTestCase(FHDLTestCase):

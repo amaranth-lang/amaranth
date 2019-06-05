@@ -6,7 +6,7 @@ from ..build.res import *
 from .tools import *
 
 
-class ConstraintManagerTestCase(FHDLTestCase):
+class ResourceManagerTestCase(FHDLTestCase):
     def setUp(self):
         self.resources = [
             Resource("clk100", 0, DiffPairs("H1", "H2", dir="i")),
@@ -20,14 +20,14 @@ class ConstraintManagerTestCase(FHDLTestCase):
         self.connectors = [
             Connector("pmod", 0, "B0 B1 B2 B3 - -"),
         ]
-        self.cm = ConstraintManager(self.resources, self.connectors, [])
+        self.cm = ResourceManager(self.resources, self.connectors, [])
 
     def test_basic(self):
         self.clocks = [
             ("clk100",      100),
             (("clk50", 0),  50),
         ]
-        self.cm = ConstraintManager(self.resources, self.connectors, self.clocks)
+        self.cm = ResourceManager(self.resources, self.connectors, self.clocks)
         self.assertEqual(self.cm.resources, {
             ("clk100",   0): self.resources[0],
             ("clk50",    0): self.resources[1],
@@ -177,8 +177,8 @@ class ConstraintManagerTestCase(FHDLTestCase):
 
     def test_wrong_resources_duplicate(self):
         with self.assertRaises(NameError,
-                msg="Trying to add (resource user_led 0 (pins o A1) ), but "
-                    "(resource user_led 0 (pins o A0) ) has the same name and number"):
+                msg="Trying to add (resource user_led 0 (pins o A1) (attrs )), but "
+                    "(resource user_led 0 (pins o A0) (attrs )) has the same name and number"):
             self.cm.add_resources([Resource("user_led", 0, Pins("A1", dir="o"))])
 
     def test_wrong_connectors(self):
@@ -192,7 +192,7 @@ class ConstraintManagerTestCase(FHDLTestCase):
             self.cm.add_connectors([Connector("pmod", 0, "1 2")])
 
     def test_wrong_lookup(self):
-        with self.assertRaises(ConstraintError,
+        with self.assertRaises(ResourceError,
                 msg="Resource user_led#1 does not exist"):
             r = self.cm.lookup("user_led", 1)
 
@@ -203,7 +203,7 @@ class ConstraintManagerTestCase(FHDLTestCase):
             self.cm.add_clock("i2c", 0, 10e6)
 
     def test_wrong_frequency_tristate(self):
-        with self.assertRaises(ConstraintError,
+        with self.assertRaises(ResourceError,
                 msg="Cannot constrain frequency of resource clk50#0 because "
                     "it has been requested as a tristate buffer"):
             self.cm.add_clock("clk50", 0, 20e6)
@@ -211,13 +211,13 @@ class ConstraintManagerTestCase(FHDLTestCase):
             list(self.cm.iter_clock_constraints())
 
     def test_wrong_frequency_duplicate(self):
-        with self.assertRaises(ConstraintError,
+        with self.assertRaises(ResourceError,
                 msg="Resource clk100#0 is already constrained to a frequency of 10.000000 MHz"):
             self.cm.add_clock("clk100", 0, 10e6)
             self.cm.add_clock("clk100", 0, 5e6)
 
     def test_wrong_request_duplicate(self):
-        with self.assertRaises(ConstraintError,
+        with self.assertRaises(ResourceError,
                 msg="Resource user_led#0 has already been requested"):
             self.cm.request("user_led", 0)
             self.cm.request("user_led", 0)
@@ -238,7 +238,8 @@ class ConstraintManagerTestCase(FHDLTestCase):
     def test_wrong_request_with_dir_dict(self):
         with self.assertRaises(TypeError,
                 msg="Directions must be a dict, not 'i', because (resource i2c 0 (subsignal scl "
-                    "(pins o N10) ) (subsignal sda (pins io N11) ) ) has subsignals"):
+                    "(pins o N10) (attrs )) (subsignal sda (pins io N11) (attrs )) (attrs )) "
+                    "has subsignals"):
             i2c = self.cm.request("i2c", 0, dir="i")
 
     def test_wrong_request_with_wrong_xdr(self):
@@ -249,5 +250,6 @@ class ConstraintManagerTestCase(FHDLTestCase):
     def test_wrong_request_with_xdr_dict(self):
         with self.assertRaises(TypeError,
                 msg="Data rate must be a dict, not 2, because (resource i2c 0 (subsignal scl "
-                    "(pins o N10) ) (subsignal sda (pins io N11) ) ) has subsignals"):
+                    "(pins o N10) (attrs )) (subsignal sda (pins io N11) (attrs )) (attrs )) "
+                    "has subsignals"):
             i2c = self.cm.request("i2c", 0, xdr=2)

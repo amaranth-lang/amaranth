@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 
-__all__ = ["Pins", "DiffPairs", "Subsignal", "Resource", "Connector"]
+__all__ = ["Pins", "DiffPairs", "Attrs", "Subsignal", "Resource", "Connector"]
 
 
 class Pins:
@@ -32,13 +32,15 @@ class Pins:
         return iter(self.names)
 
     def map_names(self, mapping, resource):
+        mapped_names = []
         for name in self.names:
             while ":" in name:
                 if name not in mapping:
                     raise NameError("Resource {!r} refers to nonexistent connector pin {}"
                                     .format(resource, name))
                 name = mapping[name]
-            yield name
+            mapped_names.append(name)
+        return mapped_names
 
     def __repr__(self):
         return "(pins {} {})".format(self.dir, " ".join(self.names))
@@ -67,65 +69,66 @@ class DiffPairs:
             self.dir, " ".join(self.p.names), " ".join(self.n.names))
 
 
+class Attrs(OrderedDict):
+    def __init__(self, **attrs):
+        for attr_key, attr_value in attrs.items():
+            if not isinstance(attr_value, str):
+                raise TypeError("Attribute value must be a string, not {!r}"
+                                .format(attr_value))
+
+        super().__init__(**attrs)
+
+    def __repr__(self):
+        return "(attrs {})".format(" ".join("{}={}".format(k, v)
+                                    for k, v in self.items()))
+
+
 class Subsignal:
-    def __init__(self, name, *io, extras=None):
-        self.name = name
+    def __init__(self, name, *args):
+        self.name  = name
+        self.ios   = []
+        self.attrs = Attrs()
 
-        if not io:
-            raise TypeError("Missing I/O constraints")
-        for c in io:
-            if not isinstance(c, (Pins, DiffPairs, Subsignal)):
-                raise TypeError("I/O constraint must be one of Pins, DiffPairs or Subsignal, "
-                                "not {!r}"
-                                .format(c))
-        if isinstance(io[0], (Pins, DiffPairs)) and len(io) > 1:
-            raise TypeError("Pins and DiffPairs cannot be followed by more I/O constraints, but "
-                            "{!r} is followed by {!r}"
-                            .format(io[0], io[1]))
-        if isinstance(io[0], Subsignal):
-            for c in io[1:]:
-                if not isinstance(c, Subsignal):
-                    raise TypeError("A Subsignal can only be followed by more Subsignals, but "
-                                    "{!r} is followed by {!r}"
-                                    .format(io[0], c))
-        self.io     = io
-        self.extras = {}
-
-        if extras is not None:
-            if not isinstance(extras, dict):
-                raise TypeError("Extra constraints must be a dict, not {!r}"
-                                .format(extras))
-            for extra_key, extra_value in extras.items():
-                if not isinstance(extra_key, str):
-                    raise TypeError("Extra constraint key must be a string, not {!r}"
-                                    .format(extra_key))
-                if not isinstance(extra_value, str):
-                    raise TypeError("Extra constraint value must be a string, not {!r}"
-                                    .format(extra_value))
-                self.extras[extra_key] = extra_value
-
-        if isinstance(self.io[0], Subsignal):
-            for sub in self.io:
-                sub.extras.update(self.extras)
+        if not args:
+            raise ValueError("Missing I/O constraints")
+        for arg in args:
+            if isinstance(arg, (Pins, DiffPairs)):
+                if not self.ios:
+                    self.ios.append(arg)
+                else:
+                    raise TypeError("Pins and DiffPairs are incompatible with other location or "
+                                    "subsignal constraints, but {!r} appears after {!r}"
+                                    .format(arg, self.ios[-1]))
+            elif isinstance(arg, Subsignal):
+                if not self.ios or isinstance(self.ios[-1], Subsignal):
+                    self.ios.append(arg)
+                else:
+                    raise TypeError("Subsignal is incompatible with location constraints, but "
+                                    "{!r} appears after {!r}"
+                                    .format(arg, self.ios[-1]))
+            elif isinstance(arg, Attrs):
+                self.attrs.update(arg)
+            else:
+                raise TypeError("I/O constraint must be one of Pins, DiffPairs, Subsignal, "
+                                "or Attrs, not {!r}"
+                                .format(arg))
 
     def __repr__(self):
         return "(subsignal {} {} {})".format(self.name,
-                                             " ".join(map(repr, self.io)),
-                                             " ".join("{}={}".format(k, v)
-                                                      for k, v in self.extras.items()))
+                                             " ".join(map(repr, self.ios)),
+                                             repr(self.attrs))
 
 
 class Resource(Subsignal):
-    def __init__(self, name, number, *io, extras=None):
-        super().__init__(name, *io, extras=extras)
+    def __init__(self, name, number, *args):
+        super().__init__(name, *args)
 
         self.number = number
 
     def __repr__(self):
         return "(resource {} {} {} {})".format(self.name, self.number,
-                                               " ".join(map(repr, self.io)),
-                                               " ".join("{}={}".format(k, v)
-                                                        for k, v in self.extras.items()))
+                                               " ".join(map(repr, self.ios)),
+                                               repr(self.attrs))
 
 
 class Connector:
