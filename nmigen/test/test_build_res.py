@@ -168,6 +168,12 @@ class ResourceManagerTestCase(FHDLTestCase):
             (scl_port, 100e3)
         ])
 
+    def test_get_clock(self):
+        clk100 = self.cm.request("clk100", 0)
+        self.assertEqual(self.cm.get_clock_constraint(clk100), 100e6)
+        with self.assertRaises(KeyError):
+            self.cm.get_clock_constraint(Signal())
+
     def test_wrong_resources(self):
         with self.assertRaises(TypeError, msg="Object 'wrong' is not a Resource"):
             self.cm.add_resources(['wrong'])
@@ -202,6 +208,12 @@ class ResourceManagerTestCase(FHDLTestCase):
         with self.assertRaises(TypeError,
                 msg="Frequency must be a number, not None"):
             self.cm.add_clock_constraint(Signal(), None)
+
+    def test_wrong_clock_pin(self):
+        with self.assertRaises(ValueError,
+                msg="The Pin object (rec <unnamed> i), which is not a previously requested "
+                    "resource, cannot be used to desigate a clock"):
+            self.cm.add_clock_constraint(Pin(1, dir="i"), 1e6)
 
     def test_wrong_request_duplicate(self):
         with self.assertRaises(ResourceError,
