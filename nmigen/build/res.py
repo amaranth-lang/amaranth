@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from .. import *
+from ..hdl.ast import *
 from ..hdl.rec import *
 from ..lib.io import *
 
@@ -15,24 +15,19 @@ class ResourceError(Exception):
 
 
 class ResourceManager:
-    def __init__(self, resources, connectors, clocks):
+    def __init__(self, resources, connectors):
         self.resources  = OrderedDict()
         self._requested = OrderedDict()
 
         self.connectors = OrderedDict()
         self._conn_pins = OrderedDict()
 
-        self.clocks     = OrderedDict()
-
         # Constraint lists
         self._ports     = []
+        self._clocks    = SignalDict()
 
         self.add_resources(resources)
         self.add_connectors(connectors)
-        for name_number, frequency in clocks:
-            if not isinstance(name_number, tuple):
-                name_number = (name_number, 0)
-            self.add_clock(*name_number, frequency)
 
     def add_resources(self, resources):
         for res in resources:
@@ -55,19 +50,6 @@ class ResourceManager:
             for conn_pin, plat_pin in conn:
                 assert conn_pin not in self._conn_pins
                 self._conn_pins[conn_pin] = plat_pin
-
-    def add_clock(self, name, number, frequency):
-        resource = self.lookup(name, number)
-        if isinstance(resource.ios[0], Subsignal):
-            raise TypeError("Cannot constrain frequency of resource {}#{} because it has "
-                            "subsignals"
-                            .format(resource.name, resource.number, frequency))
-        if (resource.name, resource.number) in self.clocks:
-            other = self.clocks[resource.name, resource.number]
-            raise ResourceError("Resource {}#{} is already constrained to a frequency of "
-                                "{:f} MHz"
-                                .format(resource.name, resource.number, other / 1e6))
-        self.clocks[resource.name, resource.number] = frequency
 
     def lookup(self, name, number=0):
         if (name, number) not in self.resources:
@@ -138,12 +120,15 @@ class ResourceManager:
                     port = Record([("p", len(phys)),
                                    ("n", len(phys))], name=name)
                 if dir == "-":
-                    self._ports.append((resource, None, port, attrs))
-                    return port
+                    pin = None
                 else:
-                    pin  = Pin(len(phys), dir, xdr, name=name)
-                    self._ports.append((resource, pin, port, attrs))
-                    return pin
+                    pin = Pin(len(phys), dir, xdr, name=name)
+                self._ports.append((resource, pin, port, attrs))
+
+                if pin is not None and resource.clock is not None:
+                    self.add_clock_constraint(pin, resource.clock.frequency)
+
+                return pin if pin is not None else port
 
             else:
                 assert False # :nocov:
@@ -206,19 +191,33 @@ class ResourceManager:
                 for bit, pin_name in enumerate(pin_names):
                     yield "{}[{}]".format(port_name, bit), pin_name, attrs
 
-    def iter_clock_constraints(self):
-        for name, number in self.clocks.keys() & self._requested.keys():
-            resource = self.resources[name, number]
-            period   = self.clocks[name, number]
-            pin      = self._requested[name, number]
-            if pin.dir == "io":
-                raise ResourceError("Cannot constrain frequency of resource {}#{} because "
-                                    "it has been requested as a tristate buffer"
-                                    .format(name, number))
-            if isinstance(resource.ios[0], Pins):
-                port_name = "{}__io".format(pin.name)
-            elif isinstance(resource.ios[0], DiffPairs):
-                port_name = "{}__p".format(pin.name)
+    def add_clock_constraint(self, clock, frequency):
+        if not isinstance(clock, (Signal, Pin)):
+            raise TypeError("Object {!r} is not a Signal or Pin".format(clock))
+        if not isinstance(frequency, (int, float)):
+            raise TypeError("Frequency must be a number, not {!r}".format(frequency))
+
+        if isinstance(clock, Pin):
+            for res, pin, port, attrs in self._ports:
+                if clock is pin:
+                    if isinstance(res.ios[0], Pins):
+                        clock = port.io
+                    elif isinstance(res.ios[0], DiffPairs):
+                        clock = port.p
+                    else:
+                        assert False
+                    break
             else:
-                assert False
-            yield (port_name, period)
+                raise ValueError("Cannot add clock constraint on a Pin {!r} that is not "
+                                 "a previously requested resource"
+                                 .format(clock))
+
+        if clock in self._clocks:
+            raise ValueError("Cannot add clock constraint on {!r}, which is already constrained "
+                             "to {} Hz"
+                             .format(clock, self._clocks[clock]))
+
+        self._clocks[clock] = float(frequency)
+
+    def iter_clock_constraints(self):
+        return iter(self._clocks.items())

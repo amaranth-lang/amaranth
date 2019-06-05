@@ -9,8 +9,8 @@ from .tools import *
 class ResourceManagerTestCase(FHDLTestCase):
     def setUp(self):
         self.resources = [
-            Resource("clk100", 0, DiffPairs("H1", "H2", dir="i")),
-            Resource("clk50", 0, Pins("K1")),
+            Resource("clk100", 0, DiffPairs("H1", "H2", dir="i"), Clock(100e6)),
+            Resource("clk50", 0, Pins("K1"), Clock(50e6)),
             Resource("user_led", 0, Pins("A0", dir="o")),
             Resource("i2c", 0,
                 Subsignal("scl", Pins("N10", dir="o")),
@@ -20,14 +20,10 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.connectors = [
             Connector("pmod", 0, "B0 B1 B2 B3 - -"),
         ]
-        self.cm = ResourceManager(self.resources, self.connectors, [])
+        self.cm = ResourceManager(self.resources, self.connectors)
 
     def test_basic(self):
-        self.clocks = [
-            ("clk100",      100),
-            (("clk50", 0),  50),
-        ]
-        self.cm = ResourceManager(self.resources, self.connectors, self.clocks)
+        self.cm = ResourceManager(self.resources, self.connectors)
         self.assertEqual(self.cm.resources, {
             ("clk100",   0): self.resources[0],
             ("clk50",    0): self.resources[1],
@@ -36,10 +32,6 @@ class ResourceManagerTestCase(FHDLTestCase):
         })
         self.assertEqual(self.cm.connectors, {
             ("pmod", 0): self.connectors[0],
-        })
-        self.assertEqual(self.cm.clocks, {
-            ("clk100", 0): 100,
-            ("clk50",  0): 50,
         })
 
     def test_add_resources(self):
@@ -152,23 +144,28 @@ class ResourceManagerTestCase(FHDLTestCase):
             )
         ])
         spi0 = self.cm.request("spi", 0)
-        self.assertEqual(list(sorted(self.cm.iter_port_constraints())), [
+        self.assertEqual(list(self.cm.iter_port_constraints()), [
+            ("spi_0__ss__io",   ["B0"], {}),
             ("spi_0__clk__io",  ["B1"], {}),
             ("spi_0__miso__io", ["B2"], {}),
             ("spi_0__mosi__io", ["B3"], {}),
-            ("spi_0__ss__io",   ["B0"], {}),
+        ])
+
+    def test_request_clock(self):
+        clk100 = self.cm.request("clk100", 0)
+        clk50 = self.cm.request("clk50", 0, dir="i")
+        clk100_port_p, clk100_port_n, clk50_port = self.cm.iter_ports()
+        self.assertEqual(list(self.cm.iter_clock_constraints()), [
+            (clk100_port_p, 100e6),
+            (clk50_port, 50e6)
         ])
 
     def test_add_clock(self):
-        self.cm.add_clock("clk100", 0, 10e6)
-        self.assertEqual(self.cm.clocks["clk100", 0], 10e6)
-        self.cm.add_clock("clk50", 0, 5e6)
-
-        clk100 = self.cm.request("clk100", 0)
-        clk50 = self.cm.request("clk50", 0, dir="i")
-        self.assertEqual(list(sorted(self.cm.iter_clock_constraints())), [
-            ("clk100_0__p", 10e6),
-            ("clk50_0__io", 5e6)
+        i2c = self.cm.request("i2c")
+        self.cm.add_clock_constraint(i2c.scl, 100e3)
+        scl_port, sda_port = self.cm.iter_ports()
+        self.assertEqual(list(self.cm.iter_clock_constraints()), [
+            (scl_port, 100e3)
         ])
 
     def test_wrong_resources(self):
@@ -177,8 +174,8 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_wrong_resources_duplicate(self):
         with self.assertRaises(NameError,
-                msg="Trying to add (resource user_led 0 (pins o A1) (attrs )), but "
-                    "(resource user_led 0 (pins o A0) (attrs )) has the same name and number"):
+                msg="Trying to add (resource user_led 0 (pins o A1)), but "
+                    "(resource user_led 0 (pins o A0)) has the same name and number"):
             self.cm.add_resources([Resource("user_led", 0, Pins("A1", dir="o"))])
 
     def test_wrong_connectors(self):
@@ -196,25 +193,15 @@ class ResourceManagerTestCase(FHDLTestCase):
                 msg="Resource user_led#1 does not exist"):
             r = self.cm.lookup("user_led", 1)
 
-    def test_wrong_frequency_subsignals(self):
+    def test_wrong_clock_signal(self):
         with self.assertRaises(TypeError,
-                msg="Cannot constrain frequency of resource i2c#0 because "
-                    "it has subsignals"):
-            self.cm.add_clock("i2c", 0, 10e6)
+                msg="Object None is not a Signal or Pin"):
+            self.cm.add_clock_constraint(None, 10e6)
 
-    def test_wrong_frequency_tristate(self):
-        with self.assertRaises(ResourceError,
-                msg="Cannot constrain frequency of resource clk50#0 because "
-                    "it has been requested as a tristate buffer"):
-            self.cm.add_clock("clk50", 0, 20e6)
-            clk50 = self.cm.request("clk50", 0)
-            list(self.cm.iter_clock_constraints())
-
-    def test_wrong_frequency_duplicate(self):
-        with self.assertRaises(ResourceError,
-                msg="Resource clk100#0 is already constrained to a frequency of 10.000000 MHz"):
-            self.cm.add_clock("clk100", 0, 10e6)
-            self.cm.add_clock("clk100", 0, 5e6)
+    def test_wrong_clock_frequency(self):
+        with self.assertRaises(TypeError,
+                msg="Frequency must be a number, not None"):
+            self.cm.add_clock_constraint(Signal(), None)
 
     def test_wrong_request_duplicate(self):
         with self.assertRaises(ResourceError,
@@ -238,7 +225,7 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_wrong_request_with_dir_dict(self):
         with self.assertRaises(TypeError,
                 msg="Directions must be a dict, not 'i', because (resource i2c 0 (subsignal scl "
-                    "(pins o N10) (attrs )) (subsignal sda (pins io N11) (attrs )) (attrs )) "
+                    "(pins o N10)) (subsignal sda (pins io N11))) "
                     "has subsignals"):
             i2c = self.cm.request("i2c", 0, dir="i")
 
@@ -250,6 +237,13 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_wrong_request_with_xdr_dict(self):
         with self.assertRaises(TypeError,
                 msg="Data rate must be a dict, not 2, because (resource i2c 0 (subsignal scl "
-                    "(pins o N10) (attrs )) (subsignal sda (pins io N11) (attrs )) (attrs )) "
+                    "(pins o N10)) (subsignal sda (pins io N11))) "
                     "has subsignals"):
             i2c = self.cm.request("i2c", 0, xdr=2)
+
+    def test_wrong_clock_constraint_twice(self):
+        clk100 = self.cm.request("clk100")
+        with self.assertRaises(ValueError,
+                msg="Cannot add clock constraint on (sig clk100_0__p), which is already "
+                    "constrained to 100000000.0 Hz"):
+            self.cm.add_clock_constraint(clk100, 1e6)

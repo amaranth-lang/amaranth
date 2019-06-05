@@ -20,10 +20,9 @@ __all__ = ["Platform", "TemplatedPlatform"]
 class Platform(ResourceManager, metaclass=ABCMeta):
     resources  = abstractproperty()
     connectors = abstractproperty()
-    clocks     = abstractproperty()
 
     def __init__(self):
-        super().__init__(self.resources, self.connectors, self.clocks)
+        super().__init__(self.resources, self.connectors)
 
         self.extra_files = OrderedDict()
 
@@ -267,7 +266,7 @@ class TemplatedPlatform(Platform):
         plan = BuildPlan(script="build_{}".format(name))
         for filename_tpl, content_tpl in self.file_templates.items():
             plan.add_file(render(filename_tpl, origin=filename_tpl),
-                          render(content_tpl, origin=filename_tpl))
+                          render(content_tpl, origin=content_tpl))
         for filename, content in self.extra_files.items():
             plan.add_file(filename, content)
         return plan

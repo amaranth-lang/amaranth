@@ -96,6 +96,14 @@ class AttrsTestCase(FHDLTestCase):
             a = Attrs(FOO=1)
 
 
+class ClockTestCase(FHDLTestCase):
+    def test_basic(self):
+        c = Clock(1_000_000)
+        self.assertEqual(c.frequency, 1e6)
+        self.assertEqual(c.period, 1e-6)
+        self.assertEqual(repr(c), "(clock 1000000.0)")
+
+
 class SubsignalTestCase(FHDLTestCase):
     def test_basic_pins(self):
         s = Subsignal("a", Pins("A0"), Attrs(IOSTANDARD="LVCMOS33"))
@@ -105,15 +113,15 @@ class SubsignalTestCase(FHDLTestCase):
     def test_basic_diffpairs(self):
         s = Subsignal("a", DiffPairs("A0", "B0"))
         self.assertEqual(repr(s),
-            "(subsignal a (diffpairs io (p A0) (n B0)) (attrs ))")
+            "(subsignal a (diffpairs io (p A0) (n B0)))")
 
     def test_basic_subsignals(self):
         s = Subsignal("a",
                 Subsignal("b", Pins("A0")),
                 Subsignal("c", Pins("A1")))
         self.assertEqual(repr(s),
-            "(subsignal a (subsignal b (pins io A0) (attrs )) "
-                         "(subsignal c (pins io A1) (attrs )) (attrs ))")
+            "(subsignal a (subsignal b (pins io A0)) "
+                         "(subsignal c (pins io A1)))")
 
     def test_attrs(self):
         s = Subsignal("a",
@@ -128,13 +136,17 @@ class SubsignalTestCase(FHDLTestCase):
         s = Subsignal("a", Pins("A0"), Attrs(SLEW="FAST"), Attrs(PULLUP="1"))
         self.assertEqual(s.attrs, {"SLEW": "FAST", "PULLUP": "1"})
 
+    def test_clock(self):
+        s = Subsignal("a", Pins("A0"), Clock(1e6))
+        self.assertEqual(s.clock.frequency, 1e6)
+
     def test_wrong_empty_io(self):
         with self.assertRaises(ValueError, msg="Missing I/O constraints"):
             s = Subsignal("a")
 
     def test_wrong_io(self):
         with self.assertRaises(TypeError,
-                msg="I/O constraint must be one of Pins, DiffPairs, Subsignal, or Attrs, "
+                msg="Constraint must be one of Pins, DiffPairs, Subsignal, Attrs, or Clock, "
                     "not 'wrong'"):
             s = Subsignal("a", "wrong")
 
@@ -153,9 +165,19 @@ class SubsignalTestCase(FHDLTestCase):
     def test_wrong_subsignals(self):
         with self.assertRaises(TypeError,
                 msg="Pins and DiffPairs are incompatible with other location or subsignal "
-                    "constraints, but (pins io B0) appears after (subsignal b (pins io A0) "
-                    "(attrs ))"):
+                    "constraints, but (pins io B0) appears after (subsignal b (pins io A0))"):
             s = Subsignal("a", Subsignal("b", Pins("A0")), Pins("B0"))
+
+    def test_wrong_clock(self):
+        with self.assertRaises(TypeError,
+                msg="Clock constraint can only be applied to Pins or DiffPairs, not "
+                    "(subsignal b (pins io A0))"):
+            s = Subsignal("a", Subsignal("b", Pins("A0")), Clock(1e6))
+
+    def test_wrong_clock_many(self):
+        with self.assertRaises(ValueError,
+                msg="Clock constraint can be applied only once"):
+            s = Subsignal("a", Pins("A0"), Clock(1e6), Clock(1e7))
 
 
 class ResourceTestCase(FHDLTestCase):
@@ -165,8 +187,8 @@ class ResourceTestCase(FHDLTestCase):
                 Subsignal("rx", Pins("A1", dir="i")),
                 Attrs(IOSTANDARD="LVCMOS33"))
         self.assertEqual(repr(r), "(resource serial 0"
-                                  " (subsignal tx (pins o A0) (attrs ))"
-                                  " (subsignal rx (pins i A1) (attrs ))"
+                                  " (subsignal tx (pins o A0))"
+                                  " (subsignal rx (pins i A1))"
                                   " (attrs IOSTANDARD=LVCMOS33))")
 
 

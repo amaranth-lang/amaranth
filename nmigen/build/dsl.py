@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 
-__all__ = ["Pins", "DiffPairs", "Attrs", "Subsignal", "Resource", "Connector"]
+__all__ = ["Pins", "DiffPairs", "Attrs", "Clock", "Subsignal", "Resource", "Connector"]
 
 
 class Pins:
@@ -83,11 +83,27 @@ class Attrs(OrderedDict):
                                     for k, v in self.items()))
 
 
+class Clock:
+    def __init__(self, frequency):
+        if not isinstance(frequency, (float, int)):
+            raise TypeError("Clock frequency must be a number")
+
+        self.frequency = float(frequency)
+
+    @property
+    def period(self):
+        return 1 / self.frequency
+
+    def __repr__(self):
+        return "(clock {})".format(self.frequency)
+
+
 class Subsignal:
     def __init__(self, name, *args):
         self.name  = name
         self.ios   = []
         self.attrs = Attrs()
+        self.clock = None
 
         if not args:
             raise ValueError("Missing I/O constraints")
@@ -108,15 +124,33 @@ class Subsignal:
                                     .format(arg, self.ios[-1]))
             elif isinstance(arg, Attrs):
                 self.attrs.update(arg)
+            elif isinstance(arg, Clock):
+                if self.ios and isinstance(self.ios[-1], (Pins, DiffPairs)):
+                    if self.clock is None:
+                        self.clock = arg
+                    else:
+                        raise ValueError("Clock constraint can be applied only once")
+                else:
+                    raise TypeError("Clock constraint can only be applied to Pins or DiffPairs, "
+                                    "not {!r}"
+                                    .format(self.ios[-1]))
             else:
-                raise TypeError("I/O constraint must be one of Pins, DiffPairs, Subsignal, "
-                                "or Attrs, not {!r}"
+                raise TypeError("Constraint must be one of Pins, DiffPairs, Subsignal, Attrs, "
+                                "or Clock, not {!r}"
                                 .format(arg))
 
+    def _content_repr(self):
+        parts = []
+        for io in self.ios:
+            parts.append(repr(io))
+        if self.clock is not None:
+            parts.append(repr(self.clock))
+        if self.attrs:
+            parts.append(repr(self.attrs))
+        return " ".join(parts)
+
     def __repr__(self):
-        return "(subsignal {} {} {})".format(self.name,
-                                             " ".join(map(repr, self.ios)),
-                                             repr(self.attrs))
+        return "(subsignal {} {})".format(self.name, self._content_repr())
 
 
 class Resource(Subsignal):
@@ -126,9 +160,7 @@ class Resource(Subsignal):
         self.number = number
 
     def __repr__(self):
-        return "(resource {} {} {} {})".format(self.name, self.number,
-                                               " ".join(map(repr, self.ios)),
-                                               repr(self.attrs))
+        return "(resource {} {} {})".format(self.name, self.number, self._content_repr())
 
 
 class Connector:

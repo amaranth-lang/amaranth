@@ -1,3 +1,3 @@
-from .dsl import Pins, DiffPairs, Attrs, Subsignal, Resource, Connector
+from .dsl import *
 from .res import ResourceError
-from .plat import Platform, TemplatedPlatform
+from .plat import *
