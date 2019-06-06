@@ -18,7 +18,7 @@ class Pins:
                                 .format(conn))
             names = ["{}_{}:{}".format(conn_name, conn_number, name) for name in names]
 
-        if dir not in ("i", "o", "io"):
+        if dir not in ("i", "o", "io", "oe"):
             raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
                             .format(dir))
 
