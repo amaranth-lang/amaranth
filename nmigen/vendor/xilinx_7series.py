@@ -63,7 +63,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             add_files {{name}}.v
             read_xdc {{name}}.xdc
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
-            synth_design -top {{name}} -part {{platform.device}}
+            synth_design -top {{name}} -part {{platform.device}}{{platform.package}}-{{platform.speedgrade}}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             report_timing_summary -file {{name}}_timing_synth.rpt
             report_utilization -hierarchical -file {{name}}_utilization_hierachical_synth.rpt
@@ -100,8 +100,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             {% endfor %}
             {% for signal, frequency in platform.iter_clock_constraints() -%}
                 create_clock -name {{signal.name}} -period {{1000000000/frequency}} [get_ports {{signal.name}}]
-            {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
             {% endfor %}
+            {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """
     }
     command_templates = [
