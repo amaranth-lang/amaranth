@@ -29,7 +29,7 @@ class MultiReg(Elaboratable):
 
     Platform override
     -----------------
-    Define the ``get_multi_reg`` platform metehod to override the implementation of MultiReg,
+    Define the ``get_multi_reg`` platform method to override the implementation of MultiReg,
     e.g. to instantiate library cells directly.
 
     Note on Reset
