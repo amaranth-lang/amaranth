@@ -366,6 +366,7 @@ class Simulator:
         self._delta           = 0.
         self._epsilon         = 1e-10
         self._fastest_clock   = self._epsilon
+        self._all_clocks      = set()         # {str/domain}
         self._state           = _State()
 
         self._processes       = set()         # {process}
@@ -426,6 +427,9 @@ class Simulator:
     def add_clock(self, period, phase=None, domain="sync"):
         if self._fastest_clock == self._epsilon or period < self._fastest_clock:
             self._fastest_clock = period
+        if domain in self._all_clocks:
+            raise ValueError("Domain '{}' already has a clock driving it"
+                             .format(domain))
 
         half_period = period / 2
         if phase is None:
@@ -440,6 +444,7 @@ class Simulator:
                 yield clk.eq(0)
                 yield Delay(half_period)
         self.add_process(clk_process)
+        self._all_clocks.add(domain)
 
     def __enter__(self):
         if self._vcd_file:

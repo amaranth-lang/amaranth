@@ -388,6 +388,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                         "a generator function"):
                 sim.add_process(1)
 
+    def test_add_clock_wrong(self):
+        with self.assertSimulation(Module()) as sim:
+            sim.add_clock(1)
+            with self.assertRaises(ValueError,
+                    msg="Domain 'sync' already has a clock driving it"):
+                sim.add_clock(1)
+
     def test_eq_signal_unused_wrong(self):
         self.setUp_lhs_rhs()
         self.s = Signal()
