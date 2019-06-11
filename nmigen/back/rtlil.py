@@ -729,9 +729,10 @@ def convert_fragment(builder, fragment, hierarchy):
                                                              name=memory.name)
                             addr_bits = bits_for(memory.depth)
                             data_parts = []
+                            data_mask = (1 << memory.width) - 1
                             for addr in range(memory.depth):
                                 if addr < len(memory.init):
-                                    data = memory.init[addr]
+                                    data = memory.init[addr] & data_mask
                                 else:
                                     data = 0
                                 data_parts.append("{:0{}b}".format(data, memory.width))
