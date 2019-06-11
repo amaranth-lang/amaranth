@@ -29,10 +29,16 @@ class MemoryTestCase(FHDLTestCase):
         m = Memory(width=8, depth=4, init=range(4))
         self.assertEqual(m.init, [0, 1, 2, 3])
 
-    def test_init_wrong(self):
+    def test_init_wrong_count(self):
         with self.assertRaises(ValueError,
                 msg="Memory initialization value count exceed memory depth (8 > 4)"):
             m = Memory(width=8, depth=4, init=range(8))
+
+    def test_init_wrong_type(self):
+        with self.assertRaises(TypeError,
+                msg="Memory initialization value at address 1: "
+                    "'str' object cannot be interpreted as an integer"):
+            m = Memory(width=8, depth=4, init=[1, "0"])
 
     def test_read_port_transparent(self):
         mem    = Memory(width=8, depth=4)

@@ -1,3 +1,5 @@
+import operator
+
 from .. import tracer
 from .ast import *
 from .ir import Elaboratable, Instance
@@ -40,11 +42,15 @@ class Memory:
             raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
                              .format(len(self.init), self.depth))
 
-        for addr in range(len(self._array)):
-            if addr < len(self._init):
-                self._array[addr].reset = self._init[addr]
-            else:
-                self._array[addr].reset = 0
+        try:
+            for addr in range(len(self._array)):
+                if addr < len(self._init):
+                    self._array[addr].reset = operator.index(self._init[addr])
+                else:
+                    self._array[addr].reset = 0
+        except TypeError as e:
+            raise TypeError("Memory initialization value at address {:x}: {}"
+                            .format(addr, e)) from None
 
     def read_port(self, domain="sync", synchronous=True, transparent=True):
         if not synchronous and not transparent:
