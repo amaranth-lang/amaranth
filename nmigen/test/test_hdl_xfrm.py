@@ -548,3 +548,39 @@ class TransformedElaboratableTestCase(FHDLTestCase):
             )
         )
         """)
+
+
+class MockUserValue(UserValue):
+    def __init__(self, lowered):
+        super().__init__()
+        self.lowered = lowered
+
+    def lower(self):
+        return self.lowered
+
+
+class UserValueTestCase(FHDLTestCase):
+    def setUp(self):
+        self.s  = Signal()
+        self.c  = Signal()
+        self.uv = MockUserValue(self.s)
+
+    def test_lower(self):
+        sync = ClockDomain()
+        f = Fragment()
+        f.add_statements(
+            self.uv.eq(1)
+        )
+        for signal in self.uv._lhs_signals():
+            f.add_driver(signal, "sync")
+
+        f = ResetInserter(self.c)(f)
+        f = DomainLowerer({"sync": sync})(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig s) (const 1'd1))
+            (switch (sig c)
+                (case 1 (eq (sig s) (const 1'd0)))
+            )
+        )
+        """)

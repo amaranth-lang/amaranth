@@ -111,6 +111,9 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_ArrayProxy(value)
         elif type(value) is Sample:
             new_value = self.on_Sample(value)
+        elif isinstance(value, UserValue):
+            # Uses `isinstance()` and not `type() is` to allow inheriting.
+            new_value = self.on_value(value._lazy_lower())
         else:
             new_value = self.on_unknown_value(value)
         if isinstance(new_value, Value):

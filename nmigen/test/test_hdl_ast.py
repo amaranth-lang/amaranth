@@ -523,6 +523,26 @@ class ResetSignalTestCase(FHDLTestCase):
         self.assertEqual(repr(s1), "(rst sync)")
 
 
+class MockUserValue(UserValue):
+    def __init__(self, lowered):
+        super().__init__()
+        self.lower_count = 0
+        self.lowered     = lowered
+
+    def lower(self):
+        self.lower_count += 1
+        return self.lowered
+
+
+class UserValueTestCase(FHDLTestCase):
+    def test_shape(self):
+        uv = MockUserValue(1)
+        self.assertEqual(uv.shape(), (1, False))
+        uv.lowered = 2
+        self.assertEqual(uv.shape(), (1, False))
+        self.assertEqual(uv.lower_count, 1)
+
+
 class SampleTestCase(FHDLTestCase):
     def test_const(self):
         s = Sample(1, 1, "sync")
