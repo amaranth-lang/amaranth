@@ -133,7 +133,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             if invert is None:
                 return y
             else:
-                a = Signal.like(y, name="{}_x{}".format(y.name, 1 if invert else 0))
+                a = Signal.like(y, name_suffix="_x{}".format(1 if invert else 0))
                 for bit in range(len(y)):
                     m.submodules += Instance("SB_LUT4",
                         p_LUT_INIT=0b01 if invert else 0b10,
@@ -148,7 +148,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             if invert is None:
                 return a
             else:
-                y = Signal.like(a, name="{}_x{}".format(a.name, 1 if invert else 0))
+                y = Signal.like(a, name_suffix="_x{}".format(1 if invert else 0))
                 for bit in range(len(a)):
                     m.submodules += Instance("SB_LUT4",
                         p_LUT_INIT=0b01 if invert else 0b10,
@@ -179,12 +179,12 @@ class LatticeICE40Platform(TemplatedPlatform):
                 pin_o1 = get_o_inverter(pin.o1, o_invert)
 
         if "i" in pin.dir and pin.xdr == 2:
-            i0_ff = Signal.like(pin_i0, name="{}_ff".format(pin_i0.name))
-            i1_ff = Signal.like(pin_i1, name="{}_ff".format(pin_i1.name))
+            i0_ff = Signal.like(pin_i0, name_suffix="_ff")
+            i1_ff = Signal.like(pin_i1, name_suffix="_ff")
             get_dff(pin.i_clk, i0_ff, pin_i0)
             get_dff(pin.i_clk, i1_ff, pin_i1)
         if "o" in pin.dir and pin.xdr == 2:
-            o1_ff = Signal.like(pin_o1, name="{}_ff".format(pin_o1.name))
+            o1_ff = Signal.like(pin_o1, name_suffix="_ff")
             get_dff(pin.o_clk, pin_o1, o1_ff)
 
         for bit in range(len(port)):
