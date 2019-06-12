@@ -145,14 +145,14 @@ class ResourceManager:
             if pin is None:
                 continue
             if isinstance(res.ios[0], Pins):
-                yield pin, port.io, attrs
+                yield pin, port.io, attrs, res.ios[0].invert
 
     def iter_differential_pins(self):
         for res, pin, port, attrs in self._ports:
             if pin is None:
                 continue
             if isinstance(res.ios[0], DiffPairs):
-                yield pin, port.p, port.n, attrs
+                yield pin, port.p, port.n, attrs, res.ios[0].invert
 
     def should_skip_port_component(self, port, attrs, component):
         return False

@@ -120,8 +120,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             return True
         return False
 
-    def _get_io_buffer(self, m, pin, port, attrs, o_invert=None):
-        def _get_dff(clk, d, q):
+    def _get_io_buffer(self, m, pin, port, attrs, i_invert=None, o_invert=None):
+        def get_dff(clk, d, q):
             m.submodules += Instance("$dff",
                 p_CLK_POLARITY=0,
                 p_WIDTH=len(d),
@@ -129,7 +129,22 @@ class LatticeICE40Platform(TemplatedPlatform):
                 i_D=d,
                 o_Q=q)
 
-        def _get_inverter(a, invert):
+        def get_i_inverter(y, invert):
+            if invert is None:
+                return y
+            else:
+                a = Signal.like(y, name="{}_x{}".format(a.name, 1 if invert else 0))
+                for bit in range(len(y)):
+                    m.submodules += Instance("SB_LUT4",
+                        p_LUT_INIT=0b01 if invert else 0b10,
+                        i_I0=a[bit],
+                        i_I1=Const(0),
+                        i_I2=Const(0),
+                        i_I3=Const(0),
+                        o_O=y[bit])
+                return a
+
+        def get_o_inverter(a, invert):
             if invert is None:
                 return a
             else:
@@ -150,21 +165,27 @@ class LatticeICE40Platform(TemplatedPlatform):
         else:
             is_global_input = False
 
+        if "i" in pin.dir:
+            if pin.xdr < 2:
+                pin_i  = get_i_inverter(pin.i,  i_invert)
+            elif pin.xdr == 2:
+                pin_i0 = get_i_inverter(pin.i0, i_invert)
+                pin_i1 = get_i_inverter(pin.i1, i_invert)
         if "o" in pin.dir:
             if pin.xdr < 2:
-                pin_o  = _get_inverter(pin.o,  o_invert)
+                pin_o  = get_o_inverter(pin.o,  o_invert)
             elif pin.xdr == 2:
-                pin_o0 = _get_inverter(pin.o0, o_invert)
-                pin_o1 = _get_inverter(pin.o1, o_invert)
+                pin_o0 = get_o_inverter(pin.o0, o_invert)
+                pin_o1 = get_o_inverter(pin.o1, o_invert)
 
         if "i" in pin.dir and pin.xdr == 2:
-            i0_ff = Signal.like(pin.i0, name="{}_ff".format(pin.i0.name))
-            i1_ff = Signal.like(pin.i1, name="{}_ff".format(pin.i1.name))
-            _get_dff(pin.i_clk, i0_ff, pin.i0)
-            _get_dff(pin.i_clk, i1_ff, pin.i1)
+            i0_ff = Signal.like(pin_i0, name="{}_ff".format(pin_i0.name))
+            i1_ff = Signal.like(pin_i1, name="{}_ff".format(pin_i1.name))
+            get_dff(pin.i_clk, i0_ff, pin_i0)
+            get_dff(pin.i_clk, i1_ff, pin_i1)
         if "o" in pin.dir and pin.xdr == 2:
-            o1_ff = Signal.like(pin.o1, name="{}_ff".format(pin.o1.name))
-            _get_dff(pin.o_clk, pin_o1, o1_ff)
+            o1_ff = Signal.like(pin_o1, name="{}_ff".format(pin_o1.name))
+            get_dff(pin.o_clk, pin_o1, o1_ff)
 
         for bit in range(len(port)):
             io_args = [
@@ -201,9 +222,9 @@ class LatticeICE40Platform(TemplatedPlatform):
 
             if "i" in pin.dir:
                 if pin.xdr == 0 and is_global_input:
-                    io_args.append(("o", "GLOBAL_BUFFER_OUTPUT", pin.i[bit]))
+                    io_args.append(("o", "GLOBAL_BUFFER_OUTPUT", pin_i[bit]))
                 elif pin.xdr < 2:
-                    io_args.append(("o", "D_IN_0",  pin.i[bit]))
+                    io_args.append(("o", "D_IN_0",  pin_i[bit]))
                 elif pin.xdr == 2:
                     # Re-register both inputs before they enter fabric. This increases hold time
                     # to an entire cycle, and adds one cycle of latency.
@@ -226,43 +247,44 @@ class LatticeICE40Platform(TemplatedPlatform):
             else:
                 m.submodules += Instance("SB_IO", *io_args)
 
-    def get_input(self, pin, port, attrs):
+    def get_input(self, pin, port, attrs, invert):
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs)
+        self._get_io_buffer(m, pin, port, attrs, i_invert=True if invert else None)
         return m
 
-    def get_output(self, pin, port, attrs):
+    def get_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs)
+        self._get_io_buffer(m, pin, port, attrs, o_invert=True if invert else None)
         return m
 
-    def get_tristate(self, pin, port, attrs):
+    def get_tristate(self, pin, port, attrs, invert):
         self._check_feature("single-ended tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs)
+        self._get_io_buffer(m, pin, port, attrs, o_invert=True if invert else None)
         return m
 
-    def get_input_output(self, pin, port, attrs):
+    def get_input_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs)
+        self._get_io_buffer(m, pin, port, attrs, i_invert=True if invert else None,
+                                                 o_invert=True if invert else None)
         return m
 
-    def get_diff_input(self, pin, p_port, n_port, attrs):
+    def get_diff_input(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         # See comment in should_skip_port_component above.
-        self._get_io_buffer(m, pin, p_port, attrs)
+        self._get_io_buffer(m, pin, p_port, attrs, i_invert=True if invert else None)
         return m
 
-    def get_diff_output(self, pin, p_port, n_port, attrs):
+    def get_diff_output(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
@@ -270,8 +292,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         # output pin. The inverter introduces a delay, so for a non-inverting output pin,
         # an identical delay is introduced by instantiating a LUT. This makes the waveform
         # perfectly symmetric in the xdr=0 case.
-        self._get_io_buffer(m, pin, p_port, attrs, o_invert=False)
-        self._get_io_buffer(m, pin, n_port, attrs, o_invert=True)
+        self._get_io_buffer(m, pin, p_port, attrs, o_invert=invert)
+        self._get_io_buffer(m, pin, n_port, attrs, o_invert=not invert)
         return m
 
     # Tristate and bidirectional buffers are not supported on iCE40 because it requires external

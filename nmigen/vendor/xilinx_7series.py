@@ -129,7 +129,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
             m.d.comb += q[bit].eq(_q)
 
-    def get_input(self, pin, port, attrs):
+    def get_input(self, pin, port, attrs, invert):
+        assert not invert
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -139,7 +140,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             m.d.comb += pin.i.eq(port)
         return m
 
-    def get_output(self, pin, port, attrs):
+    def get_output(self, pin, port, attrs, invert):
+        assert not invert
         self._check_feature("single-ended output", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -149,7 +151,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             m.d.comb += port.eq(pin.o)
         return m
 
-    def get_tristate(self, pin, port, attrs):
+    def get_tristate(self, pin, port, attrs, invert):
+        assert not invert
         self._check_feature("single-ended tristate", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -166,7 +169,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_input_output(self, pin, port, attrs):
+    def get_input_output(self, pin, port, attrs, invert):
+        assert not invert
         self._check_feature("single-ended input/output", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -186,7 +190,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_diff_input(self, pin, p_port, n_port, attrs):
+    def get_diff_input(self, pin, p_port, n_port, attrs, invert):
+        assert not invert
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -201,7 +206,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_diff_output(self, pin, p_port, n_port, attrs):
+    def get_diff_output(self, pin, p_port, n_port, attrs, invert):
+        assert not invert
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -216,7 +222,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_diff_tristate(self, pin, p_port, n_port, attrs):
+    def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
+        assert not invert
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()
@@ -234,7 +241,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_diff_input_output(self, pin, p_port, n_port, attrs):
+    def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
+        assert not invert
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1), valid_attrs=True)
         m = Module()

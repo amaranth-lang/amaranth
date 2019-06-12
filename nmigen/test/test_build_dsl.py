@@ -10,7 +10,13 @@ class PinsTestCase(FHDLTestCase):
         self.assertEqual(repr(p), "(pins io A0 A1 A2)")
         self.assertEqual(len(p.names), 3)
         self.assertEqual(p.dir, "io")
+        self.assertEqual(p.invert, False)
         self.assertEqual(list(p), ["A0", "A1", "A2"])
+
+    def test_invert(self):
+        p = PinsN("A0")
+        self.assertEqual(repr(p), "(pins-n io A0)")
+        self.assertEqual(p.invert, True)
 
     def test_conn(self):
         p = Pins("0 1 2", conn=("pmod", 0))
@@ -62,6 +68,13 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.n.names, ["B0", "B1"])
         self.assertEqual(dp.dir, "io")
         self.assertEqual(list(dp), [("A0", "B0"), ("A1", "B1")])
+
+    def test_invert(self):
+        dp = DiffPairsN(p="A0", n="B0")
+        self.assertEqual(repr(dp), "(diffpairs-n io (p A0) (n B0))")
+        self.assertEqual(dp.p.names, ["A0"])
+        self.assertEqual(dp.n.names, ["B0"])
+        self.assertEqual(dp.invert, True)
 
     def test_conn(self):
         dp = DiffPairs(p="0 1 2", n="3 4 5", conn=("pmod", 0))

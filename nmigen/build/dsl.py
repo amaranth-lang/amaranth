@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 
-__all__ = ["Pins", "DiffPairs", "Attrs", "Clock", "Subsignal", "Resource", "Connector"]
+__all__ = ["Pins", "PinsN", "DiffPairs", "DiffPairsN",
+           "Attrs", "Clock", "Subsignal", "Resource", "Connector"]
 
 
 class Pins:
@@ -22,8 +23,9 @@ class Pins:
             raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
                             .format(dir))
 
-        self.names = names
-        self.dir   = dir
+        self.names  = names
+        self.dir    = dir
+        self.invert = False
 
     def __len__(self):
         return len(self.names)
@@ -43,7 +45,14 @@ class Pins:
         return mapped_names
 
     def __repr__(self):
-        return "(pins {} {})".format(self.dir, " ".join(self.names))
+        return "(pins{} {} {})".format("-n" if self.invert else "",
+            self.dir, " ".join(self.names))
+
+
+def PinsN(*args, **kwargs):
+    pins = Pins(*args, **kwargs)
+    pins.invert = True
+    return pins
 
 
 class DiffPairs:
@@ -56,7 +65,8 @@ class DiffPairs:
                             "and {!r} do not"
                             .format(self.p, self.n))
 
-        self.dir = dir
+        self.dir    = dir
+        self.invert = False
 
     def __len__(self):
         return len(self.p.names)
@@ -65,8 +75,14 @@ class DiffPairs:
         return zip(self.p.names, self.n.names)
 
     def __repr__(self):
-        return "(diffpairs {} (p {}) (n {}))".format(
+        return "(diffpairs{} {} (p {}) (n {}))".format("-n" if self.invert else "",
             self.dir, " ".join(self.p.names), " ".join(self.n.names))
+
+
+def DiffPairsN(*args, **kwargs):
+    diff_pairs = DiffPairs(*args, **kwargs)
+    diff_pairs.invert = True
+    return diff_pairs
 
 
 class Attrs(OrderedDict):

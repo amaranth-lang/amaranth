@@ -84,8 +84,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(ports[1].nbits, 1)
 
         self.assertEqual(list(self.cm.iter_single_ended_pins()), [
-            (i2c.scl, scl, {}),
-            (i2c.sda, sda, {}),
+            (i2c.scl, scl, {}, False),
+            (i2c.sda, sda, {}, False),
         ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("i2c_0__scl__io", ["N10"], {}),
@@ -107,11 +107,28 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(n.nbits, clk100.width)
 
         self.assertEqual(list(self.cm.iter_differential_pins()), [
-            (clk100, p, n, {}),
+            (clk100, p, n, {}, False),
         ])
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("clk100_0__p", ["H1"], {}),
             ("clk100_0__n", ["H2"], {}),
+        ])
+
+    def test_request_inverted(self):
+        new_resources = [
+            Resource("cs", 0, PinsN("X0")),
+            Resource("clk", 0, DiffPairsN("Y0", "Y1")),
+        ]
+        self.cm.add_resources(new_resources)
+
+        sig_cs = self.cm.request("cs")
+        sig_clk = self.cm.request("clk")
+        port_cs, port_clk_p, port_clk_n = self.cm.iter_ports()
+        self.assertEqual(list(self.cm.iter_single_ended_pins()), [
+            (sig_cs, port_cs, {}, True),
+        ])
+        self.assertEqual(list(self.cm.iter_differential_pins()), [
+            (sig_clk, port_clk_p, port_clk_n, {}, True),
         ])
 
     def test_request_raw(self):
