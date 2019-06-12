@@ -133,7 +133,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             if invert is None:
                 return y
             else:
-                a = Signal.like(y, name="{}_x{}".format(a.name, 1 if invert else 0))
+                a = Signal.like(y, name="{}_x{}".format(y.name, 1 if invert else 0))
                 for bit in range(len(y)):
                     m.submodules += Instance("SB_LUT4",
                         p_LUT_INIT=0b01 if invert else 0b10,
