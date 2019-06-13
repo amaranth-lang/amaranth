@@ -1022,12 +1022,12 @@ class Switch(Statement):
         for key, stmts in cases.items():
             if isinstance(key, (bool, int)):
                 key = "{:0{}b}".format(key, len(self.test))
-                assert len(key) <= len(self.test)
             elif isinstance(key, str):
-                assert len(key) == len(self.test)
+                pass
             else:
                 raise TypeError("Object '{!r}' cannot be used as a switch key"
                                 .format(key))
+            assert len(key) == len(self.test)
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
             self.cases[key] = Statement.wrap(stmts)
