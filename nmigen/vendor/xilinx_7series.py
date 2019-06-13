@@ -115,99 +115,137 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         """
     ]
 
-    def _get_dff(self, m, clk, d, q):
-        # SDR I/O is performed by packing a flip-flop into the pad IOB.
-        for bit in range(len(q)):
-            _q = Signal()
-            _q.attrs["IOB"] = "TRUE"
-            m.submodules += Instance("FDCE",
-                i_C=clk,
-                i_CE=Const(1),
-                i_CLR=Const(0),
-                i_D=d[bit],
-                o_Q=_q,
-            )
-            m.d.comb += q[bit].eq(_q)
+    def _get_xdr_buffer(self, m, pin, i_invert=None, o_invert=None):
+        def get_dff(clk, d, q):
+            # SDR I/O is performed by packing a flip-flop into the pad IOB.
+            for bit in range(len(q)):
+                _q = Signal()
+                _q.attrs["IOB"] = "TRUE"
+                m.submodules += Instance("FDCE",
+                    i_C=clk,
+                    i_CE=Const(1),
+                    i_CLR=Const(0),
+                    i_D=d[bit],
+                    o_Q=_q
+                )
+                m.d.comb += q[bit].eq(_q)
 
-    def _get_iddr(self, m, clk, d, q1, q2):
-        for bit in range(len(q1)):
-            m.submodules += Instance("IDDR",
-                p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
-                p_SRTYPE="ASYNC",
-                p_INIT_Q1=0, p_INIT_Q2=0,
-                i_C=clk,
-                i_CE=Const(1),
-                i_S=Const(0), i_R=Const(0),
-                i_D=d[bit],
-                o_Q1=q1[bit], o_Q2=q2[bit]
-            )
+        def get_iddr(clk, d, q1, q2):
+            for bit in range(len(q1)):
+                m.submodules += Instance("IDDR",
+                    p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
+                    p_SRTYPE="ASYNC",
+                    p_INIT_Q1=0, p_INIT_Q2=0,
+                    i_C=clk,
+                    i_CE=Const(1),
+                    i_S=Const(0), i_R=Const(0),
+                    i_D=d[bit],
+                    o_Q1=q1[bit], o_Q2=q2[bit]
+                )
 
-    def _get_oddr(self, m, clk, d1, d2, q):
-        for bit in range(len(q)):
-            m.submodules += Instance("ODDR",
-                p_DDR_CLK_EDGE="SAME_EDGE",
-                p_SRTYPE="ASYNC",
-                p_INIT=0,
-                i_C=clk,
-                i_CE=Const(1),
-                i_S=Const(0), i_R=Const(0),
-                i_D1=d1[bit], i_D2=d2[bit],
-                o_Q=q[bit],
-            )
+        def get_oddr(clk, d1, d2, q):
+            for bit in range(len(q)):
+                m.submodules += Instance("ODDR",
+                    p_DDR_CLK_EDGE="SAME_EDGE",
+                    p_SRTYPE="ASYNC",
+                    p_INIT=0,
+                    i_C=clk,
+                    i_CE=Const(1),
+                    i_S=Const(0), i_R=Const(0),
+                    i_D1=d1[bit], i_D2=d2[bit],
+                    o_Q=q[bit]
+                )
 
-    def _get_xdr_buffer(self, m, pin):
+        def get_i_inverter(y, invert):
+            if invert is None:
+                return y
+            else:
+                a = Signal.like(y, name_suffix="_x{}".format(1 if invert else 0))
+                for bit in range(len(y)):
+                    m.submodules += Instance("LUT1",
+                        p_INIT=0b01 if invert else 0b10,
+                        i_I0=a[bit],
+                        o_O=y[bit]
+                    )
+                return a
+
+        def get_o_inverter(a, invert):
+            if invert is None:
+                return a
+            else:
+                y = Signal.like(a, name_suffix="_x{}".format(1 if invert else 0))
+                for bit in range(len(a)):
+                    m.submodules += Instance("LUT1",
+                        p_INIT=0b01 if invert else 0b10,
+                        i_I0=a[bit],
+                        o_O=y[bit]
+                    )
+                return y
+
+        if "i" in pin.dir:
+            if pin.xdr < 2:
+                pin_i = get_i_inverter(pin.i, i_invert)
+            elif pin.xdr == 2:
+                pin_i0 = get_i_inverter(pin.i0, i_invert)
+                pin_i1 = get_i_inverter(pin.i1, i_invert)
+        if "o" in pin.dir:
+            if pin.xdr < 2:
+                pin_o = get_o_inverter(pin.o, o_invert)
+            elif pin.xdr == 2:
+                pin_o0 = get_o_inverter(pin.o0, o_invert)
+                pin_o1 = get_o_inverter(pin.o1, o_invert)
+
         i  = Signal(pin.width, name="{}_xdr_i".format(pin.name))
         o  = Signal(pin.width, name="{}_xdr_o".format(pin.name))
         oe = Signal(1,         name="{}_xdr_oe".format(pin.name))
+
         if pin.xdr == 0:
             if "i" in pin.dir:
-                m.d.comb += pin.i.eq(i)
+                m.d.comb += pin_i.eq(i)
             if "o" in pin.dir:
-                m.d.comb += o.eq(pin.o)
+                m.d.comb += o.eq(pin_o)
             if pin.dir in ("oe", "io"):
                 m.d.comb += oe.eq(pin.oe)
         elif pin.xdr == 1:
             if "i" in pin.dir:
-                self._get_dff(m, pin.i_clk, i, pin.i)
+                get_dff(pin.i_clk, i, pin_i)
             if "o" in pin.dir:
-                self._get_dff(m, pin.o_clk, pin.o, o)
+                get_dff(pin.o_clk, pin_o, o)
             if pin.dir in ("oe", "io"):
-                self._get_dff(m, pin.o_clk, pin.oe, oe)
+                get_dff(pin.o_clk, pin.oe, oe)
         elif pin.xdr == 2:
             if "i" in pin.dir:
-                self._get_iddr(m, pin.i_clk, i, pin.i0, pin.i1)
+                get_iddr(pin.i_clk, i, pin_i0, pin_i1)
             if "o" in pin.dir:
-                self._get_oddr(m, pin.o_clk, pin.o0, pin.o1, o)
+                get_oddr(pin.o_clk, pin_o0, pin_o1, o)
             if pin.dir in ("oe", "io"):
-                self._get_dff(m, pin.o_clk, pin.oe, oe)
+                get_dff(pin.o_clk, pin.oe, oe)
         else:
             assert False
+
         return (i, o, oe)
 
     def get_input(self, pin, port, attrs, invert):
-        assert not invert
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         m.d.comb += i.eq(port)
         return m
 
     def get_output(self, pin, port, attrs, invert):
-        assert not invert
         self._check_feature("single-ended output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         m.d.comb += port.eq(o)
         return m
 
     def get_tristate(self, pin, port, attrs, invert):
-        assert not invert
         self._check_feature("single-ended tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
             m.submodules += Instance("OBUFT",
                 i_T=~oe,
@@ -217,11 +255,11 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_input_output(self, pin, port, attrs, invert):
-        assert not invert
         self._check_feature("single-ended input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
+                                                o_invert=True if invert else None)
         for bit in range(len(port)):
             m.submodules += Instance("IOBUF",
                 i_T=~oe,
@@ -232,11 +270,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_input(self, pin, p_port, n_port, attrs, invert):
-        assert not invert
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("IBUFDS",
                 i_I=p_port[bit], i_IB=n_port[bit],
@@ -245,11 +282,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_output(self, pin, p_port, n_port, attrs, invert):
-        assert not invert
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("OBUFDS",
                 i_I=o[bit],
@@ -258,11 +294,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
-        assert not invert
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("OBUFTDS",
                 i_T=~oe,
@@ -272,11 +307,11 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
-        assert not invert
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin)
+        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
+                                                o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("IOBUFDS",
                 i_T=~oe,
