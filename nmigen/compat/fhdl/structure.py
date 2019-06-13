@@ -105,7 +105,7 @@ class Case(ast.Switch):
                         or (isinstance(choice, str) and choice == "default")
                         or choice > key):
                     key = choice
-        if isinstance(key, str) and key == "default":
+        elif isinstance(key, str) and key == "default":
             key = "-" * len(self.test)
         else:
             key = "{:0{}b}".format(wrap(key).value, len(self.test))
