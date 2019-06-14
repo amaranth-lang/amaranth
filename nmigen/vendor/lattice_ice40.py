@@ -164,6 +164,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             del attrs["GLOBAL"]
         else:
             is_global_input = False
+        assert not (is_global_input and i_invert)
 
         if "i" in pin.dir:
             if pin.xdr < 2:
@@ -222,7 +223,7 @@ class LatticeICE40Platform(TemplatedPlatform):
 
             if "i" in pin.dir:
                 if pin.xdr == 0 and is_global_input:
-                    io_args.append(("o", "GLOBAL_BUFFER_OUTPUT", pin_i[bit]))
+                    io_args.append(("o", "GLOBAL_BUFFER_OUTPUT", pin.i[bit]))
                 elif pin.xdr < 2:
                     io_args.append(("o", "D_IN_0",  pin_i[bit]))
                 elif pin.xdr == 2:
