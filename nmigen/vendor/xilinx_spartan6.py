@@ -206,9 +206,9 @@ class XilinxSpartan6Platform(TemplatedPlatform):
                 pin_o0 = get_o_inverter(pin.o0, o_invert)
                 pin_o1 = get_o_inverter(pin.o1, o_invert)
 
-        i  = Signal(pin.width, name="{}_xdr_i".format(pin.name))
-        o  = Signal(pin.width, name="{}_xdr_o".format(pin.name))
-        oe = Signal(1,         name="{}_xdr_oe".format(pin.name))
+        i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
+        o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
+        t = Signal(1,         name="{}_xdr_t".format(pin.name))
 
         if pin.xdr == 0:
             if "i" in pin.dir:
@@ -216,14 +216,14 @@ class XilinxSpartan6Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 m.d.comb += o.eq(pin_o)
             if pin.dir in ("oe", "io"):
-                m.d.comb += oe.eq(pin.oe)
+                m.d.comb += t.eq(~pin.oe)
         elif pin.xdr == 1:
             if "i" in pin.dir:
                 get_dff(pin.i_clk, i, pin_i)
             if "o" in pin.dir:
                 get_dff(pin.o_clk, pin_o, o)
             if pin.dir in ("oe", "io"):
-                get_dff(pin.o_clk, pin.oe, oe)
+                get_dff(pin.o_clk, ~pin.oe, t)
         elif pin.xdr == 2:
             if "i" in pin.dir:
                 # Re-register first input before it enters fabric. This allows both inputs to
@@ -234,17 +234,17 @@ class XilinxSpartan6Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 get_oddr(pin.o_clk, pin_o0, pin_o1, o)
             if pin.dir in ("oe", "io"):
-                get_dff(pin.o_clk, pin.oe, oe)
+                get_dff(pin.o_clk, ~pin.oe, t)
         else:
             assert False
 
-        return (i, o, oe)
+        return (i, o, t)
 
     def get_input(self, pin, port, attrs, invert):
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         m.d.comb += i.eq(port)
         return m
 
@@ -252,7 +252,7 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("single-ended output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         m.d.comb += port.eq(o)
         return m
 
@@ -260,10 +260,10 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("single-ended tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
             m.submodules += Instance("OBUFT",
-                i_T=~oe,
+                i_T=t,
                 i_I=o[bit],
                 o_O=port[bit]
             )
@@ -273,11 +273,11 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("single-ended input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
-                                                o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
+                                               o_invert=True if invert else None)
         for bit in range(len(port)):
             m.submodules += Instance("IOBUF",
-                i_T=~oe,
+                i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
                 io_IO=port[bit]
@@ -288,7 +288,7 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("IBUFDS",
                 i_I=p_port[bit], i_IB=n_port[bit],
@@ -300,7 +300,7 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("OBUFDS",
                 i_I=o[bit],
@@ -312,10 +312,10 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("OBUFTDS",
-                i_T=~oe,
+                i_T=t,
                 i_I=o[bit],
                 o_O=p_port[bit], o_OB=n_port[bit]
             )
@@ -325,11 +325,11 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        i, o, oe = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
-                                                o_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
+                                               o_invert=True if invert else None)
         for bit in range(len(p_port)):
             m.submodules += Instance("IOBUFDS",
-                i_T=~oe,
+                i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
                 io_IO=p_port[bit], io_IOB=n_port[bit]
