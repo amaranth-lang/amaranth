@@ -249,7 +249,11 @@ class XilinxSpartan6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
-        m.d.comb += i.eq(port)
+        for bit in range(len(port)):
+            m.submodules += Instance("IBUF",
+                i_I=port[bit],
+                o_O=i[bit]
+            )
         return m
 
     def get_output(self, pin, port, attrs, invert):
@@ -257,7 +261,11 @@ class XilinxSpartan6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
-        m.d.comb += port.eq(o)
+        for bit in range(len(port)):
+            m.submodules += Instance("OBUF",
+                i_I=o[bit],
+                o_O=port[bit]
+            )
         return m
 
     def get_tristate(self, pin, port, attrs, invert):
