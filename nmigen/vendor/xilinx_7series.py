@@ -156,7 +156,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                     o_Q=q[bit]
                 )
 
-        def get_i_inverter(y, invert):
+        def get_ixor(y, invert):
             if invert is None:
                 return y
             else:
@@ -169,7 +169,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                     )
                 return a
 
-        def get_o_inverter(a, invert):
+        def get_oxor(a, invert):
             if invert is None:
                 return a
             else:
@@ -184,28 +184,32 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
 
         if "i" in pin.dir:
             if pin.xdr < 2:
-                pin_i = get_i_inverter(pin.i, i_invert)
+                pin_i  = get_ixor(pin.i, i_invert)
             elif pin.xdr == 2:
-                pin_i0 = get_i_inverter(pin.i0, i_invert)
-                pin_i1 = get_i_inverter(pin.i1, i_invert)
+                pin_i0 = get_ixor(pin.i0, i_invert)
+                pin_i1 = get_ixor(pin.i1, i_invert)
         if "o" in pin.dir:
             if pin.xdr < 2:
-                pin_o = get_o_inverter(pin.o, o_invert)
+                pin_o  = get_oxor(pin.o, o_invert)
             elif pin.xdr == 2:
-                pin_o0 = get_o_inverter(pin.o0, o_invert)
-                pin_o1 = get_o_inverter(pin.o1, o_invert)
+                pin_o0 = get_oxor(pin.o0, o_invert)
+                pin_o1 = get_oxor(pin.o1, o_invert)
 
-        i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
-        o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
-        t = Signal(1,         name="{}_xdr_t".format(pin.name))
+        i = o = t = None
+        if "i" in pin.dir:
+            i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
+        if "o" in pin.dir:
+            o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
+        if pin.dir in ("oe", "io"):
+            t = Signal(1,         name="{}_xdr_t".format(pin.name))
 
         if pin.xdr == 0:
             if "i" in pin.dir:
-                m.d.comb += pin_i.eq(i)
+                i = pin_i
             if "o" in pin.dir:
-                m.d.comb += o.eq(pin_o)
+                o = pin_o
             if pin.dir in ("oe", "io"):
-                m.d.comb += t.eq(~pin.oe)
+                t = ~pin.oe
         elif pin.xdr == 1:
             if "i" in pin.dir:
                 get_dff(pin.i_clk, i, pin_i)
