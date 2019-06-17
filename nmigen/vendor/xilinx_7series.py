@@ -121,6 +121,9 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             for bit in range(len(q)):
                 _q = Signal()
                 _q.attrs["IOB"] = "TRUE"
+                # XXX: Vivado 2019.1 seems to make this flip-flop ineligible for IOB packing
+                # unless we prevent it from being optimized.
+                _q.attrs["DONT_TOUCH"] = "TRUE"
                 m.submodules += Instance("FDCE",
                     i_C=clk,
                     i_CE=Const(1),
