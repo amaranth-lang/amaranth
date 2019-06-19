@@ -46,6 +46,10 @@ class LatticeICE40Platform(TemplatedPlatform):
         "iCE40UP5K":  "--up5k",
         "iCE5LP4K":   "--u4k",
     }
+    _nextpnr_package_options = {
+        "iCE40LP4K":  ":4k",
+        "iCE40HX4K":  ":4k",
+    }
 
     file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -96,7 +100,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             {{get_override("nextpnr_opts")|default(["--placer","heap"])|join(" ")}}
             --log {{name}}.tim
             {{platform._nextpnr_device_options[platform.device]}}
-            --package {{platform.package|lower}}
+            --package
+                {{platform.package|lower}}{{platform._nextpnr_package_options[platform.device]}}
             --json {{name}}.json
             --pcf {{name}}.pcf
             --pre-pack {{name}}_pre_pack.py
