@@ -22,6 +22,10 @@ Thanks [LambdaConcept][] for being a sponsor of this project! Contact sb [at] m-
 [yosys]: http://www.clifford.at/yosys/
 [lambdaconcept]: http://lambdaconcept.com/
 
+### HLS?
+
+nMigen is *not* a "Python-to-FPGA" conventional high level synthesis (HLS) tool. It will *not* take a Python program as input and generate a hardware implementation of it. In nMigen, the Python program is executed by a regular Python interpreter, and it emits explicit statements in the FHDL domain-specific language.  Writing a conventional HLS tool that uses nMigen as an internal component might be a good idea, on the other hand :)
+
 ### Installation
 
     pip install git+https://github.com/m-labs/nmigen.git
