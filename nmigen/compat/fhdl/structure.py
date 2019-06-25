@@ -88,6 +88,7 @@ class Case(ast.Switch):
                 raise TypeError("Case object is not a Migen constant")
             if isinstance(k, str) and k == "default":
                 default = v
+                continue
             else:
                 k = k.value
             new_cases.append((k, v))
