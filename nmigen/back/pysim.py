@@ -319,16 +319,18 @@ class _StatementCompiler(StatementVisitor):
         test  = self.rrhs_compiler(stmt.test)
         cases = []
         for value, stmts in stmt.cases.items():
-            if "-" in value:
-                mask  = "".join("0" if b == "-" else "1" for b in value)
-                value = "".join("0" if b == "-" else  b  for b in value)
+            if value is None:
+                check = lambda test: True
             else:
-                mask  = "1" * len(value)
-            mask  = int(mask,  2)
-            value = int(value, 2)
-            def make_test(mask, value):
-                return lambda test: test & mask == value
-            cases.append((make_test(mask, value), self.on_statements(stmts)))
+                if "-" in value:
+                    mask  = "".join("0" if b == "-" else "1" for b in value)
+                    value = "".join("0" if b == "-" else  b  for b in value)
+                else:
+                    mask  = "1" * len(value)
+                mask  = int(mask,  2)
+                value = int(value, 2)
+                check = lambda test: test & mask == value
+            cases.append((check, self.on_statements(stmts)))
         def run(state):
             test_value = test(state)
             for check, body in cases:

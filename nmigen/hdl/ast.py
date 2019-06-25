@@ -1024,10 +1024,12 @@ class Switch(Statement):
                 key = "{:0{}b}".format(key, len(self.test))
             elif isinstance(key, str):
                 pass
+            elif key is None:
+                pass
             else:
                 raise TypeError("Object '{!r}' cannot be used as a switch key"
                                 .format(key))
-            assert len(key) == len(self.test)
+            assert key is None or len(key) == len(self.test)
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
             self.cases[key] = Statement.wrap(stmts)
@@ -1043,7 +1045,9 @@ class Switch(Statement):
         return self.test._rhs_signals() | signals
 
     def __repr__(self):
-        cases = ["(case {} {})".format(key, " ".join(map(repr, stmts)))
+        cases = ["(default {})".format(" ".join(map(repr, stmts)))
+                 if key is None else
+                 "(case {} {})".format(key, " ".join(map(repr, stmts)))
                  for key, stmts in self.cases.items()]
         return "(switch {!r} {})".format(self.test, " ".join(cases))
 

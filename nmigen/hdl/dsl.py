@@ -316,7 +316,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 if if_test is not None:
                     match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
                 else:
-                    match = "-" * len(tests)
+                    match = None
                 cases[match] = if_case
 
             self._statements.append(Switch(Cat(tests), cases))

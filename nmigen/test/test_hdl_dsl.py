@@ -174,7 +174,7 @@ class DSLTestCase(FHDLTestCase):
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
                 (case 1- (eq (sig c2) (const 1'd0)))
-                (case -- (eq (sig c3) (const 1'd1)))
+                (default (eq (sig c3) (const 1'd1)))
             )
         )
         """)
@@ -234,7 +234,7 @@ class DSLTestCase(FHDLTestCase):
                         (case 1 (eq (sig c2) (const 1'd1)))
                     )
                 )
-                (case -
+                (default
                     (eq (sig c3) (const 1'd1))
                 )
             )
