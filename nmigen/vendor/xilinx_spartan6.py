@@ -45,9 +45,9 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream.
     """
 
-    device     = abstractproperty()
-    package    = abstractproperty()
-    speedgrade = abstractproperty()
+    device  = abstractproperty()
+    package = abstractproperty()
+    speed   = abstractproperty()
 
     file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -70,7 +70,7 @@ class XilinxSpartan6Platform(TemplatedPlatform):
             -ifn {{name}}.prj
             -ofn {{name}}.ngc
             -top {{name}}
-            -p {{platform.device}}{{platform.package}}-{{platform.speedgrade}}
+            -p {{platform.device}}{{platform.package}}-{{platform.speed}}
             {{get_override("script_after_run")|default("# (script_after_run placeholder)")}}
         """,
         "{{name}}.ucf": r"""
