@@ -329,7 +329,9 @@ class _StatementCompiler(StatementVisitor):
                     mask  = "1" * len(value)
                 mask  = int(mask,  2)
                 value = int(value, 2)
-                check = lambda test: test & mask == value
+                def make_check(mask, value):
+                    return lambda test: test & mask == value
+                check = make_check(mask, value)
             cases.append((check, self.on_statements(stmts)))
         def run(state):
             test_value = test(state)
