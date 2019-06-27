@@ -236,7 +236,10 @@ class TemplatedPlatform(Platform):
                 # `export VAR=` is treated on Linux.
                 return re.sub(r'^\"\"$', "", os.environ[var_env])
             elif var in kwargs:
-                return textwrap.dedent(kwargs[var]).strip()
+                if isinstance(kwargs[var], str):
+                    return textwrap.dedent(kwargs[var]).strip()
+                else:
+                    return kwargs[var]
             else:
                 return jinja2.Undefined(name=var)
 
