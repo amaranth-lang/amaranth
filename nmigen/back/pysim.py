@@ -10,6 +10,7 @@ from ..tools import flatten
 from ..hdl.ast import *
 from ..hdl.ir import *
 from ..hdl.xfrm import ValueVisitor, StatementVisitor
+from ..hdl.ast import DUID
 from ..hdl.dsl import Module
 from ..hdl.cd import ClockDomain
 
@@ -356,12 +357,13 @@ class _StatementCompiler(StatementVisitor):
 class _SimulatorPlatform:
     def get_reset_sync(self, reset_sync):
         m = Module()
-        m.domains += ClockDomain("_reset_sync", async_reset=True)
+        cd = ClockDomain("_reset_sync_{}".format(DUID().duid), async_reset=True)
+        m.domains += cd
         for i, o in zip((0, *reset_sync._regs), reset_sync._regs):
-            m.d._reset_sync += o.eq(i)
+            m.d[cd.name] += o.eq(i)
         m.d.comb += [
-            ClockSignal("_reset_sync").eq(ClockSignal(reset_sync.domain)),
-            ResetSignal("_reset_sync").eq(reset_sync.arst),
+            ClockSignal(cd.name).eq(ClockSignal(reset_sync.domain)),
+            ResetSignal(cd.name).eq(reset_sync.arst),
             ResetSignal(reset_sync.domain).eq(reset_sync._regs[-1])
         ]
         return m
