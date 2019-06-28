@@ -128,7 +128,7 @@ class LatticeICE40Platform(TemplatedPlatform):
     def _get_io_buffer(self, m, pin, port, attrs, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):
             m.submodules += Instance("$dff",
-                p_CLK_POLARITY=0,
+                p_CLK_POLARITY=1,
                 p_WIDTH=len(d),
                 i_CLK=clk,
                 i_D=d,
