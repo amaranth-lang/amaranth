@@ -82,12 +82,16 @@ class ResetSynchronizer(Elaboratable):
             return platform.get_reset_sync(self)
 
         m = Module()
-        m.domains += ClockDomain("_reset_sync", async_reset=True)
-        for i, o in zip((0, *self._regs), self._regs):
-            m.d._reset_sync += o.eq(i)
-        m.d.comb += [
-            ClockSignal("_reset_sync").eq(ClockSignal(self.domain)),
-            ResetSignal("_reset_sync").eq(self.arst),
-            ResetSignal(self.domain).eq(self._regs[-1])
-        ]
+        for i, o in zip((Const(0, 1), *self._regs), self._regs):
+            m.submodules += Instance("$adff",
+                p_CLK_POLARITY=1,
+                p_ARST_POLARITY=1,
+                p_ARST_VALUE=Const(1, 1),
+                p_WIDTH=1,
+                i_CLK=ClockSignal(self.domain),
+                i_ARST=self.arst,
+                i_D=i,
+                o_Q=o
+            )
+        m.d.comb += ResetSignal(self.domain).eq(self._regs[-1])
         return m
