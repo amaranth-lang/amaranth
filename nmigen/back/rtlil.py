@@ -188,12 +188,12 @@ class _SwitchBuilder:
     def __exit__(self, *args):
         self.rtlil._append("{}end\n", "  " * self.indent)
 
-    def case(self, value=None):
-        if value is None:
+    def case(self, *values):
+        if values == ():
             self.rtlil._append("{}case\n", "  " * (self.indent + 1))
         else:
-            self.rtlil._append("{}case {}'{}\n", "  " * (self.indent + 1),
-                               len(value), value)
+            self.rtlil._append("{}case {}\n", "  " * (self.indent + 1),
+                               ", ".join("{}'{}".format(len(value), value) for value in values))
         return _CaseBuilder(self.rtlil, self.indent + 2)
 
 
@@ -590,10 +590,10 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._has_rhs     = False
 
     @contextmanager
-    def case(self, switch, value):
+    def case(self, switch, values):
         try:
             old_case = self._case
-            with switch.case(value) as self._case:
+            with switch.case(*values) as self._case:
                 yield
         finally:
             self._case = old_case
@@ -645,8 +645,8 @@ class _StatementCompiler(xfrm.StatementVisitor):
         test_sigspec = self._test_cache[stmt]
 
         with self._case.switch(test_sigspec) as switch:
-            for value, stmts in stmt.cases.items():
-                with self.case(switch, value):
+            for values, stmts in stmt.cases.items():
+                with self.case(switch, values):
                     self.on_statements(stmts)
 
     def on_statement(self, stmt):

@@ -1019,20 +1019,27 @@ class Switch(Statement):
     def __init__(self, test, cases):
         self.test  = Value.wrap(test)
         self.cases = OrderedDict()
-        for key, stmts in cases.items():
-            if isinstance(key, (bool, int)):
-                key = "{:0{}b}".format(key, len(self.test))
-            elif isinstance(key, str):
-                pass
-            elif key is None:
-                pass
-            else:
-                raise TypeError("Object '{!r}' cannot be used as a switch key"
-                                .format(key))
-            assert key is None or len(key) == len(self.test)
+        for keys, stmts in cases.items():
+            # Map: None -> (); key -> (key,); (key...) -> (key...)
+            if keys is None:
+                keys = ()
+            if not isinstance(keys, tuple):
+                keys = (keys,)
+            # Map: 2 -> "0010"; "0010" -> "0010"
+            new_keys = ()
+            for key in keys:
+                if isinstance(key, (bool, int)):
+                    key = "{:0{}b}".format(key, len(self.test))
+                elif isinstance(key, str):
+                    pass
+                else:
+                    raise TypeError("Object '{!r}' cannot be used as a switch key"
+                                    .format(key))
+                assert len(key) == len(self.test)
+                new_keys = (*new_keys, key)
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
-            self.cases[key] = Statement.wrap(stmts)
+            self.cases[new_keys] = Statement.wrap(stmts)
 
     def _lhs_signals(self):
         signals = union((s._lhs_signals() for ss in self.cases.values() for s in ss),
@@ -1045,11 +1052,16 @@ class Switch(Statement):
         return self.test._rhs_signals() | signals
 
     def __repr__(self):
-        cases = ["(default {})".format(" ".join(map(repr, stmts)))
-                 if key is None else
-                 "(case {} {})".format(key, " ".join(map(repr, stmts)))
-                 for key, stmts in self.cases.items()]
-        return "(switch {!r} {})".format(self.test, " ".join(cases))
+        def case_repr(keys, stmts):
+            stmts_repr = " ".join(map(repr, stmts))
+            if keys == ():
+                return "(default {})".format(stmts_repr)
+            elif len(keys) == 1:
+                return "(case {} {})".format(keys[0], stmts_repr)
+            else:
+                return "(case ({}) {})".format(" ".join(keys), stmts_repr)
+        case_reprs = [case_repr(keys, stmts) for keys, stmts in self.cases.items()]
+        return "(switch {!r} {})".format(self.test, " ".join(case_reprs))
 
 
 @final

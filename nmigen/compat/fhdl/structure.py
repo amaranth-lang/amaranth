@@ -106,12 +106,12 @@ class Case(ast.Switch):
                         or choice > key):
                     key = choice
         elif isinstance(key, str) and key == "default":
-            key = None
+            key = ()
         else:
-            key = "{:0{}b}".format(wrap(key).value, len(self.test))
+            key = ("{:0{}b}".format(wrap(key).value, len(self.test)),)
         stmts = self.cases[key]
         del self.cases[key]
-        self.cases[None] = stmts
+        self.cases[()] = stmts
         return self
 
 

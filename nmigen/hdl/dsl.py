@@ -214,27 +214,31 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._pop_ctrl()
 
     @contextmanager
-    def Case(self, value=None):
+    def Case(self, *values):
         self._check_context("Case", context="Switch")
         switch_data = self._get_ctrl("Switch")
-        if value is None:
-            value = "-" * len(switch_data["test"])
-        if isinstance(value, str) and len(value) != len(switch_data["test"]):
-            raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
-                              .format(value, len(switch_data["test"])))
-        omit_case = False
-        if isinstance(value, int) and bits_for(value) > len(switch_data["test"]):
-            warnings.warn("Case value '{:b}' is wider than test (which has width {}); "
-                          "comparison will never be true"
-                          .format(value, len(switch_data["test"])), SyntaxWarning, stacklevel=3)
-            omit_case = True
+        new_values = ()
+        for value in values:
+            if isinstance(value, str) and len(value) != len(switch_data["test"]):
+                raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
+                                  .format(value, len(switch_data["test"])))
+            if isinstance(value, int) and bits_for(value) > len(switch_data["test"]):
+                warnings.warn("Case value '{:b}' is wider than test (which has width {}); "
+                              "comparison will never be true"
+                              .format(value, len(switch_data["test"])),
+                              SyntaxWarning, stacklevel=3)
+                continue
+            new_values = (*new_values, value)
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            if not omit_case:
-                switch_data["cases"][value] = self._statements
+            # If none of the provided cases can possibly be true, omit this branch completely.
+            # This needs to be differentiated from no cases being provided in the first place,
+            # which means the branch will always match.
+            if not (values and not new_values):
+                switch_data["cases"][new_values] = self._statements
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case

@@ -318,20 +318,22 @@ class _StatementCompiler(StatementVisitor):
     def on_Switch(self, stmt):
         test  = self.rrhs_compiler(stmt.test)
         cases = []
-        for value, stmts in stmt.cases.items():
-            if value is None:
+        for values, stmts in stmt.cases.items():
+            if values == ():
                 check = lambda test: True
             else:
-                if "-" in value:
-                    mask  = "".join("0" if b == "-" else "1" for b in value)
-                    value = "".join("0" if b == "-" else  b  for b in value)
-                else:
-                    mask  = "1" * len(value)
-                mask  = int(mask,  2)
-                value = int(value, 2)
-                def make_check(mask, value):
-                    return lambda test: test & mask == value
-                check = make_check(mask, value)
+                check = lambda test: False
+                def make_check(mask, value, prev_check):
+                    return lambda test: prev_check(test) or test & mask == value
+                for value in values:
+                    if "-" in value:
+                        mask  = "".join("0" if b == "-" else "1" for b in value)
+                        value = "".join("0" if b == "-" else  b  for b in value)
+                    else:
+                        mask  = "1" * len(value)
+                    mask  = int(mask,  2)
+                    value = int(value, 2)
+                    check = make_check(mask, value, check)
             cases.append((check, self.on_statements(stmts)))
         def run(state):
             test_value = test(state)
