@@ -10,6 +10,8 @@ from ..tools import flatten
 from ..hdl.ast import *
 from ..hdl.ir import *
 from ..hdl.xfrm import ValueVisitor, StatementVisitor
+from ..hdl.dsl import Module
+from ..hdl.cd import ClockDomain
 
 
 __all__ = ["Simulator", "Delay", "Tick", "Passive", "DeadlineError"]
@@ -351,9 +353,23 @@ class _StatementCompiler(StatementVisitor):
         return run
 
 
+class _SimulatorPlatform:
+    def get_reset_sync(self, reset_sync):
+        m = Module()
+        m.domains += ClockDomain("_reset_sync", async_reset=True)
+        for i, o in zip((0, *reset_sync._regs), reset_sync._regs):
+            m.d._reset_sync += o.eq(i)
+        m.d.comb += [
+            ClockSignal("_reset_sync").eq(ClockSignal(reset_sync.domain)),
+            ResetSignal("_reset_sync").eq(reset_sync.arst),
+            ResetSignal(reset_sync.domain).eq(reset_sync._regs[-1])
+        ]
+        return m
+
+
 class Simulator:
     def __init__(self, fragment, vcd_file=None, gtkw_file=None, traces=()):
-        self._fragment        = Fragment.get(fragment, platform=None)
+        self._fragment        = Fragment.get(fragment, platform=_SimulatorPlatform())
 
         self._signal_slots    = SignalDict()  # Signal -> int/slot
         self._slot_signals    = list()        # int/slot -> Signal
