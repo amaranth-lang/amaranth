@@ -106,9 +106,11 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self._append("  memory width {} size {} {}\n", width, size, name)
         return name
 
-    def cell(self, kind, name=None, params={}, ports={}, src=""):
+    def cell(self, kind, name=None, params={}, ports={}, attrs={}, src=""):
         self._src(src)
         name = self._make_name(name, local=False)
+        for attr_name, attr_value in attrs.items():
+            self.attribute(attr_name, attr_value)
         self._append("  cell {} {}\n", kind, name)
         for param, value in params.items():
             if isinstance(value, str):
@@ -678,7 +680,7 @@ def convert_fragment(builder, fragment, hierarchy):
             return "\\{}".format(fragment.type), port_map
 
     module_name  = hierarchy[-1] or "anonymous"
-    module_attrs = {}
+    module_attrs = OrderedDict()
     if len(hierarchy) == 1:
         module_attrs["top"] = 1
     module_attrs["nmigen.hierarchy"] = ".".join(name or "anonymous" for name in hierarchy)
@@ -761,7 +763,8 @@ def convert_fragment(builder, fragment, hierarchy):
                     compiler_state.resolve_curr(signal, prefix=sub_name)
                 sub_ports[port] = rhs_compiler(value)
 
-            module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params)
+            module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params,
+                        attrs=subfragment.attrs)
 
         # If we emit all of our combinatorial logic into a single RTLIL process, Verilog
         # simulators will break horribly, because Yosys write_verilog transforms RTLIL processes

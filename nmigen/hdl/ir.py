@@ -71,6 +71,7 @@ class Fragment:
         self.statements = []
         self.domains = OrderedDict()
         self.subfragments = []
+        self.attrs = OrderedDict()
         self.generated = OrderedDict()
         self.flatten = False
 
@@ -528,7 +529,9 @@ class Instance(Fragment):
         self.named_ports = OrderedDict()
 
         for (kind, name, value) in args:
-            if kind == "p":
+            if kind == "a":
+                self.attrs[name] = value
+            elif kind == "p":
                 self.parameters[name] = value
             elif kind in ("i", "o", "io"):
                 self.named_ports[name] = (value, kind)
@@ -538,7 +541,9 @@ class Instance(Fragment):
                                 .format((kind, name, value)))
 
         for kw, arg in kwargs.items():
-            if kw.startswith("p_"):
+            if kw.startswith("a_"):
+                self.attrs[kw[2:]] = arg
+            elif kw.startswith("p_"):
                 self.parameters[kw[2:]] = arg
             elif kw.startswith("i_"):
                 self.named_ports[kw[2:]] = (arg, "i")

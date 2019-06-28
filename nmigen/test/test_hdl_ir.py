@@ -555,15 +555,21 @@ class InstanceTestCase(FHDLTestCase):
         s5 = Signal()
         s6 = Signal()
         inst = Instance("foo",
+            ("a", "ATTR1", 1),
             ("p", "PARAM1", 0x1234),
             ("i", "s1", s1),
             ("o", "s2", s2),
             ("io", "s3", s3),
+            a_ATTR2=2,
             p_PARAM2=0x5678,
             i_s4=s4,
             o_s5=s5,
             io_s6=s6,
         )
+        self.assertEqual(inst.attrs, OrderedDict([
+            ("ATTR1", 1),
+            ("ATTR2", 2),
+        ]))
         self.assertEqual(inst.parameters, OrderedDict([
             ("PARAM1", 0x1234),
             ("PARAM2", 0x5678),
@@ -647,4 +653,12 @@ class InstanceTestCase(FHDLTestCase):
         fp = f.prepare(ports=[s], ensure_sync_exists=False)
         self.assertEqual(fp.ports, SignalDict([
             (s, "o"),
+        ]))
+
+    def test_prepare_attrs(self):
+        self.setUp_cpu()
+        self.inst.attrs["ATTR"] = 1
+        f = self.inst.prepare()
+        self.assertEqual(f.attrs, OrderedDict([
+            ("ATTR", 1),
         ]))
