@@ -52,10 +52,10 @@ class Memory:
             raise TypeError("Memory initialization value at address {:x}: {}"
                             .format(addr, e)) from None
 
-    def read_port(self, domain="sync", synchronous=True, transparent=True):
-        if not synchronous and not transparent:
+    def read_port(self, domain="sync", transparent=True):
+        if domain == "comb" and not transparent:
             raise ValueError("Read port cannot be simultaneously asynchronous and non-transparent")
-        return ReadPort(self, domain, synchronous, transparent)
+        return ReadPort(self, domain, transparent)
 
     def write_port(self, domain="sync", priority=0, granularity=None):
         if granularity is None:
@@ -77,17 +77,16 @@ class Memory:
 
 
 class ReadPort(Elaboratable):
-    def __init__(self, memory, domain, synchronous, transparent):
+    def __init__(self, memory, domain, transparent):
         self.memory      = memory
         self.domain      = domain
-        self.synchronous = synchronous
         self.transparent = transparent
 
         self.addr = Signal(max=memory.depth,
                            name="{}_r_addr".format(memory.name))
         self.data = Signal(memory.width,
                            name="{}_r_data".format(memory.name))
-        if synchronous and not transparent:
+        if self.domain != "comb" and not transparent:
             self.en = Signal(name="{}_r_en".format(memory.name))
         else:
             self.en = Const(1)
@@ -97,15 +96,19 @@ class ReadPort(Elaboratable):
             p_MEMID=self.memory,
             p_ABITS=self.addr.nbits,
             p_WIDTH=self.data.nbits,
-            p_CLK_ENABLE=self.synchronous,
+            p_CLK_ENABLE=self.domain != "comb",
             p_CLK_POLARITY=1,
             p_TRANSPARENT=self.transparent,
-            i_CLK=ClockSignal(self.domain) if self.synchronous else Const(0),
+            i_CLK=ClockSignal(self.domain) if self.domain != "comb" else Const(0),
             i_EN=self.en,
             i_ADDR=self.addr,
             o_DATA=self.data,
         )
-        if self.synchronous and not self.transparent:
+        if self.domain == "comb":
+            # Asynchronous port
+            f.add_statements(self.data.eq(self.memory._array[self.addr]))
+            f.add_driver(self.data)
+        elif not self.transparent:
             # Synchronous, read-before-write port
             f.add_statements(
                 Switch(self.en, {
@@ -113,7 +116,7 @@ class ReadPort(Elaboratable):
                 })
             )
             f.add_driver(self.data, self.domain)
-        elif self.synchronous:
+        else:
             # Synchronous, write-through port
             # This model is a bit unconventional. We model transparent ports as asynchronous ports
             # that are latched when the clock is high. This isn't exactly correct, but it is very
@@ -133,10 +136,6 @@ class ReadPort(Elaboratable):
                 }),
             )
             f.add_driver(latch_addr, self.domain)
-            f.add_driver(self.data)
-        else:
-            # Asynchronous port
-            f.add_statements(self.data.eq(self.memory._array[self.addr]))
             f.add_driver(self.data)
         return f
 

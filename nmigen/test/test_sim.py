@@ -431,7 +431,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         self.m = Module()
         self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
         self.m.submodules.rdport = self.rdport = \
-            self.memory.read_port(synchronous=rd_synchronous, transparent=rd_transparent)
+            self.memory.read_port(domain="sync" if rd_synchronous else "comb",
+                                  transparent=rd_transparent)
         self.m.submodules.wrport = self.wrport = \
             self.memory.write_port(granularity=wr_granularity)
 

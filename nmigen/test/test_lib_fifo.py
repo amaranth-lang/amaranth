@@ -59,7 +59,7 @@ class FIFOModel(Elaboratable, FIFOInterface):
 
         storage = Memory(self.width, self.depth)
         wrport  = m.submodules.wrport = storage.write_port(domain=self.wdomain)
-        rdport  = m.submodules.rdport = storage.read_port (synchronous=False)
+        rdport  = m.submodules.rdport = storage.read_port (domain="comb")
 
         produce = Signal(max=self.depth)
         consume = Signal(max=self.depth)

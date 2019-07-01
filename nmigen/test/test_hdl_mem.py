@@ -45,7 +45,6 @@ class MemoryTestCase(FHDLTestCase):
         rdport = mem.read_port()
         self.assertEqual(rdport.memory, mem)
         self.assertEqual(rdport.domain, "sync")
-        self.assertEqual(rdport.synchronous, True)
         self.assertEqual(rdport.transparent, True)
         self.assertEqual(len(rdport.addr), 2)
         self.assertEqual(len(rdport.data), 8)
@@ -58,17 +57,15 @@ class MemoryTestCase(FHDLTestCase):
         rdport = mem.read_port(transparent=False)
         self.assertEqual(rdport.memory, mem)
         self.assertEqual(rdport.domain, "sync")
-        self.assertEqual(rdport.synchronous, True)
         self.assertEqual(rdport.transparent, False)
         self.assertEqual(len(rdport.en), 1)
         self.assertIsInstance(rdport.en, Signal)
 
     def test_read_port_asynchronous(self):
         mem    = Memory(width=8, depth=4)
-        rdport = mem.read_port(synchronous=False)
+        rdport = mem.read_port(domain="comb")
         self.assertEqual(rdport.memory, mem)
-        self.assertEqual(rdport.domain, "sync")
-        self.assertEqual(rdport.synchronous, False)
+        self.assertEqual(rdport.domain, "comb")
         self.assertEqual(rdport.transparent, True)
         self.assertEqual(len(rdport.en), 1)
         self.assertIsInstance(rdport.en, Const)
@@ -78,7 +75,7 @@ class MemoryTestCase(FHDLTestCase):
         mem = Memory(width=8, depth=4)
         with self.assertRaises(ValueError,
                 msg="Read port cannot be simultaneously asynchronous and non-transparent"):
-            mem.read_port(synchronous=False, transparent=False)
+            mem.read_port(domain="comb", transparent=False)
 
     def test_write_port(self):
         mem    = Memory(width=8, depth=4)

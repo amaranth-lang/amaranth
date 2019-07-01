@@ -151,7 +151,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         storage = Memory(self.width, self.depth)
         wrport  = m.submodules.wrport = storage.write_port()
         rdport  = m.submodules.rdport = storage.read_port(
-            synchronous=not self.fwft, transparent=self.fwft)
+            domain="comb" if self.fwft else "sync", transparent=self.fwft)
         produce = Signal(max=self.depth)
         consume = Signal(max=self.depth)
 
