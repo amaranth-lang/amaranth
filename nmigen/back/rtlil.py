@@ -658,7 +658,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
                 tests = ["{:0{}b}".format(v, bits) for v in legalize.branches]
                 tests[-1] = "-" * bits
                 for branch, test in zip(legalize.branches, tests):
-                    with self.case(switch, test):
+                    with self.case(switch, (test,)):
                         branch_value = ast.Const(branch, (bits, sign))
                         with self.state.expand_to(legalize.value, branch_value):
                             super().on_statement(stmt)
