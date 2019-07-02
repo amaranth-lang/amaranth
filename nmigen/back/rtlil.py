@@ -270,7 +270,7 @@ class _ValueCompilerState:
                                     port_id=port_id, port_kind=port_kind,
                                     src=src(signal.src_loc))
         if signal in self.driven and self.driven[signal]:
-            wire_next = self.rtlil.wire(width=signal.nbits, name="$next" + wire_curr,
+            wire_next = self.rtlil.wire(width=signal.nbits, name=wire_curr + "$next",
                                         src=src(signal.src_loc))
         else:
             wire_next = None
@@ -695,7 +695,7 @@ def convert_fragment(builder, fragment, hierarchy):
         verilog_trigger_sync_emitted = False
 
         # Register all signals driven in the current fragment. This must be done first, as it
-        # affects further codegen; e.g. whether $next\sig signals will be generated and used.
+        # affects further codegen; e.g. whether \sig$next signals will be generated and used.
         for domain, signal in fragment.iter_drivers():
             compiler_state.add_driven(signal, sync=domain is not None)
 
@@ -781,8 +781,8 @@ def convert_fragment(builder, fragment, hierarchy):
 
             with module.process(name="$group_{}".format(group)) as process:
                 with process.case() as case:
-                    # For every signal in comb domain, assign $next\sig to the reset value.
-                    # For every signal in sync domains, assign $next\sig to the current
+                    # For every signal in comb domain, assign \sig$next to the reset value.
+                    # For every signal in sync domains, assign \sig$next to the current
                     # value (\sig).
                     for domain, signal in fragment.iter_drivers():
                         if signal not in group_signals:
@@ -824,7 +824,7 @@ def convert_fragment(builder, fragment, hierarchy):
                         sync.update(verilog_trigger, "1'0")
                         verilog_trigger_sync_emitted = True
 
-                # For every signal in every sync domain, assign \sig to $next\sig. The sensitivity
+                # For every signal in every sync domain, assign \sig to \sig$next. The sensitivity
                 # list, however, differs between domains: for domains with sync reset, it is
                 # `posedge clk`, for sync domains with async reset it is `posedge clk or
                 # posedge rst`.
