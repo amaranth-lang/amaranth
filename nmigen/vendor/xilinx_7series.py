@@ -62,6 +62,11 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             {% endfor %}
             add_files {{name}}.v
             read_xdc {{name}}.xdc
+            {% for file in platform.extra_files %}
+                {% if file.endswith("xdc") -%}
+                    read_xdc {{file}}
+                {% endif %}
+            {% endfor %}
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_design -top {{name}} -part {{platform.device}}{{platform.package}}-{{platform.speed}}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
