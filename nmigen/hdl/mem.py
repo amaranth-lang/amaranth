@@ -27,7 +27,8 @@ class Memory:
         self._array = Array()
         if simulate:
             for addr in range(self.depth):
-                self._array.append(Signal(self.width, name="{}({})".format(name, addr)))
+                self._array.append(Signal(self.width, name="{}({})"
+                                          .format(name or "memory", addr)))
 
         self.init = init
 
