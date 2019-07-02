@@ -3,6 +3,7 @@ import builtins
 import traceback
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
+from enum import Enum
 
 from .. import tracer
 from ..tools import *
@@ -575,9 +576,11 @@ class Signal(Value, DUID):
         defaults to 0) and ``max`` (exclusive, defaults to 2).
     attrs : dict
         Dictionary of synthesis attributes.
-    decoder : function
+    decoder : function or Enum
         A function converting integer signal values to human-readable strings (e.g. FSM state
-        names).
+        names). If an ``Enum`` subclass is passed, it is concisely decoded using format string
+        ``"{0.name:}/{0.value:}"``, or a number if the signal value is not a member of
+        the enumeration.
 
     Attributes
     ----------
@@ -627,7 +630,15 @@ class Signal(Value, DUID):
         self.reset_less = bool(reset_less)
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
-        self.decoder = decoder
+        if isinstance(decoder, type) and issubclass(decoder, Enum):
+            def enum_decoder(value):
+                try:
+                    return "{0.name:}/{0.value:}".format(decoder(value))
+                except ValueError:
+                    return str(value)
+            self.decoder = enum_decoder
+        else:
+            self.decoder = decoder
 
     @classmethod
     def like(cls, other, name=None, name_suffix=None, src_loc_at=0, **kwargs):

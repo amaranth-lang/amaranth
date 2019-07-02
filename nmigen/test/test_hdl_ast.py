@@ -1,3 +1,5 @@
+from enum import Enum
+
 from ..hdl.ast import *
 from .tools import *
 
@@ -485,6 +487,14 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s7.name, "$like")
         s8 = Signal.like(s1, name_suffix="_ff")
         self.assertEqual(s8.name, "s1_ff")
+
+    def test_decoder(self):
+        class Color(Enum):
+            RED  = 1
+            BLUE = 2
+        s = Signal(decoder=Color)
+        self.assertEqual(s.decoder(1), "RED/1")
+        self.assertEqual(s.decoder(3), "3")
 
 
 class ClockSignalTestCase(FHDLTestCase):
