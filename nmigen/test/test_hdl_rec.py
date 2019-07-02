@@ -129,6 +129,16 @@ class RecordTestCase(FHDLTestCase):
         self.assertIs(r.stb, ns)
         self.assertIs(r.info, nr)
 
+    def test_like(self):
+        r1 = Record([("a", 1), ("b", 2)])
+        r2 = Record.like(r1)
+        self.assertEqual(r1.layout, r2.layout)
+        self.assertEqual(r2.name, "r2")
+        r3 = Record.like(r1, name="foo")
+        self.assertEqual(r3.name, "foo")
+        r4 = Record.like(r1, name_suffix="foo")
+        self.assertEqual(r4.name, "r1foo")
+
 
 class ConnectTestCase(FHDLTestCase):
     def setUp_flat(self):

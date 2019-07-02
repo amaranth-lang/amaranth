@@ -69,6 +69,16 @@ class Layout:
 
 # Unlike most Values, Record *can* be subclassed.
 class Record(Value):
+    @classmethod
+    def like(cls, other, name=None, name_suffix=None, src_loc_at=0):
+        if name is not None:
+            new_name = str(name)
+        elif name_suffix is not None:
+            new_name = other.name + str(name_suffix)
+        else:
+            new_name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
+        return cls(other.layout, new_name)
+
     def __init__(self, layout, name=None, *, fields=None):
         if name is None:
             name = tracer.get_var_name(default=None)
