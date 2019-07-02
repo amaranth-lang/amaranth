@@ -281,3 +281,6 @@ class TemplatedPlatform(Platform):
         for filename, content in self.extra_files.items():
             plan.add_file(filename, content)
         return plan
+
+    def iter_extra_files(self, *endswith):
+        return (f for f in self.extra_files if f.endswith(endswith))
