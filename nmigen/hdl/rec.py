@@ -56,8 +56,15 @@ class Layout:
                 shape = (shape, False)
             self.fields[name] = (shape, direction)
 
-    def __getitem__(self, name):
-        return self.fields[name]
+    def __getitem__(self, item):
+        if isinstance(item, tuple):
+            return Layout([
+                (name, shape, dir)
+                for (name, (shape, dir)) in self.fields.items()
+                if name in item
+            ])
+
+        return self.fields[item]
 
     def __iter__(self):
         for name, (shape, dir) in self.fields.items():
@@ -121,6 +128,12 @@ class Record(Value):
                     reference = "Record '{}'".format(self.name)
                 raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
                                      .format(reference, item, ", ".join(self.fields))) from None
+        elif isinstance(item, tuple):
+            return Record(self.layout[item], fields={
+                field_name: field_value
+                for field_name, field_value in self.fields.items()
+                if field_name in item
+            })
         else:
             return super().__getitem__(item)
 

@@ -25,6 +25,18 @@ class LayoutTestCase(FHDLTestCase):
         self.assertEqual(sublayout["a"], ((1, False), DIR_NONE))
         self.assertEqual(sublayout["b"], ((1, False), DIR_NONE))
 
+    def test_slice_tuple(self):
+        layout = Layout.wrap([
+            ("a", 1),
+            ("b", 2),
+            ("c", 3)
+        ])
+        expect = Layout.wrap([
+            ("a", 1),
+            ("c", 3)
+        ])
+        self.assertEqual(layout["a", "c"], expect)
+
     def test_wrong_field(self):
         with self.assertRaises(TypeError,
                 msg="Field (1,) has invalid layout: should be either (name, shape) or "
@@ -138,6 +150,13 @@ class RecordTestCase(FHDLTestCase):
         self.assertEqual(r3.name, "foo")
         r4 = Record.like(r1, name_suffix="foo")
         self.assertEqual(r4.name, "r1foo")
+
+    def test_slice_tuple(self):
+        r1 = Record([("a", 1), ("b", 2), ("c", 3)])
+        r2 = r1["a", "c"]
+        self.assertEqual(r2.layout, Layout([("a", 1), ("c", 3)]))
+        self.assertIs(r2.a, r1.a)
+        self.assertIs(r2.c, r1.c)
 
 
 class ConnectTestCase(FHDLTestCase):
