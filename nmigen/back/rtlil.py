@@ -269,7 +269,7 @@ class _ValueCompilerState:
         wire_curr = self.rtlil.wire(width=signal.nbits, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
                                     src=src(signal.src_loc))
-        if signal in self.driven:
+        if signal in self.driven and self.driven[signal]:
             wire_next = self.rtlil.wire(width=signal.nbits, name="$next" + wire_curr,
                                         src=src(signal.src_loc))
         else:
@@ -559,10 +559,10 @@ class _LHSValueCompiler(_ValueCompiler):
         return self(value)
 
     def on_Signal(self, value):
-        wire_curr, wire_next = self.s.resolve(value)
-        if wire_next is None:
+        if value not in self.s.driven:
             raise ValueError("No LHS wire for non-driven signal {}".format(repr(value)))
-        return wire_next
+        wire_curr, wire_next = self.s.resolve(value)
+        return wire_next or wire_curr
 
     def _prepare_value_for_Slice(self, value):
         assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat, rec.Record))
@@ -824,23 +824,24 @@ def convert_fragment(builder, fragment, hierarchy):
                         sync.update(verilog_trigger, "1'0")
                         verilog_trigger_sync_emitted = True
 
-                # For every signal in every domain, assign \sig to $next\sig. The sensitivity list,
-                # however, differs between domains: for comb domains, it is `always`, for sync
-                # domains with sync reset, it is `posedge clk`, for sync domains with async reset
-                # it is `posedge clk or posedge rst`.
+                # For every signal in every sync domain, assign \sig to $next\sig. The sensitivity
+                # list, however, differs between domains: for domains with sync reset, it is
+                # `posedge clk`, for sync domains with async reset it is `posedge clk or
+                # posedge rst`.
                 for domain, signals in fragment.drivers.items():
+                    if domain is None:
+                        continue
+
                     signals = signals & group_signals
                     if not signals:
                         continue
 
+                    cd = fragment.domains[domain]
+
                     triggers = []
-                    if domain is None:
-                        triggers.append(("always",))
-                    else:
-                        cd = fragment.domains[domain]
-                        triggers.append(("posedge", compiler_state.resolve_curr(cd.clk)))
-                        if cd.async_reset:
-                            triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
+                    triggers.append(("posedge", compiler_state.resolve_curr(cd.clk)))
+                    if cd.async_reset:
+                        triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
 
                     for trigger in triggers:
                         with process.sync(*trigger) as sync:
