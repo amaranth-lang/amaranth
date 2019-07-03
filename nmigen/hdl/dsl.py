@@ -248,7 +248,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("FSM", context=None)
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
-            "signal":   Signal(name="{}_state".format(name)),
+            "signal":   Signal(name="{}_state".format(name), src_loc_at=2),
             "reset":    reset,
             "domain":   domain,
             "encoding": OrderedDict(),
