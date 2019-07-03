@@ -65,7 +65,7 @@ class Tristate(Elaboratable):
 
 class _MemoryPort(CompatModule):
     def __init__(self, adr, dat_r, we=None, dat_w=None, async_read=False, re=None,
-                 we_granularity=0, mode=WRITE_FIRST, clock_domain="sys"):
+                 we_granularity=0, mode=WRITE_FIRST, clock_domain="sync"):
         self.adr = adr
         self.dat_r = dat_r
         self.we = we
@@ -86,7 +86,7 @@ def elaborate(self, platform):
 class CompatMemory(NativeMemory):
     @deprecated("instead of `get_port()`, use `read_port()` and `write_port()`")
     def get_port(self, write_capable=False, async_read=False, has_re=False, we_granularity=0,
-                 mode=WRITE_FIRST, clock_domain="sys"):
+                 mode=WRITE_FIRST, clock_domain="sync"):
         if we_granularity >= self.width:
             warnings.warn("do not specify `we_granularity` greater than memory width, as it "
                           "is a hard error in non-compatibility mode",
