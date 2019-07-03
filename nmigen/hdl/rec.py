@@ -110,9 +110,11 @@ class Record(Value):
                 self.fields[field_name] = field
             else:
                 if isinstance(field_shape, Layout):
-                    self.fields[field_name] = Record(field_shape, name=concat(name, field_name))
+                    self.fields[field_name] = Record(field_shape, name=concat(name, field_name),
+                                                     src_loc_at=src_loc_at + 1)
                 else:
-                    self.fields[field_name] = Signal(field_shape, name=concat(name, field_name))
+                    self.fields[field_name] = Signal(field_shape, name=concat(name, field_name),
+                                                     src_loc_at=src_loc_at + 1)
 
     def __getattr__(self, name):
         return self[name]
