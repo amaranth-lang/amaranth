@@ -248,9 +248,9 @@ class LatticeICE40Platform(TemplatedPlatform):
                 io_args.append(("i", "OUTPUT_ENABLE", pin.oe))
 
             if is_global_input:
-                m.submodules += Instance("SB_GB_IO", *io_args)
+                m.submodules[pin.name] = Instance("SB_GB_IO", *io_args)
             else:
-                m.submodules += Instance("SB_IO", *io_args)
+                m.submodules[pin.name] = Instance("SB_IO", *io_args)
 
     def get_input(self, pin, port, attrs, invert):
         self._check_feature("single-ended input", pin, attrs,

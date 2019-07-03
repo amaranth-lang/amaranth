@@ -261,7 +261,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules += Instance("IB",
+            m.submodules[pin.name] = Instance("IB",
                 i_I=port[bit],
                 o_O=i[bit]
             )
@@ -273,7 +273,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules += Instance("OB",
+            m.submodules[pin.name] = Instance("OB",
                 i_I=o[bit],
                 o_O=port[bit]
             )
@@ -285,7 +285,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules += Instance("OBZ",
+            m.submodules[pin.name] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port[bit]
@@ -299,7 +299,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
                                                o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules += Instance("BB",
+            m.submodules[pin.name] = Instance("BB",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -313,7 +313,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules += Instance("IB",
+            m.submodules[pin.name] = Instance("IB",
                 i_I=p_port[bit],
                 o_O=i[bit]
             )
@@ -325,7 +325,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules += Instance("OB",
+            m.submodules[pin.name] = Instance("OB",
                 i_I=o[bit],
                 o_O=p_port[bit],
             )
@@ -337,7 +337,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules += Instance("OBZ",
+            m.submodules[pin.name] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
                 o_O=p_port[bit],
@@ -351,7 +351,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
                                                o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules += Instance("BB",
+            m.submodules[pin.name] = Instance("BB",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
