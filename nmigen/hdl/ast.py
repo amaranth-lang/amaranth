@@ -178,7 +178,7 @@ class Value(metaclass=ABCMeta):
         Assign
             Assignment statement that can be used in combinatorial or synchronous context.
         """
-        return Assign(self, value)
+        return Assign(self, value, src_loc_at=1)
 
     @abstractmethod
     def shape(self):
@@ -975,7 +975,9 @@ class Statement:
 
 @final
 class Assign(Statement):
-    def __init__(self, lhs, rhs):
+    def __init__(self, lhs, rhs, src_loc_at=0):
+        self.src_loc = tracer.get_src_loc(src_loc_at)
+
         self.lhs = Value.wrap(lhs)
         self.rhs = Value.wrap(rhs)
 
@@ -1027,7 +1029,9 @@ class Assume(Property):
 
 # @final
 class Switch(Statement):
-    def __init__(self, test, cases):
+    def __init__(self, test, cases, src_loc_at=0):
+        self.src_loc = tracer.get_src_loc(src_loc_at)
+
         self.test  = Value.wrap(test)
         self.cases = OrderedDict()
         for keys, stmts in cases.items():

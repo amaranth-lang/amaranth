@@ -211,8 +211,8 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt.src_loc = stmt.src_loc
         return new_stmt
 
-    def __call__(self, value):
-        return self.on_statement(value)
+    def __call__(self, stmt):
+        return self.on_statement(stmt)
 
 
 class StatementTransformer(StatementVisitor):
