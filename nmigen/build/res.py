@@ -18,6 +18,7 @@ class ResourceManager:
     def __init__(self, resources, connectors):
         self.resources  = OrderedDict()
         self._requested = OrderedDict()
+        self._phys_reqd = OrderedDict()
 
         self.connectors = OrderedDict()
         self._conn_pins = OrderedDict()
@@ -115,14 +116,25 @@ class ResourceManager:
             elif isinstance(resource.ios[0], (Pins, DiffPairs)):
                 phys = resource.ios[0]
                 if isinstance(phys, Pins):
+                    phys_names = phys.names
                     port = Record([("io", len(phys))], name=name)
                 if isinstance(phys, DiffPairs):
+                    phys_names = phys.p.names + phys.n.names
                     port = Record([("p", len(phys)),
                                    ("n", len(phys))], name=name)
                 if dir == "-":
                     pin = None
                 else:
                     pin = Pin(len(phys), dir, xdr, name=name)
+
+                for phys_name in phys_names:
+                    if phys_name in self._phys_reqd:
+                        raise ResourceError("Resource component {} uses physical pin {}, but it "
+                                            "is already used by resource component {} that was "
+                                            "requested earlier"
+                                            .format(name, phys_name, self._phys_reqd[phys_name]))
+                    self._phys_reqd[phys_name] = name
+
                 self._ports.append((resource, pin, port, attrs))
 
                 if pin is not None and resource.clock is not None:

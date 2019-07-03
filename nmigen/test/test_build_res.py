@@ -238,6 +238,16 @@ class ResourceManagerTestCase(FHDLTestCase):
             self.cm.request("user_led", 0)
             self.cm.request("user_led", 0)
 
+    def test_wrong_request_duplicate_physical(self):
+        self.cm.add_resources([
+            Resource("clk20", 0, Pins("H1", dir="i")),
+        ])
+        self.cm.request("clk100", 0)
+        with self.assertRaises(ResourceError,
+                msg="Resource component clk20_0 uses physical pin H1, but it is already "
+                    "used by resource component clk100_0 that was requested earlier"):
+            self.cm.request("clk20", 0)
+
     def test_wrong_request_with_dir(self):
         with self.assertRaises(TypeError,
                 msg="Direction must be one of \"i\", \"o\", \"oe\", \"io\", or \"-\", "
