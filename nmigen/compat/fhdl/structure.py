@@ -55,21 +55,21 @@ class If(ast.Switch):
         cond = Value.wrap(cond)
         if len(cond) != 1:
             cond = cond.bool()
-        super().__init__(cond, {"1": ast.Statement.wrap(stmts)})
+        super().__init__(cond, {("1",): ast.Statement.wrap(stmts)})
 
     @deprecated("instead of `.Elif(cond, ...)`, use `with m.Elif(cond): ...`")
     def Elif(self, cond, *stmts):
         cond = Value.wrap(cond)
         if len(cond) != 1:
             cond = cond.bool()
-        self.cases = OrderedDict(("-" + k, v) for k, v in self.cases.items())
-        self.cases["1" + "-" * len(self.test)] = ast.Statement.wrap(stmts)
+        self.cases = OrderedDict((("-" + k,), v) for (k,), v in self.cases.items())
+        self.cases[("1" + "-" * len(self.test),)] = ast.Statement.wrap(stmts)
         self.test = Cat(self.test, cond)
         return self
 
     @deprecated("instead of `.Else(...)`, use `with m.Else(): ...`")
     def Else(self, *stmts):
-        self.cases["-" * len(self.test)] = ast.Statement.wrap(stmts)
+        self.cases[()] = ast.Statement.wrap(stmts)
         return self
 
 
