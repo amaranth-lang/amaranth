@@ -259,7 +259,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        t, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
+        i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(port)):
             m.submodules += Instance("IB",
                 i_I=port[bit],
