@@ -390,7 +390,7 @@ def Mux(sel, val1, val0):
     Value, out
         Output ``Value``. If ``sel`` is asserted, the Mux returns ``val1``, else ``val0``.
     """
-    return Operator("m", [sel, val1, val0], src_loc_at=1)
+    return Operator("m", [sel, val1, val0])
 
 
 @final
