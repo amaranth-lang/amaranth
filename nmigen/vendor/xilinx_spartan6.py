@@ -93,35 +93,35 @@ class XilinxSpartan6Platform(TemplatedPlatform):
     command_templates = [
         r"""
         {{get_tool("xst")}}
-            {{get_override("xst_opts")|join(" ")}}
+            {{get_override("xst_opts")|options}}
             -ifn {{name}}.xst
         """,
         r"""
         {{get_tool("ngdbuild")}}
             {{quiet("-quiet")}}
             {{verbose("-verbose")}}
-            {{get_override("ngdbuild_opts")|join(" ")}}
+            {{get_override("ngdbuild_opts")|options}}
             -uc {{name}}.ucf
             {{name}}.ngc
         """,
         r"""
         {{get_tool("map")}}
             {{verbose("-detail")}}
-            {{get_override("map_opts")|default(["-w"])|join(" ")}}
+            {{get_override("map_opts")|default(["-w"])|options}}
             -o {{name}}_map.ncd
             {{name}}.ngd
             {{name}}.pcf
         """,
         r"""
         {{get_tool("par")}}
-            {{get_override("par_opts")|default(["-w"])|join(" ")}}
+            {{get_override("par_opts")|default(["-w"])|options}}
             {{name}}_map.ncd
             {{name}}_par.ncd
             {{name}}.pcf
         """,
         r"""
         {{get_tool("bitgen")}}
-            {{get_override("bitgen_opts")|default(["-w"])|join(" ")}}
+            {{get_override("bitgen_opts")|default(["-w"])|options}}
             {{name}}_par.ncd
             {{name}}.bit
         """

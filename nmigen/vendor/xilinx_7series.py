@@ -109,7 +109,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         r"""
         {{get_tool("vivado")}}
             {{verbose("-verbose")}}
-            {{get_override("vivado_opts")|join(" ")}}
+            {{get_override("vivado_opts")|options}}
             -mode batch
             -log {{name}}.log
             -source {{name}}.tcl

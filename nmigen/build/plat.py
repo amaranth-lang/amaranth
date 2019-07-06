@@ -243,6 +243,12 @@ class TemplatedPlatform(Platform):
             else:
                 return jinja2.Undefined(name=var)
 
+        def options(opts):
+            if isinstance(opts, str):
+                return opts
+            else:
+                return " ".join(opts)
+
         def verbose(arg):
             if "NMIGEN_verbose" in os.environ:
                 return arg
@@ -259,6 +265,7 @@ class TemplatedPlatform(Platform):
             try:
                 source   = textwrap.dedent(source).strip()
                 compiled = jinja2.Template(source, trim_blocks=True, lstrip_blocks=True)
+                compiled.environment.filters["options"] = options
             except jinja2.TemplateSyntaxError as e:
                 e.args = ("{} (at {}:{})".format(e.message, origin, e.lineno),)
                 raise
