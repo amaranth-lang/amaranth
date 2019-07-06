@@ -56,11 +56,13 @@ class BuildPlan:
 
 class BuildProducts:
     def __init__(self, root):
-        self._root = root
+        # We provide no guarantees that files will be available on the local filesystem (i.e. in
+        # any way other than through `products.get()`), so downstream code must never rely on this.
+        self.__root = root
 
     def get(self, filename, mode="b"):
         assert mode in "bt"
-        with open(os.path.join(self._root, filename), "r" + mode) as f:
+        with open(os.path.join(self.__root, filename), "r" + mode) as f:
             return f.read()
 
     @contextmanager
