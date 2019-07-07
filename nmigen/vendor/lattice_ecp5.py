@@ -14,6 +14,9 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``nextpnr-ecp5``
         * ``ecppack``
 
+    The environment is populated by running the script specified in the environment variable
+    ``NMIGEN_Trellis_env``, if present.
+
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
         * ``read_verilog_opts``: adds options for ``read_verilog`` Yosys command.
@@ -32,6 +35,8 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream.
         * ``{{name}}.svf``: JTAG programming vector.
     """
+
+    toolchain = "Trellis"
 
     device  = abstractproperty()
     package = abstractproperty()

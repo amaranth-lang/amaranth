@@ -14,6 +14,9 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     Required tools:
         * ``vivado``
 
+    The environment is populated by running the script specified in the environment variable
+    ``NMIGEN_Vivado_env``, if present.
+
     Available overrides:
         * ``script_after_read``: inserts commands after ``read_xdc`` in Tcl script.
         * ``script_after_synth``: inserts commands after ``synth_design`` in Tcl script.
@@ -41,6 +44,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         * ``{{name}}_route.dcp``: Vivado design checkpoint.
         * ``{{name}}.bit``: binary bitstream.
     """
+
+    toolchain = "Vivado"
 
     device  = abstractproperty()
     package = abstractproperty()

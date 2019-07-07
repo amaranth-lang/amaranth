@@ -19,6 +19,9 @@ class XilinxSpartan6Platform(TemplatedPlatform):
             * ``par``
             * ``bitgen``
 
+    The environment is populated by running the script specified in the environment variable
+    ``NMIGEN_ISE_env``, if present.
+
     Available overrides:
         * ``script_after_run``: inserts commands after ``run`` in XST script.
         * ``add_constraints``: inserts commands in UCF file.
@@ -44,6 +47,8 @@ class XilinxSpartan6Platform(TemplatedPlatform):
         * ``{{name}}.bgn``: BitGen log.
         * ``{{name}}.bit``: binary bitstream.
     """
+
+    toolchain = "ISE"
 
     device  = abstractproperty()
     package = abstractproperty()

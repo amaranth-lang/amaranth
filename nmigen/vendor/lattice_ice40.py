@@ -14,6 +14,9 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``nextpnr-ice40``
         * ``icepack``
 
+    The environment is populated by running the script specified in the environment variable
+    ``NMIGEN_IceStorm_env``, if present.
+
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
         * ``read_verilog_opts``: adds options for ``read_verilog`` Yosys command.
@@ -31,6 +34,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``{{name}}.asc``: ASCII bitstream.
         * ``{{name}}.bin``: binary bitstream.
     """
+
+    toolchain = "IceStorm"
 
     device  = abstractproperty()
     package = abstractproperty()
