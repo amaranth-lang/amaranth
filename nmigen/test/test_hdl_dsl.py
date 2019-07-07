@@ -449,6 +449,14 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    def test_FSM_empty(self):
+        m = Module()
+        with m.FSM():
+            pass
+        self.assertRepr(m._statements, """
+        ()
+        """)
+
     def test_FSM_wrong_redefined(self):
         m = Module()
         with m.FSM():

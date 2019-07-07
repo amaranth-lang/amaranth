@@ -337,6 +337,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if name == "FSM":
             fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
                 data["signal"], data["reset"], data["encoding"], data["decoding"], data["states"]
+            if not fsm_states:
+                return
             fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
             if fsm_reset is None:
                 fsm_signal.reset = fsm_encoding[next(iter(fsm_states))]
