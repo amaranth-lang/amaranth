@@ -30,8 +30,6 @@ class BuildPlan:
         forward slashes (``/``).
         """
         assert isinstance(filename, str) and filename not in self.files
-        # Just to make sure we don't accidentally overwrite anything.
-        assert not os.path.normpath(filename).startswith("..")
         self.files[filename] = content
 
     def archive(self, file):
@@ -60,6 +58,9 @@ class BuildPlan:
             os.chdir(root)
 
             for filename, content in self.files.items():
+                filename = os.path.normpath(filename)
+                # Just to make sure we don't accidentally overwrite anything outside of build root.
+                assert not filename.startswith("..")
                 dirname = os.path.dirname(filename)
                 if dirname:
                     os.makedirs(dirname, exist_ok=True)
