@@ -133,7 +133,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 raise SyntaxError("{} is not permitted outside of {}"
                                   .format(construct, context))
             else:
-                raise SyntaxError("{} is not permitted inside of {}"
+                raise SyntaxError("{} is not permitted directly inside of {}"
                                   .format(construct, self._ctrl_context))
 
     def _get_ctrl(self, name):
