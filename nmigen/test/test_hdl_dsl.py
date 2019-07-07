@@ -345,7 +345,8 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.s1):
             with self.assertRaises(SyntaxError,
-                    msg="If is not permitted directly inside of Switch"):
+                    msg="If is not permitted directly inside of Switch; "
+                        "it is permitted inside of Switch Case"):
                 with m.If(self.s2):
                     pass
 
@@ -486,7 +487,8 @@ class DSLTestCase(FHDLTestCase):
             with m.State("FOO"):
                 pass
             with self.assertRaises(SyntaxError,
-                    msg="If is not permitted directly inside of FSM"):
+                    msg="If is not permitted directly inside of FSM; "
+                        "it is permitted inside of FSM State"):
                 with m.If(self.s2):
                     pass
 

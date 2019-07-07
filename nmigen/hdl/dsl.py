@@ -133,8 +133,14 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 raise SyntaxError("{} is not permitted outside of {}"
                                   .format(construct, context))
             else:
-                raise SyntaxError("{} is not permitted directly inside of {}"
-                                  .format(construct, self._ctrl_context))
+                if self._ctrl_context == "Switch":
+                    secondary_context = "Case"
+                if self._ctrl_context == "FSM":
+                    secondary_context = "State"
+                raise SyntaxError("{} is not permitted directly inside of {}; it is permitted "
+                                  "inside of {} {}"
+                                  .format(construct, self._ctrl_context,
+                                          self._ctrl_context, secondary_context))
 
     def _get_ctrl(self, name):
         if self._ctrl_stack:
