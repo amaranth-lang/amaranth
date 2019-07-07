@@ -192,6 +192,9 @@ class LatticeECP5Platform(TemplatedPlatform):
                     m.submodules += Instance("LUT4",
                         p_INIT=0x5555 if invert else 0xaaaa,
                         i_A=a[bit],
+                        i_B=Const(0),
+                        i_C=Const(0),
+                        i_D=Const(0),
                         o_Z=z[bit]
                     )
                 return a
@@ -205,6 +208,9 @@ class LatticeECP5Platform(TemplatedPlatform):
                     m.submodules += Instance("LUT4",
                         p_INIT=0x5555 if invert else 0xaaaa,
                         i_A=a[bit],
+                        i_B=Const(0),
+                        i_C=Const(0),
+                        i_D=Const(0),
                         o_Z=z[bit]
                     )
                 return z
