@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from contextlib import contextmanager
+from abc import ABCMeta, abstractmethod
 import os
 import sys
 import subprocess
@@ -7,21 +8,52 @@ import tempfile
 import zipfile
 
 
-__all__ = ["BuildPlan", "BuildProducts"]
+__all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts"]
 
 
 class BuildPlan:
     def __init__(self, script):
+        """A build plan.
+
+        Parameters
+        ----------
+        script : str
+            The base name (without extension) of the script that will be executed.
+        """
         self.script = script
         self.files  = OrderedDict()
 
     def add_file(self, filename, content):
+        """
+        Add ``content``, which can be a :class:`str`` or :class:`bytes`, to the build plan
+        as ``filename``. The file name can be a relative path with directories separated by
+        forward slashes (``/``).
+        """
         assert isinstance(filename, str) and filename not in self.files
         # Just to make sure we don't accidentally overwrite anything.
         assert not os.path.normpath(filename).startswith("..")
         self.files[filename] = content
 
-    def execute(self, root="build", run_script=True):
+    def archive(self, file):
+        """
+        Archive files from the build plan into ``file``, which can be either a filename, or
+        a file-like object. The produced archive is deterministic: exact same files will
+        always produce exact same archive.
+        """
+        with zipfile.ZipFile(file, "w") as archive:
+            # Write archive members in deterministic order and with deterministic timestamp.
+            for filename in sorted(self.files):
+                archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
+
+    def execute_local(self, root="build", run_script=True):
+        """
+        Execute build plan using the local strategy. Files from the build plan are placed in
+        the build root directory ``root``, and, if ``run_script`` is ``True``, the script
+        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere) is
+        executed in the build root.
+
+        Returns :class:`LocalBuildProducts`.
+        """
         os.makedirs(root, exist_ok=True)
         cwd = os.getcwd()
         try:
@@ -38,35 +70,43 @@ class BuildPlan:
 
             if run_script:
                 if sys.platform.startswith("win32"):
-                    subprocess.run(["cmd", "/c", "{}.bat".format(self.script)], check=True)
+                    subprocess.check_call(["cmd", "/c", "{}.bat".format(self.script)])
                 else:
-                    subprocess.run(["sh", "{}.sh".format(self.script)], check=True)
+                    subprocess.check_call(["sh", "{}.sh".format(self.script)])
 
-                return BuildProducts(os.getcwd())
+                return LocalBuildProducts(os.getcwd())
 
         finally:
             os.chdir(cwd)
 
-    def archive(self, file):
-        with zipfile.ZipFile(file, "w") as archive:
-            # Write archive members in deterministic order and with deterministic timestamp.
-            for filename in sorted(self.files):
-                archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
+    def execute(self):
+        """
+        Execute build plan using the default strategy. Use one of the ``execute_*`` methods
+        explicitly to have more control over the strategy.
+        """
+        return self.execute_local()
 
 
-class BuildProducts:
-    def __init__(self, root):
-        # We provide no guarantees that files will be available on the local filesystem (i.e. in
-        # any way other than through `products.get()`), so downstream code must never rely on this.
-        self.__root = root
-
+class BuildProducts(metaclass=ABCMeta):
+    @abstractmethod
     def get(self, filename, mode="b"):
-        assert mode in "bt"
-        with open(os.path.join(self.__root, filename), "r" + mode) as f:
-            return f.read()
+        """
+        Extract ``filename`` from build products, and return it as a :class:`bytes` (if ``mode``
+        is ``"b"``) or a :class:`str` (if ``mode`` is ``"t"``).
+        """
+        assert mode in ("b", "t")
 
     @contextmanager
     def extract(self, *filenames):
+        """
+        Extract ``filenames`` from build products, place them in an OS-specific temporary file
+        location, with the extension preserved, and delete them afterwards. This method is used
+        as a context manager, e.g.: ::
+
+            with products.extract("bitstream.bin", "programmer.cfg") \
+                    as bitstream_filename, config_filename:
+                subprocess.check_call(["program", "-c", config_filename, bitstream_filename])
+        """
         files = []
         try:
             for filename in filenames:
@@ -88,3 +128,16 @@ class BuildProducts:
         finally:
             for file in files:
                 os.unlink(file.name)
+
+
+class LocalBuildProducts(BuildProducts):
+    def __init__(self, root):
+        # We provide no guarantees that files will be available on the local filesystem (i.e. in
+        # any way other than through `products.get()`) in general, so downstream code must never
+        # rely on this, even when we happen to use a local build most of the time.
+        self.__root = root
+
+    def get(self, filename, mode="b"):
+        super().get(filename, mode)
+        with open(os.path.join(self.__root, filename), "r" + mode) as f:
+            return f.read()

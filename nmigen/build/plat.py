@@ -48,7 +48,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         if not do_build:
             return plan
 
-        products = plan.execute(build_dir)
+        products = plan.execute_local(build_dir)
         if not do_program:
             return products
 
