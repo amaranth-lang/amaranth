@@ -118,9 +118,15 @@ class AttrsTestCase(FHDLTestCase):
         self.assertEqual(a["FOO"], None)
         self.assertEqual(repr(a), "(attrs !FOO)")
 
+    def test_callable(self):
+        fn = lambda self: "FOO"
+        a = Attrs(FOO=fn)
+        self.assertEqual(a["FOO"], fn)
+        self.assertEqual(repr(a), "(attrs FOO={!r})".format(fn))
+
     def test_wrong_value(self):
         with self.assertRaises(TypeError,
-                msg="Attribute value must be None or str, not 1"):
+                msg="Value of attribute FOO must be None, str, or callable, not 1"):
             a = Attrs(FOO=1)
 
 

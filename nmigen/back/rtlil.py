@@ -127,7 +127,7 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
                 self._append("    parameter \\{} {}'{:b}\n",
                              param, len(value), value.value)
             else:
-                assert False
+                assert False, "Bad parameter {!r}".format(value)
         for port, wire in ports.items():
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
