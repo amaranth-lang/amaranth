@@ -207,7 +207,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_statements(stmt)
         else:
             new_stmt = self.on_unknown_statement(stmt)
-        if hasattr(stmt, "src_loc") and hasattr(new_stmt, "src_loc"):
+        if isinstance(new_stmt, Statement):
             new_stmt.src_loc = stmt.src_loc
         return new_stmt
 
