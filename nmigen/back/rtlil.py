@@ -772,8 +772,9 @@ def convert_fragment(builder, fragment, hierarchy):
 
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
-                for signal in value._rhs_signals():
-                    compiler_state.resolve_curr(signal, prefix=sub_name)
+                if not isinstance(subfragment, ir.Instance):
+                    for signal in value._rhs_signals():
+                        compiler_state.resolve_curr(signal, prefix=sub_name)
                 sub_ports[port] = rhs_compiler(value)
 
             module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params,
