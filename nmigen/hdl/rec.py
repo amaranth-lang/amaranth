@@ -77,16 +77,32 @@ class Layout:
 # Unlike most Values, Record *can* be subclassed.
 class Record(Value):
     @classmethod
-    def like(cls, other, name=None, name_suffix=None, src_loc_at=0):
+    def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0):
         if name is not None:
             new_name = str(name)
         elif name_suffix is not None:
             new_name = other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
-        return cls(other.layout, new_name)
 
-    def __init__(self, layout, name=None, src_loc_at=0, *, fields=None):
+        def concat(a, b):
+            if a is None:
+                return b
+            return "{}__{}".format(a, b)
+
+        fields = {}
+        for field_name in other.fields:
+            field = other[field_name]
+            if isinstance(field, Record):
+                fields[field_name] = Record.like(field, name=concat(new_name, field_name),
+                                                 src_loc_at=1 + src_loc_at)
+            else:
+                fields[field_name] = Signal.like(field, name=concat(new_name, field_name),
+                                                 src_loc_at=1 + src_loc_at)
+
+        return cls(other.layout, new_name, fields=fields, src_loc_at=1)
+
+    def __init__(self, layout, name=None, *, fields=None, src_loc_at=0):
         if name is None:
             name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
 
@@ -111,10 +127,10 @@ class Record(Value):
             else:
                 if isinstance(field_shape, Layout):
                     self.fields[field_name] = Record(field_shape, name=concat(name, field_name),
-                                                     src_loc_at=src_loc_at + 1)
+                                                     src_loc_at=1 + src_loc_at)
                 else:
                     self.fields[field_name] = Signal(field_shape, name=concat(name, field_name),
-                                                     src_loc_at=src_loc_at + 1)
+                                                     src_loc_at=1 + src_loc_at)
 
     def __getattr__(self, name):
         return self[name]

@@ -151,6 +151,20 @@ class RecordTestCase(FHDLTestCase):
         r4 = Record.like(r1, name_suffix="foo")
         self.assertEqual(r4.name, "r1foo")
 
+    def test_like_modifications(self):
+        r1 = Record([("a", 1), ("b", [("s", 1)])])
+        self.assertEqual(r1.a.name, "r1__a")
+        self.assertEqual(r1.b.name, "r1__b")
+        self.assertEqual(r1.b.s.name, "r1__b__s")
+        r1.a.reset = 1
+        r1.b.s.reset = 1
+        r2 = Record.like(r1)
+        self.assertEqual(r2.a.reset, 1)
+        self.assertEqual(r2.b.s.reset, 1)
+        self.assertEqual(r2.a.name, "r2__a")
+        self.assertEqual(r2.b.name, "r2__b")
+        self.assertEqual(r2.b.s.name, "r2__b__s")
+
     def test_slice_tuple(self):
         r1 = Record([("a", 1), ("b", 2), ("c", 3)])
         r2 = r1["a", "c"]
