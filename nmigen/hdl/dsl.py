@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import warnings
 
 from ..tools import flatten, bits_for, deprecated
+from .. import tracer
 from .ast import *
 from .ir import *
 from .xfrm import *
@@ -109,7 +110,7 @@ class FSM:
     def ongoing(self, name):
         if name not in self.encoding:
             self.encoding[name] = len(self.encoding)
-        return self.state == self.encoding[name]
+        return Operator("==", [self.state, self.encoding[name]], src_loc_at=0)
 
 
 class Module(_ModuleBuilderRoot, Elaboratable):
@@ -160,7 +161,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def If(self, cond):
         self._check_context("If", context=None)
-        if_data = self._set_ctrl("If", {"tests": [], "bodies": []})
+        if_data = self._set_ctrl("If", {
+            "tests":   [],
+            "bodies":  [],
+            "src_loc": tracer.get_src_loc(src_loc_at=1),
+        })
         try:
             _outer_case, self._statements = self._statements, []
             self.domain._depth += 1
@@ -209,7 +214,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def Switch(self, test):
         self._check_context("Switch", context=None)
-        switch_data = self._set_ctrl("Switch", {"test": Value.wrap(test), "cases": OrderedDict()})
+        switch_data = self._set_ctrl("Switch", {
+            "test":    Value.wrap(test),
+            "cases":   OrderedDict(),
+            "src_loc": tracer.get_src_loc(src_loc_at=1),
+        })
         try:
             self._ctrl_context = "Switch"
             self.domain._depth += 1
@@ -260,6 +269,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             "encoding": OrderedDict(),
             "decoding": OrderedDict(),
             "states":   OrderedDict(),
+            "src_loc":  tracer.get_src_loc(src_loc_at=1),
         })
         self._generated[name] = fsm = \
             FSM(fsm_data["signal"], fsm_data["encoding"], fsm_data["decoding"])
@@ -310,11 +320,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         raise SyntaxError("`m.next = <...>` is only permitted inside an FSM state")
 
     def _pop_ctrl(self):
-        # FIXME: the src_loc extraction unfortunately doesn't work very well here; src_loc_at=3 is
-        # correct, but the resulting src_loc points at the *last* line of the `with` block.
-        # Unfortunately, it is not clear how this can be fixed.
-
         name, data = self._ctrl_stack.pop()
+        src_loc = data["src_loc"]
 
         if name == "If":
             if_tests, if_bodies = data["tests"], data["bodies"]
@@ -333,12 +340,12 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     match = None
                 cases[match] = if_case
 
-            self._statements.append(Switch(Cat(tests), cases, src_loc_at=3))
+            self._statements.append(Switch(Cat(tests), cases, src_loc=src_loc))
 
         if name == "Switch":
             switch_test, switch_cases = data["test"], data["cases"]
 
-            self._statements.append(Switch(switch_test, switch_cases, src_loc_at=3))
+            self._statements.append(Switch(switch_test, switch_cases, src_loc=src_loc))
 
         if name == "FSM":
             fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
@@ -355,7 +362,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fsm_signal.decoder = lambda n: "{}/{}".format(fsm_decoding[n], n)
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items()),
-                src_loc_at=3))
+                src_loc=src_loc))
 
     def _add_statement(self, assigns, domain, depth, compat_mode=False):
         def domain_name(domain):

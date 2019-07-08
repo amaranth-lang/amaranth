@@ -1029,8 +1029,14 @@ class Assume(Property):
 
 # @final
 class Switch(Statement):
-    def __init__(self, test, cases, *, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
+    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0):
+        if src_loc is None:
+            super().__init__(src_loc_at=src_loc_at)
+        else:
+            # Switch is a bit special in terms of location tracking because it is usually created
+            # long after the control has left the statement that directly caused its creation.
+            self.src_loc = src_loc
+
         self.test  = Value.wrap(test)
         self.cases = OrderedDict()
         for keys, stmts in cases.items():

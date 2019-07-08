@@ -84,11 +84,11 @@ class ReadPort(Elaboratable):
         self.transparent = transparent
 
         self.addr = Signal(max=memory.depth,
-                           name="{}_r_addr".format(memory.name))
+                           name="{}_r_addr".format(memory.name), src_loc_at=2)
         self.data = Signal(memory.width,
-                           name="{}_r_data".format(memory.name))
+                           name="{}_r_data".format(memory.name), src_loc_at=2)
         if self.domain != "comb" and not transparent:
-            self.en = Signal(name="{}_r_en".format(memory.name))
+            self.en = Signal(name="{}_r_en".format(memory.name), src_loc_at=2)
         else:
             self.en = Const(1)
 
@@ -149,11 +149,11 @@ class WritePort(Elaboratable):
         self.granularity  = granularity
 
         self.addr = Signal(max=memory.depth,
-                           name="{}_w_addr".format(memory.name))
+                           name="{}_w_addr".format(memory.name), src_loc_at=2)
         self.data = Signal(memory.width,
-                           name="{}_w_data".format(memory.name))
+                           name="{}_w_data".format(memory.name), src_loc_at=2)
         self.en   = Signal(memory.width // granularity,
-                           name="{}_w_en".format(memory.name))
+                           name="{}_w_en".format(memory.name), src_loc_at=2)
 
     def elaborate(self, platform):
         f = Instance("$memwr",
@@ -198,8 +198,8 @@ class DummyPort:
             name = tracer.get_var_name(depth=2, default="dummy")
 
         self.addr = Signal(addr_bits,
-                           name="{}_addr".format(name))
+                           name="{}_addr".format(name), src_loc_at=1)
         self.data = Signal(width,
-                           name="{}_data".format(name))
+                           name="{}_data".format(name), src_loc_at=1)
         self.en   = Signal(width // granularity,
-                           name="{}_en".format(name))
+                           name="{}_en".format(name), src_loc_at=1)
