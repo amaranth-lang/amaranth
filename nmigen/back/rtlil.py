@@ -235,9 +235,10 @@ def srcs(src_locs):
 
 
 class LegalizeValue(Exception):
-    def __init__(self, value, branches):
+    def __init__(self, value, branches, src_loc):
         self.value    = value
         self.branches = list(branches)
+        self.src_loc  = src_loc
 
 
 class _ValueCompilerState:
@@ -357,7 +358,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
                 elem = value.elems[-1]
             return self.match_shape(elem, *value.shape())
         else:
-            raise LegalizeValue(value.index, range(len(value.elems)))
+            raise LegalizeValue(value.index, range(len(value.elems)), value.src_loc)
 
 
 class _RHSValueCompiler(_ValueCompiler):
@@ -584,38 +585,10 @@ class _LHSValueCompiler(_ValueCompiler):
         if isinstance(offset, ast.Const):
             return self(ast.Slice(value.value, offset.value, offset.value + value.width))
         else:
-            raise LegalizeValue(value.offset, range((1 << len(value.offset))))
+            raise LegalizeValue(value.offset, range((1 << len(value.offset))), value.src_loc)
 
     def on_Repl(self, value):
         raise TypeError # :nocov:
-
-
-class _StatementLocator(xfrm.StatementVisitor):
-    def __init__(self):
-        self.src_locs = set()
-
-    def on_Assign(self, stmt):
-        self.src_locs.add(stmt.src_loc)
-
-    def on_Switch(self, stmt):
-        self.src_locs.add(stmt.src_loc)
-        for stmts in stmt.cases.values():
-            self.on_statements(stmts)
-
-    def on_ignored(self, stmt):
-        pass
-
-    on_Assert = on_ignored
-    on_Assume = on_ignored
-
-    def on_statements(self, stmts):
-        for stmt in stmts:
-            self.on_statement(stmt)
-
-    def __call__(self, stmt):
-        self.on_statement(stmt)
-        src_locs, self.src_locs = self.src_locs, set()
-        return src_locs
 
 
 class _StatementCompiler(xfrm.StatementVisitor):
@@ -683,7 +656,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self._test_cache[stmt] = self.rhs_compiler(stmt.test)
         test_sigspec = self._test_cache[stmt]
 
-        with self._case.switch(test_sigspec) as switch:
+        with self._case.switch(test_sigspec, src=src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
                 with self.case(switch, values):
                     self.on_statements(stmts)
@@ -692,7 +665,8 @@ class _StatementCompiler(xfrm.StatementVisitor):
         try:
             super().on_statement(stmt)
         except LegalizeValue as legalize:
-            with self._case.switch(self.rhs_compiler(legalize.value)) as switch:
+            with self._case.switch(self.rhs_compiler(legalize.value),
+                                   src=src(legalize.src_loc)) as switch:
                 bits, sign = legalize.value.shape()
                 tests = ["{:0{}b}".format(v, bits) for v in legalize.branches]
                 tests[-1] = "-" * bits
@@ -728,7 +702,6 @@ def convert_fragment(builder, fragment, hierarchy):
         compiler_state = _ValueCompilerState(module)
         rhs_compiler   = _RHSValueCompiler(compiler_state)
         lhs_compiler   = _LHSValueCompiler(compiler_state)
-        stmt_locator   = _StatementLocator()
         stmt_compiler  = _StatementCompiler(compiler_state, rhs_compiler, lhs_compiler)
 
         verilog_trigger = None
@@ -820,8 +793,7 @@ def convert_fragment(builder, fragment, hierarchy):
             lhs_group_filter = xfrm.LHSGroupFilter(group_signals)
             group_stmts = lhs_group_filter(fragment.statements)
 
-            with module.process(name="$group_{}".format(group),
-                                src=srcs(stmt_locator(group_stmts))) as process:
+            with module.process(name="$group_{}".format(group)) as process:
                 with process.case() as case:
                     # For every signal in comb domain, assign \sig$next to the reset value.
                     # For every signal in sync domains, assign \sig$next to the current
