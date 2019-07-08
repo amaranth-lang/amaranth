@@ -59,6 +59,11 @@ class PinsTestCase(FHDLTestCase):
                     "connector pin pmod_0:1"):
             p.map_names(mapping, p)
 
+    def test_wrong_assert_width(self):
+        with self.assertRaises(AssertionError,
+                msg="3 names are specified (0 1 2), but 4 names are expected"):
+            Pins("0 1 2", assert_width=4)
+
 
 class DiffPairsTestCase(FHDLTestCase):
     def test_basic(self):
@@ -95,6 +100,11 @@ class DiffPairsTestCase(FHDLTestCase):
                 msg="Positive and negative pins must have the same width, but (pins io A0) "
                     "and (pins io B0 B1) do not"):
             dp = DiffPairs("A0", "B0 B1")
+
+    def test_wrong_assert_width(self):
+        with self.assertRaises(AssertionError,
+                msg="3 names are specified (0 1 2), but 4 names are expected"):
+            DiffPairs("0 1 2", "3 4 5", assert_width=4)
 
 
 class AttrsTestCase(FHDLTestCase):

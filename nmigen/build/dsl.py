@@ -6,7 +6,7 @@ __all__ = ["Pins", "PinsN", "DiffPairs", "DiffPairsN",
 
 
 class Pins:
-    def __init__(self, names, *, dir="io", conn=None):
+    def __init__(self, names, *, dir="io", conn=None, assert_width=None):
         if not isinstance(names, str):
             raise TypeError("Names must be a whitespace-separated string, not {!r}"
                             .format(names))
@@ -22,6 +22,10 @@ class Pins:
         if dir not in ("i", "o", "io", "oe"):
             raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
                             .format(dir))
+
+        if assert_width is not None and len(names) != assert_width:
+            raise AssertionError("{} names are specified ({}), but {} names are expected"
+                                 .format(len(names), " ".join(names), assert_width))
 
         self.names  = names
         self.dir    = dir
@@ -56,9 +60,9 @@ def PinsN(*args, **kwargs):
 
 
 class DiffPairs:
-    def __init__(self, p, n, *, dir="io", conn=None):
-        self.p = Pins(p, dir=dir, conn=conn)
-        self.n = Pins(n, dir=dir, conn=conn)
+    def __init__(self, p, n, *, dir="io", conn=None, assert_width=None):
+        self.p = Pins(p, dir=dir, conn=conn, assert_width=assert_width)
+        self.n = Pins(n, dir=dir, conn=conn, assert_width=assert_width)
 
         if len(self.p.names) != len(self.n.names):
             raise TypeError("Positive and negative pins must have the same width, but {!r} "
