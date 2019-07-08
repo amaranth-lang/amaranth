@@ -458,6 +458,13 @@ class DSLTestCase(FHDLTestCase):
         ()
         """)
 
+    def test_FSM_wrong_domain(self):
+        m = Module()
+        with self.assertRaises(ValueError,
+                msg="FSM may not be driven by the 'comb' domain"):
+            with m.FSM(domain="comb"):
+                pass
+
     def test_FSM_wrong_redefined(self):
         m = Module()
         with m.FSM():

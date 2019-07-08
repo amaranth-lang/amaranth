@@ -88,6 +88,16 @@ class DomainRenamerTestCase(FHDLTestCase):
             "pix": cd_pix,
         })
 
+    def test_rename_wrong_to_comb(self):
+        with self.assertRaises(ValueError,
+                msg="Domain 'sync' may not be renamed to 'comb'"):
+            DomainRenamer("comb")
+
+    def test_rename_wrong_from_comb(self):
+        with self.assertRaises(ValueError,
+                msg="Domain 'comb' may not be renamed"):
+            DomainRenamer({"comb": "sync"})
+
 
 class DomainLowererTestCase(FHDLTestCase):
     def setUp(self):

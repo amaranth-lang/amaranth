@@ -326,6 +326,11 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
     def __init__(self, domain_map):
         if isinstance(domain_map, str):
             domain_map = {"sync": domain_map}
+        for src, dst in domain_map.items():
+            if src == "comb":
+                raise ValueError("Domain '{}' may not be renamed".format(src))
+            if dst == "comb":
+                raise ValueError("Domain '{}' may not be renamed to '{}'".format(src, dst))
         self.domain_map = OrderedDict(domain_map)
 
     def on_ClockSignal(self, value):

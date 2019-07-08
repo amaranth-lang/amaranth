@@ -55,3 +55,8 @@ class ClockDomainTestCase(FHDLTestCase):
         sync.rename("pix")
         self.assertEqual(sync.name, "pix")
         self.assertEqual(sync.clk.name, "pix_clk")
+
+    def test_wrong_name_comb(self):
+        with self.assertRaises(ValueError,
+                msg="Domain 'comb' may not be clocked"):
+            comb = ClockDomain()

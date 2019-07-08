@@ -515,6 +515,11 @@ class ClockSignalTestCase(FHDLTestCase):
         s1 = ClockSignal()
         self.assertEqual(repr(s1), "(clk sync)")
 
+    def test_wrong_name_comb(self):
+        with self.assertRaises(ValueError,
+                msg="Domain 'comb' does not have a clock"):
+            ClockSignal("comb")
+
 
 class ResetSignalTestCase(FHDLTestCase):
     def test_domain(self):
@@ -533,6 +538,11 @@ class ResetSignalTestCase(FHDLTestCase):
     def test_repr(self):
         s1 = ResetSignal()
         self.assertEqual(repr(s1), "(rst sync)")
+
+    def test_wrong_name_comb(self):
+        with self.assertRaises(ValueError,
+                msg="Domain 'comb' does not have a reset"):
+            ResetSignal("comb")
 
 
 class MockUserValue(UserValue):

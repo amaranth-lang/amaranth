@@ -693,6 +693,8 @@ class ClockSignal(Value):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
             raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
+        if domain == "comb":
+            raise ValueError("Domain '{}' does not have a clock".format(domain))
         self.domain = domain
 
     def shape(self):
@@ -727,6 +729,8 @@ class ResetSignal(Value):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
             raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
+        if domain == "comb":
+            raise ValueError("Domain '{}' does not have a reset".format(domain))
         self.domain = domain
         self.allow_reset_less = allow_reset_less
 

@@ -50,6 +50,8 @@ class ClockDomain:
                 raise ValueError("Clock domain name must be specified explicitly")
         if name.startswith("cd_"):
             name = name[3:]
+        if name == "comb":
+            raise ValueError("Domain '{}' may not be clocked".format(name))
         self.name = name
 
         self.clk = Signal(name=self._name_for(name, "clk"), src_loc_at=1)

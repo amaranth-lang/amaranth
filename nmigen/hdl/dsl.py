@@ -261,6 +261,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def FSM(self, reset=None, domain="sync", name="fsm"):
         self._check_context("FSM", context=None)
+        if domain == "comb":
+            raise ValueError("FSM may not be driven by the '{}' domain".format(domain))
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
             "signal":   Signal(name="{}_state".format(name), src_loc_at=2),
