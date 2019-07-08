@@ -29,14 +29,7 @@ class _Namer:
         return name
 
 
-class _Bufferer:
-    _escape_map = str.maketrans({
-        "\"": "\\\"",
-        "\\": "\\\\",
-        "\t": "\\t",
-        "\r": "\\r",
-        "\n": "\\n",
-    })
+class _BufferedBuilder:
     def __init__(self):
         super().__init__()
         self._buffer = io.StringIO()
@@ -47,7 +40,22 @@ class _Bufferer:
     def _append(self, fmt, *args, **kwargs):
         self._buffer.write(fmt.format(*args, **kwargs))
 
-    def attribute(self, name, value, indent=0):
+
+class _ProxiedBuilder:
+    def _append(self, *args, **kwargs):
+        self.rtlil._append(*args, **kwargs)
+
+
+class _AttrBuilder:
+    _escape_map = str.maketrans({
+        "\"": "\\\"",
+        "\\": "\\\\",
+        "\t": "\\t",
+        "\r": "\\r",
+        "\n": "\\n",
+    })
+
+    def _attribute(self, name, value, *, indent=0):
         if isinstance(value, str):
             self._append("{}attribute \\{} \"{}\"\n",
                          "  " * indent, name, value.translate(self._escape_map))
@@ -55,18 +63,20 @@ class _Bufferer:
             self._append("{}attribute \\{} {}\n",
                          "  " * indent, name, int(value))
 
-    def _src(self, src, **kwargs):
-        if src:
-            self.attribute("src", src, **kwargs)
+    def _attributes(self, attrs, *, src=None, **kwargs):
+        for name, value in attrs.items():
+            self._attribute(name, value, **kwargs)
+        if src is not None:
+            self._attribute("src", src, **kwargs)
 
 
-class _Builder(_Namer, _Bufferer):
+class _Builder(_Namer, _BufferedBuilder):
     def module(self, name=None, attrs={}):
         name = self._make_name(name, local=False)
         return _ModuleBuilder(self, name, attrs)
 
 
-class _ModuleBuilder(_Namer, _Bufferer):
+class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
     def __init__(self, rtlil, name, attrs):
         super().__init__()
         self.rtlil = rtlil
@@ -75,8 +85,7 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self.attrs.update(attrs)
 
     def __enter__(self):
-        for name, value in self.attrs.items():
-            self.attribute(name, value, indent=0)
+        self._attributes(self.attrs)
         self._append("module {}\n", self.name)
         return self
 
@@ -84,11 +93,8 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self._append("end\n")
         self.rtlil._buffer.write(str(self))
 
-    def attribute(self, name, value, indent=1):
-        super().attribute(name, value, indent)
-
-    def wire(self, width, port_id=None, port_kind=None, name=None, src=""):
-        self._src(src)
+    def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src=""):
+        self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
         if port_id is None:
             self._append("  wire width {} {}\n", width, name)
@@ -100,17 +106,15 @@ class _ModuleBuilder(_Namer, _Bufferer):
     def connect(self, lhs, rhs):
         self._append("  connect {} {}\n", lhs, rhs)
 
-    def memory(self, width, size, name=None, src=""):
-        self._src(src)
+    def memory(self, width, size, name=None, attrs={}, src=""):
+        self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
         self._append("  memory width {} size {} {}\n", width, size, name)
         return name
 
     def cell(self, kind, name=None, params={}, ports={}, attrs={}, src=""):
-        self._src(src)
+        self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
-        for attr_name, attr_value in attrs.items():
-            self.attribute(attr_name, attr_value)
         self._append("  cell {} {}\n", kind, name)
         for param, value in params.items():
             if isinstance(value, str):
@@ -129,20 +133,21 @@ class _ModuleBuilder(_Namer, _Bufferer):
         self._append("  end\n")
         return name
 
-    def process(self, name=None, src=""):
+    def process(self, name=None, attrs={}, src=""):
         name = self._make_name(name, local=True)
-        return _ProcessBuilder(self, name, src)
+        return _ProcessBuilder(self, name, attrs, src)
 
 
-class _ProcessBuilder(_Bufferer):
-    def __init__(self, rtlil, name, src):
+class _ProcessBuilder(_BufferedBuilder, _AttrBuilder):
+    def __init__(self, rtlil, name, attrs, src):
         super().__init__()
         self.rtlil = rtlil
         self.name  = name
+        self.attrs = {}
         self.src   = src
 
     def __enter__(self):
-        self._src(self.src, indent=1)
+        self._attributes(self.attrs, src=self.src, indent=1)
         self._append("  process {}\n", self.name)
         return self
 
@@ -157,7 +162,7 @@ class _ProcessBuilder(_Bufferer):
         return _SyncBuilder(self, kind, cond)
 
 
-class _CaseBuilder:
+class _CaseBuilder(_ProxiedBuilder):
     def __init__(self, rtlil, indent):
         self.rtlil  = rtlil
         self.indent = indent
@@ -169,35 +174,38 @@ class _CaseBuilder:
         pass
 
     def assign(self, lhs, rhs):
-        self.rtlil._append("{}assign {} {}\n", "  " * self.indent, lhs, rhs)
+        self._append("{}assign {} {}\n", "  " * self.indent, lhs, rhs)
 
-    def switch(self, cond):
-        return _SwitchBuilder(self.rtlil, cond, self.indent)
+    def switch(self, cond, attrs={}, src=""):
+        return _SwitchBuilder(self.rtlil, cond, attrs, src, self.indent)
 
 
-class _SwitchBuilder:
-    def __init__(self, rtlil, cond, indent):
+class _SwitchBuilder(_ProxiedBuilder, _AttrBuilder):
+    def __init__(self, rtlil, cond, attrs, src, indent):
         self.rtlil  = rtlil
         self.cond   = cond
+        self.attrs  = attrs
+        self.src    = src
         self.indent = indent
 
     def __enter__(self):
-        self.rtlil._append("{}switch {}\n", "  " * self.indent, self.cond)
+        self._attributes(self.attrs, src=self.src, indent=self.indent)
+        self._append("{}switch {}\n", "  " * self.indent, self.cond)
         return self
 
     def __exit__(self, *args):
-        self.rtlil._append("{}end\n", "  " * self.indent)
+        self._append("{}end\n", "  " * self.indent)
 
     def case(self, *values):
         if values == ():
-            self.rtlil._append("{}case\n", "  " * (self.indent + 1))
+            self._append("{}case\n", "  " * (self.indent + 1))
         else:
-            self.rtlil._append("{}case {}\n", "  " * (self.indent + 1),
-                               ", ".join("{}'{}".format(len(value), value) for value in values))
+            self._append("{}case {}\n", "  " * (self.indent + 1),
+                         ", ".join("{}'{}".format(len(value), value) for value in values))
         return _CaseBuilder(self.rtlil, self.indent + 2)
 
 
-class _SyncBuilder:
+class _SyncBuilder(_ProxiedBuilder):
     def __init__(self, rtlil, kind, cond):
         self.rtlil = rtlil
         self.kind  = kind
@@ -205,16 +213,16 @@ class _SyncBuilder:
 
     def __enter__(self):
         if self.cond is None:
-            self.rtlil._append("    sync {}\n", self.kind)
+            self._append("    sync {}\n", self.kind)
         else:
-            self.rtlil._append("    sync {} {}\n", self.kind, self.cond)
+            self._append("    sync {} {}\n", self.kind, self.cond)
         return self
 
     def __exit__(self, *args):
         pass
 
     def update(self, lhs, rhs):
-        self.rtlil._append("      update {} {}\n", lhs, rhs)
+        self._append("      update {} {}\n", lhs, rhs)
 
 
 def src(src_loc):
@@ -268,10 +276,9 @@ class _ValueCompilerState:
         else:
             wire_name = signal.name
 
-        for attr_name, attr_signal in signal.attrs.items():
-            self.rtlil.attribute(attr_name, attr_signal)
         wire_curr = self.rtlil.wire(width=signal.nbits, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
+                                    attrs=signal.attrs,
                                     src=src(signal.src_loc))
         if signal in self.driven and self.driven[signal]:
             wire_next = self.rtlil.wire(width=signal.nbits, name=wire_curr + "$next",
