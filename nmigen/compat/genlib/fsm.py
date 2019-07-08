@@ -16,11 +16,13 @@ class AnonymousState:
 
 class NextState(Statement):
     def __init__(self, state):
+        super().__init__()
         self.state = state
 
 
 class NextValue(Statement):
     def __init__(self, target, value):
+        super().__init__()
         self.target = target
         self.value = value
 
