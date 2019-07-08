@@ -66,7 +66,7 @@ class _AttrBuilder:
     def _attributes(self, attrs, *, src=None, **kwargs):
         for name, value in attrs.items():
             self._attribute(name, value, **kwargs)
-        if src is not None:
+        if src:
             self._attribute("src", src, **kwargs)
 
 
