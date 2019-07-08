@@ -15,7 +15,7 @@ class ClockDivisor(Elaboratable):
 
 
 if __name__ == "__main__":
-    ctr = ClockDivisor(factor=16)
-    m = ctr.elaborate(platform=None)
-    m.domains += ClockDomain("sync", async_reset=True)
-    main(m, ports=[ctr.o])
+    m = Module()
+    m.domains.sync = sync = ClockDomain("sync", async_reset=True)
+    m.submodules.ctr = ctr = ClockDivisor(factor=16)
+    main(m, ports=[ctr.o, sync.clk])
