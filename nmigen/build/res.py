@@ -106,9 +106,10 @@ class ResourceManager:
             if isinstance(resource.ios[0], Subsignal):
                 fields = OrderedDict()
                 for sub in resource.ios:
+                    sub_attrs = {k: v for k, v in {**attrs, **sub.attrs}.items() if v is not None}
                     fields[sub.name] = resolve(sub, dir[sub.name], xdr[sub.name],
                                                name="{}__{}".format(name, sub.name),
-                                               attrs={**attrs, **sub.attrs})
+                                               attrs=sub_attrs)
                 return Record([
                     (f_name, f.layout) for (f_name, f) in fields.items()
                 ], fields=fields, name=name)

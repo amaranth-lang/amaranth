@@ -92,15 +92,20 @@ def DiffPairsN(*args, **kwargs):
 class Attrs(OrderedDict):
     def __init__(self, **attrs):
         for attr_key, attr_value in attrs.items():
-            if not isinstance(attr_value, str):
-                raise TypeError("Attribute value must be a string, not {!r}"
+            if not (attr_value is None or isinstance(attr_value, str)):
+                raise TypeError("Attribute value must be None or str, not {!r}"
                                 .format(attr_value))
 
         super().__init__(**attrs)
 
     def __repr__(self):
-        return "(attrs {})".format(" ".join("{}={}".format(k, v)
-                                    for k, v in self.items()))
+        items = []
+        for key, value in self.items():
+            if value is None:
+                items.append("!" + key)
+            else:
+                items.append(key + "=" + value)
+        return "(attrs {})".format(" ".join(items))
 
 
 class Clock:

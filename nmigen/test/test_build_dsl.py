@@ -113,9 +113,14 @@ class AttrsTestCase(FHDLTestCase):
         self.assertEqual(a["IO_STANDARD"], "LVCMOS33")
         self.assertEqual(repr(a), "(attrs IO_STANDARD=LVCMOS33 PULLUP=1)")
 
+    def test_remove(self):
+        a = Attrs(FOO=None)
+        self.assertEqual(a["FOO"], None)
+        self.assertEqual(repr(a), "(attrs !FOO)")
+
     def test_wrong_value(self):
         with self.assertRaises(TypeError,
-                msg="Attribute value must be a string, not 1"):
+                msg="Attribute value must be None or str, not 1"):
             a = Attrs(FOO=1)
 
 
