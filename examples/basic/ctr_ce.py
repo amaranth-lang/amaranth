@@ -12,7 +12,7 @@ class Counter(Elaboratable):
         m = Module()
         m.d.sync += self.v.eq(self.v + 1)
         m.d.comb += self.o.eq(self.v[-1])
-        return CEInserter(self.ce)(m.lower(platform))
+        return CEInserter(self.ce)(m)
 
 
 ctr = Counter(width=16)
