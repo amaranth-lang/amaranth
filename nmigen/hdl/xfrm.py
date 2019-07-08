@@ -81,6 +81,9 @@ class ValueVisitor(metaclass=ABCMeta):
     def on_unknown_value(self, value):
         raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
 
+    def replace_value_src_loc(self, value, new_value):
+        return True
+
     def on_value(self, value):
         if type(value) is Const:
             new_value = self.on_Const(value)
@@ -117,7 +120,7 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_value(value._lazy_lower())
         else:
             new_value = self.on_unknown_value(value)
-        if isinstance(new_value, Value):
+        if isinstance(new_value, Value) and self.replace_value_src_loc(value, new_value):
             new_value.src_loc = value.src_loc
         return new_value
 
@@ -194,6 +197,9 @@ class StatementVisitor(metaclass=ABCMeta):
     def on_unknown_statement(self, stmt):
         raise TypeError("Cannot transform statement '{!r}'".format(stmt)) # :nocov:
 
+    def replace_statement_src_loc(self, stmt, new_stmt):
+        return True
+
     def on_statement(self, stmt):
         if type(stmt) is Assign:
             new_stmt = self.on_Assign(stmt)
@@ -208,7 +214,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_statements(stmt)
         else:
             new_stmt = self.on_unknown_statement(stmt)
-        if isinstance(new_stmt, Statement):
+        if isinstance(new_stmt, Statement) and self.replace_statement_src_loc(stmt, new_stmt):
             new_stmt.src_loc = stmt.src_loc
         return new_stmt
 
@@ -364,6 +370,9 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
     def map_drivers(self, fragment, new_fragment):
         for domain, signal in fragment.iter_drivers():
             new_fragment.add_driver(self.on_value(signal), domain)
+
+    def replace_value_src_loc(self, value, new_value):
+        return not isinstance(value, (ClockSignal, ResetSignal))
 
     def on_ClockSignal(self, value):
         cd = self._resolve(value.domain, value)
