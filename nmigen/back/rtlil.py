@@ -196,7 +196,8 @@ class _SwitchBuilder(_ProxiedBuilder, _AttrBuilder):
     def __exit__(self, *args):
         self._append("{}end\n", "  " * self.indent)
 
-    def case(self, *values):
+    def case(self, *values, attrs={}, src=""):
+        self._attributes(attrs, src=src, indent=self.indent + 1)
         if values == ():
             self._append("{}case\n", "  " * (self.indent + 1))
         else:
@@ -602,10 +603,10 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._has_rhs     = False
 
     @contextmanager
-    def case(self, switch, values):
+    def case(self, switch, values, src=""):
         try:
             old_case = self._case
-            with switch.case(*values) as self._case:
+            with switch.case(*values, src=src) as self._case:
                 yield
         finally:
             self._case = old_case
@@ -658,7 +659,11 @@ class _StatementCompiler(xfrm.StatementVisitor):
 
         with self._case.switch(test_sigspec, src=src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
-                with self.case(switch, values):
+                if values in stmt.case_src_locs:
+                    case_src = src(stmt.case_src_locs[values])
+                else:
+                    case_src = ""
+                with self.case(switch, values, src=case_src):
                     self.on_statements(stmts)
 
     def on_statement(self, stmt):

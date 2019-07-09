@@ -216,6 +216,8 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_unknown_statement(stmt)
         if isinstance(new_stmt, Statement) and self.replace_statement_src_loc(stmt, new_stmt):
             new_stmt.src_loc = stmt.src_loc
+            if isinstance(new_stmt, Switch) and isinstance(stmt, Switch):
+                new_stmt.case_src_locs = stmt.case_src_locs
         return new_stmt
 
     def __call__(self, stmt):

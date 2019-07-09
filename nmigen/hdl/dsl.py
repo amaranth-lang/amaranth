@@ -161,10 +161,12 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def If(self, cond):
         self._check_context("If", context=None)
+        src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._set_ctrl("If", {
-            "tests":   [],
-            "bodies":  [],
-            "src_loc": tracer.get_src_loc(src_loc_at=1),
+            "tests":    [],
+            "bodies":   [],
+            "src_loc":  src_loc,
+            "src_locs": [],
         })
         try:
             _outer_case, self._statements = self._statements, []
@@ -173,6 +175,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._flush_ctrl()
             if_data["tests"].append(cond)
             if_data["bodies"].append(self._statements)
+            if_data["src_locs"].append(src_loc)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
@@ -180,6 +183,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def Elif(self, cond):
         self._check_context("Elif", context=None)
+        src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._get_ctrl("If")
         if if_data is None:
             raise SyntaxError("Elif without preceding If")
@@ -190,6 +194,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._flush_ctrl()
             if_data["tests"].append(cond)
             if_data["bodies"].append(self._statements)
+            if_data["src_locs"].append(src_loc)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
@@ -197,6 +202,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def Else(self):
         self._check_context("Else", context=None)
+        src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._get_ctrl("If")
         if if_data is None:
             raise SyntaxError("Else without preceding If/Elif")
@@ -206,6 +212,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             yield
             self._flush_ctrl()
             if_data["bodies"].append(self._statements)
+            if_data["src_locs"].append(src_loc)
         finally:
             self.domain._depth -= 1
             self._statements = _outer_case
@@ -218,6 +225,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             "test":    Value.wrap(test),
             "cases":   OrderedDict(),
             "src_loc": tracer.get_src_loc(src_loc_at=1),
+            "case_src_locs": {},
         })
         try:
             self._ctrl_context = "Switch"
@@ -231,6 +239,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def Case(self, *values):
         self._check_context("Case", context="Switch")
+        src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_values = ()
         for value in values:
@@ -254,6 +263,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             # which means the branch will always match.
             if not (values and not new_values):
                 switch_data["cases"][new_values] = self._statements
+                switch_data["case_src_locs"][new_values] = src_loc
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
@@ -272,6 +282,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             "decoding": OrderedDict(),
             "states":   OrderedDict(),
             "src_loc":  tracer.get_src_loc(src_loc_at=1),
+            "state_src_locs": {},
         })
         self._generated[name] = fsm = \
             FSM(fsm_data["signal"], fsm_data["encoding"], fsm_data["decoding"])
@@ -287,6 +298,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def State(self, name):
         self._check_context("FSM State", context="FSM")
+        src_loc = tracer.get_src_loc(src_loc_at=1)
         fsm_data = self._get_ctrl("FSM")
         if name in fsm_data["states"]:
             raise SyntaxError("FSM state '{}' is already defined".format(name))
@@ -298,6 +310,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             yield
             self._flush_ctrl()
             fsm_data["states"][name] = self._statements
+            fsm_data["state_src_locs"][name] = src_loc
         finally:
             self._ctrl_context = "FSM"
             self._statements = _outer_case
@@ -327,6 +340,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
         if name == "If":
             if_tests, if_bodies = data["tests"], data["bodies"]
+            if_src_locs = data["src_locs"]
 
             tests, cases = [], OrderedDict()
             for if_test, if_case in zip(if_tests + [None], if_bodies):
@@ -342,16 +356,20 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     match = None
                 cases[match] = if_case
 
-            self._statements.append(Switch(Cat(tests), cases, src_loc=src_loc))
+            self._statements.append(Switch(Cat(tests), cases,
+                src_loc=src_loc, case_src_locs=dict(zip(cases, if_src_locs))))
 
         if name == "Switch":
             switch_test, switch_cases = data["test"], data["cases"]
+            switch_case_src_locs = data["case_src_locs"]
 
-            self._statements.append(Switch(switch_test, switch_cases, src_loc=src_loc))
+            self._statements.append(Switch(switch_test, switch_cases,
+                src_loc=src_loc, case_src_locs=switch_case_src_locs))
 
         if name == "FSM":
             fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
                 data["signal"], data["reset"], data["encoding"], data["decoding"], data["states"]
+            fsm_state_src_locs = data["state_src_locs"]
             if not fsm_states:
                 return
             fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
@@ -364,7 +382,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fsm_signal.decoder = lambda n: "{}/{}".format(fsm_decoding[n], n)
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items()),
-                src_loc=src_loc))
+                src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
+                                                for name in fsm_states}))
 
     def _add_statement(self, assigns, domain, depth, compat_mode=False):
         def domain_name(domain):

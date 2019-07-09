@@ -1033,18 +1033,22 @@ class Assume(Property):
 
 # @final
 class Switch(Statement):
-    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0):
+    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0, case_src_locs={}):
         if src_loc is None:
             super().__init__(src_loc_at=src_loc_at)
         else:
             # Switch is a bit special in terms of location tracking because it is usually created
             # long after the control has left the statement that directly caused its creation.
             self.src_loc = src_loc
+        # Switch is also a bit special in that its parts also have location information. It can't
+        # be automatically traced, so whatever constructs a Switch may optionally provide it.
+        self.case_src_locs = {}
 
         self.test  = Value.wrap(test)
         self.cases = OrderedDict()
-        for keys, stmts in cases.items():
+        for orig_keys, stmts in cases.items():
             # Map: None -> (); key -> (key,); (key...) -> (key...)
+            keys = orig_keys
             if keys is None:
                 keys = ()
             if not isinstance(keys, tuple):
@@ -1064,6 +1068,8 @@ class Switch(Statement):
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
             self.cases[new_keys] = Statement.wrap(stmts)
+            if orig_keys in case_src_locs:
+                self.case_src_locs[new_keys] = case_src_locs[orig_keys]
 
     def _lhs_signals(self):
         signals = union((s._lhs_signals() for ss in self.cases.values() for s in ss),
