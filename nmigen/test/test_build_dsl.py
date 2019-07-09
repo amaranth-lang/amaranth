@@ -225,6 +225,15 @@ class ResourceTestCase(FHDLTestCase):
                                   " (subsignal rx (pins i A1))"
                                   " (attrs IOSTANDARD=LVCMOS33))")
 
+    def test_family(self):
+        ios = [Subsignal("clk", Pins("A0", dir="o"))]
+        r1  = Resource.family(0, default_name="spi", ios=ios)
+        r2  = Resource.family("spi_flash", 0, default_name="spi", ios=ios)
+        self.assertEqual(r1.name, "spi")
+        self.assertEqual(r1.ios, ios)
+        self.assertEqual(r2.name, "spi_flash")
+        self.assertEqual(r2.ios, ios)
+
 
 class ConnectorTestCase(FHDLTestCase):
     def test_string(self):

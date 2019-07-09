@@ -181,6 +181,20 @@ class Subsignal:
 
 
 class Resource(Subsignal):
+    @classmethod
+    def family(cls, name_or_number, number=None, *, ios, default_name):
+        # This constructor accepts two different forms:
+        #  1. Number-only form:
+        #       Resource.family(0, default_name="name", ios=[Pins("A0 A1")])
+        #  2. Name-and-number (name override) form:
+        #       Resource.family("override", 0, default_name="name", ios=...)
+        # This makes it easier to build abstractions for resources, e.g. an SPIResource abstraction
+        # could simply delegate to `Resource.family(*args, default_name="spi", ios=ios)`.
+        if number is None: # name_or_number is number
+            return cls(default_name, name_or_number, *ios)
+        else: # name_or_number is name
+            return cls(name_or_number, number, *ios)
+
     def __init__(self, name, number, *args):
         super().__init__(name, *args)
 
