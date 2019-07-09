@@ -3,6 +3,7 @@ language: python
 python:
   - "3.6"
   - "3.7"
+  - "pypy3"
 cache:
   directories:
     - "$HOME/.ccache"
@@ -23,3 +24,7 @@ script:
   - python setup.py develop
   - coverage run -m unittest discover
   - codecov
+matrix:
+  fast_finish: true
+  allow_failures:
+  - python: "pypy3"
