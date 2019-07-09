@@ -603,10 +603,10 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._has_rhs     = False
 
     @contextmanager
-    def case(self, switch, values, src=""):
+    def case(self, switch, values, attrs={}, src=""):
         try:
             old_case = self._case
-            with switch.case(*values, src=src) as self._case:
+            with switch.case(*values, attrs=attrs, src=src) as self._case:
                 yield
         finally:
             self._case = old_case
@@ -659,11 +659,18 @@ class _StatementCompiler(xfrm.StatementVisitor):
 
         with self._case.switch(test_sigspec, src=src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
+                case_attrs = {}
                 if values in stmt.case_src_locs:
-                    case_src = src(stmt.case_src_locs[values])
-                else:
-                    case_src = ""
-                with self.case(switch, values, src=case_src):
+                    case_attrs["src"] = src(stmt.case_src_locs[values])
+                if isinstance(stmt.test, ast.Signal) and stmt.test.decoder:
+                    decoded_values = []
+                    for value in values:
+                        if "-" in value:
+                            decoded_values.append("<multiple>")
+                        else:
+                            decoded_values.append(stmt.test.decoder(int(value, 2)))
+                    case_attrs["nmigen.decoding"] = "|".join(decoded_values)
+                with self.case(switch, values, attrs=case_attrs):
                     self.on_statements(stmts)
 
     def on_statement(self, stmt):
