@@ -182,7 +182,7 @@ class Subsignal:
 
 class Resource(Subsignal):
     @classmethod
-    def family(cls, name_or_number, number=None, *, ios, default_name):
+    def family(cls, name_or_number, number=None, *, ios, default_name, name_suffix=""):
         # This constructor accepts two different forms:
         #  1. Number-only form:
         #       Resource.family(0, default_name="name", ios=[Pins("A0 A1")])
@@ -190,10 +190,15 @@ class Resource(Subsignal):
         #       Resource.family("override", 0, default_name="name", ios=...)
         # This makes it easier to build abstractions for resources, e.g. an SPIResource abstraction
         # could simply delegate to `Resource.family(*args, default_name="spi", ios=ios)`.
+        # The name_suffix argument is meant to support creating resources with
+        # similar names, such as spi_flash, spi_flash_2x, etc.
+        if name_suffix:  # Only add "_" if we actually have a suffix.
+            name_suffix = "_" + name_suffix
+
         if number is None: # name_or_number is number
-            return cls(default_name, name_or_number, *ios)
+            return cls(default_name + name_suffix, name_or_number, *ios)
         else: # name_or_number is name
-            return cls(name_or_number, number, *ios)
+            return cls(name_or_number + name_suffix, number, *ios)
 
     def __init__(self, name, number, *args):
         super().__init__(name, *args)

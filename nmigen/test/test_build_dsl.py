@@ -229,10 +229,16 @@ class ResourceTestCase(FHDLTestCase):
         ios = [Subsignal("clk", Pins("A0", dir="o"))]
         r1  = Resource.family(0, default_name="spi", ios=ios)
         r2  = Resource.family("spi_flash", 0, default_name="spi", ios=ios)
+        r3  = Resource.family("spi_flash", 0, default_name="spi", ios=ios, name_suffix="4x")
+        r4  = Resource.family(0, default_name="spi", ios=ios, name_suffix="2x")
         self.assertEqual(r1.name, "spi")
         self.assertEqual(r1.ios, ios)
         self.assertEqual(r2.name, "spi_flash")
         self.assertEqual(r2.ios, ios)
+        self.assertEqual(r3.name, "spi_flash_4x")
+        self.assertEqual(r3.ios, ios)
+        self.assertEqual(r4.name, "spi_2x")
+        self.assertEqual(r4.ios, ios)
 
 
 class ConnectorTestCase(FHDLTestCase):
