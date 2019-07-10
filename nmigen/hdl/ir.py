@@ -10,26 +10,30 @@ from .ast import *
 from .cd import *
 
 
-__all__ = ["Elaboratable", "DriverConflict", "Fragment", "Instance"]
+__all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance"]
+
+
+class UnusedElaboratable(Warning):
+    pass
 
 
 class Elaboratable(metaclass=ABCMeta):
     _Elaboratable__silence = False
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, src_loc_at=0, **kwargs):
         self = super().__new__(cls)
-        self._Elaboratable__traceback = traceback.extract_stack()[:-1]
-        self._Elaboratable__used      = False
+        self._Elaboratable__src_loc = traceback.extract_stack(limit=2 + src_loc_at)[0]
+        self._Elaboratable__used    = False
         return self
 
     def __del__(self):
         if self._Elaboratable__silence:
             return
         if hasattr(self, "_Elaboratable__used") and not self._Elaboratable__used:
-            print("Warning: elaboratable created but never used\n",
-                  "Constructor traceback (most recent call last):\n",
-                  *traceback.format_list(self._Elaboratable__traceback),
-                  file=sys.stderr, sep="")
+            warnings.warn_explicit("{!r} created but never used".format(self), UnusedElaboratable,
+                                   filename=self._Elaboratable__src_loc.filename,
+                                   lineno=self._Elaboratable__src_loc.lineno,
+                                   source=self)
 
 
 _old_excepthook = sys.excepthook
