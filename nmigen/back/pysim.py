@@ -849,7 +849,7 @@ class Simulator:
             def add_trace(signal, **kwargs):
                 signal_slot = self._signal_slots[signal]
                 if self._vcd_names[signal_slot] is not None:
-                    if len(signal) > 1:
+                    if len(signal) > 1 and not signal.decoder:
                         suffix = "[{}:0]".format(len(signal) - 1)
                     else:
                         suffix = ""
