@@ -271,7 +271,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     Asynchronous first in, first out queue.
 
     Read and write interfaces are accessed from different clock domains, called ``read``
-    and ``write``; use :class:`DomainsRenamer` to rename them as appropriate for the design.
+    and ``write``; use :class:`DomainRenamer` to rename them as appropriate for the design.
     """.strip(),
     parameters="""
     fwft : bool
