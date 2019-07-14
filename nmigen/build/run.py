@@ -71,7 +71,13 @@ class BuildPlan:
 
             if run_script:
                 if sys.platform.startswith("win32"):
-                    subprocess.check_call(["cmd", "/c", "{}.bat".format(self.script)])
+                    # Without "call", "cmd /c {}.bat" will return 0.
+                    # See https://stackoverflow.com/a/30736987 for a detailed
+                    # explanation of why, including disassembly/decompilation
+                    # of relevant code in cmd.exe.
+                    # Running the script manually from a command prompt is
+                    # unaffected- i.e. "call" is not required.
+                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)])
                 else:
                     subprocess.check_call(["sh", "{}.sh".format(self.script)])
 
