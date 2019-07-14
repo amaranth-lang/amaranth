@@ -97,9 +97,9 @@ class Pin(Record):
         cannot change direction more than once per cycle, so at most one output enable signal
         is present.
     """
-    def __init__(self, width, dir, xdr=0, name=None):
+    def __init__(self, width, dir, xdr=0, name=None, src_loc_at=0):
         self.width = width
         self.dir   = dir
         self.xdr   = xdr
 
-        super().__init__(pin_layout(self.width, self.dir, self.xdr), name=name)
+        super().__init__(pin_layout(self.width, self.dir, self.xdr), name=name, src_loc_at=src_loc_at + 1)
