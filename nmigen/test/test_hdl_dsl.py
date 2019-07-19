@@ -517,26 +517,30 @@ class DSLTestCase(FHDLTestCase):
         m1 = Module()
         m2 = Module()
         m1.submodules += m2
-        self.assertEqual(m1._submodules, [(m2, None)])
+        self.assertEqual(m1._anon_submodules, [m2])
+        self.assertEqual(m1._named_submodules, {})
 
     def test_submodule_anon_multi(self):
         m1 = Module()
         m2 = Module()
         m3 = Module()
         m1.submodules += m2, m3
-        self.assertEqual(m1._submodules, [(m2, None), (m3, None)])
+        self.assertEqual(m1._anon_submodules, [m2, m3])
+        self.assertEqual(m1._named_submodules, {})
 
     def test_submodule_named(self):
         m1 = Module()
         m2 = Module()
         m1.submodules.foo = m2
-        self.assertEqual(m1._submodules, [(m2, "foo")])
+        self.assertEqual(m1._anon_submodules, [])
+        self.assertEqual(m1._named_submodules, {"foo": m2})
 
     def test_submodule_named_index(self):
         m1 = Module()
         m2 = Module()
         m1.submodules["foo"] = m2
-        self.assertEqual(m1._submodules, [(m2, "foo")])
+        self.assertEqual(m1._anon_submodules, [])
+        self.assertEqual(m1._named_submodules, {"foo": m2})
 
     def test_submodule_wrong(self):
         m = Module()
@@ -546,6 +550,34 @@ class DSLTestCase(FHDLTestCase):
         with self.assertRaises(TypeError,
                 msg="Trying to add '1', which does not implement .elaborate(), as a submodule"):
             m.submodules += 1
+
+    def test_submodule_named_conflict(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules.foo = m2
+        with self.assertRaises(NameError, msg="Submodule named 'foo' already exists"):
+            m1.submodules.foo = m2
+
+    def test_submodule_get(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules.foo = m2
+        m3 = m1.submodules.foo
+        self.assertEqual(m2, m3)
+
+    def test_submodule_get_index(self):
+        m1 = Module()
+        m2 = Module()
+        m1.submodules["foo"] = m2
+        m3 = m1.submodules["foo"]
+        self.assertEqual(m2, m3)
+
+    def test_submodule_get_unset(self):
+        m1 = Module()
+        with self.assertRaises(AttributeError, msg="No submodule named 'foo' exists"):
+            m2 = m1.submodules.foo
+        with self.assertRaises(AttributeError, msg="No submodule named 'foo' exists"):
+            m2 = m1.submodules["foo"]
 
     def test_domain_named_implicit(self):
         m = Module()

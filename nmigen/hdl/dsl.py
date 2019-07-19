@@ -87,6 +87,12 @@ class _ModuleBuilderSubmodules:
     def __setitem__(self, name, value):
         return self.__setattr__(name, value)
 
+    def __getattr__(self, name):
+        return self._builder._get_submodule(name)
+
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
 
 class _ModuleBuilderDomainSet:
     def __init__(self, builder):
@@ -124,7 +130,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._ctrl_stack   = []
 
         self._driving      = SignalDict()
-        self._submodules   = []
+        self._named_submodules   = {}
+        self._anon_submodules = []
         self._domains      = []
         self._generated    = {}
 
@@ -418,7 +425,18 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if not hasattr(submodule, "elaborate"):
             raise TypeError("Trying to add '{!r}', which does not implement .elaborate(), as "
                             "a submodule".format(submodule))
-        self._submodules.append((submodule, name))
+        if name == None:
+            self._anon_submodules.append(submodule)
+        else:
+            if name in self._named_submodules:
+                raise NameError("Submodule named '{}' already exists".format(name))
+            self._named_submodules[name] = submodule
+
+    def _get_submodule(self, name):
+        if name in self._named_submodules:
+            return self._named_submodules[name]
+        else:
+            raise AttributeError("No submodule named '{}' exists".format(name))
 
     def _add_domain(self, cd):
         self._domains.append(cd)
@@ -431,8 +449,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._flush()
 
         fragment = Fragment()
-        for submodule, name in self._submodules:
-            fragment.add_subfragment(Fragment.get(submodule, platform), name)
+        for name in self._named_submodules:
+            fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
+        for submodule in self._anon_submodules:
+            fragment.add_subfragment(Fragment.get(submodule, platform), None)
         statements = SampleDomainInjector("sync")(self._statements)
         fragment.add_statements(statements)
         for signal, domain in self._driving.items():
