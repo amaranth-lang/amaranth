@@ -283,7 +283,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules[pin.name] = Instance("IBUF",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUF",
                 i_I=port[bit],
                 o_O=i[bit]
             )
@@ -295,7 +295,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules[pin.name] = Instance("OBUF",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUF",
                 i_I=o[bit],
                 o_O=port[bit]
             )
@@ -307,7 +307,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules[pin.name] = Instance("OBUFT",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFT",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port[bit]
@@ -321,7 +321,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
                                                o_invert=True if invert else None)
         for bit in range(len(port)):
-            m.submodules[pin.name] = Instance("IOBUF",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUF",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -335,7 +335,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules[pin.name] = Instance("IBUFDS",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUFDS",
                 i_I=p_port[bit], i_IB=n_port[bit],
                 o_O=i[bit]
             )
@@ -347,7 +347,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules[pin.name] = Instance("OBUFDS",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFDS",
                 i_I=o[bit],
                 o_O=p_port[bit], o_OB=n_port[bit]
             )
@@ -359,7 +359,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules[pin.name] = Instance("OBUFTDS",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFTDS",
                 i_T=t,
                 i_I=o[bit],
                 o_O=p_port[bit], o_OB=n_port[bit]
@@ -373,7 +373,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=True if invert else None,
                                                o_invert=True if invert else None)
         for bit in range(len(p_port)):
-            m.submodules[pin.name] = Instance("IOBUFDS",
+            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUFDS",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
