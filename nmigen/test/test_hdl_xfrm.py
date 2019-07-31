@@ -2,6 +2,7 @@ from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.ir import *
 from ..hdl.xfrm import *
+from ..hdl.mem import *
 from .tools import *
 
 
@@ -511,6 +512,20 @@ class CEInserterTestCase(FHDLTestCase):
                 (case 0 (eq (sig s2) (sig s2)))
             )
         )
+        """)
+
+    def test_ce_read_port(self):
+        mem = Memory(width=8, depth=4)
+        f = CEInserter(self.c1)(mem.read_port(transparent=False)).elaborate(platform=None)
+        self.assertRepr(f.named_ports["EN"][0], """
+        (m (sig c1) (sig mem_r_en) (const 1'd0))
+        """)
+
+    def test_ce_write_port(self):
+        mem = Memory(width=8, depth=4)
+        f = CEInserter(self.c1)(mem.write_port()).elaborate(platform=None)
+        self.assertRepr(f.named_ports["EN"][0], """
+        (m (sig c1) (cat (repl (slice (sig mem_w_en) 0:1) 8)) (const 8'd0))
         """)
 
 

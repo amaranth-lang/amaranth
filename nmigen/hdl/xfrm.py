@@ -570,6 +570,7 @@ class _ControlInserter(FragmentTransformer):
         self.src_loc = tracer.get_src_loc()
         return super().__call__(value)
 
+
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals if not s.reset_less]
@@ -580,3 +581,13 @@ class CEInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(s) for s in signals]
         fragment.add_statements(Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
+
+    def on_fragment(self, fragment):
+        new_fragment = super().on_fragment(fragment)
+        if isinstance(new_fragment, Instance) and new_fragment.type in ("$memrd", "$memwr"):
+            clk_port, clk_dir = new_fragment.named_ports["CLK"]
+            if isinstance(clk_port, ClockSignal) and clk_port.domain in self.controls:
+                en_port, en_dir = new_fragment.named_ports["EN"]
+                en_port = Mux(self.controls[clk_port.domain], en_port, Const(0, len(en_port)))
+                new_fragment.named_ports["EN"] = en_port, en_dir
+        return new_fragment
