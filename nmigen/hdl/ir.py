@@ -364,6 +364,9 @@ class Fragment:
                     raise DomainError("Domain '{}' is used but not defined".format(domain_name))
                 if type(value) is ClockDomain:
                     domain = value
+                    # Only expose ports on clock domains returned directly, i.e. not as a part of
+                    # a fragment driving that domain.
+                    new_domains.append(domain)
                 else:
                     new_fragment = Fragment.get(value, platform=None)
                     if new_fragment.domains.keys() != {domain_name}:
@@ -377,7 +380,6 @@ class Fragment:
                     self.add_subfragment(new_fragment)
                     domain = new_fragment.domains[domain_name]
                 self.add_domains(domain)
-                new_domains.append(domain)
         return new_domains
 
     def _propagate_domains(self, missing_domain):

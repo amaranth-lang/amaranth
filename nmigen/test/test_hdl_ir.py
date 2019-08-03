@@ -415,7 +415,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         new_domains = f1._propagate_domains(missing_domain=lambda name: f2)
         self.assertEqual(f1.domains.keys(), {"sync"})
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
-        self.assertEqual(new_domains, [f1.domains["sync"]])
+        self.assertEqual(new_domains, [])
         self.assertEqual(f1.subfragments, [
             (f2, None)
         ])
