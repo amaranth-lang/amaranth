@@ -7,11 +7,20 @@ from ..hdl.mem import *
 from .tools import *
 
 
+class BadElaboratable(Elaboratable):
+    def elaborate(self, platform):
+        return
+
+
 class FragmentGetTestCase(FHDLTestCase):
     def test_get_wrong(self):
         with self.assertRaises(AttributeError,
                 msg="Object 'None' cannot be elaborated"):
             Fragment.get(None, platform=None)
+
+        with self.assertRaises(AttributeError,
+                msg="Object 'None' cannot be elaborated"):
+            Fragment.get(BadElaboratable(), platform=None)
 
 
 class FragmentGeneratedTestCase(FHDLTestCase):

@@ -52,10 +52,12 @@ class DriverConflict(UserWarning):
 class Fragment:
     @staticmethod
     def get(obj, platform):
+        code = None
         while True:
             if isinstance(obj, Fragment):
                 return obj
             elif isinstance(obj, Elaboratable):
+                code = obj.elaborate.__code__
                 obj._Elaboratable__used = True
                 obj = obj.elaborate(platform)
             elif hasattr(obj, "elaborate"):
@@ -65,9 +67,16 @@ class Fragment:
                             .format(type(obj)),
                     category=RuntimeWarning,
                     stacklevel=2)
+                code = obj.elaborate.__code__
                 obj = obj.elaborate(platform)
             else:
                 raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
+            if obj is None and code is not None:
+                warnings.warn_explicit(
+                    message=".elaborate() returned None; missing return statement?",
+                    category=UserWarning,
+                    filename=code.co_filename,
+                    lineno=code.co_firstlineno)
 
     def __init__(self):
         self.ports = SignalDict()
