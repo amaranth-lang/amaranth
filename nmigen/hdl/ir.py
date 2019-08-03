@@ -363,23 +363,21 @@ class Fragment:
                 if value is None:
                     raise DomainError("Domain '{}' is used but not defined".format(domain_name))
                 if type(value) is ClockDomain:
-                    domain = value
-                    # Only expose ports on clock domains returned directly, i.e. not as a part of
-                    # a fragment driving that domain.
-                    new_domains.append(domain)
+                    self.add_domains(value)
+                    # And expose ports on the newly added clock domain, since it is added directly
+                    # and there was no chance to add any logic driving it.
+                    new_domains.append(value)
                 else:
                     new_fragment = Fragment.get(value, platform=None)
-                    if new_fragment.domains.keys() != {domain_name}:
+                    if domain_name not in new_fragment.domains:
+                        defined = new_fragment.domains.keys()
                         raise DomainError(
-                            "Fragment returned by missing domain callback should define exactly "
-                            "one domain '{}', but defines domain(s) {}."
-                            .format(domain_name,
-                                    ", ".join("'{}'".format(n)
-                                              for n in new_fragment.domains.keys())))
+                            "Fragment returned by missing domain callback does not define "
+                            "requested domain '{}' (defines {})."
+                            .format(domain_name, ", ".join("'{}'".format(n) for n in defined)))
                     new_fragment.flatten = True
                     self.add_subfragment(new_fragment)
-                    domain = new_fragment.domains[domain_name]
-                self.add_domains(domain)
+                    self.add_domains(new_fragment.domains.values())
         return new_domains
 
     def _propagate_domains(self, missing_domain):

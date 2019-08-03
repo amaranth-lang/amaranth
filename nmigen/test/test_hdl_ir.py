@@ -421,6 +421,25 @@ class FragmentDomainsTestCase(FHDLTestCase):
         ])
         self.assertTrue(f2.flatten)
 
+    def test_propagate_create_missing_fragment_many_domains(self):
+        s1 = Signal()
+        f1 = Fragment()
+        f1.add_driver(s1, "sync")
+
+        cd_por  = ClockDomain("por")
+        cd_sync = ClockDomain("sync")
+        f2 = Fragment()
+        f2.add_domains(cd_por, cd_sync)
+
+        new_domains = f1._propagate_domains(missing_domain=lambda name: f2)
+        self.assertEqual(f1.domains.keys(), {"sync", "por"})
+        self.assertEqual(f2.domains.keys(), {"sync", "por"})
+        self.assertEqual(f1.domains["sync"], f2.domains["sync"])
+        self.assertEqual(new_domains, [])
+        self.assertEqual(f1.subfragments, [
+            (f2, None)
+        ])
+
     def test_propagate_create_missing_fragment_wrong(self):
         s1 = Signal()
         f1 = Fragment()
@@ -430,8 +449,8 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f2.add_domains(ClockDomain("foo"))
 
         with self.assertRaises(DomainError,
-                msg="Fragment returned by missing domain callback should define exactly "
-                    "one domain 'sync', but defines domain(s) 'foo'."):
+                msg="Fragment returned by missing domain callback does not define requested "
+                    "domain 'sync' (defines 'foo')."):
             f1._propagate_domains(missing_domain=lambda name: f2)
 
 
