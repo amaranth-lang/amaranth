@@ -122,6 +122,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         """
     ]
 
+    def create_missing_domain(self, name):
+        # No additional reset logic needed.
+        csuper().create_missing_domain(name)
+
     def _get_xdr_buffer(self, m, pin, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):
             # SDR I/O is performed by packing a flip-flop into the pad IOB.

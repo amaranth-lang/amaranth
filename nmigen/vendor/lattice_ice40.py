@@ -119,6 +119,46 @@ class LatticeICE40Platform(TemplatedPlatform):
         """
     ]
 
+    def create_missing_domain(self, name):
+        # For unknown reasons (no errata was ever published, and no documentation mentions this
+        # issue), iCE40 BRAMs read as zeroes for ~3 us after configuration and release of internal
+        # global reset. Note that this is a *time-based* delay, generated purely by the internal
+        # oscillator, which may not be observed nor influenced directly. For details, see links:
+        #  * https://github.com/cliffordwolf/icestorm/issues/76#issuecomment-289270411
+        #  * https://github.com/cliffordwolf/icotools/issues/2#issuecomment-299734673
+        #
+        # To handle this, it is necessary to have a global reset in any iCE40 design that may
+        # potentially instantiate BRAMs, and assert this reset for >3 us after configuration.
+        # (We add a margin of 5x to allow for PVT variation.) If the board includes a dedicated
+        # reset line, this line is ORed with the power on reset.
+        #
+        # The power-on reset timer counts up because the vendor tools do not support initialization
+        # of flip-flops.
+        if name == "sync" and self.default_clk is not None:
+            clk_i = self.request(self.default_clk).i
+            if self.default_rst is not None:
+                rst_i = self.request(self.default_rst).i
+
+            m = Module()
+            # Power-on-reset domain
+            m.domains += ClockDomain("ice40_por", reset_less=True)
+            delay = int(15e-6 * self.default_clk_frequency)
+            timer = Signal(max=delay)
+            ready = Signal()
+            m.d.comb += ClockSignal("ice40_por").eq(clk_i)
+            with m.If(timer == delay):
+                m.d.ice40_por += ready.eq(1)
+            with m.Else():
+                m.d.ice40_por += timer.eq(timer + 1)
+            # Primary domain
+            m.domains += ClockDomain("sync")
+            m.d.comb += ClockSignal("sync").eq(clk_i)
+            if self.default_rst is not None:
+                m.d.comb += ResetSignal("sync").eq(~ready | rst_i)
+            else:
+                m.d.comb += ResetSignal("sync").eq(~ready)
+            return m
+
     def should_skip_port_component(self, port, attrs, component):
         # On iCE40, a differential input is placed by only instantiating an SB_IO primitive for
         # the pin with z=0, which is the non-inverting pin. The pinout unfortunately differs

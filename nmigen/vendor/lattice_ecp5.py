@@ -127,6 +127,10 @@ class LatticeECP5Platform(TemplatedPlatform):
         """
     ]
 
+    def create_missing_domain(self, name):
+        # No additional reset logic needed.
+        return super().create_missing_domain(name)
+
     _single_ended_io_types = [
         "HSUL12", "LVCMOS12", "LVCMOS15", "LVCMOS18", "LVCMOS25", "LVCMOS33", "LVTTL33",
         "SSTL135_I", "SSTL135_II", "SSTL15_I", "SSTL15_II", "SSTL18_I", "SSTL18_II",

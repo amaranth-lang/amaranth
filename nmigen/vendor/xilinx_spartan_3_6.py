@@ -59,6 +59,23 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     package = abstractproperty()
     speed   = abstractproperty()
 
+    @property
+    def family(self):
+        device = self.device.upper()
+        if device.startswith("XC3S"):
+            if device.endswith("A"):
+                return "3A"
+            elif device.endswith("E"):
+                raise NotImplementedError("""Spartan 3E family is not supported
+                                           as a nMigen platform.""")
+            else:
+                raise NotImplementedError("""Spartan 3 family is not supported
+                                           as a nMigen platform.""")
+        elif device.startswith("XC6S"):
+            return "6"
+        else:
+            assert False
+
     file_templates = {
         **TemplatedPlatform.build_script_templates,
         "{{name}}.v": r"""
@@ -142,22 +159,9 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         """
     ]
 
-    @property
-    def family(self):
-        device = self.device.upper()
-        if device.startswith("XC3S"):
-            if device.endswith("A"):
-                return "3A"
-            elif device.endswith("E"):
-                raise NotImplementedError("""Spartan 3E family is not supported
-                                           as a nMigen platform.""")
-            else:
-                raise NotImplementedError("""Spartan 3 family is not supported
-                                           as a nMigen platform.""")
-        elif device.startswith("XC6S"):
-            return "6"
-        else:
-            assert False
+    def create_missing_domain(self, name):
+        # No additional reset logic needed.
+        return super().create_missing_domain(name)
 
     def _get_xdr_buffer(self, m, pin, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):
