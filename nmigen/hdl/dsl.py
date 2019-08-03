@@ -165,9 +165,21 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._ctrl_stack.append((name, data))
         return data
 
+    def _check_signed_cond(self, cond):
+        cond = Value.wrap(cond)
+        bits, sign = cond.shape()
+        if sign:
+            warnings.warn("Signed values in If/Elif conditions usually result from inverting "
+                          "Python booleans with ~, which leads to unexpected results: ~True is "
+                          "-2, which is truthful. "
+                          "(Silence this warning with `m.If(x)` → `m.If(x.bool())`.)",
+                          SyntaxWarning, stacklevel=4)
+        return cond
+
     @contextmanager
     def If(self, cond):
         self._check_context("If", context=None)
+        cond = self._check_signed_cond(cond)
         src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._set_ctrl("If", {
             "tests":    [],
@@ -190,6 +202,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     @contextmanager
     def Elif(self, cond):
         self._check_context("Elif", context=None)
+        cond = self._check_signed_cond(cond)
         src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._get_ctrl("If")
         if if_data is None:
