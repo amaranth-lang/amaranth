@@ -171,8 +171,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if sign:
             warnings.warn("Signed values in If/Elif conditions usually result from inverting "
                           "Python booleans with ~, which leads to unexpected results: ~True is "
-                          "-2, which is truthful. "
-                          "(Silence this warning with `m.If(x)` → `m.If(x.bool())`.)",
+                          "-2, which is truthful. Replace `~flag` with `not flag`. (If this is "
+                          "a false positive, silence this warning with "
+                          "`m.If(x)` → `m.If(x.bool())`.)",
                           SyntaxWarning, stacklevel=4)
         return cond
 
