@@ -578,9 +578,9 @@ class _LHSValueCompiler(_ValueCompiler):
         elif new_bits < value_bits:
             return self(ast.Slice(value, 0, new_bits))
         else: # new_bits > value_bits
-            # It is legal to assign to constants on LHS in RTLIL; such assignments are ignored.
             dummy_bits = new_bits - value_bits
-            return "{{ {}'{} {} }}".format(dummy_bits, "x" * dummy_bits, self(value))
+            dummy_wire = self.s.rtlil.wire(dummy_bits)
+            return "{{ {} {} }}".format(dummy_wire, self(value))
 
     def on_Signal(self, value):
         if value not in self.s.driven:
