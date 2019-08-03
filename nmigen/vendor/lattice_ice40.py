@@ -278,8 +278,8 @@ class LatticeICE40Platform(TemplatedPlatform):
                 elif pin.xdr == 2:
                     # Re-register both inputs before they enter fabric. This increases hold time
                     # to an entire cycle, and adds one cycle of latency.
-                    io_args.append(("o", "D_IN_0",  i0_ff))
-                    io_args.append(("o", "D_IN_1",  i1_ff))
+                    io_args.append(("o", "D_IN_0",  i0_ff[bit]))
+                    io_args.append(("o", "D_IN_1",  i1_ff[bit]))
             if "o" in pin.dir:
                 if pin.xdr < 2:
                     io_args.append(("i", "D_OUT_0", pin_o[bit]))
@@ -287,7 +287,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                     # Re-register negedge output after it leaves fabric. This increases setup time
                     # to an entire cycle, and doesn't add latency.
                     io_args.append(("i", "D_OUT_0", pin_o0[bit]))
-                    io_args.append(("i", "D_OUT_1", o1_ff))
+                    io_args.append(("i", "D_OUT_1", o1_ff[bit]))
 
             if pin.dir in ("oe", "io"):
                 io_args.append(("i", "OUTPUT_ENABLE", pin.oe))
