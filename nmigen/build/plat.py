@@ -21,6 +21,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     resources   = abstractproperty()
     connectors  = abstractproperty()
     default_clk = None
+    default_rst = None
 
     def __init__(self):
         super().__init__(self.resources, self.connectors)
