@@ -351,19 +351,24 @@ class Fragment:
 
             subfrag._propagate_domains_down()
 
-    def _propagate_domains(self, missing_domain):
+    def _create_missing_domains(self, missing_domain):
         from .xfrm import DomainCollector
 
-        self._propagate_domains_up()
         new_domains = []
         for domain_name in DomainCollector()(self):
             if domain_name is None:
                 continue
             if domain_name not in self.domains:
                 domain = missing_domain(domain_name)
-                if domain is not None:
-                    self.add_domains(domain)
-                    new_domains.append(domain)
+                if domain is None:
+                    raise DomainError("Domain '{}' is used but not defined".format(domain_name))
+                self.add_domains(domain)
+                new_domains.append(domain)
+        return new_domains
+
+    def _propagate_domains(self, missing_domain):
+        self._propagate_domains_up()
+        new_domains = self._create_missing_domains(missing_domain)
         self._propagate_domains_down()
         return new_domains
 

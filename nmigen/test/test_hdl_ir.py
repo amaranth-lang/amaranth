@@ -380,6 +380,15 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains, {"cd": cd})
         self.assertEqual(f2.domains, {"cd": cd})
 
+    def test_propagate_missing(self):
+        s1 = Signal()
+        f1 = Fragment()
+        f1.add_driver(s1, "sync")
+
+        with self.assertRaises(DomainError,
+                msg="Domain 'sync' is used but not defined"):
+            f1._propagate_domains(missing_domain=lambda name: None)
+
     def test_propagate_create_missing(self):
         s1 = Signal()
         f1 = Fragment()
