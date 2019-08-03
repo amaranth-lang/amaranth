@@ -18,8 +18,9 @@ __all__ = ["Platform", "TemplatedPlatform"]
 
 
 class Platform(ResourceManager, metaclass=ABCMeta):
-    resources  = abstractproperty()
-    connectors = abstractproperty()
+    resources   = abstractproperty()
+    connectors  = abstractproperty()
+    default_clk = None
 
     def __init__(self):
         super().__init__(self.resources, self.connectors)
@@ -27,6 +28,21 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self.extra_files = OrderedDict()
 
         self._prepared   = False
+
+    @property
+    def default_clk_constraint(self):
+        if self.default_clk is None:
+            raise AttributeError("Platform '{}' does not define a default clock"
+                                 .format(self.__class__.__name__))
+        return self.lookup(self.default_clk).clock
+
+    @property
+    def default_clk_frequency(self):
+        constraint = self.default_clk_constraint
+        if constraint is None:
+            raise AttributeError("Platform '{}' does not constrain its default clock"
+                                 .format(self.__class__.__name__))
+        return constraint.frequency
 
     def add_file(self, filename, content):
         if not isinstance(filename, str):
