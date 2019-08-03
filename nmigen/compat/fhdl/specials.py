@@ -44,7 +44,7 @@ class Tristate(Elaboratable):
             pin.oe = self.oe
             if self.i is not None:
                 pin.i = self.i
-            return platform.get_input_output(pin, self.target, extras={})
+            return platform.get_input_output(pin, self.target, attrs={}, invert=None)
 
         m = Module()
         m.d.comb += self.i.eq(self.target)
