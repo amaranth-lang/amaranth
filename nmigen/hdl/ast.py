@@ -147,7 +147,7 @@ class Value(metaclass=ABCMeta):
         return ~premise | conclusion
 
     # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
-    @deprecated("instead of `.part`, use `.bit_slip`")
+    @deprecated("instead of `.part`, use `.bit_select`")
     def part(self, offset, width):
         return Part(self, offset, width, src_loc_at=1)
 
