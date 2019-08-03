@@ -211,7 +211,7 @@ class TemplatedPlatform(Platform):
         def emit_design(backend):
             return {"rtlil": rtlil, "verilog": verilog}[backend].convert(
                 fragment, name=name, platform=self, ports=list(self.iter_ports()),
-                ensure_sync_exists=False)
+                missing_domain=lambda name: None)
 
         def emit_commands(format):
             commands = []

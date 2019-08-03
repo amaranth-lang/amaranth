@@ -1,6 +1,7 @@
 import warnings
 
 from ...hdl.ir import Fragment
+from ...hdl.cd import ClockDomain
 from ...back import verilog
 from .conv_output import ConvOutput
 
@@ -16,11 +17,14 @@ def convert(fi, ios=None, name="top", special_overrides=dict(),
                       DeprecationWarning, stacklevel=1)
     # TODO: attr_translate
 
+    def missing_domain(name):
+        if create_clock_domains:
+            return ClockDomain(name)
     v_output = verilog.convert(
         fragment=Fragment.get(fi.get_fragment(), platform=None),
         name=name,
         ports=ios or (),
-        ensure_sync_exists=create_clock_domains
+        missing_domain=missing_domain
     )
     output = ConvOutput()
     output.set_main_source(v_output)

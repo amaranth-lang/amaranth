@@ -385,7 +385,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_process(process)
 
     def test_run_until(self):
-        with self.assertSimulation(Module(), deadline=100e-6) as sim:
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertSimulation(m, deadline=100e-6) as sim:
             sim.add_clock(1e-6)
             def process():
                 for _ in range(101):
@@ -401,7 +404,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 sim.add_process(1)
 
     def test_add_clock_wrong(self):
-        with self.assertSimulation(Module()) as sim:
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertSimulation(m) as sim:
             sim.add_clock(1)
             with self.assertRaises(ValueError,
                     msg="Domain 'sync' already has a clock driving it"):

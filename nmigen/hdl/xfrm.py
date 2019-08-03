@@ -15,7 +15,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "StatementVisitor", "StatementTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
-           "DomainRenamer", "DomainLowerer",
+           "DomainCollector", "DomainRenamer", "DomainLowerer",
            "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "CEInserter"]
@@ -323,6 +323,85 @@ class TransformedElaboratable(Elaboratable):
         for transform in self._transforms_:
             fragment = transform(fragment)
         return fragment
+
+
+class DomainCollector(ValueVisitor, StatementVisitor):
+    def __init__(self):
+        self.domains = set()
+
+    def on_ignore(self, value):
+        pass
+
+    on_Const = on_ignore
+    on_AnyConst = on_ignore
+    on_AnySeq = on_ignore
+    on_Signal = on_ignore
+
+    def on_ClockSignal(self, value):
+        self.domains.add(value.domain)
+
+    def on_ResetSignal(self, value):
+        self.domains.add(value.domain)
+
+    on_Record = on_ignore
+
+    def on_Operator(self, value):
+        for o in value.operands:
+            self.on_value(o)
+
+    def on_Slice(self, value):
+        self.on_value(value.value)
+
+    def on_Part(self, value):
+        self.on_value(value.value)
+        self.on_value(value.offset)
+
+    def on_Cat(self, value):
+        for o in value.parts:
+            self.on_value(o)
+
+    def on_Repl(self, value):
+        self.on_value(value.value)
+
+    def on_ArrayProxy(self, value):
+        for elem in value._iter_as_values():
+            self.on_value(elem)
+        self.on_value(value.index)
+
+    def on_Sample(self, value):
+        self.on_value(value.value)
+
+    def on_Assign(self, stmt):
+        self.on_value(stmt.lhs)
+        self.on_value(stmt.rhs)
+
+    def on_Assert(self, stmt):
+        self.on_value(stmt.test)
+
+    def on_Assume(self, stmt):
+        self.on_value(stmt.test)
+
+    def on_Switch(self, stmt):
+        self.on_value(stmt.test)
+        for stmts in stmt.cases.values():
+            self.on_statement(stmts)
+
+    def on_statements(self, stmts):
+        for stmt in stmts:
+            self.on_statement(stmt)
+
+    def on_fragment(self, fragment):
+        if isinstance(fragment, Instance):
+            for name, (value, dir) in fragment.named_ports.items():
+                self.on_value(value)
+        self.on_statements(fragment.statements)
+        self.domains.update(fragment.drivers.keys())
+        for subfragment, name in fragment.subfragments:
+            self.on_fragment(subfragment)
+
+    def __call__(self, fragment):
+        self.on_fragment(fragment)
+        return self.domains
 
 
 class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer):

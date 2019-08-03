@@ -376,16 +376,18 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f1.add_domains(cd)
         f1.add_subfragment(f2)
 
-        f1._propagate_domains(ensure_sync_exists=False)
+        f1._propagate_domains(missing_domain=lambda name: None)
         self.assertEqual(f1.domains, {"cd": cd})
         self.assertEqual(f2.domains, {"cd": cd})
 
-    def test_propagate_ensure_sync(self):
+    def test_propagate_create_missing(self):
+        s1 = Signal()
         f1 = Fragment()
+        f1.add_driver(s1, "sync")
         f2 = Fragment()
         f1.add_subfragment(f2)
 
-        f1._propagate_domains(ensure_sync_exists=True)
+        f1._propagate_domains(missing_domain=lambda name: ClockDomain(name))
         self.assertEqual(f1.domains.keys(), {"sync"})
         self.assertEqual(f2.domains.keys(), {"sync"})
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
@@ -661,7 +663,7 @@ class InstanceTestCase(FHDLTestCase):
         f = Fragment()
         f.add_subfragment(Instance("foo", o_O=s[0]))
         f.add_subfragment(Instance("foo", o_O=s[1]))
-        fp = f.prepare(ports=[s], ensure_sync_exists=False)
+        fp = f.prepare(ports=[s], missing_domain=lambda name: None)
         self.assertEqual(fp.ports, SignalDict([
             (s, "o"),
         ]))
