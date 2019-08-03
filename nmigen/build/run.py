@@ -43,7 +43,7 @@ class BuildPlan:
             for filename in sorted(self.files):
                 archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
 
-    def execute_local(self, root="build", run_script=True):
+    def execute_local(self, root="build", *, run_script=True):
         """
         Execute build plan using the local strategy. Files from the build plan are placed in
         the build root directory ``root``, and, if ``run_script`` is ``True``, the script
