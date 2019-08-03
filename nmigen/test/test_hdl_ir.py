@@ -376,9 +376,10 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f1.add_domains(cd)
         f1.add_subfragment(f2)
 
-        f1._propagate_domains(missing_domain=lambda name: None)
+        new_domains = f1._propagate_domains(missing_domain=lambda name: None)
         self.assertEqual(f1.domains, {"cd": cd})
         self.assertEqual(f2.domains, {"cd": cd})
+        self.assertEqual(new_domains, [])
 
     def test_propagate_missing(self):
         s1 = Signal()
@@ -396,10 +397,42 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f2 = Fragment()
         f1.add_subfragment(f2)
 
-        f1._propagate_domains(missing_domain=lambda name: ClockDomain(name))
+        new_domains = f1._propagate_domains(missing_domain=lambda name: ClockDomain(name))
         self.assertEqual(f1.domains.keys(), {"sync"})
         self.assertEqual(f2.domains.keys(), {"sync"})
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
+        self.assertEqual(new_domains, [f1.domains["sync"]])
+
+    def test_propagate_create_missing_fragment(self):
+        s1 = Signal()
+        f1 = Fragment()
+        f1.add_driver(s1, "sync")
+
+        cd = ClockDomain("sync")
+        f2 = Fragment()
+        f2.add_domains(cd)
+
+        new_domains = f1._propagate_domains(missing_domain=lambda name: f2)
+        self.assertEqual(f1.domains.keys(), {"sync"})
+        self.assertEqual(f1.domains["sync"], f2.domains["sync"])
+        self.assertEqual(new_domains, [f1.domains["sync"]])
+        self.assertEqual(f1.subfragments, [
+            (f2, None)
+        ])
+        self.assertTrue(f2.flatten)
+
+    def test_propagate_create_missing_fragment_wrong(self):
+        s1 = Signal()
+        f1 = Fragment()
+        f1.add_driver(s1, "sync")
+
+        f2 = Fragment()
+        f2.add_domains(ClockDomain("foo"))
+
+        with self.assertRaises(DomainError,
+                msg="Fragment returned by missing domain callback should define exactly "
+                    "one domain 'sync', but defines domain(s) 'foo'."):
+            f1._propagate_domains(missing_domain=lambda name: f2)
 
 
 class FragmentHierarchyConflictTestCase(FHDLTestCase):

@@ -359,9 +359,23 @@ class Fragment:
             if domain_name is None:
                 continue
             if domain_name not in self.domains:
-                domain = missing_domain(domain_name)
-                if domain is None:
+                value = missing_domain(domain_name)
+                if value is None:
                     raise DomainError("Domain '{}' is used but not defined".format(domain_name))
+                if type(value) is ClockDomain:
+                    domain = value
+                else:
+                    new_fragment = Fragment.get(value, platform=None)
+                    if new_fragment.domains.keys() != {domain_name}:
+                        raise DomainError(
+                            "Fragment returned by missing domain callback should define exactly "
+                            "one domain '{}', but defines domain(s) {}."
+                            .format(domain_name,
+                                    ", ".join("'{}'".format(n)
+                                              for n in new_fragment.domains.keys())))
+                    new_fragment.flatten = True
+                    self.add_subfragment(new_fragment)
+                    domain = new_fragment.domains[domain_name]
                 self.add_domains(domain)
                 new_domains.append(domain)
         return new_domains
