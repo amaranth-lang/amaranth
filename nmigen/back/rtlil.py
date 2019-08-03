@@ -227,12 +227,14 @@ class _SyncBuilder(_ProxiedBuilder):
 
 
 def src(src_loc):
+    if src_loc is None:
+        return None
     file, line = src_loc
     return "{}:{}".format(file, line)
 
 
 def srcs(src_locs):
-    return "|".join(sorted(map(src, src_locs)))
+    return "|".join(sorted(filter(lambda x: x, map(src, src_locs))))
 
 
 class LegalizeValue(Exception):
@@ -402,7 +404,7 @@ class _RHSValueCompiler(_ValueCompiler):
             return self.s.anys[value]
 
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         self.s.rtlil.cell("$anyconst", ports={
             "\\Y": res,
         }, params={
@@ -416,7 +418,7 @@ class _RHSValueCompiler(_ValueCompiler):
             return self.s.anys[value]
 
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         self.s.rtlil.cell("$anyseq", ports={
             "\\Y": res,
         }, params={
@@ -433,7 +435,7 @@ class _RHSValueCompiler(_ValueCompiler):
         arg, = value.operands
         arg_bits, arg_sign = arg.shape()
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(1, value.op)], ports={
             "\\A": self(arg),
             "\\Y": res,
@@ -452,7 +454,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if new_bits <= value_bits:
             return self(ast.Slice(value, 0, new_bits))
 
-        res = self.s.rtlil.wire(width=new_bits)
+        res = self.s.rtlil.wire(width=new_bits, src=src(value.src_loc))
         self.s.rtlil.cell("$pos", ports={
             "\\A": self(value),
             "\\Y": res,
@@ -476,7 +478,7 @@ class _RHSValueCompiler(_ValueCompiler):
             lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
             rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(2, value.op)], ports={
             "\\A": lhs_wire,
             "\\B": rhs_wire,
@@ -498,7 +500,7 @@ class _RHSValueCompiler(_ValueCompiler):
         val1_bits = val0_bits = res_bits = max(val1_bits, val0_bits, res_bits)
         val1_wire = self.match_shape(val1, val1_bits, val1_sign)
         val0_wire = self.match_shape(val0, val0_bits, val0_sign)
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         self.s.rtlil.cell("$mux", ports={
             "\\A": val0_wire,
             "\\B": val1_wire,
@@ -524,7 +526,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
             sigspec = self(value)
         else:
-            sigspec = self.s.rtlil.wire(len(value))
+            sigspec = self.s.rtlil.wire(len(value), src=src(value.src_loc))
             self.s.rtlil.connect(sigspec, self(value))
         return sigspec
 
@@ -533,7 +535,7 @@ class _RHSValueCompiler(_ValueCompiler):
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits)
+        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         # Note: Verilog's x[o+:w] construct produces a $shiftx cell, not a $shift cell.
         # However, Migen's semantics defines the out-of-range bits to be zero, so it is correct
         # to use a $shift cell here instead, even though it produces less idiomatic Verilog.

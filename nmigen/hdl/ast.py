@@ -163,7 +163,7 @@ class Value(metaclass=ABCMeta):
         Part, out
             Selected part of the ``Value``
         """
-        return Part(self, offset, width)
+        return Part(self, offset, width, src_loc_at=1)
 
     def eq(self, value):
         """Assignment.
