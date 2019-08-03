@@ -605,6 +605,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self._case        = None
         self._test_cache  = {}
         self._has_rhs     = False
+        self._wrap_assign = False
 
     @contextmanager
     def case(self, switch, values, attrs={}, src=""):
@@ -630,7 +631,15 @@ class _StatementCompiler(xfrm.StatementVisitor):
             # In RTLIL, LHS and RHS of assignment must have exactly same width.
             rhs_sigspec = self.rhs_compiler.match_shape(
                 stmt.rhs, lhs_bits, lhs_sign)
-        self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
+        if self._wrap_assign:
+            # In RTLIL, all assigns are logically sequenced before all switches, even if they are
+            # interleaved in the source. In nMigen, the source ordering is used. To handle this
+            # mismatch, we wrap all assigns following a switch in a dummy switch.
+            with self._case.switch("{ }") as wrap_switch:
+                with wrap_switch.case() as wrap_case:
+                    wrap_case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
+        else:
+            self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
     def on_Assert(self, stmt):
         self(stmt._check.eq(stmt.test))
@@ -675,7 +684,9 @@ class _StatementCompiler(xfrm.StatementVisitor):
                             decoded_values.append(stmt.test.decoder(int(value, 2)))
                     case_attrs["nmigen.decoding"] = "|".join(decoded_values)
                 with self.case(switch, values, attrs=case_attrs):
+                    self._wrap_assign = False
                     self.on_statements(stmts)
+        self._wrap_assign = True
 
     def on_statement(self, stmt):
         try:
@@ -688,9 +699,11 @@ class _StatementCompiler(xfrm.StatementVisitor):
                 tests[-1] = "-" * bits
                 for branch, test in zip(legalize.branches, tests):
                     with self.case(switch, (test,)):
+                        self._wrap_assign = False
                         branch_value = ast.Const(branch, (bits, sign))
                         with self.state.expand_to(legalize.value, branch_value):
                             super().on_statement(stmt)
+            self._wrap_assign = True
 
     def on_statements(self, stmts):
         for stmt in stmts:
@@ -827,6 +840,7 @@ def convert_fragment(builder, fragment, hierarchy):
                     # Convert statements into decision trees.
                     stmt_compiler._case = case
                     stmt_compiler._has_rhs = False
+                    stmt_compiler._wrap_assign = False
                     stmt_compiler(group_stmts)
 
                     # Verilog `always @*` blocks will not run if `*` does not match anything, i.e.
