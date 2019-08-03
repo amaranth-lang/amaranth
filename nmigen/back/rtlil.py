@@ -532,6 +532,8 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Part(self, value):
         lhs, rhs = value.value, value.offset
+        if value.stride != 1:
+            rhs *= value.stride
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
         res_bits, res_sign = value.shape()

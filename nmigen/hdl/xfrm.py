@@ -157,7 +157,8 @@ class ValueTransformer(ValueVisitor):
         return Slice(self.on_value(value.value), value.start, value.end)
 
     def on_Part(self, value):
-        return Part(self.on_value(value.value), self.on_value(value.offset), value.width)
+        return Part(self.on_value(value.value), self.on_value(value.offset),
+                    value.width, value.stride)
 
     def on_Cat(self, value):
         return Cat(self.on_value(o) for o in value.parts)

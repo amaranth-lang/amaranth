@@ -177,11 +177,12 @@ class _RHSValueCompiler(_ValueCompiler):
         return lambda state: normalize((arg(state) >> shift) & mask, shape)
 
     def on_Part(self, value):
-        shape = value.shape()
-        arg   = self(value.value)
-        shift = self(value.offset)
-        mask  = (1 << value.width) - 1
-        return lambda state: normalize((arg(state) >> shift(state)) & mask, shape)
+        shape  = value.shape()
+        arg    = self(value.value)
+        shift  = self(value.offset)
+        mask   = (1 << value.width) - 1
+        stride = value.stride
+        return lambda state: normalize((arg(state) >> shift(state) * stride) & mask, shape)
 
     def on_Cat(self, value):
         shape  = value.shape()
@@ -260,13 +261,14 @@ class _LHSValueCompiler(_ValueCompiler):
         return eval
 
     def on_Part(self, value):
-        lhs_r = self.rhs_compiler(value.value)
-        lhs_l = self(value.value)
-        shift = self.rhs_compiler(value.offset)
-        mask  = (1 << value.width) - 1
+        lhs_r  = self.rhs_compiler(value.value)
+        lhs_l  = self(value.value)
+        shift  = self.rhs_compiler(value.offset)
+        mask   = (1 << value.width) - 1
+        stride = value.stride
         def eval(state, rhs):
             lhs_value   = lhs_r(state)
-            shift_value = shift(state)
+            shift_value = shift(state) * stride
             lhs_value  &= ~(mask << shift_value)
             lhs_value  |= (rhs & mask) << shift_value
             lhs_l(state, lhs_value)

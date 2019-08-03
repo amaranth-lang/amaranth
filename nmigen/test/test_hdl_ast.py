@@ -294,24 +294,52 @@ class SliceTestCase(FHDLTestCase):
         self.assertEqual(repr(s1), "(slice (const 4'd10) 2:3)")
 
 
-class PartTestCase(FHDLTestCase):
+class BitSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
         self.s = Signal(max=self.c.nbits)
 
     def test_shape(self):
-        s1 = self.c.part(self.s, 2)
+        s1 = self.c.bit_select(self.s, 2)
         self.assertEqual(s1.shape(), (2, False))
-        s2 = self.c.part(self.s, 0)
+        s2 = self.c.bit_select(self.s, 0)
         self.assertEqual(s2.shape(), (0, False))
+
+    def test_stride(self):
+        s1 = self.c.bit_select(self.s, 2)
+        self.assertEqual(s1.stride, 1)
 
     def test_width_bad(self):
         with self.assertRaises(TypeError):
-            self.c.part(self.s, -1)
+            self.c.bit_select(self.s, -1)
 
     def test_repr(self):
-        s = self.c.part(self.s, 2)
-        self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2)")
+        s = self.c.bit_select(self.s, 2)
+        self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2 1)")
+
+
+class WordSelectTestCase(FHDLTestCase):
+    def setUp(self):
+        self.c = Const(0, 8)
+        self.s = Signal(max=self.c.nbits)
+
+    def test_shape(self):
+        s1 = self.c.word_select(self.s, 2)
+        self.assertEqual(s1.shape(), (2, False))
+
+    def test_stride(self):
+        s1 = self.c.word_select(self.s, 2)
+        self.assertEqual(s1.stride, 2)
+
+    def test_width_bad(self):
+        with self.assertRaises(TypeError):
+            self.c.word_select(self.s, 0)
+        with self.assertRaises(TypeError):
+            self.c.word_select(self.s, -1)
+
+    def test_repr(self):
+        s = self.c.word_select(self.s, 2)
+        self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2 2)")
 
 
 class CatTestCase(FHDLTestCase):

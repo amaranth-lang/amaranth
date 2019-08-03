@@ -151,17 +151,29 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt2 = lambda y, a: y[2:4].eq(a)
         self.assertStatement(stmt2, [C(0b01, 2)], C(0b11110111, 8), reset=0b11111011)
 
-    def test_part(self):
-        stmt = lambda y, a, b: y.eq(a.part(b, 3))
+    def test_bit_select(self):
+        stmt = lambda y, a, b: y.eq(a.bit_select(b, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(0)], C(0b100, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(2)], C(0b101, 3))
         self.assertStatement(stmt, [C(0b10110100, 8), C(3)], C(0b110, 3))
 
-    def test_part_lhs(self):
-        stmt = lambda y, a, b: y.part(a, 3).eq(b)
+    def test_bit_select_lhs(self):
+        stmt = lambda y, a, b: y.bit_select(a, 3).eq(b)
         self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), reset=0b11111111)
         self.assertStatement(stmt, [C(2), C(0b101, 3)], C(0b11110111, 8), reset=0b11111111)
         self.assertStatement(stmt, [C(3), C(0b110, 3)], C(0b11110111, 8), reset=0b11111111)
+
+    def test_word_select(self):
+        stmt = lambda y, a, b: y.eq(a.word_select(b, 3))
+        self.assertStatement(stmt, [C(0b10110100, 8), C(0)], C(0b100, 3))
+        self.assertStatement(stmt, [C(0b10110100, 8), C(1)], C(0b110, 3))
+        self.assertStatement(stmt, [C(0b10110100, 8), C(2)], C(0b010, 3))
+
+    def test_word_select_lhs(self):
+        stmt = lambda y, a, b: y.word_select(a, 3).eq(b)
+        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(1), C(0b101, 3)], C(0b11101111, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(2), C(0b110, 3)], C(0b10111111, 8), reset=0b11111111)
 
     def test_cat(self):
         stmt = lambda y, *xs: y.eq(Cat(*xs))
