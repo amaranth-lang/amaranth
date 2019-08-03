@@ -572,8 +572,15 @@ class _LHSValueCompiler(_ValueCompiler):
         raise TypeError # :nocov:
 
     def match_shape(self, value, new_bits, new_sign):
-        assert value.shape() == (new_bits, new_sign)
-        return self(value)
+        value_bits, value_sign = value.shape()
+        if new_bits == value_bits:
+            return self(value)
+        elif new_bits < value_bits:
+            return self(ast.Slice(value, 0, new_bits))
+        else: # new_bits > value_bits
+            # It is legal to assign to constants on LHS in RTLIL; such assignments are ignored.
+            dummy_bits = new_bits - value_bits
+            return "{{ {}'{} {} }}".format(dummy_bits, "x" * dummy_bits, self(value))
 
     def on_Signal(self, value):
         if value not in self.s.driven:
