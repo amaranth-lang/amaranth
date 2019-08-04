@@ -1,18 +1,15 @@
 from abc import abstractproperty
 
-from ..hdl.ast import *
-from ..hdl.dsl import *
-from ..hdl.ir import *
+from ..hdl import *
 from ..build import *
 
 
 __all__ = ["XilinxSpartan3APlatform", "XilinxSpartan6Platform"]
 
+
 # The interface to Spartan 3 and 6 are substantially the same. Handle
 # differences internally using one class and expose user-aliases for
 # convenience.
-
-
 class XilinxSpartan3Or6Platform(TemplatedPlatform):
     """
     Required tools:
@@ -164,8 +161,31 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     ]
 
     def create_missing_domain(self, name):
-        # No additional reset logic needed.
-        return super().create_missing_domain(name)
+        # Xilinx devices have a global write enable (GWE) signal that asserted during configuraiton
+        # and deasserted once it ends. Because it is an asynchronous signal (GWE is driven by logic
+        # syncronous to configuration clock, which is not used by most designs), even though it is
+        # a low-skew global network, its deassertion may violate a setup/hold constraint with
+        # relation to a user clock. The recommended solution is to use a BUFGCE driven by the EOS
+        # signal (if available). For details, see:
+        #   * https://www.xilinx.com/support/answers/44174.html
+        #   * https://www.xilinx.com/support/documentation/white_papers/wp272.pdf
+        if name == "sync" and self.default_clk is not None:
+            clk_i = self.request(self.default_clk).i
+            if self.default_rst is not None:
+                rst_i = self.request(self.default_rst).i
+
+            m = Module()
+            ready = Signal()
+            if self.family == "6":
+                m.submodules += Instance("STARTUP_SPARTAN6", o_EOS=ready)
+            else:
+                raise NotImplementedError("Spartan 3 devices lack an end-of-startup signal; "
+                                          "ensure the design has an appropriate reset")
+            m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
+            m.submodules += Instance("BUFGCE", i_CE=ready, i_I=clk_i, o_O=ClockSignal("sync"))
+            if self.default_rst is not None:
+                m.d.comb += ResetSignal("sync").eq(rst_i)
+            return m
 
     def _get_xdr_buffer(self, m, pin, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):

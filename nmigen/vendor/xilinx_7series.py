@@ -1,8 +1,6 @@
 from abc import abstractproperty
 
-from ..hdl.ast import *
-from ..hdl.dsl import *
-from ..hdl.ir import *
+from ..hdl import *
 from ..build import *
 
 
@@ -123,8 +121,27 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     ]
 
     def create_missing_domain(self, name):
-        # No additional reset logic needed.
-        csuper().create_missing_domain(name)
+        # Xilinx devices have a global write enable (GWE) signal that asserted during configuraiton
+        # and deasserted once it ends. Because it is an asynchronous signal (GWE is driven by logic
+        # syncronous to configuration clock, which is not used by most designs), even though it is
+        # a low-skew global network, its deassertion may violate a setup/hold constraint with
+        # relation to a user clock. The recommended solution is to use a BUFGCE driven by the EOS
+        # signal. For details, see:
+        #   * https://www.xilinx.com/support/answers/44174.html
+        #   * https://www.xilinx.com/support/documentation/white_papers/wp272.pdf
+        if name == "sync" and self.default_clk is not None:
+            clk_i = self.request(self.default_clk).i
+            if self.default_rst is not None:
+                rst_i = self.request(self.default_rst).i
+
+            m = Module()
+            ready = Signal()
+            m.submodules += Instance("STARTUPE3", o_EOS=ready)
+            m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
+            m.submodules += Instance("BUFGCE", i_CE=ready, i_I=clk_i, o_O=ClockSignal("sync"))
+            if self.default_rst is not None:
+                m.d.comb += ResetSignal("sync").eq(rst_i)
+            return m
 
     def _get_xdr_buffer(self, m, pin, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):

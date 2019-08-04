@@ -74,6 +74,10 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
     @abstractmethod
     def create_missing_domain(self, name):
+        # Simple instantiation of a clock domain driven directly by the board clock and reset.
+        # Because of device-specific considerations, this implementation generally does NOT provide
+        # reliable power-on/post-configuration reset, and the logic should be replaced with family
+        # specific logic based on vendor recommendations.
         if name == "sync" and self.default_clk is not None:
             clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
