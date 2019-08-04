@@ -33,7 +33,8 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         * ``ngdbuild_opts``: adds extra options for NGDBuild.
         * ``map_opts``: adds extra options for MAP.
         * ``par_opts``: adds extra options for PAR.
-        * ``bitgen_opts``: adds extra options for BitGen.
+        * ``bitgen_opts``: adds extra and overrides default options for BitGen;
+          default options: ``-g Compress``.
 
     Build products:
         * ``{{name}}.srp``: synthesis report.
@@ -154,8 +155,9 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         """,
         r"""
         {{get_tool("bitgen")}}
-            {{get_override("bitgen_opts")|default(["-g Binary:Yes", "-g Compress"])|options}}
+            {{get_override("bitgen_opts")|default(["-g Compress"])|options}}
             -w
+            -g Binary:Yes
             {{name}}_par.ncd
             {{name}}.bit
         """
