@@ -244,11 +244,15 @@ class LatticeICE40Platform(TemplatedPlatform):
             ]
 
             if "i" not in pin.dir:
-                i_type =     0b00 # PIN_NO_INPUT aka PIN_INPUT_REGISTERED
+                # If no input pin is requested, it is important to use a non-registered input pin
+                # type, because an output-only pin would not have an input clock, and if its input
+                # is configured as registered, this would prevent a co-located input-capable pin
+                # from using an input clock.
+                i_type =     0b01 # PIN_INPUT
             elif pin.xdr == 0:
                 i_type =     0b01 # PIN_INPUT
             elif pin.xdr > 0:
-                i_type =     0b00 # PIN_INPUT_REGISTERED
+                i_type =     0b00 # PIN_INPUT_REGISTERED aka PIN_INPUT_DDR
             if "o" not in pin.dir:
                 o_type = 0b0000   # PIN_NO_OUTPUT
             elif pin.xdr == 0 and pin.dir == "o":
