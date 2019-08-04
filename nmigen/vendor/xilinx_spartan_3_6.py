@@ -154,9 +154,8 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         """,
         r"""
         {{get_tool("bitgen")}}
-            {{get_override("bitgen_opts")|default([])|options}}
+            {{get_override("bitgen_opts")|default(["-g Binary:Yes", "-g Compress"])|options}}
             -w
-            -g Binary:Yes
             {{name}}_par.ncd
             {{name}}.bit
         """
