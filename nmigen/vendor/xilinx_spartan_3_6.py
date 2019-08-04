@@ -101,7 +101,6 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             {% if platform.family in ["3", "3E", "3A"] %}
             -use_new_parser yes
             {% endif %}
-            -register_balancing yes
             -p {{platform.device}}{{platform.package}}-{{platform.speed}}
             {{get_override("script_after_run")|default("# (script_after_run placeholder)")}}
         """,
