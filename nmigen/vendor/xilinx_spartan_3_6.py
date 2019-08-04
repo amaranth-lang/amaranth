@@ -121,6 +121,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """
     }
+    unix_interpreter  = "bash"
     command_templates = [
         r"""
         {{get_tool("xst")}}
