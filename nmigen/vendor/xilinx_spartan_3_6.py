@@ -138,21 +138,24 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         r"""
         {{get_tool("map")}}
             {{verbose("-detail")}}
-            {{get_override("map_opts")|default(["-w"])|options}}
+            {{get_override("map_opts")|default([])|options}}
+            -w
             -o {{name}}_map.ncd
             {{name}}.ngd
             {{name}}.pcf
         """,
         r"""
         {{get_tool("par")}}
-            {{get_override("par_opts")|default(["-w"])|options}}
+            {{get_override("par_opts")|default([])|options}}
+            -w
             {{name}}_map.ncd
             {{name}}_par.ncd
             {{name}}.pcf
         """,
         r"""
         {{get_tool("bitgen")}}
-            {{get_override("bitgen_opts")|default(["-w"])|options}}
+            {{get_override("bitgen_opts")|default([])|options}}
+            -w
             -g Binary:Yes
             {{name}}_par.ncd
             {{name}}.bit
