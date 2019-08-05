@@ -8,7 +8,7 @@ from .tools import *
 def example_test(name):
     path = (Path(__file__).parent / ".." / ".." / "examples" / name).resolve()
     def test_function(self):
-        subprocess.check_call([sys.executable, path, "generate"], stdout=subprocess.DEVNULL)
+        subprocess.check_call([sys.executable, str(path), "generate"], stdout=subprocess.DEVNULL)
     return test_function
 
 
