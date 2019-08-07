@@ -49,12 +49,14 @@ class LatticeICE40Platform(TemplatedPlatform):
         "iCE40HX4K":  "--hx8k",
         "iCE40HX8K":  "--hx8k",
         "iCE40UP5K":  "--up5k",
+        "iCE40UP3K":  "--up5k",
         "iCE5LP4K":   "--u4k",
         "iCE5LP1K":   "--u4k",
     }
     _nextpnr_package_options = {
         "iCE40LP4K":  ":4k",
         "iCE40HX4K":  ":4k",
+        "iCE40UP3K":  "",
         "iCE5LP1K":   "",
     }
 
