@@ -105,7 +105,9 @@ class CompatModule(ir.Elaboratable):
         return self._module
 
     def elaborate(self, platform):
-        return self.get_fragment()
+        if not self.get_fragment_called:
+            self.get_fragment()
+        return self._module
 
     def __getattr__(self, name):
         if name == "comb":
@@ -137,22 +139,22 @@ class CompatModule(ir.Elaboratable):
             raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(type(self).__name__, name))
 
-    def _finalize_submodules(self, finalize_native):
-        for name, submodule in self._submodules:
-            if hasattr(submodule, "get_fragment_called"):
-                # Compat submodule
-                if not submodule.get_fragment_called:
-                    self._module._add_submodule(submodule.get_fragment(), name)
-            elif finalize_native:
-                # Native submodule
-                self._module._add_submodule(submodule, name)
-
     def finalize(self, *args, **kwargs):
+        def finalize_submodules():
+            for name, submodule in self._submodules:
+                if not hasattr(submodule, "finalize"):
+                    continue
+                if submodule.finalized:
+                    continue
+                submodule.finalize(*args, **kwargs)
+
         if not self.finalized:
             self.finalized = True
-            self._finalize_submodules(finalize_native=False)
+            finalize_submodules()
             self.do_finalize(*args, **kwargs)
-            self._finalize_submodules(finalize_native=True)
+            finalize_submodules()
+            for name, submodule in self._submodules:
+                self._module._add_submodule(submodule, name)
 
     def do_finalize(self):
         pass
