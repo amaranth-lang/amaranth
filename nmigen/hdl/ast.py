@@ -1256,31 +1256,32 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
 class ValueKey:
     def __init__(self, value):
         self.value = Value.wrap(value)
-
-    def __hash__(self):
         if isinstance(self.value, Const):
-            return hash(self.value.value)
+            self._hash = hash(self.value.value)
         elif isinstance(self.value, (Signal, AnyValue)):
-            return hash(self.value.duid)
+            self._hash = hash(self.value.duid)
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
-            return hash(self.value.domain)
+            self._hash = hash(self.value.domain)
         elif isinstance(self.value, Operator):
-            return hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
+            self._hash = hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
         elif isinstance(self.value, Slice):
-            return hash((ValueKey(self.value.value), self.value.start, self.value.end))
+            self._hash = hash((ValueKey(self.value.value), self.value.start, self.value.end))
         elif isinstance(self.value, Part):
-            return hash((ValueKey(self.value.value), ValueKey(self.value.offset),
-                         self.value.width, self.value.stride))
+            self._hash = hash((ValueKey(self.value.value), ValueKey(self.value.offset),
+                              self.value.width, self.value.stride))
         elif isinstance(self.value, Cat):
-            return hash(tuple(ValueKey(o) for o in self.value.parts))
+            self._hash = hash(tuple(ValueKey(o) for o in self.value.parts))
         elif isinstance(self.value, ArrayProxy):
-            return hash((ValueKey(self.value.index),
-                         tuple(ValueKey(e) for e in self.value._iter_as_values())))
+            self._hash = hash((ValueKey(self.value.index),
+                              tuple(ValueKey(e) for e in self.value._iter_as_values())))
         elif isinstance(self.value, Sample):
-            return hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
+            self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
+
+    def __hash__(self):
+        return self._hash
 
     def __eq__(self, other):
         if type(other) is not ValueKey:
@@ -1358,6 +1359,7 @@ class ValueSet(_MappedKeySet):
 
 class SignalKey:
     def __init__(self, signal):
+        self.signal = signal
         if type(signal) is Signal:
             self._intern = (0, signal.duid)
         elif type(signal) is ClockSignal:
@@ -1366,7 +1368,6 @@ class SignalKey:
             self._intern = (2, signal.domain)
         else:
             raise TypeError("Object '{!r}' is not an nMigen signal".format(signal))
-        self.signal = signal
 
     def __hash__(self):
         return hash(self._intern)
