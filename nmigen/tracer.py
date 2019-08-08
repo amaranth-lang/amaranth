@@ -1,5 +1,4 @@
-import traceback
-import inspect
+import sys
 from opcode import opname
 
 
@@ -14,10 +13,7 @@ _raise_exception = object()
 
 
 def get_var_name(depth=2, default=_raise_exception):
-    frame = inspect.currentframe()
-    for _ in range(depth):
-        frame = frame.f_back
-
+    frame = sys._getframe(depth)
     code = frame.f_code
     call_index = frame.f_lasti
     while True:
@@ -55,7 +51,5 @@ def get_src_loc(src_loc_at=0):
     # n-th  frame: get_src_loc()
     # n-1th frame: caller of get_src_loc() (usually constructor)
     # n-2th frame: caller of caller (usually user code)
-    # Python returns the stack frames reversed, so it is enough to set limit and grab the very
-    # first one in the array.
-    tb = traceback.extract_stack(limit=3 + src_loc_at)
-    return (tb[0].filename, tb[0].lineno)
+    frame = sys._getframe(2 + src_loc_at)
+    return (frame.f_code.co_filename, frame.f_lineno)
