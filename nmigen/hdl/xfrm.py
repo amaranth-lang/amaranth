@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
 
-from ..tools import flatten
+from ..tools import flatten, deprecated
 from .. import tracer
 from .ast import *
 from .ast import _StatementList
@@ -18,7 +18,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
            "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
-           "ResetInserter", "CEInserter"]
+           "ResetInserter", "EnableInserter", "CEInserter"]
 
 
 class ValueVisitor(metaclass=ABCMeta):
@@ -657,7 +657,7 @@ class ResetInserter(_ControlInserter):
         fragment.add_statements(Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 
-class CEInserter(_ControlInserter):
+class EnableInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(s) for s in signals]
         fragment.add_statements(Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
@@ -671,3 +671,6 @@ class CEInserter(_ControlInserter):
                 en_port = Mux(self.controls[clk_port.domain], en_port, Const(0, len(en_port)))
                 new_fragment.named_ports["EN"] = en_port, en_dir
         return new_fragment
+
+
+CEInserter = deprecated("instead of `CEInserter`, use `EnableInserter`")(EnableInserter)

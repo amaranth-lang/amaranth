@@ -38,8 +38,8 @@ Compatibility summary
       <br>Note: `transform_*` methods not considered part of public API.
       - (⊙) `ModuleTransformer` **brk**
       - (⊙) `ControlInserter` **brk**
-      - (-) `CEInserter` **obs**
-      - (-) `ResetInserter` **obs**
+      - (+) `CEInserter` → `EnableInserter`
+      - (+) `ResetInserter` id
       - (+) `ClockDomainsRenamer` → `DomainRenamer`, `cd_remapping=`→`domain_map=`
     - (⊙) `edif` **brk**
     - (+) `module` **obs** → `.hdl.dsl`

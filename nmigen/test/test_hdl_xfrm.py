@@ -437,21 +437,21 @@ class ResetInserterTestCase(FHDLTestCase):
         """)
 
 
-class CEInserterTestCase(FHDLTestCase):
+class EnableInserterTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
         self.s2 = Signal()
         self.s3 = Signal()
         self.c1 = Signal()
 
-    def test_ce_default(self):
+    def test_enable_default(self):
         f = Fragment()
         f.add_statements(
             self.s1.eq(1)
         )
         f.add_driver(self.s1, "sync")
 
-        f = CEInserter(self.c1)(f)
+        f = EnableInserter(self.c1)(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s1) (const 1'd1))
@@ -461,7 +461,7 @@ class CEInserterTestCase(FHDLTestCase):
         )
         """)
 
-    def test_ce_cd(self):
+    def test_enable_cd(self):
         f = Fragment()
         f.add_statements(
             self.s1.eq(1),
@@ -470,7 +470,7 @@ class CEInserterTestCase(FHDLTestCase):
         f.add_driver(self.s1, "sync")
         f.add_driver(self.s2, "pix")
 
-        f = CEInserter({"pix": self.c1})(f)
+        f = EnableInserter({"pix": self.c1})(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s1) (const 1'd1))
@@ -481,7 +481,7 @@ class CEInserterTestCase(FHDLTestCase):
         )
         """)
 
-    def test_ce_subfragment(self):
+    def test_enable_subfragment(self):
         f1 = Fragment()
         f1.add_statements(
             self.s1.eq(1)
@@ -495,7 +495,7 @@ class CEInserterTestCase(FHDLTestCase):
         f2.add_driver(self.s2, "sync")
         f1.add_subfragment(f2)
 
-        f1 = CEInserter(self.c1)(f1)
+        f1 = EnableInserter(self.c1)(f1)
         (f2, _), = f1.subfragments
         self.assertRepr(f1.statements, """
         (
@@ -514,16 +514,16 @@ class CEInserterTestCase(FHDLTestCase):
         )
         """)
 
-    def test_ce_read_port(self):
+    def test_enable_read_port(self):
         mem = Memory(width=8, depth=4)
-        f = CEInserter(self.c1)(mem.read_port(transparent=False)).elaborate(platform=None)
+        f = EnableInserter(self.c1)(mem.read_port(transparent=False)).elaborate(platform=None)
         self.assertRepr(f.named_ports["EN"][0], """
         (m (sig c1) (sig mem_r_en) (const 1'd0))
         """)
 
-    def test_ce_write_port(self):
+    def test_enable_write_port(self):
         mem = Memory(width=8, depth=4)
-        f = CEInserter(self.c1)(mem.write_port()).elaborate(platform=None)
+        f = EnableInserter(self.c1)(mem.write_port()).elaborate(platform=None)
         self.assertRepr(f.named_ports["EN"][0], """
         (m (sig c1) (cat (repl (slice (sig mem_w_en) 0:1) 8)) (const 8'd0))
         """)
@@ -549,13 +549,13 @@ class TransformedElaboratableTestCase(FHDLTestCase):
 
     def test_getattr(self):
         e = _MockElaboratable()
-        te = CEInserter(self.c1)(e)
+        te = EnableInserter(self.c1)(e)
 
         self.assertIs(te.s1, e.s1)
 
     def test_composition(self):
         e = _MockElaboratable()
-        te1 = CEInserter(self.c1)(e)
+        te1 = EnableInserter(self.c1)(e)
         te2 = ResetInserter(self.c2)(te1)
 
         self.assertIsInstance(te1, TransformedElaboratable)

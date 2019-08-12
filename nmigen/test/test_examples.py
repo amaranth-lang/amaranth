@@ -18,7 +18,7 @@ class ExamplesTestCase(FHDLTestCase):
     test_arst       = example_test("basic/arst.py")
     test_cdc        = example_test("basic/cdc.py")
     test_ctr        = example_test("basic/ctr.py")
-    test_ctr_ce     = example_test("basic/ctr_ce.py")
+    test_ctr_en     = example_test("basic/ctr_en.py")
     test_fsm        = example_test("basic/fsm.py")
     test_gpio       = example_test("basic/gpio.py")
     test_inst       = example_test("basic/inst.py")
