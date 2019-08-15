@@ -331,6 +331,9 @@ class _ValueCompiler(xfrm.ValueVisitor):
     def on_Sample(self, value):
         raise NotImplementedError # :nocov:
 
+    def on_Initial(self, value):
+        raise NotImplementedError # :nocov:
+
     def on_Record(self, value):
         return self(ast.Cat(value.fields.values()))
 

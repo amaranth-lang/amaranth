@@ -614,3 +614,9 @@ class SampleTestCase(FHDLTestCase):
         with self.assertRaises(ValueError,
                 "Cannot sample a value 1 cycles in the future"):
             Sample(Signal(), -1, "sync")
+
+
+class InitialTestCase(FHDLTestCase):
+    def test_initial(self):
+        i = Initial()
+        self.assertEqual(i.shape(), (1, False))

@@ -78,6 +78,10 @@ class ValueVisitor(metaclass=ABCMeta):
     def on_Sample(self, value):
         pass # :nocov:
 
+    @abstractmethod
+    def on_Initial(self, value):
+        pass # :nocov:
+
     def on_unknown_value(self, value):
         raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
 
@@ -115,6 +119,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_ArrayProxy(value)
         elif type(value) is Sample:
             new_value = self.on_Sample(value)
+        elif type(value) is Initial:
+            new_value = self.on_Initial(value)
         elif isinstance(value, UserValue):
             # Uses `isinstance()` and not `type() is` to allow inheriting.
             new_value = self.on_value(value._lazy_lower())
@@ -172,6 +178,9 @@ class ValueTransformer(ValueVisitor):
 
     def on_Sample(self, value):
         return Sample(self.on_value(value.value), value.clocks, value.domain)
+
+    def on_Initial(self, value):
+        return value
 
 
 class StatementVisitor(metaclass=ABCMeta):
@@ -371,6 +380,9 @@ class DomainCollector(ValueVisitor, StatementVisitor):
     def on_Sample(self, value):
         self.on_value(value.value)
 
+    def on_Initial(self, value):
+        pass
+
     def on_Assign(self, stmt):
         self.on_value(stmt.lhs)
         self.on_value(stmt.rhs)
@@ -491,6 +503,7 @@ class SampleDomainInjector(ValueTransformer, StatementTransformer):
 
 class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
     def __init__(self):
+        self.initial = None
         self.sample_cache = None
         self.sample_stmts = None
 
@@ -503,6 +516,8 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             return "clk", 0
         elif isinstance(value, ResetSignal):
             return "rst", 1
+        elif isinstance(value, Initial):
+            return "init", 0 # Past(Initial()) produces 0, 1, 0, 0, ...
         else:
             raise NotImplementedError # :nocov:
 
@@ -510,8 +525,9 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         if value in self.sample_cache:
             return self.sample_cache[value]
 
+        sampled_value = self.on_value(value.value)
         if value.clocks == 0:
-            sample = value.value
+            sample = sampled_value
         else:
             assert value.domain is not None
             sampled_name, sampled_reset = self._name_reset(value.value)
@@ -519,7 +535,7 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             sample = Signal.like(value.value, name=name, reset_less=True, reset=sampled_reset)
             sample.attrs["nmigen.sample_reg"] = True
 
-            prev_sample = self.on_Sample(Sample(value.value, value.clocks - 1, value.domain))
+            prev_sample = self.on_Sample(Sample(sampled_value, value.clocks - 1, value.domain))
             if value.domain not in self.sample_stmts:
                 self.sample_stmts[value.domain] = []
             self.sample_stmts[value.domain].append(sample.eq(prev_sample))
@@ -527,7 +543,13 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         self.sample_cache[value] = sample
         return sample
 
+    def on_Initial(self, value):
+        if self.initial is None:
+            self.initial = Signal(name="init")
+        return self.initial
+
     def map_statements(self, fragment, new_fragment):
+        self.initial = None
         self.sample_cache = ValueDict()
         self.sample_stmts = OrderedDict()
         new_fragment.add_statements(map(self.on_statement, fragment.statements))
@@ -535,6 +557,8 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             new_fragment.add_statements(stmts)
             for stmt in stmts:
                 new_fragment.add_driver(stmt.lhs, domain)
+        if self.initial is not None:
+            new_fragment.add_subfragment(Instance("$initstate", o_Y=self.initial))
 
 
 class SwitchCleaner(StatementVisitor):

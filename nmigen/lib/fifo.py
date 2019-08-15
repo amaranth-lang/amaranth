@@ -181,9 +181,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
 
         if platform == "formal":
             # TODO: move this logic to SymbiYosys
-            initstate = Signal()
-            m.submodules += Instance("$initstate", o_Y=initstate)
-            with m.If(initstate):
+            with m.If(Initial()):
                 m.d.comb += [
                     Assume(produce < self.depth),
                     Assume(consume < self.depth),
@@ -351,10 +349,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         ]
 
         if platform == "formal":
-            # TODO: move this logic elsewhere
-            initstate = Signal()
-            m.submodules += Instance("$initstate", o_Y=initstate)
-            with m.If(initstate):
+            with m.If(Initial()):
                 m.d.comb += Assume(produce_w_gry == (produce_w_bin ^ produce_w_bin[1:]))
                 m.d.comb += Assume(consume_r_gry == (consume_r_bin ^ consume_r_bin[1:]))
 

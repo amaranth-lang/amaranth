@@ -86,6 +86,9 @@ class _ValueCompiler(ValueVisitor):
     def on_Sample(self, value):
         raise NotImplementedError # :nocov:
 
+    def on_Initial(self, value):
+        raise NotImplementedError # :nocov:
+
     def on_Record(self, value):
         return self(Cat(value.fields.values()))
 

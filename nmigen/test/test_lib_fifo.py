@@ -208,12 +208,10 @@ class FIFOContractSpec(Elaboratable):
                 with m.If((read_1 == entry_1) & (read_2 == entry_2)):
                     m.next = "DONE"
 
-        initstate = Signal()
-        m.submodules += Instance("$initstate", o_Y=initstate)
-        with m.If(initstate):
+        with m.If(Initial()):
             m.d.comb += Assume(write_fsm.ongoing("WRITE-1"))
             m.d.comb += Assume(read_fsm.ongoing("READ"))
-        with m.If(Past(initstate, self.bound - 1)):
+        with m.If(Past(Initial(), self.bound - 1)):
             m.d.comb += Assert(read_fsm.ongoing("DONE"))
 
         if self.wdomain != "sync" or self.rdomain != "sync":

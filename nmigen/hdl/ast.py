@@ -12,9 +12,9 @@ from ..tools import *
 __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
-    "Sample", "Past", "Stable", "Rose", "Fell",
     "Signal", "ClockSignal", "ResetSignal",
     "UserValue",
+    "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
     "Statement", "Assign", "Assert", "Assume", "Switch", "Delay", "Tick",
     "Passive", "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
     "SignalSet",
@@ -957,7 +957,7 @@ class Sample(Value):
         self.value  = Value.wrap(expr)
         self.clocks = int(clocks)
         self.domain = domain
-        if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal)):
+        if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal, Initial)):
             raise TypeError("Sampled value may only be a signal or a constant, not {!r}"
                             .format(self.value))
         if self.clocks < 0:
@@ -989,6 +989,25 @@ def Rose(expr, clocks=0, domain=None):
 
 def Fell(expr, clocks=0, domain=None):
     return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
+
+
+@final
+class Initial(Value):
+    """Start indicator, for formal verification.
+
+    An ``Initial`` signal is ``1`` at the first cycle of model checking, and ``0`` at any other.
+    """
+    def __init__(self, *, src_loc_at=0):
+        super().__init__(src_loc_at=1 + src_loc_at)
+
+    def shape(self):
+        return (1, False)
+
+    def _rhs_signals(self):
+        return ValueSet((self,))
+
+    def __repr__(self):
+        return "(initial)"
 
 
 class _StatementList(list):
@@ -1276,6 +1295,8 @@ class ValueKey:
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
         elif isinstance(self.value, Sample):
             self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
+        elif isinstance(self.value, Initial):
+            self._hash = 0
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
@@ -1322,6 +1343,8 @@ class ValueKey:
             return (ValueKey(self.value.value) == ValueKey(other.value.value) and
                     self.value.clocks == other.value.clocks and
                     self.value.domain == self.value.domain)
+        elif isinstance(self.value, Initial):
+            return True
         else: # :nocov:
             raise TypeError("Object '{!r}' cannot be used as a key in value collections"
                             .format(self.value))
