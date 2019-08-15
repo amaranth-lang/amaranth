@@ -491,8 +491,8 @@ class SampleDomainInjector(ValueTransformer, StatementTransformer):
 
 class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
     def __init__(self):
-        self.sample_cache = ValueDict()
-        self.sample_stmts = OrderedDict()
+        self.sample_cache = None
+        self.sample_stmts = None
 
     def _name_reset(self, value):
         if isinstance(value, Const):
@@ -527,13 +527,14 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         self.sample_cache[value] = sample
         return sample
 
-    def on_fragment(self, fragment):
-        new_fragment = super().on_fragment(fragment)
+    def map_statements(self, fragment, new_fragment):
+        self.sample_cache = ValueDict()
+        self.sample_stmts = OrderedDict()
+        new_fragment.add_statements(map(self.on_statement, fragment.statements))
         for domain, stmts in self.sample_stmts.items():
             new_fragment.add_statements(stmts)
             for stmt in stmts:
                 new_fragment.add_driver(stmt.lhs, domain)
-        return new_fragment
 
 
 class SwitchCleaner(StatementVisitor):
