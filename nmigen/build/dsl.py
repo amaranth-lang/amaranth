@@ -210,10 +210,10 @@ class Resource(Subsignal):
 
 
 class Connector:
-    def __init__(self, name, number, io):
+    def __init__(self, name, number, io, *, conn=None):
         self.name    = name
         self.number  = number
-        self.mapping = OrderedDict()
+        mapping = OrderedDict()
 
         if isinstance(io, dict):
             for conn_pin, plat_pin in io.items():
@@ -223,17 +223,28 @@ class Connector:
                 if not isinstance(plat_pin, str):
                     raise TypeError("Platform pin name must be a string, not {!r}"
                                     .format(plat_pin))
-                self.mapping[conn_pin] = plat_pin
+                mapping[conn_pin] = plat_pin
 
         elif isinstance(io, str):
             for conn_pin, plat_pin in enumerate(io.split(), start=1):
                 if plat_pin == "-":
                     continue
-                self.mapping[str(conn_pin)] = plat_pin
 
+                mapping[str(conn_pin)] = plat_pin
         else:
             raise TypeError("Connector I/Os must be a dictionary or a string, not {!r}"
                             .format(io))
+
+        if conn is not None:
+            conn_name, conn_number = conn
+            if not (isinstance(conn_name, str) and isinstance(conn_number, int)):
+                raise TypeError("Connector must be None or a pair of string and integer, not {!r}"
+                                .format(conn))
+
+            for conn_pin, plat_pin in mapping.items():
+                mapping[conn_pin] = "{}_{}:{}".format(conn_name, conn_number, plat_pin)
+
+        self.mapping = mapping
 
     def __repr__(self):
         return "(connector {} {} {})".format(self.name, self.number,

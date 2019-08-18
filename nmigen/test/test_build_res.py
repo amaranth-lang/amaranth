@@ -168,6 +168,27 @@ class ResourceManagerTestCase(FHDLTestCase):
             ("spi_0__mosi__io", ["B3"], {}),
         ])
 
+    def test_request_via_nested_connector(self):
+        new_connectors = [
+            Connector("pmod_extension", 0, "1 2 3 4 - -", conn=("pmod", 0)),
+        ]
+        self.cm.add_connectors(new_connectors)
+        self.cm.add_resources([
+            Resource("spi", 0,
+                Subsignal("ss",   Pins("1", conn=("pmod_extension", 0))),
+                Subsignal("clk",  Pins("2", conn=("pmod_extension", 0))),
+                Subsignal("miso", Pins("3", conn=("pmod_extension", 0))),
+                Subsignal("mosi", Pins("4", conn=("pmod_extension", 0))),
+            )
+        ])
+        spi0 = self.cm.request("spi", 0)
+        self.assertEqual(list(self.cm.iter_port_constraints()), [
+            ("spi_0__ss__io",   ["B0"], {}),
+            ("spi_0__clk__io",  ["B1"], {}),
+            ("spi_0__miso__io", ["B2"], {}),
+            ("spi_0__mosi__io", ["B3"], {}),
+        ])
+
     def test_request_clock(self):
         clk100 = self.cm.request("clk100", 0)
         clk50 = self.cm.request("clk50", 0, dir="i")

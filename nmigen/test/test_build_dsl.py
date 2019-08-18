@@ -278,6 +278,19 @@ class ConnectorTestCase(FHDLTestCase):
             ("DP1", "A1"),
         ]))
 
+    def test_conn(self):
+        c = Connector("pmod", 0, "0 1 2 3 - - 4 5 6 7 - -", conn=("expansion", 0))
+        self.assertEqual(c.mapping, OrderedDict([
+            ("1", "expansion_0:0"),
+            ("2", "expansion_0:1"),
+            ("3", "expansion_0:2"),
+            ("4", "expansion_0:3"),
+            ("7", "expansion_0:4"),
+            ("8", "expansion_0:5"),
+            ("9", "expansion_0:6"),
+            ("10", "expansion_0:7"),
+        ]))
+
     def test_wrong_io(self):
         with self.assertRaises(TypeError,
                 msg="Connector I/Os must be a dictionary or a string, not []"):
