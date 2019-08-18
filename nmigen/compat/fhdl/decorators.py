@@ -1,6 +1,6 @@
 from ...hdl.ast import *
 from ...hdl.xfrm import ResetInserter as NativeResetInserter
-from ...hdl.xfrm import CEInserter as NativeCEInserter
+from ...hdl.xfrm import EnableInserter as NativeEnableInserter
 from ...hdl.xfrm import DomainRenamer as NativeDomainRenamer
 
 
@@ -33,7 +33,7 @@ class CompatResetInserter(_CompatControlInserter):
 
 class CompatCEInserter(_CompatControlInserter):
     _control_name = "ce"
-    _native_inserter = NativeCEInserter
+    _native_inserter = NativeEnableInserter
 
 
 ResetInserter = CompatResetInserter
