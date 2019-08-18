@@ -698,4 +698,5 @@ class EnableInserter(_ControlInserter):
         return new_fragment
 
 
-CEInserter = deprecated("instead of `CEInserter`, use `EnableInserter`")(EnableInserter)
+CEInserter = staticmethod(
+    deprecated("instead of `CEInserter`, use `EnableInserter`")(EnableInserter))
