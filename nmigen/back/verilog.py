@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 
 from . import rtlil
@@ -11,13 +12,9 @@ class YosysError(Exception):
     pass
 
 
-def _convert_il_text(il_text, strip_src):
+def _yosys_version():
     try:
-        popen = subprocess.Popen([os.getenv("YOSYS", "yosys"), "-q", "-"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding="utf-8")
+        version = subprocess.check_output([os.getenv("YOSYS", "yosys"), "-V"], encoding="utf-8")
     except FileNotFoundError as e:
         if os.getenv("YOSYS"):
             raise YosysError("Could not find Yosys in {} as specified via the YOSYS environment "
@@ -26,11 +23,21 @@ def _convert_il_text(il_text, strip_src):
             raise YosysError("Could not find Yosys in PATH. Place `yosys` in PATH or specify "
                              "path explicitly via the YOSYS environment variable") from e
 
+    m = re.match(r"^Yosys ([\d.]+)\+(\d+)", version)
+    tag, offset = m[1], m[2]
+    return tuple(map(int, tag.split("."))), offset
+
+
+def _convert_il_text(il_text, strip_src):
+    version, offset = _yosys_version()
+    if version < (0, 8):
+        raise YosysError("Yosys %d.%d is not suppored", *version)
+
     attr_map = []
     if strip_src:
         attr_map.append("-remove src")
 
-    verilog_text, error = popen.communicate("""
+    script = """
 # Convert nMigen's RTLIL to readable Verilog.
 read_ilang <<rtlil
 {}
@@ -43,7 +50,14 @@ proc_clean
 memory_collect
 attrmap {}
 write_verilog -norename
-""".format(il_text, " ".join(attr_map)))
+""".format(il_text, " ".join(attr_map))
+
+    popen = subprocess.Popen([os.getenv("YOSYS", "yosys"), "-q", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding="utf-8")
+    verilog_text, error = popen.communicate(script)
     if popen.returncode:
         raise YosysError(error.strip())
     else:
