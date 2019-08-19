@@ -428,9 +428,8 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
         self.assertEqual(new_domains, [])
         self.assertEqual(f1.subfragments, [
-            (f2, None)
+            (f2, "cd_sync")
         ])
-        self.assertTrue(f2.flatten)
 
     def test_propagate_create_missing_fragment_many_domains(self):
         s1 = Signal()
@@ -448,7 +447,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
         self.assertEqual(new_domains, [])
         self.assertEqual(f1.subfragments, [
-            (f2, None)
+            (f2, "cd_sync")
         ])
 
     def test_propagate_create_missing_fragment_wrong(self):

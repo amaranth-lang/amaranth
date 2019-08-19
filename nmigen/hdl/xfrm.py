@@ -336,12 +336,16 @@ class TransformedElaboratable(Elaboratable):
 
 class DomainCollector(ValueVisitor, StatementVisitor):
     def __init__(self):
-        self.domains = set()
+        self.used_domains = set()
+        self.defined_domains = set()
         self._local_domains = set()
 
-    def _add_domain(self, domain_name):
-        if domain_name not in self._local_domains:
-            self.domains.add(domain_name)
+    def _add_used_domain(self, domain_name):
+        if domain_name is None:
+            return
+        if domain_name in self._local_domains:
+            return
+        self.used_domains.add(domain_name)
 
     def on_ignore(self, value):
         pass
@@ -352,10 +356,10 @@ class DomainCollector(ValueVisitor, StatementVisitor):
     on_Signal = on_ignore
 
     def on_ClockSignal(self, value):
-        self._add_domain(value.domain)
+        self._add_used_domain(value.domain)
 
     def on_ResetSignal(self, value):
-        self._add_domain(value.domain)
+        self._add_used_domain(value.domain)
 
     on_Record = on_ignore
 
@@ -416,10 +420,12 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         for domain_name, domain in fragment.domains.items():
             if domain.local:
                 self._local_domains.add(domain_name)
+            else:
+                self.defined_domains.add(domain_name)
 
         self.on_statements(fragment.statements)
         for domain_name in fragment.drivers:
-            self._add_domain(domain_name)
+            self._add_used_domain(domain_name)
         for subfragment, name in fragment.subfragments:
             self.on_fragment(subfragment)
 
@@ -427,7 +433,6 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
     def __call__(self, fragment):
         self.on_fragment(fragment)
-        return self.domains
 
 
 class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer):

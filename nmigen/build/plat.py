@@ -58,11 +58,11 @@ class Platform(ResourceManager, metaclass=ABCMeta):
             raise TypeError("File contents must be str, bytes, or a file-like object")
         self.extra_files[filename] = content
 
-    def build(self, fragment, name="top",
+    def build(self, elaboratable, name="top",
               build_dir="build", do_build=True,
               program_opts=None, do_program=False,
               **kwargs):
-        plan = self.prepare(fragment, name, **kwargs)
+        plan = self.prepare(elaboratable, name, **kwargs)
         if not do_build:
             return plan
 
@@ -90,13 +90,12 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 m.d.comb += ResetSignal("sync").eq(rst_i)
             return m
 
-    def prepare(self, fragment, name="top", **kwargs):
+    def prepare(self, elaboratable, name="top", **kwargs):
         assert not self._prepared
         self._prepared = True
 
-        fragment = Fragment.get(fragment, self)
-        fragment = fragment.prepare(ports=list(self.iter_ports()),
-                                    missing_domain=self.create_missing_domain)
+        fragment = Fragment.get(elaboratable, self)
+        fragment.create_missing_domains(self.create_missing_domain)
 
         def add_pin_fragment(pin, pin_fragment):
             pin_fragment = Fragment.get(pin_fragment, self)
@@ -125,6 +124,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 add_pin_fragment(pin,
                     self.get_diff_input_output(pin, p_port, n_port, attrs, invert))
 
+        fragment = fragment.prepare(ports=self.iter_ports(), missing_domain=lambda name: None)
         return self.toolchain_prepare(fragment, name, **kwargs)
 
     @abstractmethod

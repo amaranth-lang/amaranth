@@ -355,45 +355,40 @@ class Fragment:
 
             subfrag._propagate_domains_down()
 
-    def _create_missing_domains(self, missing_domain):
+    def create_missing_domains(self, missing_domain):
         from .xfrm import DomainCollector
 
+        collector = DomainCollector()
+        collector(self)
+
         new_domains = []
-        for domain_name in DomainCollector()(self):
+        for domain_name in collector.used_domains - collector.defined_domains:
             if domain_name is None:
                 continue
-            if domain_name not in self.domains:
-                value = missing_domain(domain_name)
-                if value is None:
-                    raise DomainError("Domain '{}' is used but not defined".format(domain_name))
-                if type(value) is ClockDomain:
-                    self.add_domains(value)
-                    # And expose ports on the newly added clock domain, since it is added directly
-                    # and there was no chance to add any logic driving it.
-                    new_domains.append(value)
-                else:
-                    new_fragment = Fragment.get(value, platform=None)
-                    if domain_name not in new_fragment.domains:
-                        defined = new_fragment.domains.keys()
-                        raise DomainError(
-                            "Fragment returned by missing domain callback does not define "
-                            "requested domain '{}' (defines {})."
-                            .format(domain_name, ", ".join("'{}'".format(n) for n in defined)))
-                    new_fragment.flatten = True
-                    self.add_subfragment(new_fragment)
-                    self.add_domains(new_fragment.domains.values())
+            value = missing_domain(domain_name)
+            if value is None:
+                raise DomainError("Domain '{}' is used but not defined".format(domain_name))
+            if type(value) is ClockDomain:
+                self.add_domains(value)
+                # And expose ports on the newly added clock domain, since it is added directly
+                # and there was no chance to add any logic driving it.
+                new_domains.append(value)
+            else:
+                new_fragment = Fragment.get(value, platform=None)
+                if domain_name not in new_fragment.domains:
+                    defined = new_fragment.domains.keys()
+                    raise DomainError(
+                        "Fragment returned by missing domain callback does not define "
+                        "requested domain '{}' (defines {})."
+                        .format(domain_name, ", ".join("'{}'".format(n) for n in defined)))
+                self.add_subfragment(new_fragment, "cd_{}".format(domain_name))
         return new_domains
 
     def _propagate_domains(self, missing_domain):
+        new_domains = self.create_missing_domains(missing_domain)
         self._propagate_domains_up()
-        new_domains = self._create_missing_domains(missing_domain)
         self._propagate_domains_down()
         return new_domains
-
-    def _lower_domain_signals(self):
-        from .xfrm import DomainLowerer
-
-        return DomainLowerer()(self)
 
     def _prepare_use_def_graph(self, parent, level, uses, defs, ios, top):
         def add_uses(*sigs, self=self):
@@ -536,12 +531,12 @@ class Fragment:
                 self.add_ports(sig, dir="i")
 
     def prepare(self, ports=None, missing_domain=lambda name: ClockDomain(name)):
-        from .xfrm import SampleLowerer
+        from .xfrm import SampleLowerer, DomainLowerer
 
         fragment = SampleLowerer()(self)
         new_domains = fragment._propagate_domains(missing_domain)
         fragment._resolve_hierarchy_conflicts()
-        fragment = fragment._lower_domain_signals()
+        fragment = DomainLowerer()(fragment)
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
