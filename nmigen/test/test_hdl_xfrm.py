@@ -150,9 +150,10 @@ class DomainLowererTestCase(FHDLTestCase):
         """)
 
     def test_lower_drivers(self):
+        sync = ClockDomain()
         pix = ClockDomain()
         f = Fragment()
-        f.add_domains(pix)
+        f.add_domains(sync, pix)
         f.add_driver(ClockSignal("pix"), None)
         f.add_driver(ResetSignal("pix"), "sync")
 
@@ -597,6 +598,7 @@ class UserValueTestCase(FHDLTestCase):
     def test_lower(self):
         sync = ClockDomain()
         f = Fragment()
+        f.add_domains(sync)
         f.add_statements(
             self.uv.eq(1)
         )
@@ -609,6 +611,9 @@ class UserValueTestCase(FHDLTestCase):
         (
             (eq (sig s) (const 1'd1))
             (switch (sig c)
+                (case 1 (eq (sig s) (const 1'd0)))
+            )
+            (switch (sig rst)
                 (case 1 (eq (sig s) (const 1'd0)))
             )
         )

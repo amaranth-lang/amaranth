@@ -386,12 +386,6 @@ class Fragment:
         self._propagate_domains_down()
         return new_domains
 
-    def _insert_domain_resets(self):
-        from .xfrm import ResetInserter
-
-        resets = {cd.name: cd.rst for cd in self.domains.values() if cd.rst is not None}
-        return ResetInserter(resets)(self)
-
     def _lower_domain_signals(self):
         from .xfrm import DomainLowerer
 
@@ -543,7 +537,6 @@ class Fragment:
         fragment = SampleLowerer()(self)
         new_domains = fragment._propagate_domains(missing_domain)
         fragment._resolve_hierarchy_conflicts()
-        fragment = fragment._insert_domain_resets()
         fragment = fragment._lower_domain_signals()
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)

@@ -488,22 +488,34 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         return not isinstance(value, (ClockSignal, ResetSignal))
 
     def on_ClockSignal(self, value):
-        cd = self._resolve(value.domain, value)
-        return cd.clk
+        domain = self._resolve(value.domain, value)
+        return domain.clk
 
     def on_ResetSignal(self, value):
-        cd = self._resolve(value.domain, value)
-        if cd.rst is None:
+        domain = self._resolve(value.domain, value)
+        if domain.rst is None:
             if value.allow_reset_less:
                 return Const(0)
             else:
                 raise DomainError("Signal {!r} refers to reset of reset-less domain '{}'"
                                   .format(value, value.domain))
-        return cd.rst
+        return domain.rst
+
+    def _insert_resets(self, fragment):
+        for domain_name, signals in fragment.drivers.items():
+            if domain_name is None:
+                continue
+            domain = fragment.domains[domain_name]
+            if domain.rst is None:
+                continue
+            stmts = [signal.eq(Const(signal.reset, signal.nbits))
+                     for signal in signals if not signal.reset_less]
+            fragment.add_statements(Switch(domain.rst, {1: stmts}))
 
     def on_fragment(self, fragment):
         self.domains = fragment.domains
         new_fragment = super().on_fragment(fragment)
+        self._insert_resets(new_fragment)
         return new_fragment
 
 
