@@ -305,12 +305,14 @@ class Fragment:
             subfrag._propagate_domains_up(hierarchy + (hier_name,))
 
             # Second, classify subfragments by domains they define.
-            for domain in subfrag.iter_domains():
-                domain_subfrags[domain].add((subfrag, name, i))
+            for domain_name, domain in subfrag.domains.items():
+                if domain.local:
+                    continue
+                domain_subfrags[domain_name].add((subfrag, name, i))
 
         # For each domain defined by more than one subfragment, rename the domain in each
         # of the subfragments such that they no longer conflict.
-        for domain, subfrags in domain_subfrags.items():
+        for domain_name, subfrags in domain_subfrags.items():
             if len(subfrags) == 1:
                 continue
 
@@ -321,7 +323,7 @@ class Fragment:
                 raise DomainError("Domain '{}' is defined by subfragments {} of fragment '{}'; "
                                   "it is necessary to either rename subfragment domains "
                                   "explicitly, or give names to subfragments"
-                                  .format(domain, ", ".join(names), ".".join(hierarchy)))
+                                  .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
             if len(names) != len(set(names)):
                 names = sorted("#{}".format(i) for f, n, i in subfrags)
@@ -329,16 +331,18 @@ class Fragment:
                                   "some of which have identical names; it is necessary to either "
                                   "rename subfragment domains explicitly, or give distinct names "
                                   "to subfragments"
-                                  .format(domain, ", ".join(names), ".".join(hierarchy)))
+                                  .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
             for subfrag, name, i in subfrags:
-                self.subfragments[i] = \
-                    (DomainRenamer({domain: "{}_{}".format(name, domain)})(subfrag), name)
+                domain_name_map = {domain_name: "{}_{}".format(name, domain_name)}
+                self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name)
 
         # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
         for subfrag, name in self.subfragments:
-            for domain in subfrag.iter_domains():
-                self.add_domains(subfrag.domains[domain])
+            for domain_name, domain in subfrag.domains.items():
+                if domain.local:
+                    continue
+                self.add_domains(domain)
 
     def _propagate_domains_down(self):
         # For each domain defined in this fragment, ensure it also exists in all subfragments.

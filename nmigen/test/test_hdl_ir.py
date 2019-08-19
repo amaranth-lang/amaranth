@@ -290,6 +290,17 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f1._propagate_domains_up()
         self.assertEqual(f1.domains, {"cd": cd})
 
+    def test_propagate_up_local(self):
+        cd = ClockDomain(local=True)
+
+        f1 = Fragment()
+        f2 = Fragment()
+        f1.add_subfragment(f2)
+        f2.add_domains(cd)
+
+        f1._propagate_domains_up()
+        self.assertEqual(f1.domains, {})
+
     def test_domain_conflict(self):
         cda = ClockDomain("sync")
         cdb = ClockDomain("sync")
