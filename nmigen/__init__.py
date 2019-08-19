@@ -1,5 +1,5 @@
 from ._version import get_versions
-__version__ = get_versions()['version']
+__version__ = get_versions()["full-revisionid"]
 del get_versions
 
 from .hdl import *
