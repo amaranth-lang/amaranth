@@ -256,8 +256,8 @@ class TemplatedPlatform(Platform):
             assert False
 
         def emit_design(backend):
-            return {"rtlil": rtlil, "verilog": verilog}[backend].convert(fragment, name=name,
-                ports=list(self.iter_ports()), missing_domain=lambda name: None)
+            backend_mod = {"rtlil": rtlil, "verilog": verilog}[backend]
+            return backend_mod.convert_fragment(fragment, name=name)
 
         def emit_commands(format):
             commands = []
