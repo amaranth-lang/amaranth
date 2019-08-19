@@ -147,15 +147,15 @@ class LatticeICE40Platform(TemplatedPlatform):
 
             m = Module()
             # Power-on-reset domain
-            m.domains += ClockDomain("ice40_por", reset_less=True)
+            m.domains += ClockDomain("por", reset_less=True, local=True)
             delay = int(15e-6 * self.default_clk_frequency)
             timer = Signal(max=delay)
             ready = Signal()
-            m.d.comb += ClockSignal("ice40_por").eq(clk_i)
+            m.d.comb += ClockSignal("por").eq(clk_i)
             with m.If(timer == delay):
-                m.d.ice40_por += ready.eq(1)
+                m.d.por += ready.eq(1)
             with m.Else():
-                m.d.ice40_por += timer.eq(timer + 1)
+                m.d.por += timer.eq(timer + 1)
             # Primary domain
             m.domains += ClockDomain("sync")
             m.d.comb += ClockSignal("sync").eq(clk_i)
