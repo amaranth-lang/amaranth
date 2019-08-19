@@ -4,14 +4,14 @@ import subprocess
 from . import rtlil
 
 
-__all__ = ["convert"]
+__all__ = ["YosysError", "convert", "convert_fragment"]
 
 
 class YosysError(Exception):
     pass
 
 
-def convert(*args, strip_src=False, **kwargs):
+def _convert_il_text(il_text, strip_src):
     try:
         popen = subprocess.Popen([os.getenv("YOSYS", "yosys"), "-q", "-"],
             stdin=subprocess.PIPE,
@@ -30,7 +30,6 @@ def convert(*args, strip_src=False, **kwargs):
     if strip_src:
         attr_map.append("-remove src")
 
-    il_text = rtlil.convert(*args, **kwargs)
     verilog_text, error = popen.communicate("""
 # Convert nMigen's RTLIL to readable Verilog.
 read_ilang <<rtlil
@@ -49,3 +48,13 @@ write_verilog -norename
         raise YosysError(error.strip())
     else:
         return verilog_text
+
+
+def convert_fragment(*args, strip_src=False, **kwargs):
+    il_text = rtlil.convert_fragment(*args, **kwargs)
+    return _convert_il_text(il_text, strip_src)
+
+
+def convert(*args, strip_src=False, **kwargs):
+    il_text = rtlil.convert(*args, **kwargs)
+    return _convert_il_text(il_text, strip_src)

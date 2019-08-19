@@ -21,7 +21,7 @@ def convert(fi, ios=None, name="top", special_overrides=dict(),
         if create_clock_domains:
             return ClockDomain(name)
     v_output = verilog.convert(
-        fragment=Fragment.get(fi.get_fragment(), platform=None),
+        elaboratable=fi.get_fragment(),
         name=name,
         ports=ios or (),
         missing_domain=missing_domain

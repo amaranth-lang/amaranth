@@ -7,7 +7,7 @@ from ..tools import bits_for, flatten
 from ..hdl import ast, rec, ir, mem, xfrm
 
 
-__all__ = ["convert"]
+__all__ = ["convert", "convert_fragment"]
 
 
 class _Namer:
@@ -720,7 +720,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self.on_statement(stmt)
 
 
-def convert_fragment(builder, fragment, hierarchy):
+def _convert_fragment(builder, fragment, hierarchy):
     if isinstance(fragment, ir.Instance):
         port_map = OrderedDict()
         for port_name, (value, dir) in fragment.named_ports.items():
@@ -807,7 +807,7 @@ def convert_fragment(builder, fragment, hierarchy):
                     sub_params[param_name] = param_value
 
             sub_type, sub_port_map = \
-                convert_fragment(builder, subfragment, hierarchy=hierarchy + (sub_name,))
+                _convert_fragment(builder, subfragment, hierarchy=hierarchy + (sub_name,))
 
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
@@ -938,8 +938,13 @@ def convert_fragment(builder, fragment, hierarchy):
     return module.name, port_map
 
 
-def convert(fragment, name="top", platform=None, **kwargs):
-    fragment = ir.Fragment.get(fragment, platform).prepare(**kwargs)
+def convert_fragment(fragment, name="top"):
+    assert isinstance(fragment, ir.Fragment)
     builder = _Builder()
-    convert_fragment(builder, fragment, hierarchy=(name,))
+    _convert_fragment(builder, fragment, hierarchy=(name,))
     return str(builder)
+
+
+def convert(elaboratable, name="top", platform=None, **kwargs):
+    fragment = ir.Fragment.get(elaboratable, platform).prepare(**kwargs)
+    return convert_fragment(fragment, name)
