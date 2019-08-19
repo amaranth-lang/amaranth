@@ -395,7 +395,7 @@ class Fragment:
     def _lower_domain_signals(self):
         from .xfrm import DomainLowerer
 
-        return DomainLowerer(self.domains)(self)
+        return DomainLowerer()(self)
 
     def _prepare_use_def_graph(self, parent, level, uses, defs, ios, top):
         def add_uses(*sigs, self=self):

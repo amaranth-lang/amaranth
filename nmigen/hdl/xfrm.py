@@ -337,6 +337,11 @@ class TransformedElaboratable(Elaboratable):
 class DomainCollector(ValueVisitor, StatementVisitor):
     def __init__(self):
         self.domains = set()
+        self._local_domains = set()
+
+    def _add_domain(self, domain_name):
+        if domain_name not in self._local_domains:
+            self.domains.add(domain_name)
 
     def on_ignore(self, value):
         pass
@@ -347,10 +352,10 @@ class DomainCollector(ValueVisitor, StatementVisitor):
     on_Signal = on_ignore
 
     def on_ClockSignal(self, value):
-        self.domains.add(value.domain)
+        self._add_domain(value.domain)
 
     def on_ResetSignal(self, value):
-        self.domains.add(value.domain)
+        self._add_domain(value.domain)
 
     on_Record = on_ignore
 
@@ -406,10 +411,19 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         if isinstance(fragment, Instance):
             for name, (value, dir) in fragment.named_ports.items():
                 self.on_value(value)
+
+        old_local_domains, self._local_domains = self._local_domains, set(self._local_domains)
+        for domain_name, domain in fragment.domains.items():
+            if domain.local:
+                self._local_domains.add(domain_name)
+
         self.on_statements(fragment.statements)
-        self.domains.update(fragment.drivers.keys())
+        for domain_name in fragment.drivers:
+            self._add_domain(domain_name)
         for subfragment, name in fragment.subfragments:
             self.on_fragment(subfragment)
+
+        self._local_domains = old_local_domains
 
     def __call__(self, fragment):
         self.on_fragment(fragment)
@@ -457,8 +471,8 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
-    def __init__(self, domains):
-        self.domains = domains
+    def __init__(self):
+        self.domains = None
 
     def _resolve(self, domain, context):
         if domain not in self.domains:
@@ -486,6 +500,11 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 raise DomainError("Signal {!r} refers to reset of reset-less domain '{}'"
                                   .format(value, value.domain))
         return cd.rst
+
+    def on_fragment(self, fragment):
+        self.domains = fragment.domains
+        new_fragment = super().on_fragment(fragment)
+        return new_fragment
 
 
 class SampleDomainInjector(ValueTransformer, StatementTransformer):

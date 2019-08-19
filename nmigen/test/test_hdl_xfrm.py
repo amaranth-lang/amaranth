@@ -107,11 +107,12 @@ class DomainLowererTestCase(FHDLTestCase):
     def test_lower_clk(self):
         sync = ClockDomain()
         f = Fragment()
+        f.add_domains(sync)
         f.add_statements(
             self.s.eq(ClockSignal("sync"))
         )
 
-        f = DomainLowerer({"sync": sync})(f)
+        f = DomainLowerer()(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s) (sig clk))
@@ -121,11 +122,12 @@ class DomainLowererTestCase(FHDLTestCase):
     def test_lower_rst(self):
         sync = ClockDomain()
         f = Fragment()
+        f.add_domains(sync)
         f.add_statements(
             self.s.eq(ResetSignal("sync"))
         )
 
-        f = DomainLowerer({"sync": sync})(f)
+        f = DomainLowerer()(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s) (sig rst))
@@ -135,11 +137,12 @@ class DomainLowererTestCase(FHDLTestCase):
     def test_lower_rst_reset_less(self):
         sync = ClockDomain(reset_less=True)
         f = Fragment()
+        f.add_domains(sync)
         f.add_statements(
             self.s.eq(ResetSignal("sync", allow_reset_less=True))
         )
 
-        f = DomainLowerer({"sync": sync})(f)
+        f = DomainLowerer()(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s) (const 1'd0))
@@ -149,17 +152,17 @@ class DomainLowererTestCase(FHDLTestCase):
     def test_lower_drivers(self):
         pix = ClockDomain()
         f = Fragment()
+        f.add_domains(pix)
         f.add_driver(ClockSignal("pix"), None)
         f.add_driver(ResetSignal("pix"), "sync")
 
-        f = DomainLowerer({"pix": pix})(f)
+        f = DomainLowerer()(f)
         self.assertEqual(f.drivers, {
             None: SignalSet((pix.clk,)),
             "sync": SignalSet((pix.rst,))
         })
 
     def test_lower_wrong_domain(self):
-        sync = ClockDomain()
         f = Fragment()
         f.add_statements(
             self.s.eq(ClockSignal("xxx"))
@@ -167,18 +170,19 @@ class DomainLowererTestCase(FHDLTestCase):
 
         with self.assertRaises(DomainError,
                 msg="Signal (clk xxx) refers to nonexistent domain 'xxx'"):
-            DomainLowerer({"sync": sync})(f)
+            DomainLowerer()(f)
 
     def test_lower_wrong_reset_less_domain(self):
         sync = ClockDomain(reset_less=True)
         f = Fragment()
+        f.add_domains(sync)
         f.add_statements(
             self.s.eq(ResetSignal("sync"))
         )
 
         with self.assertRaises(DomainError,
                 msg="Signal (rst sync) refers to reset of reset-less domain 'sync'"):
-            DomainLowerer({"sync": sync})(f)
+            DomainLowerer()(f)
 
 
 class SampleLowererTestCase(FHDLTestCase):
@@ -600,7 +604,7 @@ class UserValueTestCase(FHDLTestCase):
             f.add_driver(signal, "sync")
 
         f = ResetInserter(self.c)(f)
-        f = DomainLowerer({"sync": sync})(f)
+        f = DomainLowerer()(f)
         self.assertRepr(f.statements, """
         (
             (eq (sig s) (const 1'd1))
