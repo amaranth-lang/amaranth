@@ -993,7 +993,7 @@ def Fell(expr, clocks=0, domain=None):
 
 @final
 class Initial(Value):
-    """Start indicator, for formal verification.
+    """Start indicator, for model checking.
 
     An ``Initial`` signal is ``1`` at the first cycle of model checking, and ``0`` at any other.
     """

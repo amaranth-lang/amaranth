@@ -1,6 +1,6 @@
 from .tools import *
 from ..hdl import *
-from ..formal import *
+from ..asserts import *
 from ..back.pysim import *
 from ..lib.coding import *
 

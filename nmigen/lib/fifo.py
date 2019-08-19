@@ -1,7 +1,7 @@
 """First-in first-out queues."""
 
 from .. import *
-from ..formal import *
+from ..asserts import *
 from ..tools import log2_int
 from .coding import GrayEncoder
 
