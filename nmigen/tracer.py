@@ -17,8 +17,8 @@ def get_var_name(depth=2, default=_raise_exception):
     code = frame.f_code
     call_index = frame.f_lasti
     while True:
-        call_opc   = opname[code.co_code[call_index]]
-        if call_opc in ("EXTENDED_ARG"):
+        call_opc = opname[code.co_code[call_index]]
+        if call_opc in ("EXTENDED_ARG",):
             call_index += 2
         else:
             break
