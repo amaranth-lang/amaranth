@@ -402,7 +402,7 @@ class Simulator:
     def _check_process(process):
         if inspect.isgeneratorfunction(process):
             process = process()
-        if not inspect.isgenerator(process):
+        if not (inspect.isgenerator(process) or inspect.iscoroutine(process)):
             raise TypeError("Cannot add a process '{!r}' because it is not a generator or "
                             "a generator function"
                             .format(process))
@@ -412,7 +412,10 @@ class Simulator:
         if process in self._process_loc:
             return self._process_loc[process]
         else:
-            frame = process.gi_frame
+            if inspect.isgenerator(process):
+                frame = process.gi_frame
+            if inspect.iscoroutine(process):
+                frame = process.cr_frame
             return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
 
     def add_process(self, process):
