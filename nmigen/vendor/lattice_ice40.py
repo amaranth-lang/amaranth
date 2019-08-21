@@ -23,8 +23,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``synth_opts``: adds options for ``synth_ice40`` Yosys command.
         * ``script_after_read``: inserts commands after ``read_ilang`` in Yosys script.
         * ``script_after_synth``: inserts commands after ``synth_ice40`` in Yosys script.
-        * ``yosys_opts``: adds extra options for Yosys.
-        * ``nextpnr_opts``: adds extra and overrides default options for nextpnr;
+        * ``yosys_opts``: adds extra options for ``yosys``.
+        * ``nextpnr_opts``: adds extra and overrides default options for ``nextpnr-ice40``;
           default options: ``--placer heap``.
 
     Build products:

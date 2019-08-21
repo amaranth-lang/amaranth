@@ -26,11 +26,11 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     Available overrides:
         * ``script_after_run``: inserts commands after ``run`` in XST script.
         * ``add_constraints``: inserts commands in UCF file.
-        * ``xst_opts``: adds extra options for XST.
-        * ``ngdbuild_opts``: adds extra options for NGDBuild.
-        * ``map_opts``: adds extra options for MAP.
-        * ``par_opts``: adds extra options for PAR.
-        * ``bitgen_opts``: adds extra and overrides default options for BitGen;
+        * ``xst_opts``: adds extra options for ``xst``.
+        * ``ngdbuild_opts``: adds extra options for ``ngdbuild``.
+        * ``map_opts``: adds extra options for ``map``.
+        * ``par_opts``: adds extra options for ``par``.
+        * ``bitgen_opts``: adds extra and overrides default options for ``bitgen``;
           default options: ``-g Compress``.
 
     Build products:

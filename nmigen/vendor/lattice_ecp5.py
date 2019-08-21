@@ -23,9 +23,9 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``synth_opts``: adds options for ``synth_ecp5`` Yosys command.
         * ``script_after_read``: inserts commands after ``read_ilang`` in Yosys script.
         * ``script_after_synth``: inserts commands after ``synth_ecp5`` in Yosys script.
-        * ``yosys_opts``: adds extra options for Yosys.
-        * ``nextpnr_opts``: adds extra options for nextpnr.
-        * ``ecppack_opts``: adds extra options for ecppack.
+        * ``yosys_opts``: adds extra options for ``yosys``.
+        * ``nextpnr_opts``: adds extra options for ``nextpnr-ecp5``.
+        * ``ecppack_opts``: adds extra options for ``ecppack``.
 
     Build products:
         * ``{{name}}.rpt``: Yosys log.
