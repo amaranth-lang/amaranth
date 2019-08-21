@@ -136,7 +136,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
 
             m = Module()
             ready = Signal()
-            m.submodules += Instance("STARTUPE3", o_EOS=ready)
+            m.submodules += Instance("STARTUPE2", o_EOS=ready)
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
             m.submodules += Instance("BUFGCE", i_CE=ready, i_I=clk_i, o_O=ClockSignal("sync"))
             if self.default_rst is not None:
