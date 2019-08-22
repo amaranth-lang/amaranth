@@ -123,6 +123,9 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
             elif isinstance(value, int):
                 self._append("    parameter \\{} {:d}\n",
                              param, value)
+            elif isinstance(value, float):
+                self._append("    parameter real \\{} \"{:f}\"\n",
+                             param, value)
             elif isinstance(value, ast.Const):
                 self._append("    parameter \\{} {}'{:b}\n",
                              param, len(value), value.value)
