@@ -174,7 +174,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             return True
         return False
 
-    def _get_io_buffer(self, m, pin, port, attrs, i_invert=None, o_invert=None):
+    def _get_io_buffer(self, m, pin, port, attrs, *, i_invert=False, o_invert=False,
+                       invert_lut=False):
         def get_dff(clk, d, q):
             m.submodules += Instance("$dff",
                 p_CLK_POLARITY=1,
@@ -183,35 +184,43 @@ class LatticeICE40Platform(TemplatedPlatform):
                 i_D=d,
                 o_Q=q)
 
-        def get_ixor(y, invert):
-            if invert is None:
-                return y
-            else:
+        def get_ineg(y, invert):
+            if invert_lut:
                 a = Signal.like(y, name_suffix="_x{}".format(1 if invert else 0))
                 for bit in range(len(y)):
                     m.submodules += Instance("SB_LUT4",
-                        p_LUT_INIT=0b01 if invert else 0b10,
+                        p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
                         i_I0=a[bit],
                         i_I1=Const(0),
                         i_I2=Const(0),
                         i_I3=Const(0),
                         o_O=y[bit])
                 return a
-
-        def get_oxor(a, invert):
-            if invert is None:
+            elif invert:
+                a = Signal.like(y, name_suffix="_n")
+                m.d.comb += y.eq(~a)
                 return a
             else:
+                return y
+
+        def get_oneg(a, invert):
+            if invert_lut:
                 y = Signal.like(a, name_suffix="_x{}".format(1 if invert else 0))
                 for bit in range(len(a)):
                     m.submodules += Instance("SB_LUT4",
-                        p_LUT_INIT=0b01 if invert else 0b10,
+                        p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
                         i_I0=a[bit],
                         i_I1=Const(0),
                         i_I2=Const(0),
                         i_I3=Const(0),
                         o_O=y[bit])
                 return y
+            elif invert:
+                y = Signal.like(a, name_suffix="_n")
+                m.d.comb += y.eq(~a)
+                return y
+            else:
+                return a
 
         if "GLOBAL" in attrs:
             is_global_input = bool(attrs["GLOBAL"])
@@ -222,16 +231,16 @@ class LatticeICE40Platform(TemplatedPlatform):
 
         if "i" in pin.dir:
             if pin.xdr < 2:
-                pin_i  = get_ixor(pin.i,  i_invert)
+                pin_i  = get_ineg(pin.i,  i_invert)
             elif pin.xdr == 2:
-                pin_i0 = get_ixor(pin.i0, i_invert)
-                pin_i1 = get_ixor(pin.i1, i_invert)
+                pin_i0 = get_ineg(pin.i0, i_invert)
+                pin_i1 = get_ineg(pin.i1, i_invert)
         if "o" in pin.dir:
             if pin.xdr < 2:
-                pin_o  = get_oxor(pin.o,  o_invert)
+                pin_o  = get_oneg(pin.o,  o_invert)
             elif pin.xdr == 2:
-                pin_o0 = get_oxor(pin.o0, o_invert)
-                pin_o1 = get_oxor(pin.o1, o_invert)
+                pin_o0 = get_oneg(pin.o0, o_invert)
+                pin_o1 = get_oneg(pin.o1, o_invert)
 
         if "i" in pin.dir and pin.xdr == 2:
             i0_ff = Signal.like(pin_i0, name_suffix="_ff")
@@ -310,29 +319,28 @@ class LatticeICE40Platform(TemplatedPlatform):
         self._check_feature("single-ended input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs, i_invert=True if invert else None)
+        self._get_io_buffer(m, pin, port, attrs, i_invert=invert)
         return m
 
     def get_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs, o_invert=True if invert else None)
+        self._get_io_buffer(m, pin, port, attrs, o_invert=invert)
         return m
 
     def get_tristate(self, pin, port, attrs, invert):
         self._check_feature("single-ended tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs, o_invert=True if invert else None)
+        self._get_io_buffer(m, pin, port, attrs, o_invert=invert)
         return m
 
     def get_input_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
-        self._get_io_buffer(m, pin, port, attrs, i_invert=True if invert else None,
-                                                 o_invert=True if invert else None)
+        self._get_io_buffer(m, pin, port, attrs, i_invert=invert, o_invert=invert)
         return m
 
     def get_diff_input(self, pin, p_port, n_port, attrs, invert):
@@ -340,7 +348,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         # See comment in should_skip_port_component above.
-        self._get_io_buffer(m, pin, p_port, attrs, i_invert=True if invert else None)
+        self._get_io_buffer(m, pin, p_port, attrs, i_invert=invert)
         return m
 
     def get_diff_output(self, pin, p_port, n_port, attrs, invert):
@@ -351,8 +359,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         # output pin. The inverter introduces a delay, so for a non-inverting output pin,
         # an identical delay is introduced by instantiating a LUT. This makes the waveform
         # perfectly symmetric in the xdr=0 case.
-        self._get_io_buffer(m, pin, p_port, attrs, o_invert=invert)
-        self._get_io_buffer(m, pin, n_port, attrs, o_invert=not invert)
+        self._get_io_buffer(m, pin, p_port, attrs, o_invert=    invert, invert_lut=True)
+        self._get_io_buffer(m, pin, n_port, attrs, o_invert=not invert, invert_lut=True)
         return m
 
     # Tristate and bidirectional buffers are not supported on iCE40 because it requires external
