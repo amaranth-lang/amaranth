@@ -2,6 +2,13 @@ from nmigen import *
 
 
 class UART(Elaboratable):
+    """
+    Parameters
+    ----------
+    divisor : int
+        Set to ``round(clk-rate / baud-rate)``.
+        E.g. ``12e6 / 115200`` = ``104``.
+    """
     def __init__(self, divisor, data_bits=8):
         assert divisor >= 4
 
