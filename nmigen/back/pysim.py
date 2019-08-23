@@ -451,6 +451,10 @@ class Simulator:
         for domain_obj in self._domains:
             if not domain_obj.local and domain_obj.name == domain:
                 clk = domain_obj.clk
+                break
+        else:
+            raise ValueError("Domain '{}' is not present in simulation"
+                             .format(domain))
         def clk_process():
             yield Passive()
             yield Delay(phase)

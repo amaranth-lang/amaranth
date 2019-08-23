@@ -413,6 +413,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                     msg="Domain 'sync' already has a clock driving it"):
                 sim.add_clock(1)
 
+    def test_add_clock_wrong(self):
+        m = Module()
+        with self.assertSimulation(m) as sim:
+            with self.assertRaises(ValueError,
+                    msg="Domain 'sync' is not present in simulation"):
+                sim.add_clock(1)
+
     def test_eq_signal_unused_wrong(self):
         self.setUp_lhs_rhs()
         self.s = Signal()
