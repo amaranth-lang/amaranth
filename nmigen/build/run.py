@@ -6,6 +6,7 @@ import sys
 import subprocess
 import tempfile
 import zipfile
+import hashlib
 
 
 __all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts"]
@@ -31,6 +32,21 @@ class BuildPlan:
         """
         assert isinstance(filename, str) and filename not in self.files
         self.files[filename] = content
+
+    def digest(self, size=64):
+        """
+        Compute a `digest`, a short byte sequence deterministically and uniquely identifying
+        this build plan.
+        """
+        hasher = hashlib.blake2b(digest_size=size)
+        for filename in sorted(self.files):
+            hasher.update(filename.encode("utf-8"))
+            content = self.files[filename]
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+            hasher.update(content)
+        hasher.update(self.script.encode("utf-8"))
+        return hasher.digest()
 
     def archive(self, file):
         """
