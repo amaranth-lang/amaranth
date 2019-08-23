@@ -438,7 +438,7 @@ class Simulator:
         sync_process = sync_process()
         self.add_process(sync_process)
 
-    def add_clock(self, period, phase=None, domain="sync"):
+    def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
         if self._fastest_clock == self._epsilon or period < self._fastest_clock:
             self._fastest_clock = period
         if domain in self._all_clocks:
@@ -453,8 +453,11 @@ class Simulator:
                 clk = domain_obj.clk
                 break
         else:
-            raise ValueError("Domain '{}' is not present in simulation"
-                             .format(domain))
+            if if_exists:
+                return
+            else:
+                raise ValueError("Domain '{}' is not present in simulation"
+                                 .format(domain))
         def clk_process():
             yield Passive()
             yield Delay(phase)
