@@ -233,7 +233,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     # Common logic
 
-    def __init__(self, *, toolchain="Diamond"):
+    def __init__(self, *, toolchain="Trellis"):
         super().__init__()
 
         assert toolchain in ("Trellis", "Diamond")
