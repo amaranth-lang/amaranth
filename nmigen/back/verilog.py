@@ -23,14 +23,14 @@ def _yosys_version():
             raise YosysError("Could not find Yosys in PATH. Place `yosys` in PATH or specify "
                              "path explicitly via the YOSYS environment variable") from e
 
-    m = re.match(r"^Yosys ([\d.]+)\+(\d+)", version)
-    tag, offset = m[1], m[2]
+    m = re.match(r"^Yosys ([\d.]+)(?:\+(\d+))?", version)
+    tag, offset = m[1], m[2] or 0
     return tuple(map(int, tag.split("."))), offset
 
 
 def _convert_il_text(il_text, strip_src):
     version, offset = _yosys_version()
-    if version < (0, 8):
+    if version < (0, 9):
         raise YosysError("Yosys %d.%d is not suppored", *version)
 
     attr_map = []
@@ -42,7 +42,7 @@ def _convert_il_text(il_text, strip_src):
 read_ilang <<rtlil
 {}
 rtlil
-proc_prune
+{prune}proc_prune
 proc_init
 proc_arst
 proc_dff
@@ -50,7 +50,8 @@ proc_clean
 memory_collect
 attrmap {}
 write_verilog -norename
-""".format(il_text, " ".join(attr_map))
+""".format(il_text, " ".join(attr_map),
+           prune="# " if version == (0, 9) and offset == 0 else "")
 
     popen = subprocess.Popen([os.getenv("YOSYS", "yosys"), "-q", "-"],
         stdin=subprocess.PIPE,
