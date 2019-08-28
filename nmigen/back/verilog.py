@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 
+from .._toolchain import *
 from . import rtlil
 
 
@@ -13,15 +14,18 @@ class YosysError(Exception):
 
 
 def _yosys_version():
+    yosys_path = get_tool("yosys")
     try:
-        version = subprocess.check_output([os.getenv("YOSYS", "yosys"), "-V"], encoding="utf-8")
+        version = subprocess.check_output([yosys_path, "-V"], encoding="utf-8")
     except FileNotFoundError as e:
         if os.getenv("YOSYS"):
             raise YosysError("Could not find Yosys in {} as specified via the YOSYS environment "
                              "variable".format(os.getenv("YOSYS"))) from e
-        else:
+        elif yosys_path == "yosys":
             raise YosysError("Could not find Yosys in PATH. Place `yosys` in PATH or specify "
                              "path explicitly via the YOSYS environment variable") from e
+        else:
+            raise
 
     m = re.match(r"^Yosys ([\d.]+)(?:\+(\d+))?", version)
     tag, offset = m[1], m[2] or 0

@@ -6,6 +6,7 @@ import re
 import jinja2
 
 from .. import __version__
+from .._toolchain import *
 from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.dsl import *
@@ -262,10 +263,6 @@ class TemplatedPlatform(Platform):
                 else:
                     assert False
             return "\n".join(commands)
-
-        def get_tool(tool):
-            tool_env = tool.upper().replace("-", "_")
-            return os.environ.get(tool_env, tool)
 
         def get_override(var):
             var_env = "NMIGEN_{}".format(var)
