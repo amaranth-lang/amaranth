@@ -57,6 +57,14 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     package = abstractproperty()
     speed   = abstractproperty()
 
+    required_tools = [
+        "xst",
+        "ngdbuild",
+        "map",
+        "par",
+        "bitgen",
+    ]
+
     @property
     def family(self):
         device = self.device.upper()

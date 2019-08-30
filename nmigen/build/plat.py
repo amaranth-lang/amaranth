@@ -20,10 +20,11 @@ __all__ = ["Platform", "TemplatedPlatform"]
 
 
 class Platform(ResourceManager, metaclass=ABCMeta):
-    resources   = abstractproperty()
-    connectors  = abstractproperty()
-    default_clk = None
-    default_rst = None
+    resources      = abstractproperty()
+    connectors     = abstractproperty()
+    default_clk    = None
+    default_rst    = None
+    required_tools = abstractproperty()
 
     def __init__(self):
         super().__init__(self.resources, self.connectors)
@@ -63,6 +64,9 @@ class Platform(ResourceManager, metaclass=ABCMeta):
               build_dir="build", do_build=True,
               program_opts=None, do_program=False,
               **kwargs):
+        for tool in self.required_tools:
+            require_tool(tool)
+
         plan = self.prepare(elaboratable, name, **kwargs)
         if not do_build:
             return plan
@@ -72,6 +76,9 @@ class Platform(ResourceManager, metaclass=ABCMeta):
             return products
 
         self.toolchain_program(products, name, **(program_opts or {}))
+
+    def has_required_tools(self):
+        return all(has_tool(name) for name in self.required_tools)
 
     @abstractmethod
     def create_missing_domain(self, name):

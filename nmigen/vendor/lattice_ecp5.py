@@ -240,6 +240,14 @@ class LatticeECP5Platform(TemplatedPlatform):
         self.toolchain = toolchain
 
     @property
+    def required_tools(self):
+        if self.toolchain == "Trellis":
+            return ["yosys", "nextpnr-ecp5", "ecppack"]
+        if self.toolchain == "Diamond":
+            return ["pnmainc", "ddtcmd"]
+        assert False
+
+    @property
     def file_templates(self):
         if self.toolchain == "Trellis":
             return self._trellis_file_templates

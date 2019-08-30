@@ -14,19 +14,8 @@ class YosysError(Exception):
 
 
 def _yosys_version():
-    yosys_path = get_tool("yosys")
-    try:
-        version = subprocess.check_output([yosys_path, "-V"], encoding="utf-8")
-    except FileNotFoundError as e:
-        if os.getenv("YOSYS"):
-            raise YosysError("Could not find Yosys in {} as specified via the YOSYS environment "
-                             "variable".format(os.getenv("YOSYS"))) from e
-        elif yosys_path == "yosys":
-            raise YosysError("Could not find Yosys in PATH. Place `yosys` in PATH or specify "
-                             "path explicitly via the YOSYS environment variable") from e
-        else:
-            raise
-
+    yosys_path = require_tool("yosys")
+    version = subprocess.check_output([yosys_path, "-V"], encoding="utf-8")
     m = re.match(r"^Yosys ([\d.]+)(?:\+(\d+))?", version)
     tag, offset = m[1], m[2] or 0
     return tuple(map(int, tag.split("."))), offset
@@ -57,7 +46,7 @@ write_verilog -norename
 """.format(il_text, " ".join(attr_map),
            prune="# " if version == (0, 9) and offset == 0 else "")
 
-    popen = subprocess.Popen([os.getenv("YOSYS", "yosys"), "-q", "-"],
+    popen = subprocess.Popen([require_tool("yosys"), "-q", "-"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -39,6 +39,12 @@ class LatticeICE40Platform(TemplatedPlatform):
     device  = abstractproperty()
     package = abstractproperty()
 
+    required_tools = [
+        "yosys",
+        "nextpnr-ice40",
+        "icepack",
+    ]
+
     _nextpnr_device_options = {
         "iCE40LP384": "--lp384",
         "iCE40LP1K":  "--lp1k",

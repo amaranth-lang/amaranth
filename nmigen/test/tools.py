@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from ..hdl.ast import *
 from ..hdl.ir import *
 from ..back import rtlil
-from .._toolchain import get_tool
+from .._toolchain import require_tool
 
 
 __all__ = ["FHDLTestCase"]
@@ -95,7 +95,7 @@ class FHDLTestCase(unittest.TestCase):
             script=script,
             rtlil=rtlil.convert(Fragment.get(spec, platform="formal"))
         )
-        with subprocess.Popen([get_tool("sby"), "-f", "-d", spec_name], cwd=spec_dir,
+        with subprocess.Popen([require_tool("sby"), "-f", "-d", spec_name], cwd=spec_dir,
                               universal_newlines=True,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
             stdout, stderr = proc.communicate(config)
