@@ -109,9 +109,9 @@ class DiffPairsTestCase(FHDLTestCase):
 
 class AttrsTestCase(FHDLTestCase):
     def test_basic(self):
-        a = Attrs(IO_STANDARD="LVCMOS33", PULLUP="1")
+        a = Attrs(IO_STANDARD="LVCMOS33", PULLUP=1)
         self.assertEqual(a["IO_STANDARD"], "LVCMOS33")
-        self.assertEqual(repr(a), "(attrs IO_STANDARD=LVCMOS33 PULLUP=1)")
+        self.assertEqual(repr(a), "(attrs IO_STANDARD='LVCMOS33' PULLUP=1)")
 
     def test_remove(self):
         a = Attrs(FOO=None)
@@ -126,8 +126,8 @@ class AttrsTestCase(FHDLTestCase):
 
     def test_wrong_value(self):
         with self.assertRaises(TypeError,
-                msg="Value of attribute FOO must be None, str, or callable, not 1"):
-            a = Attrs(FOO=1)
+                msg="Value of attribute FOO must be None, int, str, or callable, not 1.0"):
+            a = Attrs(FOO=1.0)
 
 
 class ClockTestCase(FHDLTestCase):
@@ -142,7 +142,7 @@ class SubsignalTestCase(FHDLTestCase):
     def test_basic_pins(self):
         s = Subsignal("a", Pins("A0"), Attrs(IOSTANDARD="LVCMOS33"))
         self.assertEqual(repr(s),
-            "(subsignal a (pins io A0) (attrs IOSTANDARD=LVCMOS33))")
+            "(subsignal a (pins io A0) (attrs IOSTANDARD='LVCMOS33'))")
 
     def test_basic_diffpairs(self):
         s = Subsignal("a", DiffPairs("A0", "B0"))
@@ -223,7 +223,7 @@ class ResourceTestCase(FHDLTestCase):
         self.assertEqual(repr(r), "(resource serial 0"
                                   " (subsignal tx (pins o A0))"
                                   " (subsignal rx (pins i A1))"
-                                  " (attrs IOSTANDARD=LVCMOS33))")
+                                  " (attrs IOSTANDARD='LVCMOS33'))")
 
     def test_family(self):
         ios = [Subsignal("clk", Pins("A0", dir="o"))]
