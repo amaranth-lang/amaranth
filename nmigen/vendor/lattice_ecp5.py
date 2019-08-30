@@ -256,8 +256,38 @@ class LatticeECP5Platform(TemplatedPlatform):
         assert False
 
     def create_missing_domain(self, name):
-        # No additional reset logic needed.
-        return super().create_missing_domain(name)
+        # Lattice ECP devices have two global set/reset signals: PUR, which is driven at startup
+        # by the configuration logic and unconditionally resets every storage element, and GSR,
+        # which is driven by user logic and each storage element may be configured as affected or
+        # unaffected by GSR. PUR is purely asynchronous, so even though it is a low-skew global
+        # network, its deassertion may violate a setup/hold constraint with relation to a user
+        # clock. To avoid this, a GSR/SGSR instance should be driven synchronized to user clock.
+        if name == "sync" and self.default_clk is not None:
+            clk_i = self.request(self.default_clk).i
+            if self.default_rst is not None:
+                rst_i = self.request(self.default_rst).i
+            else:
+                rst_i = Const(0)
+
+            gsr0 = Signal()
+            gsr1 = Signal()
+            m = Module()
+            # There is no end-of-startup signal on ECP5, but PUR is released after IOB enable, so
+            # a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
+            m.submodules += [
+                Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=~rst_i, o_Q=gsr0),
+                Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=gsr0,   o_Q=gsr1),
+                # Although we already synchronize the reset input to user clock, SGSR has dedicated
+                # clock routing to the center of the FPGA; use that just in case it turns out to be
+                # more reliable. (None of this is documented.)
+                Instance("SGSR", i_CLK=clk_i, i_GSR=gsr1),
+            ]
+            # GSR implicitly connects to every appropriate storage element. As such, the sync
+            # domain is reset-less; domains driven by other clocks would need to have dedicated
+            # reset circuitry or otherwise meet setup/hold constraints on their own.
+            m.domains += ClockDomain("sync", reset_less=True)
+            m.d.comb += ClockSignal("sync").eq(clk_i)
+            return m
 
     _single_ended_io_types = [
         "HSUL12", "LVCMOS12", "LVCMOS15", "LVCMOS18", "LVCMOS25", "LVCMOS33", "LVTTL33",
