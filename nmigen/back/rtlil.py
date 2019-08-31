@@ -884,8 +884,8 @@ def _convert_fragment(builder, fragment, hierarchy):
 
                 # For every signal in every sync domain, assign \sig to \sig$next. The sensitivity
                 # list, however, differs between domains: for domains with sync reset, it is
-                # `posedge clk`, for sync domains with async reset it is `posedge clk or
-                # posedge rst`.
+                # `[pos|neg]edge clk`, for sync domains with async reset it is `[pos|neg]edge clk
+                # or posedge rst`.
                 for domain, signals in fragment.drivers.items():
                     if domain is None:
                         continue
@@ -897,7 +897,7 @@ def _convert_fragment(builder, fragment, hierarchy):
                     cd = fragment.domains[domain]
 
                     triggers = []
-                    triggers.append(("posedge", compiler_state.resolve_curr(cd.clk)))
+                    triggers.append((cd.clk_edge + "edge", compiler_state.resolve_curr(cd.clk)))
                     if cd.async_reset:
                         triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
 

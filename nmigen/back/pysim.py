@@ -364,6 +364,7 @@ class Simulator:
         self._slot_signals    = list()        # int/slot -> Signal
 
         self._domains         = list()        # [ClockDomain]
+        self._clk_edges       = dict()        # ClockDomain -> int/edge
         self._domain_triggers = list()        # int/slot -> ClockDomain
 
         self._signals         = SignalSet()   # {Signal}
@@ -488,6 +489,7 @@ class Simulator:
                     add_fragment(subfragment, (*scope, name))
         add_fragment(root_fragment, scope=("top",))
         self._domains = list(domains)
+        self._clk_edges = {domain: 1 if domain.clk_edge == "pos" else 0 for domain in domains}
 
         def add_signal(signal):
             if signal not in self._signals:
@@ -642,7 +644,8 @@ class Simulator:
             return
 
         # If the signal is a clock that triggers synchronous logic, record that fact.
-        if new == 1 and self._domain_triggers[signal_slot] is not None:
+        if (self._domain_triggers[signal_slot] is not None and
+                self._clk_edges[self._domain_triggers[signal_slot]] == new):
             domains.add(self._domain_triggers[signal_slot])
 
         if self._vcd_writer:

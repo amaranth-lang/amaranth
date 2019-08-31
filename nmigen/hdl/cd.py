@@ -45,7 +45,8 @@ class ClockDomain:
         else:
             return "{}_{}".format(domain_name, signal_name)
 
-    def __init__(self, name=None, reset_less=False, async_reset=False, local=False):
+    def __init__(self, name=None, *, clk_edge="pos", reset_less=False, async_reset=False,
+                 local=False):
         if name is None:
             try:
                 name = tracer.get_var_name()
@@ -55,9 +56,16 @@ class ClockDomain:
             name = name[3:]
         if name == "comb":
             raise ValueError("Domain '{}' may not be clocked".format(name))
+
+        if clk_edge not in ("pos", "neg"):
+            raise ValueError("Domain clock edge must be one of 'pos' or 'neg', not {!r}"
+                             .format(clk_edge))
+
         self.name = name
 
         self.clk = Signal(name=self._name_for(name, "clk"), src_loc_at=1)
+        self.clk_edge = clk_edge
+
         if reset_less:
             self.rst = None
         else:

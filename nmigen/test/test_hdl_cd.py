@@ -23,6 +23,19 @@ class ClockDomainTestCase(FHDLTestCase):
         cd_reset = ClockDomain(local=True)
         self.assertEqual(cd_reset.local, True)
 
+    def test_edge(self):
+        sync = ClockDomain()
+        self.assertEqual(sync.clk_edge, "pos")
+        sync = ClockDomain(clk_edge="pos")
+        self.assertEqual(sync.clk_edge, "pos")
+        sync = ClockDomain(clk_edge="neg")
+        self.assertEqual(sync.clk_edge, "neg")
+
+    def test_edge_wrong(self):
+        with self.assertRaises(ValueError,
+                msg="Domain clock edge must be one of 'pos' or 'neg', not 'xxx'"):
+            ClockDomain("sync", clk_edge="xxx")
+
     def test_with_reset(self):
         pix = ClockDomain()
         self.assertIsNotNone(pix.clk)
