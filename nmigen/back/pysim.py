@@ -320,6 +320,9 @@ class _StatementCompiler(StatementVisitor):
     def on_Assume(self, stmt):
         pass # :nocov:
 
+    def on_Cover(self, stmt):
+        raise NotImplementedError("Covers not yet implemented for Simulator backend.") # :nocov:
+
     def on_Switch(self, stmt):
         test  = self.rrhs_compiler(stmt.test)
         cases = []

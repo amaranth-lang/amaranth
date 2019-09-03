@@ -417,9 +417,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for assign in Statement.wrap(assigns):
-            if not compat_mode and not isinstance(assign, (Assign, Assert, Assume)):
+            if not compat_mode and not isinstance(assign, (Assign, Assert, Assume, Cover)):
                 raise SyntaxError(
-                    "Only assignments, asserts, and assumes may be appended to d.{}"
+                    "Only assignments and property checks may be appended to d.{}"
                     .format(domain_name(domain)))
 
             assign = SampleDomainInjector(domain)(assign)

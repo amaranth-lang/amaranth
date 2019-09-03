@@ -15,7 +15,7 @@ __all__ = [
     "Signal", "ClockSignal", "ResetSignal",
     "UserValue",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
-    "Statement", "Assign", "Assert", "Assume", "Switch", "Delay", "Tick",
+    "Statement", "Assign", "Assert", "Assume", "Cover", "Switch", "Delay", "Tick",
     "Passive", "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
     "SignalSet",
 ]
@@ -1078,6 +1078,11 @@ class Assert(Property):
 @final
 class Assume(Property):
     _kind = "assume"
+
+
+@final
+class Cover(Property):
+    _kind = "cover"
 
 
 # @final
