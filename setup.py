@@ -1,27 +1,27 @@
-import sys
 from setuptools import setup, find_packages
-import versioneer
 
 
-if sys.version_info[:3] < (3, 6):
-    raise SystemExit("nMigen requires Python 3.6+")
+def scm_version():
+    def local_scheme(version):
+        return version.format_choice("+{node}", "+{node}.dirty")
+    return {"version_scheme": "guess-next-dev", "local_scheme": local_scheme}
 
 
 setup(
     name="nmigen",
-    version=versioneer.get_version(),
+    use_scm_version=scm_version(),
     author="whitequark",
     author_email="whitequark@whitequark.org",
     description="Python toolbox for building complex digital hardware",
     #long_description="""TODO""",
     license="BSD",
+    python_requires="~=3.6",
+    setup_requires=["setuptools_scm"],
     install_requires=["pyvcd>=0.1.4", "bitarray", "Jinja2"],
     packages=find_packages(),
-    python_requires=">=3.6",
     project_urls={
         #"Documentation": "https://nmigen.readthedocs.io/",
         "Source Code": "https://github.com/m-labs/nmigen",
         "Bug Tracker": "https://github.com/m-labs/nmigen/issues",
     },
-    cmdclass=versioneer.get_cmdclass()
 )

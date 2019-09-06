@@ -1,10 +1,18 @@
+# Python
 *.pyc
+*.eggs
 *.egg-info
-*.il
-*.v
-*.vcd
-*.gtkw
-**/test/spec_*/
+
+# coverage
 /.coverage
 /htmlcov
+
+# tests
+**/test/spec_*/
+*.vcd
+*.gtkw
+
+# misc user-created
+*.il
+*.v
 /build
