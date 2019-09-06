@@ -1,7 +1,7 @@
 # Python
 *.pyc
-*.eggs
-*.egg-info
+/*.egg-info
+/.eggs
 
 # coverage
 /.coverage
