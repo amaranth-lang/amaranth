@@ -4,6 +4,7 @@ from .. import *
 from ..asserts import *
 from ..tools import log2_int
 from .coding import GrayEncoder
+from .cdc import MultiReg
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]

@@ -5,4 +5,3 @@ except pkg_resources.DistributionNotFound:
     pass
 
 from .hdl import *
-from .lib import *

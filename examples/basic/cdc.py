@@ -1,4 +1,5 @@
 from nmigen import *
+from nmigen.lib.cdc import MultiReg
 from nmigen.cli import main
 
 
