@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import builtins
 import traceback
+import warnings
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum
@@ -627,6 +628,13 @@ class Signal(Value, DUID):
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
+        # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+        if min is not None or max is not None:
+            warnings.warn("instead of `Signal(min={min}, max={max})`, "
+                          "use `Signal.range({min}, {max})`"
+                          .format(min=min or 0, max=max or 2),
+                          DeprecationWarning, stacklevel=2 + src_loc_at)
+
         if name is not None and not isinstance(name, str):
             raise TypeError("Name must be a string, not '{!r}'".format(name))
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
@@ -670,6 +678,23 @@ class Signal(Value, DUID):
             self.decoder = enum_decoder
         else:
             self.decoder = decoder
+
+    @classmethod
+    def range(cls, *args, src_loc_at=0, **kwargs):
+        """Create Signal that can represent a given range.
+
+        The parameters to ``Signal.range`` are the same as for the built-in ``range`` function.
+        That is, for any given ``range(*args)``, ``Signal.range(*args)`` can represent any
+        ``x for x in range(*args)``.
+        """
+        value_range = range(*args)
+        if len(value_range) > 0:
+            signed = value_range.start < 0 or (value_range.stop - value_range.step) < 0
+        else:
+            signed = value_range.start < 0
+        nbits  = max(bits_for(value_range.start, signed),
+                     bits_for(value_range.stop - value_range.step, signed))
+        return cls((nbits, signed), src_loc_at=1 + src_loc_at, **kwargs)
 
     @classmethod
     def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
