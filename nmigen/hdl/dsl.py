@@ -289,6 +289,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = "Switch"
             self._statements = _outer_case
 
+    def Default(self):
+        return self.Case()
+
     @contextmanager
     def FSM(self, reset=None, domain="sync", name="fsm"):
         self._check_context("FSM", context=None)

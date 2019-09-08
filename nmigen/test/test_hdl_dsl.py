@@ -307,12 +307,29 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
-    def test_Switch_default(self):
+    def test_Switch_default_Case(self):
         m = Module()
         with m.Switch(self.w1):
             with m.Case(3):
                 m.d.comb += self.c1.eq(1)
             with m.Case():
+                m.d.comb += self.c2.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig w1)
+                (case 0011 (eq (sig c1) (const 1'd1)))
+                (default (eq (sig c2) (const 1'd1)))
+            )
+        )
+        """)
+
+    def test_Switch_default_Default(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Case(3):
+                m.d.comb += self.c1.eq(1)
+            with m.Default():
                 m.d.comb += self.c2.eq(1)
         m._flush()
         self.assertRepr(m._statements, """
