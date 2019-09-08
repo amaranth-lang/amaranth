@@ -983,11 +983,14 @@ class Sample(Value):
         self.clocks = int(clocks)
         self.domain = domain
         if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal, Initial)):
-            raise TypeError("Sampled value may only be a signal or a constant, not {!r}"
+            raise TypeError("Sampled value must be a signal or a constant, not {!r}"
                             .format(self.value))
         if self.clocks < 0:
             raise ValueError("Cannot sample a value {} cycles in the future"
                              .format(-self.clocks))
+        if not (self.domain is None or isinstance(self.domain, str)):
+            raise TypeError("Domain name must be a string or None, not {!r}"
+                            .format(self.domain))
 
     def shape(self):
         return self.value.shape()

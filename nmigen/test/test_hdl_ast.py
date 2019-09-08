@@ -629,7 +629,7 @@ class SampleTestCase(FHDLTestCase):
 
     def test_wrong_value_operator(self):
         with self.assertRaises(TypeError,
-                "Sampled value may only be a signal or a constant, not "
+                "Sampled value must be a signal or a constant, not "
                 "(+ (sig $signal) (const 1'd1))"):
             Sample(Signal() + 1, 1, "sync")
 
@@ -637,6 +637,11 @@ class SampleTestCase(FHDLTestCase):
         with self.assertRaises(ValueError,
                 "Cannot sample a value 1 cycles in the future"):
             Sample(Signal(), -1, "sync")
+
+    def test_wrong_domain(self):
+        with self.assertRaises(TypeError,
+                "Domain name must be a string or None, not 0"):
+            Sample(Signal(), 1, 0)
 
 
 class InitialTestCase(FHDLTestCase):
