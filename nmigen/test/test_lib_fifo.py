@@ -52,7 +52,7 @@ class FIFOModel(Elaboratable, FIFOInterface):
         self.wdomain = wdomain
 
         self.replace = Signal()
-        self.level   = Signal(max=self.depth + 1)
+        self.level   = Signal.range(self.depth + 1)
 
     def elaborate(self, platform):
         m = Module()
@@ -61,8 +61,8 @@ class FIFOModel(Elaboratable, FIFOInterface):
         wrport  = m.submodules.wrport = storage.write_port(domain=self.wdomain)
         rdport  = m.submodules.rdport = storage.read_port (domain="comb")
 
-        produce = Signal(max=self.depth)
-        consume = Signal(max=self.depth)
+        produce = Signal.range(self.depth)
+        consume = Signal.range(self.depth)
 
         m.d.comb += self.readable.eq(self.level > 0)
         m.d.comb += rdport.addr.eq((consume + 1) % self.depth)

@@ -15,7 +15,7 @@ class UARTReceiver(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        ctr = Signal(max=self.divisor)
+        ctr = Signal.range(self.divisor)
         stb = Signal()
         with m.If(ctr == 0):
             m.d.sync += ctr.eq(self.divisor - 1)

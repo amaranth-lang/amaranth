@@ -83,7 +83,7 @@ class ReadPort(Elaboratable):
         self.domain      = domain
         self.transparent = transparent
 
-        self.addr = Signal(max=memory.depth,
+        self.addr = Signal.range(memory.depth,
                            name="{}_r_addr".format(memory.name), src_loc_at=2)
         self.data = Signal(memory.width,
                            name="{}_r_data".format(memory.name), src_loc_at=2)
@@ -148,7 +148,7 @@ class WritePort(Elaboratable):
         self.priority     = priority
         self.granularity  = granularity
 
-        self.addr = Signal(max=memory.depth,
+        self.addr = Signal.range(memory.depth,
                            name="{}_w_addr".format(memory.name), src_loc_at=2)
         self.data = Signal(memory.width,
                            name="{}_w_data".format(memory.name), src_loc_at=2)
