@@ -148,6 +148,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         r"""
         {{get_tool("ecppack")}}
             {{verbose("--verbose")}}
+            {{get_override("ecppack_opts")|options}}
             --input {{name}}.config
             --bit {{name}}.bit
             --svf {{name}}.svf
