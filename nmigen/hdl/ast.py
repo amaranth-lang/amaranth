@@ -665,6 +665,14 @@ class Signal(Value, DUID):
 
         if not isinstance(self.nbits, int) or self.nbits < 0:
             raise TypeError("Width must be a non-negative integer, not '{!r}'".format(self.nbits))
+
+        reset_nbits = bits_for(reset, self.signed)
+        if reset != 0 and reset_nbits > self.nbits:
+            warnings.warn("Reset value {!r} requires {} bits to represent, but the signal "
+                          "only has {} bits"
+                          .format(reset, reset_nbits, self.nbits),
+                          SyntaxWarning, stacklevel=2 + src_loc_at)
+
         self.reset = int(reset)
         self.reset_less = bool(reset_less)
 

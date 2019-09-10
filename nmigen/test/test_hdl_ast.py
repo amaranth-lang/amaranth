@@ -510,6 +510,17 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s1.reset, 0b111)
         self.assertEqual(s1.reset_less, True)
 
+    def test_reset_narrow(self):
+        with self.assertWarns(SyntaxWarning,
+                msg="Reset value 8 requires 4 bits to represent, but the signal only has 3 bits"):
+            Signal(3, reset=8)
+        with self.assertWarns(SyntaxWarning,
+                msg="Reset value 4 requires 4 bits to represent, but the signal only has 3 bits"):
+            Signal((3, True), reset=4)
+        with self.assertWarns(SyntaxWarning,
+                msg="Reset value -5 requires 4 bits to represent, but the signal only has 3 bits"):
+            Signal((3, True), reset=-5)
+
     def test_attrs(self):
         s1 = Signal()
         self.assertEqual(s1.attrs, {})
