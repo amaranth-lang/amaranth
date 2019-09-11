@@ -716,7 +716,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self.on_statement(stmt)
 
 
-def _convert_fragment(builder, fragment, hierarchy):
+def _convert_fragment(builder, fragment, name_map, hierarchy):
     if isinstance(fragment, ir.Instance):
         port_map = OrderedDict()
         for port_name, (value, dir) in fragment.named_ports.items():
@@ -803,7 +803,8 @@ def _convert_fragment(builder, fragment, hierarchy):
                     sub_params[param_name] = param_value
 
             sub_type, sub_port_map = \
-                _convert_fragment(builder, subfragment, hierarchy=hierarchy + (sub_name,))
+                _convert_fragment(builder, subfragment, name_map,
+                                  hierarchy=hierarchy + (sub_name,))
 
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
@@ -924,12 +925,20 @@ def _convert_fragment(builder, fragment, hierarchy):
             wire_curr, _ = compiler_state.wires[wire]
             module.connect(wire_curr, rhs_compiler(ast.Const(wire.reset, wire.nbits)))
 
-    # Finally, collect the names we've given to our ports in RTLIL, and correlate these with
-    # the signals represented by these ports. If we are a submodule, this will be necessary
-    # to create a cell for us in the parent module.
+    # Collect the names we've given to our ports in RTLIL, and correlate these with the signals
+    # represented by these ports. If we are a submodule, this will be necessary to create a cell
+    # for us in the parent module.
     port_map = OrderedDict()
     for signal in fragment.ports:
         port_map[compiler_state.resolve_curr(signal)] = signal
+
+    # Finally, collect tha names we've given to each wire in RTLIL, and provide these to
+    # the caller, to allow manipulating them in the toolchain.
+    for signal in compiler_state.wires:
+        wire_name = compiler_state.resolve_curr(signal)
+        if wire_name.startswith("\\"):
+            wire_name = wire_name[1:]
+        name_map[signal] = hierarchy + (wire_name,)
 
     return module.name, port_map
 
@@ -937,10 +946,12 @@ def _convert_fragment(builder, fragment, hierarchy):
 def convert_fragment(fragment, name="top"):
     assert isinstance(fragment, ir.Fragment)
     builder = _Builder()
-    _convert_fragment(builder, fragment, hierarchy=(name,))
-    return str(builder)
+    name_map = ast.SignalDict()
+    _convert_fragment(builder, fragment, name_map, hierarchy=(name,))
+    return str(builder), name_map
 
 
 def convert(elaboratable, name="top", platform=None, **kwargs):
     fragment = ir.Fragment.get(elaboratable, platform).prepare(**kwargs)
-    return convert_fragment(fragment, name)
+    il_text, name_map = convert_fragment(fragment, name)
+    return il_text

@@ -59,8 +59,8 @@ write_verilog -norename
 
 
 def convert_fragment(*args, strip_src=False, **kwargs):
-    il_text = rtlil.convert_fragment(*args, **kwargs)
-    return _convert_il_text(il_text, strip_src)
+    il_text, name_map = rtlil.convert_fragment(*args, **kwargs)
+    return _convert_il_text(il_text, strip_src), name_map
 
 
 def convert(*args, strip_src=False, **kwargs):
