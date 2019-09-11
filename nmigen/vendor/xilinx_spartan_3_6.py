@@ -127,8 +127,8 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                 {% endfor %}
             {% endfor %}
             {% for signal, frequency in platform.iter_clock_constraints() -%}
-                NET "{{signal.name}}" TNM_NET="PRD{{signal.name}}";
-                TIMESPEC "TS{{signal.name}}"=PERIOD "PRD{{signal.name}}" {{1000000000/frequency}} ns HIGH 50%;
+                NET "{{signal|hierarchy("/")}}" TNM_NET="PRD{{signal|hierarchy("/")}}";
+                TIMESPEC "TS{{signal|hierarchy("/")}}"=PERIOD "PRD{{signal|hierarchy("/")}}" {{1000000000/frequency}} ns HIGH 50%;
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """

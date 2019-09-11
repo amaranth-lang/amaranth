@@ -209,7 +209,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         """,
         "{{name}}.sdc": r"""
             {% for signal, frequency in platform.iter_clock_constraints() -%}
-                create_clock -period {{1000000000/frequency}} [get_ports {{signal.name}}]
+                create_clock -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")}}]
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,

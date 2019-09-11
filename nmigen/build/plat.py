@@ -296,6 +296,9 @@ class TemplatedPlatform(Platform):
             else:
                 return " ".join(opts)
 
+        def hierarchy(signal, separator):
+            return separator.join(name_map[signal][1:])
+
         def verbose(arg):
             if "NMIGEN_verbose" in os.environ:
                 return arg
@@ -313,6 +316,7 @@ class TemplatedPlatform(Platform):
                 source   = textwrap.dedent(source).strip()
                 compiled = jinja2.Template(source, trim_blocks=True, lstrip_blocks=True)
                 compiled.environment.filters["options"] = options
+                compiled.environment.filters["hierarchy"] = hierarchy
             except jinja2.TemplateSyntaxError as e:
                 e.args = ("{} (at {}:{})".format(e.message, origin, e.lineno),)
                 raise
