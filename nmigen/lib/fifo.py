@@ -291,20 +291,28 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     description="""
     Asynchronous first in, first out queue.
 
-    Read and write interfaces are accessed from different clock domains, called ``read``
-    and ``write``; use :class:`DomainRenamer` to rename them as appropriate for the design.
+    Read and write interfaces are accessed from different clock domains, which can be set when
+    constructing the FIFO.
     """.strip(),
     parameters="""
+    r_domain : str
+        Read clock domain.
+    w_domain : str
+        Write clock domain.
+    """.strip(),
+    attributes="""
     fwft : bool
         Always set.
     """.strip(),
-    attributes="",
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth):
+    def __init__(self, width, depth, *, r_domain="read", w_domain="write"):
         super().__init__(width, depth, fwft=True)
+
+        self._r_domain = r_domain
+        self._w_domain = w_domain
 
         try:
             self._ctr_bits = log2_int(depth, need_pow2=True) + 1
@@ -324,31 +332,31 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         # TODO: extract this pattern into lib.cdc.GrayCounter
         produce_w_bin = Signal(self._ctr_bits)
         produce_w_nxt = Signal(self._ctr_bits)
-        m.d.comb  += produce_w_nxt.eq(produce_w_bin + do_write)
-        m.d.write += produce_w_bin.eq(produce_w_nxt)
+        m.d.comb += produce_w_nxt.eq(produce_w_bin + do_write)
+        m.d[self._w_domain] += produce_w_bin.eq(produce_w_nxt)
 
         consume_r_bin = Signal(self._ctr_bits)
         consume_r_nxt = Signal(self._ctr_bits)
-        m.d.comb  += consume_r_nxt.eq(consume_r_bin + do_read)
-        m.d.read  += consume_r_bin.eq(consume_r_nxt)
+        m.d.comb += consume_r_nxt.eq(consume_r_bin + do_read)
+        m.d[self._r_domain] += consume_r_bin.eq(consume_r_nxt)
 
         produce_w_gry = Signal(self._ctr_bits)
         produce_r_gry = Signal(self._ctr_bits)
         produce_enc = m.submodules.produce_enc = \
             GrayEncoder(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
-            MultiReg(produce_w_gry, produce_r_gry, o_domain="read")
-        m.d.comb  += produce_enc.i.eq(produce_w_nxt),
-        m.d.write += produce_w_gry.eq(produce_enc.o)
+            MultiReg(produce_w_gry, produce_r_gry, o_domain=self._r_domain)
+        m.d.comb += produce_enc.i.eq(produce_w_nxt),
+        m.d[self._w_domain] += produce_w_gry.eq(produce_enc.o)
 
         consume_r_gry = Signal(self._ctr_bits)
         consume_w_gry = Signal(self._ctr_bits)
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
-            MultiReg(consume_r_gry, consume_w_gry, o_domain="write")
-        m.d.comb  += consume_enc.i.eq(consume_r_nxt)
-        m.d.read  += consume_r_gry.eq(consume_enc.o)
+            MultiReg(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
+        m.d.comb += consume_enc.i.eq(consume_r_nxt)
+        m.d[self._r_domain] += consume_r_gry.eq(consume_enc.o)
 
         m.d.comb += [
             self.w_rdy.eq(
@@ -359,8 +367,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         ]
 
         storage = Memory(self.width, self.depth)
-        w_port  = m.submodules.w_port = storage.write_port(domain="write")
-        r_port  = m.submodules.r_port = storage.read_port (domain="read")
+        w_port  = m.submodules.w_port = storage.write_port(domain=self._w_domain)
+        r_port  = m.submodules.r_port = storage.read_port (domain=self._r_domain)
         m.d.comb += [
             w_port.addr.eq(produce_w_bin[:-1]),
             w_port.data.eq(self.w_data),
@@ -384,6 +392,9 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     description="""
     Buffered asynchronous first in, first out queue.
 
+    Read and write interfaces are accessed from different clock domains, which can be set when
+    constructing the FIFO.
+
     This queue's interface is identical to :class:`AsyncFIFO`, but it has an additional register
     on the output, improving timing in case of block RAM that has large clock-to-output delay.
 
@@ -391,20 +402,29 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     becoming available on the output is increased to one cycle.
     """.strip(),
     parameters="""
+    r_domain : str
+        Read clock domain.
+    w_domain : str
+        Write clock domain.
+    """.strip(),
+    attributes="""
     fwft : bool
         Always set.
     """.strip(),
-    attributes="",
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth):
+    def __init__(self, width, depth, *, r_domain="read", w_domain="write"):
         super().__init__(width, depth, fwft=True)
+
+        self._r_domain = r_domain
+        self._w_domain = w_domain
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1)
+        m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1,
+            r_domain=self._r_domain, w_domain=self._w_domain)
 
         m.d.comb += [
             fifo.w_data.eq(self.w_data),
@@ -413,11 +433,12 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         ]
 
         with m.If(self.r_en | ~self.r_rdy):
-            m.d.read += [
+            m.d[self._r_domain] += [
                 self.r_data.eq(fifo.r_data),
-                self.r_rdy.eq(fifo.r_rdy)
+                self.r_rdy.eq(fifo.r_rdy),
             ]
-            m.d.comb += \
+            m.d.comb += [
                 fifo.r_en.eq(1)
+            ]
 
         return m
