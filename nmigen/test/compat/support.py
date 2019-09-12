@@ -12,4 +12,5 @@ class SimCase:
         verilog.convert(self.tb)
 
     def run_with(self, generator):
-        run_simulation(self.tb, generator)
+        with _ignore_deprecated():
+            run_simulation(self.tb, generator)

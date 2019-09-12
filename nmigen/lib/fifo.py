@@ -2,7 +2,7 @@
 
 from .. import *
 from ..asserts import *
-from ..tools import log2_int
+from ..tools import log2_int, deprecated
 from .coding import GrayEncoder
 from .cdc import MultiReg
 
@@ -25,35 +25,37 @@ class FIFOInterface:
     Attributes
     ----------
     {attributes}
-    din : in, width
+    w_data : in, width
         Input data.
-    writable : out
-        Asserted if there is space in the queue, i.e. ``we`` can be asserted to write a new entry.
-    we : in
-        Write strobe. Latches ``din`` into the queue. Does nothing if ``writable`` is not asserted.
+    w_rdy : out
+        Asserted if there is space in the queue, i.e. ``w_en`` can be asserted to write
+        a new entry.
+    w_en : in
+        Write strobe. Latches ``w_data`` into the queue. Does nothing if ``w_rdy`` is not asserted.
     {w_attributes}
-    dout : out, width
-        Output data. {dout_valid}
-    readable : out
-        Asserted if there is an entry in the queue, i.e. ``re`` can be asserted to read this entry.
-    re : in
-        Read strobe. Makes the next entry (if any) available on ``dout`` at the next cycle.
-        Does nothing if ``readable`` is not asserted.
+    r_data : out, width
+        Output data. {r_data_valid}
+    r_rdy : out
+        Asserted if there is an entry in the queue, i.e. ``r_en`` can be asserted to read
+        an existing entry.
+    r_en : in
+        Read strobe. Makes the next entry (if any) available on ``r_data`` at the next cycle.
+        Does nothing if ``r_rdy`` is not asserted.
     {r_attributes}
     """
 
     __doc__ = _doc_template.format(description="""
-    Data written to the input interface (``din``, ``we``, ``writable``) is buffered and can be
-    read at the output interface (``dout``, ``re``, ``readable`). The data entry written first
+    Data written to the input interface (``w_data``, ``w_rdy``, ``w_en``) is buffered and can be
+    read at the output interface (``r_data``, ``r_rdy``, ``r_en`). The data entry written first
     to the input also appears first on the output.
     """,
     parameters="",
-    dout_valid="The conditions in which ``dout`` is valid depends on the type of the queue.",
+    r_data_valid="The conditions in which ``r_data`` is valid depends on the type of the queue.",
     attributes="""
     fwft : bool
-        First-word fallthrough. If set, when ``readable`` rises, the first entry is already
-        available, i.e. ``dout`` is valid. Otherwise, after ``readable`` rises, it is necessary
-        to strobe ``re`` for ``dout`` to become valid.
+        First-word fallthrough. If set, when ``r_rdy`` rises, the first entry is already
+        available, i.e. ``r_data`` is valid. Otherwise, after ``r_rdy`` rises, it is necessary
+        to strobe ``r_en`` for ``r_data`` to become valid.
     """.strip(),
     w_attributes="",
     r_attributes="")
@@ -63,30 +65,66 @@ class FIFOInterface:
         self.depth = depth
         self.fwft  = fwft
 
-        self.din      = Signal(width, reset_less=True)
-        self.writable = Signal() # not full
-        self.we       = Signal()
+        self.w_data = Signal(width, reset_less=True)
+        self.w_rdy  = Signal() # not full
+        self.w_en   = Signal()
 
-        self.dout     = Signal(width, reset_less=True)
-        self.readable = Signal() # not empty
-        self.re       = Signal()
+        self.r_data = Signal(width, reset_less=True)
+        self.r_rdy  = Signal() # not empty
+        self.r_en   = Signal()
 
     def read(self):
         """Read method for simulation."""
-        assert (yield self.readable)
-        yield self.re.eq(1)
+        assert (yield self.r_rdy)
+        yield self.r_en.eq(1)
         yield
-        value = (yield self.dout)
-        yield self.re.eq(0)
+        value = (yield self.r_data)
+        yield self.r_en.eq(0)
         return value
 
     def write(self, data):
         """Write method for simulation."""
-        assert (yield self.writable)
-        yield self.din.eq(data)
-        yield self.we.eq(1)
+        assert (yield self.w_rdy)
+        yield self.w_data.eq(data)
+        yield self.w_en.eq(1)
         yield
-        yield self.we.eq(0)
+        yield self.w_en.eq(0)
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.din`, use `fifo.w_data`")
+    def din(self):
+        return self.w_data
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.writable`, use `fifo.w_rdy`")
+    def writable(self):
+        return self.w_rdy
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.we`, use `fifo.w_en`")
+    def we(self):
+        return self.w_en
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.dout`, use `fifo.r_data`")
+    def dout(self):
+        return self.r_data
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.readable`, use `fifo.r_rdy`")
+    def readable(self):
+        return self.r_rdy
+
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `fifo.re`, use `fifo.r_en`")
+    def re(self):
+        return self.r_en
 
 
 def _incr(signal, modulo):
@@ -108,11 +146,11 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     fwft : bool
         First-word fallthrough. If set, when the queue is empty and an entry is written into it,
         that entry becomes available on the output on the same clock cycle. Otherwise, it is
-        necessary to assert ``re`` for ``dout`` to become valid.
+        necessary to assert ``r_en`` for ``r_data`` to become valid.
     """.strip(),
-    dout_valid="""
-    For FWFT queues, valid if ``readable`` is asserted. For non-FWFT queues, valid on the next
-    cycle after ``readable`` and ``re`` have been asserted.
+    r_data_valid="""
+    For FWFT queues, valid if ``r_rdy`` is asserted. For non-FWFT queues, valid on the next
+    cycle after ``r_rdy`` and ``r_en`` have been asserted.
     """.strip(),
     attributes="",
     r_attributes="""
@@ -129,34 +167,34 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     def elaborate(self, platform):
         m = Module()
         m.d.comb += [
-            self.writable.eq(self.level != self.depth),
-            self.readable.eq(self.level != 0)
+            self.w_rdy.eq(self.level != self.depth),
+            self.r_rdy.eq(self.level != 0)
         ]
 
-        do_read  = self.readable & self.re
-        do_write = self.writable & self.we
+        do_read  = self.r_rdy & self.r_en
+        do_write = self.w_rdy & self.w_en
 
         storage = Memory(self.width, self.depth)
-        wrport  = m.submodules.wrport = storage.write_port()
-        rdport  = m.submodules.rdport = storage.read_port(
+        w_port  = m.submodules.w_port = storage.write_port()
+        r_port  = m.submodules.r_port = storage.read_port(
             domain="comb" if self.fwft else "sync", transparent=self.fwft)
         produce = Signal.range(self.depth)
         consume = Signal.range(self.depth)
 
         m.d.comb += [
-            wrport.addr.eq(produce),
-            wrport.data.eq(self.din),
-            wrport.en.eq(self.we & self.writable)
+            w_port.addr.eq(produce),
+            w_port.data.eq(self.w_data),
+            w_port.en.eq(self.w_en & self.w_rdy)
         ]
         with m.If(do_write):
             m.d.sync += produce.eq(_incr(produce, self.depth))
 
         m.d.comb += [
-            rdport.addr.eq(consume),
-            self.dout.eq(rdport.data),
+            r_port.addr.eq(consume),
+            self.r_data.eq(r_port.data),
         ]
         if not self.fwft:
-            m.d.comb += rdport.en.eq(self.re)
+            m.d.comb += r_port.en.eq(self.r_en)
         with m.If(do_read):
             m.d.sync += consume.eq(_incr(consume, self.depth))
 
@@ -201,7 +239,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     This queue's interface is identical to :class:`SyncFIFO` configured as ``fwft=True``, but it
     does not use asynchronous memory reads, which are incompatible with FPGA block RAMs.
 
-    In exchange, the latency between an entry being written to an empty queue and that entry
+    In exchange, the latency betw_enen an entry being written to an empty queue and that entry
     becoming available on the output is increased to one cycle.
     """.strip(),
     parameters="""
@@ -209,7 +247,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
         Always set.
     """.strip(),
     attributes="",
-    dout_valid="Valid if ``readable`` is asserted.",
+    r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
     level : out
         Number of unread entries.
@@ -229,21 +267,21 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
         m.submodules.unbuffered = fifo = SyncFIFO(self.width, self.depth - 1, fwft=False)
 
         m.d.comb += [
-            fifo.din.eq(self.din),
-            fifo.we.eq(self.we),
-            self.writable.eq(fifo.writable),
+            fifo.w_data.eq(self.w_data),
+            fifo.w_en.eq(self.w_en),
+            self.w_rdy.eq(fifo.w_rdy),
         ]
 
         m.d.comb += [
-            self.dout.eq(fifo.dout),
-            fifo.re.eq(fifo.readable & (~self.readable | self.re)),
+            self.r_data.eq(fifo.r_data),
+            fifo.r_en.eq(fifo.r_rdy & (~self.r_rdy | self.r_en)),
         ]
-        with m.If(fifo.re):
-            m.d.sync += self.readable.eq(1)
-        with m.Elif(self.re):
-            m.d.sync += self.readable.eq(0)
+        with m.If(fifo.r_en):
+            m.d.sync += self.r_rdy.eq(1)
+        with m.Elif(self.r_en):
+            m.d.sync += self.r_rdy.eq(0)
 
-        m.d.comb += self.level.eq(fifo.level + self.readable)
+        m.d.comb += self.level.eq(fifo.level + self.r_rdy)
 
         return m
 
@@ -261,7 +299,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         Always set.
     """.strip(),
     attributes="",
-    dout_valid="Valid if ``readable`` is asserted.",
+    r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="",
     w_attributes="")
 
@@ -280,8 +318,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
 
         m = Module()
 
-        do_write = self.writable & self.we
-        do_read  = self.readable & self.re
+        do_write = self.w_rdy & self.w_en
+        do_read  = self.r_rdy & self.r_en
 
         # TODO: extract this pattern into lib.cdc.GrayCounter
         produce_w_bin = Signal(self._ctr_bits)
@@ -313,24 +351,24 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.read  += consume_r_gry.eq(consume_enc.o)
 
         m.d.comb += [
-            self.writable.eq(
+            self.w_rdy.eq(
                 (produce_w_gry[-1]  == consume_w_gry[-1]) |
                 (produce_w_gry[-2]  == consume_w_gry[-2]) |
                 (produce_w_gry[:-2] != consume_w_gry[:-2])),
-            self.readable.eq(consume_r_gry != produce_r_gry)
+            self.r_rdy.eq(consume_r_gry != produce_r_gry)
         ]
 
         storage = Memory(self.width, self.depth)
-        wrport  = m.submodules.wrport = storage.write_port(domain="write")
-        rdport  = m.submodules.rdport = storage.read_port (domain="read")
+        w_port  = m.submodules.w_port = storage.write_port(domain="write")
+        r_port  = m.submodules.r_port = storage.read_port (domain="read")
         m.d.comb += [
-            wrport.addr.eq(produce_w_bin[:-1]),
-            wrport.data.eq(self.din),
-            wrport.en.eq(do_write)
+            w_port.addr.eq(produce_w_bin[:-1]),
+            w_port.data.eq(self.w_data),
+            w_port.en.eq(do_write)
         ]
         m.d.comb += [
-            rdport.addr.eq((consume_r_bin + do_read)[:-1]),
-            self.dout.eq(rdport.data),
+            r_port.addr.eq((consume_r_bin + do_read)[:-1]),
+            self.r_data.eq(r_port.data),
         ]
 
         if platform == "formal":
@@ -349,7 +387,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     This queue's interface is identical to :class:`AsyncFIFO`, but it has an additional register
     on the output, improving timing in case of block RAM that has large clock-to-output delay.
 
-    In exchange, the latency between an entry being written to an empty queue and that entry
+    In exchange, the latency betw_enen an entry being written to an empty queue and that entry
     becoming available on the output is increased to one cycle.
     """.strip(),
     parameters="""
@@ -357,7 +395,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         Always set.
     """.strip(),
     attributes="",
-    dout_valid="Valid if ``readable`` is asserted.",
+    r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="",
     w_attributes="")
 
@@ -369,17 +407,17 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1)
 
         m.d.comb += [
-            fifo.din.eq(self.din),
-            self.writable.eq(fifo.writable),
-            fifo.we.eq(self.we),
+            fifo.w_data.eq(self.w_data),
+            self.w_rdy.eq(fifo.w_rdy),
+            fifo.w_en.eq(self.w_en),
         ]
 
-        with m.If(self.re | ~self.readable):
+        with m.If(self.r_en | ~self.r_rdy):
             m.d.read += [
-                self.dout.eq(fifo.dout),
-                self.readable.eq(fifo.readable)
+                self.r_data.eq(fifo.r_data),
+                self.r_rdy.eq(fifo.r_rdy)
             ]
             m.d.comb += \
-                fifo.re.eq(1)
+                fifo.r_en.eq(1)
 
         return m
