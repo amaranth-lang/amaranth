@@ -9,7 +9,7 @@ __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
 class Memory:
-    def __init__(self, width, depth, init=None, name=None, simulate=True):
+    def __init__(self, width, depth, *, init=None, name=None, simulate=True):
         if not isinstance(width, int) or width < 0:
             raise TypeError("Memory width must be a non-negative integer, not '{!r}'"
                             .format(width))
@@ -53,12 +53,12 @@ class Memory:
             raise TypeError("Memory initialization value at address {:x}: {}"
                             .format(addr, e)) from None
 
-    def read_port(self, domain="sync", transparent=True):
+    def read_port(self, domain="sync", *, transparent=True):
         if domain == "comb" and not transparent:
             raise ValueError("Read port cannot be simultaneously asynchronous and non-transparent")
-        return ReadPort(self, domain, transparent)
+        return ReadPort(self, domain, transparent=transparent)
 
-    def write_port(self, domain="sync", priority=0, granularity=None):
+    def write_port(self, domain="sync", *, priority=0, granularity=None):
         if granularity is None:
             granularity = self.width
         if not isinstance(granularity, int) or granularity < 0:
@@ -70,7 +70,7 @@ class Memory:
                              .format(granularity, self.width))
         if self.width // granularity * granularity != self.width:
             raise ValueError("Write port granularity must divide memory width evenly")
-        return WritePort(self, domain, priority, granularity)
+        return WritePort(self, domain, priority=priority, granularity=granularity)
 
     def __getitem__(self, index):
         """Simulation only."""
@@ -78,7 +78,7 @@ class Memory:
 
 
 class ReadPort(Elaboratable):
-    def __init__(self, memory, domain, transparent):
+    def __init__(self, memory, domain, *, transparent):
         self.memory      = memory
         self.domain      = domain
         self.transparent = transparent
@@ -142,7 +142,7 @@ class ReadPort(Elaboratable):
 
 
 class WritePort(Elaboratable):
-    def __init__(self, memory, domain, priority, granularity):
+    def __init__(self, memory, domain, *, priority, granularity):
         self.memory       = memory
         self.domain       = domain
         self.priority     = priority
@@ -189,7 +189,7 @@ class DummyPort:
     It does not include any read/write port specific attributes, i.e. none besides ``"domain"``;
     any such attributes may be set manually.
     """
-    def __init__(self, width, addr_bits, domain="sync", name=None, granularity=None):
+    def __init__(self, width, addr_bits, domain="sync", *, name=None, granularity=None):
         self.domain = domain
 
         if granularity is None:
