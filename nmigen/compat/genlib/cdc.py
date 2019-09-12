@@ -1,11 +1,23 @@
+import warnings
+
 from ...tools import deprecated
-from ...lib.cdc import MultiReg
+from ...lib.cdc import MultiReg as NativeMultiReg
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule
 from ..fhdl.structure import If
 
 
 __all__ = ["MultiReg", "GrayCounter", "GrayDecoder"]
+
+
+class MultiReg(NativeMultiReg):
+    def __init__(self, i, o, odomain="sync", n=2, reset=0):
+        if odomain != "sync":
+            warnings.warn("instead of `MultiReg(..., odomain={!r})`, "
+                          "use `MultiReg(..., o_domain={!r})`"
+                          .format(odomain, odomain),
+                          DeprecationWarning, stacklevel=2)
+        super().__init__(i, o, o_domain=odomain, n=n, reset=reset)
 
 
 @deprecated("instead of `migen.genlib.cdc.GrayCounter`, use `nmigen.lib.coding.GrayEncoder`")

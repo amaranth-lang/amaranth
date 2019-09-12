@@ -16,7 +16,7 @@ class MultiReg(Elaboratable):
         Signal to be resynchronised
     o : Signal(), out
         Signal connected to synchroniser output
-    odomain : str
+    o_domain : str
         Name of output clock domain
     n : int
         Number of flops between input and output.
@@ -24,7 +24,7 @@ class MultiReg(Elaboratable):
         Reset value of the flip-flops. On FPGAs, even if ``reset_less`` is True, the MultiReg is
         still set to this value during initialization.
     reset_less : bool
-        If True (the default), this MultiReg is unaffected by ``odomain`` reset.
+        If True (the default), this MultiReg is unaffected by ``o_domain`` reset.
         See "Note on Reset" below.
 
     Platform override
@@ -42,17 +42,17 @@ class MultiReg(Elaboratable):
     consider setting ``reset_less`` to False if any of the following is true:
 
     - You are targeting an ASIC, or an FPGA that does not allow arbitrary initial flip-flop states;
-    - Your design features warm (non-power-on) resets of ``odomain``, so the one-time
+    - Your design features warm (non-power-on) resets of ``o_domain``, so the one-time
       initialization at power on is insufficient;
     - Your design features a sequenced reset, and the MultiReg must maintain its reset value until
-      ``odomain`` reset specifically is deasserted.
+      ``o_domain`` reset specifically is deasserted.
 
-    MultiReg is reset by the ``odomain`` reset only.
+    MultiReg is reset by the ``o_domain`` reset only.
     """
-    def __init__(self, i, o, odomain="sync", n=2, reset=0, reset_less=True):
+    def __init__(self, i, o, *, o_domain="sync", n=2, reset=0, reset_less=True):
         self.i = i
         self.o = o
-        self.odomain = odomain
+        self.o_domain = o_domain
 
         self._regs = [Signal(self.i.shape(), name="cdc{}".format(i), reset=reset,
                              reset_less=reset_less)
@@ -64,7 +64,7 @@ class MultiReg(Elaboratable):
 
         m = Module()
         for i, o in zip((self.i, *self._regs), self._regs):
-            m.d[self.odomain] += o.eq(i)
+            m.d[self.o_domain] += o.eq(i)
         m.d.comb += self.o.eq(self._regs[-1])
         return m
 

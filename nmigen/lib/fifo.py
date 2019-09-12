@@ -315,7 +315,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         produce_enc = m.submodules.produce_enc = \
             GrayEncoder(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
-            MultiReg(produce_w_gry, produce_r_gry, odomain="read")
+            MultiReg(produce_w_gry, produce_r_gry, o_domain="read")
         m.d.comb  += produce_enc.i.eq(produce_w_nxt),
         m.d.write += produce_w_gry.eq(produce_enc.o)
 
@@ -324,7 +324,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
-            MultiReg(consume_r_gry, consume_w_gry, odomain="write")
+            MultiReg(consume_r_gry, consume_w_gry, o_domain="write")
         m.d.comb  += consume_enc.i.eq(consume_r_nxt)
         m.d.read  += consume_r_gry.eq(consume_enc.o)
 
