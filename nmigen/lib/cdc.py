@@ -52,8 +52,8 @@ class MultiReg(Elaboratable):
     def __init__(self, i, o, *, o_domain="sync", n=2, reset=0, reset_less=True):
         self.i = i
         self.o = o
-        self.o_domain = o_domain
 
+        self._o_domain = o_domain
         self._regs = [Signal(self.i.shape(), name="cdc{}".format(i), reset=reset,
                              reset_less=reset_less)
                       for i in range(n)]
@@ -64,7 +64,7 @@ class MultiReg(Elaboratable):
 
         m = Module()
         for i, o in zip((self.i, *self._regs), self._regs):
-            m.d[self.o_domain] += o.eq(i)
+            m.d[self._o_domain] += o.eq(i)
         m.d.comb += self.o.eq(self._regs[-1])
         return m
 
@@ -72,8 +72,8 @@ class MultiReg(Elaboratable):
 class ResetSynchronizer(Elaboratable):
     def __init__(self, arst, *, domain="sync", n=2):
         self.arst = arst
-        self.domain = domain
 
+        self._domain = domain
         self._regs = [Signal(1, name="arst{}".format(i), reset=1)
                       for i in range(n)]
 
@@ -86,8 +86,8 @@ class ResetSynchronizer(Elaboratable):
         for i, o in zip((0, *self._regs), self._regs):
             m.d.reset_sync += o.eq(i)
         m.d.comb += [
-            ClockSignal("reset_sync").eq(ClockSignal(self.domain)),
+            ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
             ResetSignal("reset_sync").eq(self.arst),
-            ResetSignal(self.domain).eq(self._regs[-1])
+            ResetSignal(self._domain).eq(self._regs[-1])
         ]
         return m

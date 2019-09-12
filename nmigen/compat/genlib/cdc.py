@@ -18,6 +18,7 @@ class MultiReg(NativeMultiReg):
                           .format(odomain, odomain),
                           DeprecationWarning, stacklevel=2)
         super().__init__(i, o, o_domain=odomain, n=n, reset=reset)
+        self.odomain = odomain
 
 
 @deprecated("instead of `migen.genlib.cdc.GrayCounter`, use `nmigen.lib.coding.GrayEncoder`")
