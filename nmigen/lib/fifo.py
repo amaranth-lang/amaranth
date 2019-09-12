@@ -96,13 +96,6 @@ def _incr(signal, modulo):
         return Mux(signal == modulo - 1, 0, signal + 1)
 
 
-def _decr(signal, modulo):
-    if modulo == 2 ** len(signal):
-        return signal - 1
-    else:
-        return Mux(signal == 0, modulo - 1, signal - 1)
-
-
 class SyncFIFO(Elaboratable, FIFOInterface):
     __doc__ = FIFOInterface._doc_template.format(
     description="""
@@ -126,18 +119,12 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     level : out
         Number of unread entries.
     """.strip(),
-    w_attributes="""
-    replace : in
-        If asserted at the same time as ``we``, replaces the last entry written into the queue
-        with ``din``. For FWFT queues, if ``level`` is 1, this replaces the value at ``dout``
-        as well. Does nothing if the queue is empty.
-    """.strip())
+    w_attributes="")
 
     def __init__(self, width, depth, fwft=True):
         super().__init__(width, depth, fwft)
 
-        self.level   = Signal.range(depth + 1)
-        self.replace = Signal()
+        self.level = Signal.range(depth + 1)
 
     def elaborate(self, platform):
         m = Module()
@@ -147,7 +134,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         ]
 
         do_read  = self.readable & self.re
-        do_write = self.writable & self.we & ~self.replace
+        do_write = self.writable & self.we
 
         storage = Memory(self.width, self.depth)
         wrport  = m.submodules.wrport = storage.write_port()
@@ -159,10 +146,8 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += [
             wrport.addr.eq(produce),
             wrport.data.eq(self.din),
-            wrport.en.eq(self.we & (self.writable | self.replace))
+            wrport.en.eq(self.we & self.writable)
         ]
-        with m.If(self.replace):
-            m.d.comb += wrport.addr.eq(_decr(produce, self.depth))
         with m.If(do_write):
             m.d.sync += produce.eq(_incr(produce, self.depth))
 
@@ -247,7 +232,6 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
             fifo.din.eq(self.din),
             fifo.we.eq(self.we),
             self.writable.eq(fifo.writable),
-            fifo.replace.eq(0),
         ]
 
         m.d.comb += [

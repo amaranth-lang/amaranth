@@ -36,21 +36,3 @@ class SyncFIFOCase(SimCase, unittest.TestCase):
                     self.assertEqual((yield self.tb.dut.dout[32:]), i*2)
                 yield
         self.run_with(gen())
-
-    def test_replace(self):
-        seq = [x for x in range(20) if x % 5]
-        def gen():
-            for cycle in count():
-                yield self.tb.dut.we.eq(cycle % 2 == 0)
-                yield self.tb.dut.re.eq(cycle % 7 == 0)
-                yield self.tb.dut.replace.eq(
-                    (yield self.tb.dut.din[:32]) % 5 == 1)
-                if (yield self.tb.dut.readable) and (yield self.tb.dut.re):
-                    try:
-                        i = seq.pop(0)
-                    except IndexError:
-                        break
-                    self.assertEqual((yield self.tb.dut.dout[:32]), i)
-                    self.assertEqual((yield self.tb.dut.dout[32:]), i*2)
-                yield
-        self.run_with(gen())

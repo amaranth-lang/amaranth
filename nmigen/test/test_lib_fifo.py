@@ -51,8 +51,7 @@ class FIFOModel(Elaboratable, FIFOInterface):
         self.rdomain = rdomain
         self.wdomain = wdomain
 
-        self.replace = Signal()
-        self.level   = Signal.range(self.depth + 1)
+        self.level = Signal.range(self.depth + 1)
 
     def elaborate(self, platform):
         m = Module()
@@ -75,24 +74,16 @@ class FIFOModel(Elaboratable, FIFOInterface):
 
         m.d.comb += self.writable.eq(self.level < self.depth)
         m.d.comb += wrport.data.eq(self.din)
-        with m.If(self.we):
-            with m.If(~self.replace & self.writable):
-                m.d.comb += wrport.addr.eq((produce + 1) % self.depth)
-                m.d.comb += wrport.en.eq(1)
-                m.d[self.wdomain] += produce.eq(wrport.addr)
-            with m.If(self.replace):
-                # The result of trying to replace an element in an empty queue is irrelevant.
-                # The result of trying to replace the element that is currently being read
-                # is undefined.
-                m.d.comb += Assume(self.level > 0)
-                m.d.comb += wrport.addr.eq(produce)
-                m.d.comb += wrport.en.eq(1)
+        with m.If(self.we & self.writable):
+            m.d.comb += wrport.addr.eq((produce + 1) % self.depth)
+            m.d.comb += wrport.en.eq(1)
+            m.d[self.wdomain] += produce.eq(wrport.addr)
 
         with m.If(ResetSignal(self.rdomain) | ResetSignal(self.wdomain)):
             m.d.sync += self.level.eq(0)
         with m.Else():
             m.d.sync += self.level.eq(self.level
-                + (self.writable & self.we & ~self.replace)
+                + (self.writable & self.we)
                 - (self.readable & self.re))
 
         m.d.comb += Assert(ResetSignal(self.rdomain) == ResetSignal(self.wdomain))
@@ -123,10 +114,6 @@ class FIFOModelEquivalenceSpec(Elaboratable):
             gold.we.eq(dut.we),
             gold.din.eq(dut.din),
         ]
-        if hasattr(dut, "replace"):
-            m.d.comb += gold.replace.eq(dut.replace)
-        else:
-            m.d.comb += gold.replace.eq(0)
 
         m.d.comb += Assert(dut.readable.implies(gold.readable))
         m.d.comb += Assert(dut.writable.implies(gold.writable))
@@ -168,9 +155,6 @@ class FIFOContractSpec(Elaboratable):
         if self.rdomain != "sync":
             m.domains += ClockDomain(self.rdomain)
             m.d.comb += ResetSignal(self.rdomain).eq(0)
-
-        if hasattr(fifo, "replace"):
-            m.d.comb += fifo.replace.eq(0)
 
         entry_1 = AnyConst(fifo.width)
         entry_2 = AnyConst(fifo.width)
