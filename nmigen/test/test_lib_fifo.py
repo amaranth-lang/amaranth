@@ -46,7 +46,7 @@ class FIFOModel(Elaboratable, FIFOInterface):
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
     """
     def __init__(self, width, depth, fwft, rdomain, wdomain):
-        super().__init__(width, depth, fwft)
+        super().__init__(width, depth, fwft=fwft)
 
         self.rdomain = rdomain
         self.wdomain = wdomain

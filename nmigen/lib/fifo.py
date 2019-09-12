@@ -58,7 +58,7 @@ class FIFOInterface:
     w_attributes="",
     r_attributes="")
 
-    def __init__(self, width, depth, fwft):
+    def __init__(self, width, depth, *, fwft):
         self.width = width
         self.depth = depth
         self.fwft  = fwft
@@ -121,8 +121,8 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     """.strip(),
     w_attributes="")
 
-    def __init__(self, width, depth, fwft=True):
-        super().__init__(width, depth, fwft)
+    def __init__(self, width, depth, *, fwft=True):
+        super().__init__(width, depth, fwft=fwft)
 
         self.level = Signal.range(depth + 1)
 
