@@ -70,7 +70,7 @@ class MultiReg(Elaboratable):
 
 
 class ResetSynchronizer(Elaboratable):
-    def __init__(self, arst, domain="sync", n=2):
+    def __init__(self, arst, *, domain="sync", n=2):
         self.arst = arst
         self.domain = domain
 

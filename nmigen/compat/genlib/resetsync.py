@@ -10,7 +10,7 @@ __all__ = ["AsyncResetSynchronizer"]
             "a clock domain name as an argument, not a clock domain object")
 class CompatResetSynchronizer(NativeResetSynchronizer):
     def __init__(self, cd, async_reset):
-        super().__init__(async_reset, cd.name)
+        super().__init__(async_reset, domain=cd.name)
 
 
 AsyncResetSynchronizer = CompatResetSynchronizer
