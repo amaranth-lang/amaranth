@@ -102,4 +102,5 @@ class Pin(Record):
         self.dir   = dir
         self.xdr   = xdr
 
-        super().__init__(pin_layout(self.width, self.dir, self.xdr), name=name, src_loc_at=src_loc_at + 1)
+        super().__init__(pin_layout(self.width, self.dir, self.xdr),
+                         name=name, src_loc_at=src_loc_at + 1)
