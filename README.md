@@ -14,7 +14,7 @@ See the [doc/](doc/) folder for more technical information.
 
 nMigen is a direct descendant of [Migen][] rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive compatibility layer that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend depends on [Yosys][]; currently, the `master` branch of Yosys is required.
+nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend requires [Yosys][] 0.9 or a newer version.
 
 Thanks [LambdaConcept][] for being a sponsor of this project! Contact sb [at] m-labs.hk if you also wish to support this work.
 
@@ -27,6 +27,8 @@ Thanks [LambdaConcept][] for being a sponsor of this project! Contact sb [at] m-
 nMigen is *not* a "Python-to-FPGA" conventional high level synthesis (HLS) tool. It will *not* take a Python program as input and generate a hardware implementation of it. In nMigen, the Python program is executed by a regular Python interpreter, and it emits explicit statements in the FHDL domain-specific language.  Writing a conventional HLS tool that uses nMigen as an internal component might be a good idea, on the other hand :)
 
 ### Installation
+
+nMigen requires [Yosys][] 0.9 or newer, as well as a device-specific toolchain.
 
     pip install git+https://github.com/m-labs/nmigen.git
     pip install git+https://github.com/m-labs/nmigen-boards.git
