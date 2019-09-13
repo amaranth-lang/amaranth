@@ -133,9 +133,29 @@ class Value(metaclass=ABCMeta):
         Returns
         -------
         Value, out
-            Output ``Value``. If any bits are set, returns ``1``, else ``0``.
+            ``1`` if any bits are set, ``0`` otherwise.
         """
         return Operator("b", [self])
+
+    def any(self):
+        """Check if any bits are ``1``.
+
+        Returns
+        -------
+        Value, out
+            ``1`` if any bits are set, ``0`` otherwise.
+        """
+        return Operator("r|", [self])
+
+    def all(self):
+        """Check if all bits are ``1``.
+
+        Returns
+        -------
+        Value, out
+            ``1`` if all bits are set, ``0`` otherwise.
+        """
+        return Operator("r&", [self])
 
     def implies(premise, conclusion):
         """Implication.
@@ -361,7 +381,7 @@ class Operator(Value):
                     return a_bits + 1, True
                 else:
                     return a_bits, a_sign
-            if self.op == "b":
+            if self.op in ("b", "r|", "r&", "r^"):
                 return 1, False
         elif len(op_shapes) == 2:
             (a_bits, a_sign), (b_bits, b_sign) = op_shapes
@@ -372,7 +392,7 @@ class Operator(Value):
                 return a_bits + b_bits, a_sign or b_sign
             if self.op == "%":
                 return a_bits, a_sign
-            if self.op in ("<", "<=", "==", "!=", ">", ">=", "b"):
+            if self.op in ("<", "<=", "==", "!=", ">", ">="):
                 return 1, False
             if self.op in ("&", "^", "|"):
                 return self._bitwise_binary_shape(*op_shapes)

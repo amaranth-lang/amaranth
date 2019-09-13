@@ -251,6 +251,14 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(repr(v), "(b (const 1'd0))")
         self.assertEqual(v.shape(), (1, False))
 
+    def test_any(self):
+        v = Const(0b101).any()
+        self.assertEqual(repr(v), "(r| (const 3'd5))")
+
+    def test_all(self):
+        v = Const(0b101).all()
+        self.assertEqual(repr(v), "(r& (const 3'd5))")
+
     def test_hash(self):
         with self.assertRaises(TypeError):
             hash(Const(0) + Const(0))

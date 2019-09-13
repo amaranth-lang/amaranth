@@ -129,6 +129,12 @@ class _RHSValueCompiler(_ValueCompiler):
                 return lambda state: normalize(-arg(state), shape)
             if value.op == "b":
                 return lambda state: normalize(bool(arg(state)), shape)
+            if value.op == "r|":
+                return lambda state: normalize(arg(state) != 0, shape)
+            if value.op == "r&":
+                val, = value.operands
+                mask = (1 << len(val)) - 1
+                return lambda state: normalize(arg(state) == mask, shape)
         elif len(value.operands) == 2:
             lhs, rhs = map(self, value.operands)
             if value.op == "+":
