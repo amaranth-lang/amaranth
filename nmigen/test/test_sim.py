@@ -69,6 +69,12 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0b01, 2)], C(0))
         self.assertStatement(stmt, [C(0b11, 2)], C(1))
 
+    def test_xor(self):
+        stmt = lambda y, a: y.eq(a.xor())
+        self.assertStatement(stmt, [C(0b00, 2)], C(0))
+        self.assertStatement(stmt, [C(0b01, 2)], C(1))
+        self.assertStatement(stmt, [C(0b11, 2)], C(0))
+
     def test_add(self):
         stmt = lambda y, a, b: y.eq(a + b)
         self.assertStatement(stmt, [C(0,  4), C(1,  4)], C(1,   4))

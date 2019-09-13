@@ -157,6 +157,16 @@ class Value(metaclass=ABCMeta):
         """
         return Operator("r&", [self])
 
+    def xor(self):
+        """Compute pairwise exclusive-or of every bit.
+
+        Returns
+        -------
+        Value, out
+            ``1`` if an odd number of bits are set, ``0`` if an even number of bits are set.
+        """
+        return Operator("r^", [self])
+
     def implies(premise, conclusion):
         """Implication.
 
