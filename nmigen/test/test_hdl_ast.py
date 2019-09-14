@@ -263,6 +263,41 @@ class OperatorTestCase(FHDLTestCase):
         v = Const(0b101).xor()
         self.assertEqual(repr(v), "(r^ (const 3'd5))")
 
+    def test_matches(self):
+        s = Signal(4)
+        self.assertRepr(s.matches(), "(const 1'd0)")
+        self.assertRepr(s.matches(1), """
+        (== (sig s) (const 1'd1))
+        """)
+        self.assertRepr(s.matches(0, 1), """
+        (r| (cat (== (sig s) (const 1'd0)) (== (sig s) (const 1'd1))))
+        """)
+        self.assertRepr(s.matches("10--"), """
+        (== (& (sig s) (const 4'd12)) (const 4'd8))
+        """)
+
+    def test_matches_width_wrong(self):
+        s = Signal(4)
+        with self.assertRaises(SyntaxError,
+                msg="Match pattern '--' must have the same width as match value (which is 4)"):
+            s.matches("--")
+        with self.assertWarns(SyntaxWarning,
+                msg="Match pattern '10110' is wider than match value (which has width 4); "
+                    "comparison will never be true"):
+            s.matches(0b10110)
+
+    def test_matches_bits_wrong(self):
+        s = Signal(4)
+        with self.assertRaises(SyntaxError,
+                msg="Match pattern 'abc' must consist of 0, 1, and - (don't care) bits"):
+            s.matches("abc")
+
+    def test_matches_pattern_wrong(self):
+        s = Signal(4)
+        with self.assertRaises(SyntaxError,
+                msg="Match pattern must be an integer or a string, not 1.0"):
+            s.matches(1.0)
+
     def test_hash(self):
         with self.assertRaises(TypeError):
             hash(Const(0) + Const(0))

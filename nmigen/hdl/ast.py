@@ -191,9 +191,9 @@ class Value(metaclass=ABCMeta):
         Parameters
         ----------
         offset : Value, in
-            index of first selected bit
+            Index of first selected bit.
         width : int
-            number of selected bits
+            Number of selected bits.
 
         Returns
         -------
@@ -211,9 +211,9 @@ class Value(metaclass=ABCMeta):
         Parameters
         ----------
         offset : Value, in
-            index of first selected word
+            Index of first selected word.
         width : int
-            number of selected bits
+            Number of selected bits.
 
         Returns
         -------
@@ -221,6 +221,56 @@ class Value(metaclass=ABCMeta):
             Selected part of the ``Value``
         """
         return Part(self, offset, width, stride=width, src_loc_at=1)
+
+    def matches(self, *patterns):
+        """Pattern matching.
+
+        Matches against a set of patterns, which may be integers or bit strings, recognizing
+        the same grammar as ``Case()``.
+
+        Parameters
+        ----------
+        patterns : int or str
+            Patterns to match against.
+
+        Returns
+        -------
+        Value, out
+            ``1`` if any pattern matches the value, ``0`` otherwise.
+        """
+        matches = []
+        for pattern in patterns:
+            if isinstance(pattern, str) and any(bit not in "01-" for bit in pattern):
+                raise SyntaxError("Match pattern '{}' must consist of 0, 1, and - (don't care) "
+                                  "bits"
+                                  .format(pattern))
+            if isinstance(pattern, str) and len(pattern) != len(self):
+                raise SyntaxError("Match pattern '{}' must have the same width as match value "
+                                  "(which is {})"
+                                  .format(pattern, len(self)))
+            if not isinstance(pattern, (int, str)):
+                raise SyntaxError("Match pattern must be an integer or a string, not {}"
+                                  .format(pattern))
+            if isinstance(pattern, int) and bits_for(pattern) > len(self):
+                warnings.warn("Match pattern '{:b}' is wider than match value "
+                              "(which has width {}); comparison will never be true"
+                              .format(pattern, len(self)),
+                              SyntaxWarning, stacklevel=3)
+                continue
+            if isinstance(pattern, int):
+                matches.append(self == pattern)
+            elif isinstance(pattern, str):
+                mask    = int(pattern.replace("0", "1").replace("-", "0"), 2)
+                pattern = int(pattern.replace("-", "0"), 2)
+                matches.append((self & mask) == pattern)
+            else:
+                assert False
+        if not matches:
+            return Const(0)
+        elif len(matches) == 1:
+            return matches[0]
+        else:
+            return Cat(*matches).any()
 
     def eq(self, value):
         """Assignment.
