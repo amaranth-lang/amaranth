@@ -359,12 +359,12 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaises(SyntaxError,
-                    msg="Case value '--' must have the same width as test (which is 4)"):
+                    msg="Case pattern '--' must have the same width as switch value (which is 4)"):
                 with m.Case("--"):
                     pass
             with self.assertWarns(SyntaxWarning,
-                    msg="Case value '10110' is wider than test (which has width 4); comparison "
-                        "will never be true"):
+                    msg="Case pattern '10110' is wider than switch value (which has width 4); "
+                        "comparison will never be true"):
                 with m.Case(0b10110):
                     pass
         self.assertRepr(m._statements, """
@@ -372,6 +372,22 @@ class DSLTestCase(FHDLTestCase):
             (switch (sig w1) )
         )
         """)
+
+    def test_Case_bits_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with self.assertRaises(SyntaxError,
+                    msg="Case pattern 'abc' must consist of 0, 1, and - (don't care) bits"):
+                with m.Case("abc"):
+                    pass
+
+    def test_Case_pattern_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with self.assertRaises(SyntaxError,
+                    msg="Case pattern must be an integer or a string, not 1.0"):
+                with m.Case(1.0):
+                    pass
 
     def test_Case_outside_Switch_wrong(self):
         m = Module()

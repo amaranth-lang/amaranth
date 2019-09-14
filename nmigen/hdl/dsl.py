@@ -258,22 +258,29 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._pop_ctrl()
 
     @contextmanager
-    def Case(self, *values):
+    def Case(self, *patterns):
         self._check_context("Case", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        new_values = ()
-        for value in values:
-            if isinstance(value, str) and len(value) != len(switch_data["test"]):
-                raise SyntaxError("Case value '{}' must have the same width as test (which is {})"
-                                  .format(value, len(switch_data["test"])))
-            if isinstance(value, int) and bits_for(value) > len(switch_data["test"]):
-                warnings.warn("Case value '{:b}' is wider than test (which has width {}); "
-                              "comparison will never be true"
-                              .format(value, len(switch_data["test"])),
+        new_patterns = ()
+        for pattern in patterns:
+            if isinstance(pattern, str) and any(bit not in "01-" for bit in pattern):
+                raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) bits"
+                                  .format(pattern))
+            if isinstance(pattern, str) and len(pattern) != len(switch_data["test"]):
+                raise SyntaxError("Case pattern '{}' must have the same width as switch value "
+                                  "(which is {})"
+                                  .format(pattern, len(switch_data["test"])))
+            if not isinstance(pattern, (int, str)):
+                raise SyntaxError("Case pattern must be an integer or a string, not {}"
+                                  .format(pattern))
+            if isinstance(pattern, int) and bits_for(pattern) > len(switch_data["test"]):
+                warnings.warn("Case pattern '{:b}' is wider than switch value "
+                              "(which has width {}); comparison will never be true"
+                              .format(pattern, len(switch_data["test"])),
                               SyntaxWarning, stacklevel=3)
                 continue
-            new_values = (*new_values, value)
+            new_patterns = (*new_patterns, pattern)
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None
@@ -282,9 +289,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             # If none of the provided cases can possibly be true, omit this branch completely.
             # This needs to be differentiated from no cases being provided in the first place,
             # which means the branch will always match.
-            if not (values and not new_values):
-                switch_data["cases"][new_values] = self._statements
-                switch_data["case_src_locs"][new_values] = src_loc
+            if not (patterns and not new_patterns):
+                switch_data["cases"][new_patterns] = self._statements
+                switch_data["case_src_locs"][new_patterns] = src_loc
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
