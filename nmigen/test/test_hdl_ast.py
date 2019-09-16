@@ -5,6 +5,23 @@ from ..hdl.ast import *
 from .tools import *
 
 
+class UnsignedEnum(Enum):
+    FOO = 1
+    BAR = 2
+    BAZ = 3
+
+
+class SignedEnum(Enum):
+    FOO = -1
+    BAR =  0
+    BAZ = +1
+
+
+class StringEnum(Enum):
+    FOO = "a"
+    BAR = "b"
+
+
 class ValueTestCase(FHDLTestCase):
     def test_wrap(self):
         self.assertIsInstance(Value.wrap(0), Const)
@@ -14,6 +31,19 @@ class ValueTestCase(FHDLTestCase):
         with self.assertRaises(TypeError,
                 msg="Object ''str'' is not an nMigen value"):
             Value.wrap("str")
+
+    def test_wrap_enum(self):
+        e1 = Value.wrap(UnsignedEnum.FOO)
+        self.assertIsInstance(e1, Const)
+        self.assertEqual(e1.shape(), (2, False))
+        e2 = Value.wrap(SignedEnum.FOO)
+        self.assertIsInstance(e2, Const)
+        self.assertEqual(e2.shape(), (2, True))
+
+    def test_wrap_enum_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Only enumerations with integer values can be converted to nMigen values"):
+            Value.wrap(StringEnum.FOO)
 
     def test_bool(self):
         with self.assertRaises(TypeError,
@@ -276,6 +306,12 @@ class OperatorTestCase(FHDLTestCase):
         (== (& (sig s) (const 4'd12)) (const 4'd8))
         """)
 
+    def test_matches_enum(self):
+        s = Signal.enum(SignedEnum)
+        self.assertRepr(s.matches(SignedEnum.FOO), """
+        (== (& (sig s) (const 2'd3)) (const 2'd3))
+        """)
+
     def test_matches_width_wrong(self):
         s = Signal(4)
         with self.assertRaises(SyntaxError,
@@ -295,7 +331,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_pattern_wrong(self):
         s = Signal(4)
         with self.assertRaises(SyntaxError,
-                msg="Match pattern must be an integer or a string, not 1.0"):
+                msg="Match pattern must be an integer, a string, or an enumeration, not 1.0"):
             s.matches(1.0)
 
     def test_hash(self):
@@ -604,6 +640,13 @@ class SignalTestCase(FHDLTestCase):
         s = Signal(decoder=Color)
         self.assertEqual(s.decoder(1), "RED/1")
         self.assertEqual(s.decoder(3), "3")
+
+    def test_enum(self):
+        s1 = Signal.enum(UnsignedEnum)
+        self.assertEqual(s1.shape(), (2, False))
+        s2 = Signal.enum(SignedEnum)
+        self.assertEqual(s2.shape(), (2, True))
+        self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
 
 
 class ClockSignalTestCase(FHDLTestCase):

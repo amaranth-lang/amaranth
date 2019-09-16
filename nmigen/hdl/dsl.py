@@ -1,6 +1,7 @@
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from contextlib import contextmanager
+from enum import Enum
 import warnings
 
 from ..tools import flatten, bits_for, deprecated
@@ -264,6 +265,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
         for pattern in patterns:
+            if not isinstance(pattern, (int, str, Enum)):
+                raise SyntaxError("Case pattern must be an integer, a string, or an enumeration, "
+                                  "not {!r}"
+                                  .format(pattern))
             if isinstance(pattern, str) and any(bit not in "01-" for bit in pattern):
                 raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) bits"
                                   .format(pattern))
@@ -271,9 +276,6 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 raise SyntaxError("Case pattern '{}' must have the same width as switch value "
                                   "(which is {})"
                                   .format(pattern, len(switch_data["test"])))
-            if not isinstance(pattern, (int, str)):
-                raise SyntaxError("Case pattern must be an integer or a string, not {}"
-                                  .format(pattern))
             if isinstance(pattern, int) and bits_for(pattern) > len(switch_data["test"]):
                 warnings.warn("Case pattern '{:b}' is wider than switch value "
                               "(which has width {}); comparison will never be true"

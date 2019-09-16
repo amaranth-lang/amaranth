@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from enum import Enum
 
 from ..hdl.ast import *
 from ..hdl.cd import *
@@ -355,6 +356,23 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    def test_Switch_enum(self):
+        class Color(Enum):
+            RED  = 1
+            BLUE = 2
+        m = Module()
+        se = Signal.enum(Color)
+        with m.Switch(se):
+            with m.Case(Color.RED):
+                m.d.comb += self.c1.eq(1)
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig se)
+                (case 01 (eq (sig c1) (const 1'd1)))
+            )
+        )
+        """)
+
     def test_Case_width_wrong(self):
         m = Module()
         with m.Switch(self.w1):
@@ -385,7 +403,7 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaises(SyntaxError,
-                    msg="Case pattern must be an integer or a string, not 1.0"):
+                    msg="Case pattern must be an integer, a string, or an enumeration, not 1.0"):
                 with m.Case(1.0):
                     pass
 
