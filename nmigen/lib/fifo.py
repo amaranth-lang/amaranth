@@ -368,7 +368,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
 
         storage = Memory(self.width, self.depth)
         w_port  = m.submodules.w_port = storage.write_port(domain=self._w_domain)
-        r_port  = m.submodules.r_port = storage.read_port (domain=self._r_domain)
+        r_port  = m.submodules.r_port = storage.read_port (domain=self._r_domain,
+                                                           transparent=False)
         m.d.comb += [
             w_port.addr.eq(produce_w_bin[:-1]),
             w_port.data.eq(self.w_data),
@@ -377,6 +378,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += [
             r_port.addr.eq((consume_r_bin + do_read)[:-1]),
             self.r_data.eq(r_port.data),
+            r_port.en.eq(1),
         ]
 
         if platform == "formal":
