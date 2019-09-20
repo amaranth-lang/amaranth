@@ -32,7 +32,7 @@ class FIFOSmokeTestCase(FHDLTestCase):
         self.assertSyncFIFOWorks(SyncFIFO(width=8, depth=4, fwft=False))
 
     def test_sync_buffered(self):
-        self.assertSyncFIFOWorks(SyncFIFO(width=8, depth=4, fwft=True))
+        self.assertSyncFIFOWorks(SyncFIFOBuffered(width=8, depth=4))
 
     def test_async(self):
         self.assertAsyncFIFOWorks(AsyncFIFO(width=8, depth=4))
