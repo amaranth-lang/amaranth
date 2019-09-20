@@ -400,7 +400,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     This queue's interface is identical to :class:`AsyncFIFO`, but it has an additional register
     on the output, improving timing in case of block RAM that has large clock-to-output delay.
 
-    In exchange, the latency betw_enen an entry being written to an empty queue and that entry
+    In exchange, the latency between an entry being written to an empty queue and that entry
     becoming available on the output is increased to one cycle.
     """.strip(),
     parameters="""
