@@ -283,12 +283,12 @@ class _ValueCompilerState:
         else:
             wire_name = signal.name
 
-        wire_curr = self.rtlil.wire(width=signal.nbits, name=wire_name,
+        wire_curr = self.rtlil.wire(width=signal.width, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
                                     attrs=signal.attrs,
                                     src=src(signal.src_loc))
         if signal in self.driven and self.driven[signal]:
-            wire_next = self.rtlil.wire(width=signal.nbits, name=wire_curr + "$next",
+            wire_next = self.rtlil.wire(width=signal.width, name=wire_curr + "$next",
                                         src=src(signal.src_loc))
         else:
             wire_next = None
@@ -403,10 +403,10 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Const(self, value):
         if isinstance(value.value, str):
-            return "{}'{}".format(value.nbits, value.value)
+            return "{}'{}".format(value.width, value.value)
         else:
-            value_twos_compl = value.value & ((1 << value.nbits) - 1)
-            return "{}'{:0{}b}".format(value.nbits, value_twos_compl, value.nbits)
+            value_twos_compl = value.value & ((1 << value.width) - 1)
+            return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
 
     def on_AnyConst(self, value):
         if value in self.s.anys:
@@ -703,13 +703,13 @@ class _StatementCompiler(xfrm.StatementVisitor):
         except LegalizeValue as legalize:
             with self._case.switch(self.rhs_compiler(legalize.value),
                                    src=src(legalize.src_loc)) as switch:
-                bits, sign = legalize.value.shape()
-                tests = ["{:0{}b}".format(v, bits) for v in legalize.branches]
-                tests[-1] = "-" * bits
+                width, signed = legalize.value.shape()
+                tests = ["{:0{}b}".format(v, width) for v in legalize.branches]
+                tests[-1] = "-" * width
                 for branch, test in zip(legalize.branches, tests):
                     with self.case(switch, (test,)):
                         self._wrap_assign = False
-                        branch_value = ast.Const(branch, (bits, sign))
+                        branch_value = ast.Const(branch, (width, signed))
                         with self.state.expand_to(legalize.value, branch_value):
                             super().on_statement(stmt)
             self._wrap_assign = True
@@ -842,7 +842,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         if signal not in group_signals:
                             continue
                         if domain is None:
-                            prev_value = ast.Const(signal.reset, signal.nbits)
+                            prev_value = ast.Const(signal.reset, signal.width)
                         else:
                             prev_value = signal
                         case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
@@ -871,7 +871,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         if signal not in group_signals:
                             continue
                         wire_curr, wire_next = compiler_state.resolve(signal)
-                        sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.nbits)))
+                        sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.width)))
 
                     # The Verilog simulator trigger needs to change at time 0, so if we haven't
                     # yet done that in some process, do it.
@@ -926,7 +926,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             if wire in driven:
                 continue
             wire_curr, _ = compiler_state.wires[wire]
-            module.connect(wire_curr, rhs_compiler(ast.Const(wire.reset, wire.nbits)))
+            module.connect(wire_curr, rhs_compiler(ast.Const(wire.reset, wire.width)))
 
     # Collect the names we've given to our ports in RTLIL, and correlate these with the signals
     # represented by these ports. If we are a submodule, this will be necessary to create a cell

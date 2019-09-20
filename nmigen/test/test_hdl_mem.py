@@ -123,8 +123,8 @@ class DummyPortTestCase(FHDLTestCase):
 
     def test_sizes(self):
         p1 = DummyPort(width=8, addr_bits=2)
-        self.assertEqual(p1.addr.nbits, 2)
-        self.assertEqual(p1.data.nbits, 8)
-        self.assertEqual(p1.en.nbits, 1)
+        self.assertEqual(p1.addr.width, 2)
+        self.assertEqual(p1.data.width, 8)
+        self.assertEqual(p1.en.width, 1)
         p2 = DummyPort(width=8, addr_bits=2, granularity=2)
-        self.assertEqual(p2.en.nbits, 4)
+        self.assertEqual(p2.en.width, 4)

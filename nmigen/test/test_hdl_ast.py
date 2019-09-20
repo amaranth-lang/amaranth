@@ -381,7 +381,7 @@ class SliceTestCase(FHDLTestCase):
 class BitSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal.range(self.c.nbits)
+        self.s = Signal.range(self.c.width)
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
@@ -405,7 +405,7 @@ class BitSelectTestCase(FHDLTestCase):
 class WordSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal.range(self.c.nbits)
+        self.s = Signal.range(self.c.width)
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)

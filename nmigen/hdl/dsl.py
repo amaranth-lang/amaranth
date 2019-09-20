@@ -168,8 +168,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
     def _check_signed_cond(self, cond):
         cond = Value.wrap(cond)
-        bits, sign = cond.shape()
-        if sign:
+        width, signed = cond.shape()
+        if signed:
             warnings.warn("Signed values in If/Elif conditions usually result from inverting "
                           "Python booleans with ~, which leads to unexpected results: ~True is "
                           "-2, which is truthful. Replace `~flag` with `not flag`. (If this is "
@@ -405,7 +405,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fsm_state_src_locs = data["state_src_locs"]
             if not fsm_states:
                 return
-            fsm_signal.nbits = bits_for(len(fsm_encoding) - 1)
+            fsm_signal.width = bits_for(len(fsm_encoding) - 1)
             if fsm_reset is None:
                 fsm_signal.reset = fsm_encoding[next(iter(fsm_states))]
             else:

@@ -95,8 +95,8 @@ class ReadPort(Elaboratable):
     def elaborate(self, platform):
         f = Instance("$memrd",
             p_MEMID=self.memory,
-            p_ABITS=self.addr.nbits,
-            p_WIDTH=self.data.nbits,
+            p_ABITS=self.addr.width,
+            p_WIDTH=self.data.width,
             p_CLK_ENABLE=self.domain != "comb",
             p_CLK_POLARITY=1,
             p_TRANSPARENT=self.transparent,
@@ -158,8 +158,8 @@ class WritePort(Elaboratable):
     def elaborate(self, platform):
         f = Instance("$memwr",
             p_MEMID=self.memory,
-            p_ABITS=self.addr.nbits,
-            p_WIDTH=self.data.nbits,
+            p_ABITS=self.addr.width,
+            p_WIDTH=self.data.width,
             p_CLK_ENABLE=1,
             p_CLK_POLARITY=1,
             p_PRIORITY=self.priority,

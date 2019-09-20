@@ -523,7 +523,7 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
             domain = fragment.domains[domain_name]
             if domain.rst is None:
                 continue
-            stmts = [signal.eq(Const(signal.reset, signal.nbits))
+            stmts = [signal.eq(Const(signal.reset, signal.width))
                      for signal in signals if not signal.reset_less]
             fragment.add_statements(Switch(domain.rst, {1: stmts}))
 
@@ -732,7 +732,7 @@ class _ControlInserter(FragmentTransformer):
 
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(Const(s.reset, s.nbits)) for s in signals if not s.reset_less]
+        stmts = [s.eq(Const(s.reset, s.width)) for s in signals if not s.reset_less]
         fragment.add_statements(Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 

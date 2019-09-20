@@ -81,7 +81,7 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(len(ports), 2)
         scl, sda = ports
         self.assertEqual(ports[1].name, "i2c_0__sda__io")
-        self.assertEqual(ports[1].nbits, 1)
+        self.assertEqual(ports[1].width, 1)
 
         self.assertEqual(list(self.cm.iter_single_ended_pins()), [
             (i2c.scl, scl, {}, False),
@@ -102,9 +102,9 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(len(ports), 2)
         p, n = ports
         self.assertEqual(p.name, "clk100_0__p")
-        self.assertEqual(p.nbits, clk100.width)
+        self.assertEqual(p.width, clk100.width)
         self.assertEqual(n.name, "clk100_0__n")
-        self.assertEqual(n.nbits, clk100.width)
+        self.assertEqual(n.width, clk100.width)
 
         self.assertEqual(list(self.cm.iter_differential_pins()), [
             (clk100, p, n, {}, False),

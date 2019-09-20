@@ -561,7 +561,7 @@ class Simulator:
                     var_init = signal.decoder(signal.reset).expandtabs().replace(" ", "_")
                 else:
                     var_type = "wire"
-                    var_size = signal.nbits
+                    var_size = signal.width
                     var_init = signal.reset
 
                 suffix = None
