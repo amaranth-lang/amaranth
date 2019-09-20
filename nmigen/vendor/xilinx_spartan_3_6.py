@@ -411,6 +411,14 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             )
         return m
 
+    def get_multi_reg(self, multireg):
+        m = Module()
+        for i, o in zip((multireg.i, *multireg._regs), multireg._regs):
+            o.attrs["ASYNC_REG"] = "TRUE"
+            m.d[multireg._o_domain] += o.eq(i)
+        m.d.comb += multireg.o.eq(multireg._regs[-1])
+        return m
+
 
 XilinxSpartan3APlatform = XilinxSpartan3Or6Platform
 XilinxSpartan6Platform = XilinxSpartan3Or6Platform

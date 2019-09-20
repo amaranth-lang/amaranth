@@ -360,3 +360,11 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                 io_IO=p_port[bit], io_IOB=n_port[bit]
             )
         return m
+
+    def get_multi_reg(self, multireg):
+        m = Module()
+        for i, o in zip((multireg.i, *multireg._regs), multireg._regs):
+            o.attrs["ASYNC_REG"] = "TRUE"
+            m.d[multireg._o_domain] += o.eq(i)
+        m.d.comb += multireg.o.eq(multireg._regs[-1])
+        return m
