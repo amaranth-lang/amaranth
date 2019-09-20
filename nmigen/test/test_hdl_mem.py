@@ -60,6 +60,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(rdport.transparent, False)
         self.assertEqual(len(rdport.en), 1)
         self.assertIsInstance(rdport.en, Signal)
+        self.assertEqual(rdport.en.reset, 1)
 
     def test_read_port_asynchronous(self):
         mem    = Memory(width=8, depth=4)

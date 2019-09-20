@@ -88,7 +88,7 @@ class ReadPort(Elaboratable):
         self.data = Signal(memory.width,
                            name="{}_r_data".format(memory.name), src_loc_at=2)
         if self.domain != "comb" and not transparent:
-            self.en = Signal(name="{}_r_en".format(memory.name), src_loc_at=2)
+            self.en = Signal(name="{}_r_en".format(memory.name), src_loc_at=2, reset=1)
         else:
             self.en = Const(1)
 

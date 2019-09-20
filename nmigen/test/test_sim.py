@@ -548,9 +548,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(1)
-                yield self.rdport.en.eq(1)
                 yield
-                self.assertEqual((yield self.rdport.data), 0x00)
+                self.assertEqual((yield self.rdport.data), 0xaa)
                 yield
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield Delay(1e-6) # let comb propagate
