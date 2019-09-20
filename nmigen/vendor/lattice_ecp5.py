@@ -121,7 +121,7 @@ class LatticeECP5Platform(TemplatedPlatform):
                     {%- for key, value in extras.items() %} {{key}}={{value}}{% endfor %};
             {% endfor %}
             {% for signal, frequency in platform.iter_clock_constraints() -%}
-                FREQUENCY PORT "{{signal.name}}" {{frequency}} HZ;
+                FREQUENCY NET "{{signal|hierarchy(".")}}" {{frequency}} HZ;
             {% endfor %}
         """
     }
@@ -203,7 +203,7 @@ class LatticeECP5Platform(TemplatedPlatform):
                     {%- for key, value in extras.items() %} {{key}}={{value}}{% endfor %};
             {% endfor %}
             {% for signal, frequency in platform.iter_clock_constraints() -%}
-                FREQUENCY PORT "{{signal.name}}" {{frequency/1000000}} MHZ;
+                FREQUENCY NET "{{signal|hierarchy("/")}}" {{frequency/1000000}} MHZ;
             {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """,
