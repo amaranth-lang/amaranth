@@ -61,18 +61,21 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a: y.eq(a.any())
         self.assertStatement(stmt, [C(0b00, 2)], C(0))
         self.assertStatement(stmt, [C(0b01, 2)], C(1))
+        self.assertStatement(stmt, [C(0b10, 2)], C(1))
         self.assertStatement(stmt, [C(0b11, 2)], C(1))
 
     def test_all(self):
         stmt = lambda y, a: y.eq(a.all())
         self.assertStatement(stmt, [C(0b00, 2)], C(0))
         self.assertStatement(stmt, [C(0b01, 2)], C(0))
+        self.assertStatement(stmt, [C(0b10, 2)], C(0))
         self.assertStatement(stmt, [C(0b11, 2)], C(1))
 
-    def test_xor(self):
+    def test_xor_unary(self):
         stmt = lambda y, a: y.eq(a.xor())
         self.assertStatement(stmt, [C(0b00, 2)], C(0))
         self.assertStatement(stmt, [C(0b01, 2)], C(1))
+        self.assertStatement(stmt, [C(0b10, 2)], C(1))
         self.assertStatement(stmt, [C(0b11, 2)], C(0))
 
     def test_add(self):
@@ -100,7 +103,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a, b: y.eq(a | b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b1110, 4))
 
-    def test_xor(self):
+    def test_xor_binary(self):
         stmt = lambda y, a, b: y.eq(a ^ b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b0110, 4))
 
