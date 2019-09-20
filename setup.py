@@ -17,7 +17,7 @@ setup(
     license="BSD",
     python_requires="~=3.6",
     setup_requires=["setuptools_scm"],
-    install_requires=["pyvcd>=0.1.4", "bitarray", "Jinja2"],
+    install_requires=["setuptools", "pyvcd>=0.1.4", "bitarray", "Jinja2"],
     packages=find_packages(),
     project_urls={
         #"Documentation": "https://nmigen.readthedocs.io/",
