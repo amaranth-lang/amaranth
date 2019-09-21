@@ -147,7 +147,7 @@ class ResourceManager:
                 self._ports.append((resource, pin, port, attrs))
 
                 if pin is not None and resource.clock is not None:
-                    self.add_clock_constraint(pin, resource.clock.frequency)
+                    self.add_clock_constraint(pin.i, resource.clock.frequency)
 
                 return pin if pin is not None else port
 
@@ -212,42 +212,18 @@ class ResourceManager:
                 for bit, pin_name in enumerate(pin_names):
                     yield "{}[{}]".format(port_name, bit), pin_name, attrs
 
-    def _map_clock_to_port(self, clock):
-        if not isinstance(clock, (Signal, Pin)):
-            raise TypeError("Object {!r} is not a Signal or Pin".format(clock))
-
-        if isinstance(clock, Pin):
-            for res, pin, port, attrs in self._ports:
-                if clock is pin:
-                    if isinstance(res.ios[0], Pins):
-                        clock = port.io
-                    elif isinstance(res.ios[0], DiffPairs):
-                        clock = port.p
-                    else:
-                        assert False
-                    break
-            else:
-                raise ValueError("The Pin object {!r}, which is not a previously requested "
-                                 "resource, cannot be used to desigate a clock"
-                                 .format(clock))
-
-        return clock
-
     def add_clock_constraint(self, clock, frequency):
+        if not isinstance(clock, Signal):
+            raise TypeError("Object {!r} is not a Signal".format(clock))
         if not isinstance(frequency, (int, float)):
             raise TypeError("Frequency must be a number, not {!r}".format(frequency))
 
-        clock = self._map_clock_to_port(clock)
         if clock in self._clocks:
             raise ValueError("Cannot add clock constraint on {!r}, which is already constrained "
                              "to {} Hz"
                              .format(clock, self._clocks[clock]))
         else:
             self._clocks[clock] = float(frequency)
-
-    def get_clock_constraint(self, clock):
-        clock = self._map_clock_to_port(clock)
-        return self._clocks[clock]
 
     def iter_clock_constraints(self):
         return iter(self._clocks.items())

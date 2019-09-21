@@ -194,23 +194,16 @@ class ResourceManagerTestCase(FHDLTestCase):
         clk50 = self.cm.request("clk50", 0, dir="i")
         clk100_port_p, clk100_port_n, clk50_port = self.cm.iter_ports()
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (clk100_port_p, 100e6),
-            (clk50_port, 50e6)
+            (clk100.i, 100e6),
+            (clk50.i, 50e6)
         ])
 
     def test_add_clock(self):
         i2c = self.cm.request("i2c")
-        self.cm.add_clock_constraint(i2c.scl, 100e3)
-        scl_port, sda_port = self.cm.iter_ports()
+        self.cm.add_clock_constraint(i2c.scl.o, 100e3)
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (scl_port, 100e3)
+            (i2c.scl.o, 100e3)
         ])
-
-    def test_get_clock(self):
-        clk100 = self.cm.request("clk100", 0)
-        self.assertEqual(self.cm.get_clock_constraint(clk100), 100e6)
-        with self.assertRaises(KeyError):
-            self.cm.get_clock_constraint(Signal())
 
     def test_wrong_resources(self):
         with self.assertRaises(TypeError, msg="Object 'wrong' is not a Resource"):
@@ -239,19 +232,13 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_wrong_clock_signal(self):
         with self.assertRaises(TypeError,
-                msg="Object None is not a Signal or Pin"):
+                msg="Object None is not a Signal"):
             self.cm.add_clock_constraint(None, 10e6)
 
     def test_wrong_clock_frequency(self):
         with self.assertRaises(TypeError,
                 msg="Frequency must be a number, not None"):
             self.cm.add_clock_constraint(Signal(), None)
-
-    def test_wrong_clock_pin(self):
-        with self.assertRaises(ValueError,
-                msg="The Pin object (rec <unnamed> i), which is not a previously requested "
-                    "resource, cannot be used to desigate a clock"):
-            self.cm.add_clock_constraint(Pin(1, dir="i"), 1e6)
 
     def test_wrong_request_duplicate(self):
         with self.assertRaises(ResourceError,
@@ -304,6 +291,6 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_wrong_clock_constraint_twice(self):
         clk100 = self.cm.request("clk100")
         with self.assertRaises(ValueError,
-                msg="Cannot add clock constraint on (sig clk100_0__p), which is already "
+                msg="Cannot add clock constraint on (sig clk100_0__i), which is already "
                     "constrained to 100000000.0 Hz"):
-            self.cm.add_clock_constraint(clk100, 1e6)
+            self.cm.add_clock_constraint(clk100.i, 1e6)
