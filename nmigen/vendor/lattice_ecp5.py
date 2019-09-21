@@ -29,6 +29,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``yosys_opts``: adds extra options for ``yosys``.
         * ``nextpnr_opts``: adds extra options for ``nextpnr-ecp5``.
         * ``ecppack_opts``: adds extra options for ``ecppack``.
+        * ``add_preferences``: inserts commands at the end of the LPF file.
 
     Build products:
         * ``{{name}}.rpt``: Yosys log.
@@ -51,8 +52,8 @@ class LatticeECP5Platform(TemplatedPlatform):
     Available overrides:
         * ``script_project``: inserts commands before ``prj_project save`` in Tcl script.
         * ``script_after_export``: inserts commands after ``prj_run Export`` in Tcl script.
-        * ``add_preferences``: inserts commands in LPF file.
-        * ``add_constraints``: inserts commands in XDC file.
+        * ``add_preferences``: inserts commands at the end of the LPF file.
+        * ``add_constraints``: inserts commands at the end of the XDC file.
 
     Build products:
         * ``{{name}}_impl/{{name}}_impl.htm``: consolidated log.
@@ -91,6 +92,11 @@ class LatticeECP5Platform(TemplatedPlatform):
         "BG756": "caBGA756",
     }
 
+    _trellis_required_tools = [
+        "yosys",
+        "nextpnr-ecp5",
+        "ecppack"
+    ]
     _trellis_file_templates = {
         **TemplatedPlatform.build_script_templates,
         "{{name}}.il": r"""
@@ -123,6 +129,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             {% for signal, frequency in platform.iter_clock_constraints() -%}
                 FREQUENCY NET "{{signal|hierarchy(".")}}" {{frequency}} HZ;
             {% endfor %}
+            {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """
     }
     _trellis_command_templates = [
@@ -157,6 +164,10 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     # Diamond templates
 
+    _diamond_required_tools = [
+        "pnmainc",
+        "ddtcmd"
+    ]
     _diamond_file_templates = {
         **TemplatedPlatform.build_script_templates,
         "build_{{name}}.sh": r"""
@@ -243,9 +254,9 @@ class LatticeECP5Platform(TemplatedPlatform):
     @property
     def required_tools(self):
         if self.toolchain == "Trellis":
-            return ["yosys", "nextpnr-ecp5", "ecppack"]
+            return self._trellis_required_tools
         if self.toolchain == "Diamond":
-            return ["pnmainc", "ddtcmd"]
+            return self._diamond_required_tools
         assert False
 
     @property
