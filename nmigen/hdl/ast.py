@@ -963,29 +963,29 @@ class Array(MutableSequence):
 
         gpios = Array(Signal() for _ in range(10))
         with m.If(bus.we):
-            m.d.sync += gpios[bus.adr].eq(bus.dat_w)
+            m.d.sync += gpios[bus.addr].eq(bus.w_data)
         with m.Else():
-            m.d.sync += bus.dat_r.eq(gpios[bus.adr])
+            m.d.sync += bus.r_data.eq(gpios[bus.addr])
 
     Multidimensional array::
 
         mult = Array(Array(x * y for y in range(10)) for x in range(10))
-        a = Signal(max=10)
-        b = Signal(max=10)
+        a = Signal.range(10)
+        b = Signal.range(10)
         r = Signal(8)
         m.d.comb += r.eq(mult[a][b])
 
     Array of records::
 
         layout = [
-            ("re",     1),
-            ("dat_r", 16),
+            ("r_data", 16),
+            ("r_en",   1),
         ]
         buses  = Array(Record(layout) for busno in range(4))
         master = Record(layout)
         m.d.comb += [
-            buses[sel].re.eq(master.re),
-            master.dat_r.eq(buses[sel].dat_r),
+            buses[sel].r_en.eq(master.r_en),
+            master.r_data.eq(buses[sel].r_data),
         ]
     """
     def __init__(self, iterable=()):
