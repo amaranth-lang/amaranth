@@ -21,7 +21,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             * ``bitgen``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_ISE_env``, if present.
+    ``NMIGEN_ENV_ISE``, if present.
 
     Available overrides:
         * ``script_after_run``: inserts commands after ``run`` in XST script.

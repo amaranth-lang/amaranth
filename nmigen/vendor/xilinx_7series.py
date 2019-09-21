@@ -13,7 +13,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         * ``vivado``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_Vivado_env``, if present.
+    ``NMIGEN_ENV_Vivado``, if present.
 
     Available overrides:
         * ``script_after_read``: inserts commands after ``read_xdc`` in Tcl script.

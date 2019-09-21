@@ -18,7 +18,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``ecppack``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_Trellis_env``, if present.
+    ``NMIGEN_ENV_Trellis``, if present.
 
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
@@ -46,7 +46,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``ddtcmd``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_Diamond_env``, if present.
+    ``NMIGEN_ENV_Diamond``, if present.
 
     Available overrides:
         * ``script_project``: inserts commands before ``prj_project save`` in Tcl script.

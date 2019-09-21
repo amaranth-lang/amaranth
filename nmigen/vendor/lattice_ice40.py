@@ -15,7 +15,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``icepack``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_IceStorm_env``, if present.
+    ``NMIGEN_ENV_IceStorm``, if present.
 
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
