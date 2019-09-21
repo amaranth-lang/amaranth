@@ -358,12 +358,13 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += consume_enc.i.eq(consume_r_nxt)
         m.d[self._r_domain] += consume_r_gry.eq(consume_enc.o)
 
+        w_full  = Signal()
+        r_empty = Signal()
         m.d.comb += [
-            self.w_rdy.eq(
-                (produce_w_gry[-1]  == consume_w_gry[-1]) |
-                (produce_w_gry[-2]  == consume_w_gry[-2]) |
-                (produce_w_gry[:-2] != consume_w_gry[:-2])),
-            self.r_rdy.eq(consume_r_gry != produce_r_gry)
+            w_full.eq((produce_w_gry[-1]  != consume_w_gry[-1]) &
+                      (produce_w_gry[-2]  != consume_w_gry[-2]) &
+                      (produce_w_gry[:-2] == consume_w_gry[:-2])),
+            r_empty.eq(consume_r_gry == produce_r_gry),
         ]
 
         storage = Memory(self.width, self.depth)
@@ -373,12 +374,14 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += [
             w_port.addr.eq(produce_w_bin[:-1]),
             w_port.data.eq(self.w_data),
-            w_port.en.eq(do_write)
+            w_port.en.eq(do_write),
+            self.w_rdy.eq(~w_full),
         ]
         m.d.comb += [
-            r_port.addr.eq((consume_r_bin + do_read)[:-1]),
+            r_port.addr.eq(consume_r_nxt[:-1]),
             self.r_data.eq(r_port.data),
             r_port.en.eq(1),
+            self.r_rdy.eq(~r_empty),
         ]
 
         if platform == "formal":
