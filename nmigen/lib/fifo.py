@@ -240,7 +240,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     does not use asynchronous memory reads, which are incompatible with FPGA block RAMs.
 
     In exchange, the latency betw_enen an entry being written to an empty queue and that entry
-    becoming available on the output is increased to one cycle.
+    becoming available on the output is increased by one cycle compared to :class:`SyncFIFO`.
     """.strip(),
     parameters="""
     fwft : bool
@@ -404,7 +404,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     on the output, improving timing in case of block RAM that has large clock-to-output delay.
 
     In exchange, the latency between an entry being written to an empty queue and that entry
-    becoming available on the output is increased to one cycle.
+    becoming available on the output is increased by one cycle compared to :class:`AsyncFIFO`.
     """.strip(),
     parameters="""
     r_domain : str
