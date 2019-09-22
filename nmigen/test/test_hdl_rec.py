@@ -36,8 +36,10 @@ class LayoutTestCase(FHDLTestCase):
     def test_enum_field(self):
         layout = Layout.wrap([
             ("enum", UnsignedEnum),
+            ("enum_dir", UnsignedEnum, DIR_FANOUT),
         ])
         self.assertEqual(layout["enum"], ((2, False), DIR_NONE))
+        self.assertEqual(layout["enum_dir"], ((2, False), DIR_FANOUT))
 
     def test_slice_tuple(self):
         layout = Layout.wrap([
@@ -75,7 +77,7 @@ class LayoutTestCase(FHDLTestCase):
 
     def test_wrong_shape(self):
         with self.assertRaises(TypeError,
-                msg="Field ('a', 'x') has invalid shape: should be an int, tuple, or "
+                msg="Field ('a', 'x') has invalid shape: should be an int, tuple, Enum, or "
                     "list of fields of a nested record"):
             Layout.wrap([("a", "x")])
 
