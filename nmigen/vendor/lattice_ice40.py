@@ -169,6 +169,8 @@ class LatticeICE40Platform(TemplatedPlatform):
     # iCECube2 templates
 
     _icecube2_required_tools = [
+        "synthesis",
+        "synpwrap",
         "tclsh",
     ]
     _icecube2_file_templates = {
