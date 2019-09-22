@@ -5,6 +5,7 @@ from functools import reduce
 from .. import tracer
 from ..tools import union
 from .ast import *
+from .ast import _enum_shape
 
 
 __all__ = ["Direction", "DIR_NONE", "DIR_FANOUT", "DIR_FANIN", "Layout", "Record"]
@@ -34,6 +35,8 @@ class Layout:
             if len(field) == 2:
                 name, shape = field
                 direction = DIR_NONE
+                if isinstance(shape, type) and issubclass(shape, Enum):
+                    shape = _enum_shape(shape)
                 if isinstance(shape, list):
                     shape = Layout.wrap(shape)
             else:

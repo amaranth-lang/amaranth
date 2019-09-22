@@ -1,6 +1,14 @@
+from enum import Enum
+
 from ..hdl.ast import *
 from ..hdl.rec import *
 from .tools import *
+
+
+class UnsignedEnum(Enum):
+    FOO = 1
+    BAR = 2
+    BAZ = 3
 
 
 class LayoutTestCase(FHDLTestCase):
@@ -24,6 +32,12 @@ class LayoutTestCase(FHDLTestCase):
         self.assertEqual(layout["info"][1], DIR_NONE)
         self.assertEqual(sublayout["a"], ((1, False), DIR_NONE))
         self.assertEqual(sublayout["b"], ((1, False), DIR_NONE))
+
+    def test_enum_field(self):
+        layout = Layout.wrap([
+            ("enum", UnsignedEnum),
+        ])
+        self.assertEqual(layout["enum"], ((2, False), DIR_NONE))
 
     def test_slice_tuple(self):
         layout = Layout.wrap([
