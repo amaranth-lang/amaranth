@@ -185,22 +185,22 @@ class LatticeECP5Platform(TemplatedPlatform):
             {{emit_design("verilog")}}
         """,
         "{{name}}.tcl": r"""
-            prj_project new -name "{{name}}" -impl "impl" -impl_dir "top_impl" \
+            prj_project new -name {{name}} -impl impl -impl_dir top_impl \
                 -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}} \
-                -lpf "{{name}}.lpf" \
+                -lpf {{name}}.lpf \
                 -synthesis synplify
             {% for file in platform.iter_extra_files(".v", ".sv", ".vhd", ".vhdl") -%}
                 prj_src add "{{file}}"
             {% endfor %}
-            prj_src add "{{name}}.v"
-            prj_impl option top "{{name}}"
-            prj_src add "{{name}}.sdc"
+            prj_src add {{name}}.v
+            prj_impl option top {{name}}
+            prj_src add {{name}}.sdc
             {{get_override("script_project")|default("# (script_project placeholder)")}}
             prj_project save
-            prj_run Synthesis -impl "impl" -forceAll
-            prj_run Translate -impl "impl" -forceAll
-            prj_run Map -impl "impl" -forceAll
-            prj_run PAR -impl "impl" -forceAll
+            prj_run Synthesis -impl impl -forceAll
+            prj_run Translate -impl impl -forceAll
+            prj_run Map -impl impl -forceAll
+            prj_run PAR -impl impl -forceAll
             prj_run Export -impl "impl" -forceAll -task Bitgen
             {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
         """,
