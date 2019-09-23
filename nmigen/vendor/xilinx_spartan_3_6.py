@@ -419,6 +419,18 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         m.d.comb += ff_sync.o.eq(multireg._stages[-1])
         return m
 
+    def get_reset_sync(self, resetsync):
+        m = Module()
+        m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
+        for i, o in zip((0, *resetsync._stages), resetsync._stages):
+            o.attrs["ASYNC_REG"] = "TRUE"
+            m.d.reset_sync += o.eq(i)
+        m.d.comb += [
+            ClockSignal("reset_sync").eq(ClockSignal(resetsync._domain)),
+            ResetSignal("reset_sync").eq(resetsync.arst),
+            ResetSignal(resetsync._domain).eq(resetsync._stages[-1])
+        ]
+        return m
 
 XilinxSpartan3APlatform = XilinxSpartan3Or6Platform
 XilinxSpartan6Platform = XilinxSpartan3Or6Platform
