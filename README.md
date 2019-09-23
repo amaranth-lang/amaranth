@@ -12,7 +12,7 @@ Other nMigen libraries are built on FHDL and provide various tools and logic cor
 
 See the [doc/](doc/) folder for more technical information.
 
-nMigen is a direct descendant of [Migen][] rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive compatibility layer that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
+nMigen is a direct descendant of [Migen][] rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
 nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend requires [Yosys][] 0.9 or a newer version.
 
@@ -37,9 +37,17 @@ nMigen requires [Yosys][] 0.9 or newer, as well as a device-specific toolchain.
 
 TBD
 
-### Links
+### Migration from [Migen][]
 
-TBD
+If you are already familiar with [Migen][], the good news is that nMigen provides a comprehensive Migen compatibility layer! An existing Migen design can be synthesized and simulated with nMigen in three steps:
+
+  1. Replace all `from migen import <...>` statements with `from nmigen.compat import <...>`.
+  2. Replace every explicit mention of the default `sys` clock domain with the new default `sync` clock domain. E.g. `ClockSignal("sys")` is changed to `ClockSignal("sync")`.
+  3. Migrate from Migen build/platform system to nMigen build/platform system. nMigen does not provide a build/platform compatibility layer because both the board definition files and the platform abstraction differ too much.
+
+Note that nMigen will **not** produce the exact same RTL as Migen did. nMigen has been built to allow you to take advantage of the new and improved functionality it has (such as producing hierarchical RTL) while making migration as painless as possible.
+
+Once your design passes verification with nMigen, you can migrate it to the nMigen syntax one module at a time. Migen modules can be added to nMigen modules and vice versa, so there is no restriction on the order of migration, either.
 
 ### License
 
