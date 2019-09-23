@@ -1,6 +1,7 @@
 from ...tools import deprecated, extend
-from ...lib.fifo import FIFOInterface as NativeFIFOInterface, \
-  SyncFIFO, SyncFIFOBuffered, AsyncFIFO, AsyncFIFOBuffered
+from ...lib.fifo import (FIFOInterface as NativeFIFOInterface,
+  SyncFIFO as NativeSyncFIFO, SyncFIFOBuffered as NativeSyncFIFOBuffered,
+  AsyncFIFO as NativeAsyncFIFO, AsyncFIFOBuffered as NativeAsyncFIFOBuffered)
 
 
 __all__ = ["_FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -9,11 +10,8 @@ __all__ = ["_FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "Async
 class CompatFIFOInterface(NativeFIFOInterface):
     @deprecated("attribute `fwft` must be provided to FIFOInterface constructor")
     def __init__(self, width, depth):
-        super().__init__(width, depth, fwft=False)
+        super().__init__(width=width, depth=depth, fwft=False)
         del self.fwft
-
-
-_FIFOInterface = CompatFIFOInterface
 
 
 @extend(NativeFIFOInterface)
@@ -36,3 +34,30 @@ def write(self, data):
     yield
     yield self.w_en.eq(0)
     yield
+
+
+class CompatSyncFIFO(NativeSyncFIFO):
+    def __init__(self, width, depth, fwft=True):
+        super().__init__(width=width, depth=depth, fwft=fwft)
+
+
+class CompatSyncFIFOBuffered(NativeSyncFIFOBuffered):
+    def __init__(self, width, depth):
+        super().__init__(width=width, depth=depth)
+
+
+class CompatAsyncFIFO(NativeAsyncFIFO):
+    def __init__(self, width, depth):
+        super().__init__(width=width, depth=depth)
+
+
+class CompatAsyncFIFOBuffered(NativeAsyncFIFOBuffered):
+    def __init__(self, width, depth):
+        super().__init__(width=width, depth=depth)
+
+
+_FIFOInterface = CompatFIFOInterface
+SyncFIFO = CompatSyncFIFO
+SyncFIFOBuffered = CompatSyncFIFOBuffered
+AsyncFIFO = CompatAsyncFIFO
+AsyncFIFOBuffered = CompatAsyncFIFOBuffered

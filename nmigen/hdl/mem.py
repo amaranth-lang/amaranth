@@ -9,7 +9,7 @@ __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
 class Memory:
-    def __init__(self, width, depth, *, init=None, name=None, simulate=True):
+    def __init__(self, *, width, depth, init=None, name=None, simulate=True):
         if not isinstance(width, int) or width < 0:
             raise TypeError("Memory width must be a non-negative integer, not '{!r}'"
                             .format(width))

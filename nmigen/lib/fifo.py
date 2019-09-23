@@ -60,7 +60,7 @@ class FIFOInterface:
     w_attributes="",
     r_attributes="")
 
-    def __init__(self, width, depth, *, fwft):
+    def __init__(self, *, width, depth, fwft):
         if not isinstance(width, int) or width < 0:
             raise TypeError("FIFO width must be a non-negative integer, not '{!r}'"
                             .format(width))
@@ -184,8 +184,8 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     """.strip(),
     w_attributes="")
 
-    def __init__(self, width, depth, *, fwft=True):
-        super().__init__(width, depth, fwft=fwft)
+    def __init__(self, *, width, depth, fwft=True):
+        super().__init__(width=width, depth=depth, fwft=fwft)
 
         self.level = Signal.range(depth + 1)
 
@@ -199,7 +199,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         do_read  = self.r_rdy & self.r_en
         do_write = self.w_rdy & self.w_en
 
-        storage = Memory(self.width, self.depth)
+        storage = Memory(width=self.width, depth=self.depth)
         w_port  = m.submodules.w_port = storage.write_port()
         r_port  = m.submodules.r_port = storage.read_port(
             domain="comb" if self.fwft else "sync", transparent=self.fwft)
@@ -279,8 +279,8 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     """.strip(),
     w_attributes="")
 
-    def __init__(self, width, depth):
-        super().__init__(width, depth, fwft=True)
+    def __init__(self, *, width, depth):
+        super().__init__(width=width, depth=depth, fwft=True)
 
         self.level = Signal.range(depth + 1)
 
@@ -289,7 +289,8 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
 
         # Effectively, this queue treats the output register of the non-FWFT inner queue as
         # an additional storage element.
-        m.submodules.unbuffered = fifo = SyncFIFO(self.width, self.depth - 1, fwft=False)
+        m.submodules.unbuffered = fifo = SyncFIFO(width=self.width, depth=self.depth - 1,
+                                                  fwft=False)
 
         m.d.comb += [
             fifo.w_data.eq(self.w_data),
@@ -336,14 +337,14 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth, *, r_domain="read", w_domain="write", exact_depth=False):
+    def __init__(self, *, width, depth, r_domain="read", w_domain="write", exact_depth=False):
         try:
             depth_bits = log2_int(depth, need_pow2=exact_depth)
         except ValueError as e:
             raise ValueError("AsyncFIFO only supports depths that are powers of 2; requested "
                              "exact depth {} is not"
                              .format(depth)) from None
-        super().__init__(width, 1 << depth_bits, fwft=True)
+        super().__init__(width=width, depth=1 << depth_bits, fwft=True)
 
         self._r_domain = r_domain
         self._w_domain = w_domain
@@ -397,7 +398,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             r_empty.eq(consume_r_gry == produce_r_gry),
         ]
 
-        storage = Memory(self.width, self.depth)
+        storage = Memory(width=self.width, depth=self.depth)
         w_port  = m.submodules.w_port = storage.write_port(domain=self._w_domain)
         r_port  = m.submodules.r_port = storage.read_port (domain=self._r_domain,
                                                            transparent=False)
@@ -454,21 +455,21 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth, *, r_domain="read", w_domain="write", exact_depth=False):
+    def __init__(self, *, width, depth, r_domain="read", w_domain="write", exact_depth=False):
         try:
             depth_bits = log2_int(max(0, depth - 1), need_pow2=exact_depth)
         except ValueError as e:
             raise ValueError("AsyncFIFOBuffered only supports depths that are one higher "
                              "than powers of 2; requested exact depth {} is not"
                              .format(depth)) from None
-        super().__init__(width, (1 << depth_bits) + 1, fwft=True)
+        super().__init__(width=width, depth=(1 << depth_bits) + 1, fwft=True)
 
         self._r_domain = r_domain
         self._w_domain = w_domain
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.unbuffered = fifo = AsyncFIFO(self.width, self.depth - 1,
+        m.submodules.unbuffered = fifo = AsyncFIFO(width=self.width, depth=self.depth - 1,
             r_domain=self._r_domain, w_domain=self._w_domain)
 
         m.d.comb += [

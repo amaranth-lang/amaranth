@@ -49,8 +49,8 @@ class FIFOModel(Elaboratable, FIFOInterface):
     """
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
     """
-    def __init__(self, width, depth, *, fwft, r_domain, w_domain):
-        super().__init__(width, depth, fwft=fwft)
+    def __init__(self, *, width, depth, fwft, r_domain, w_domain):
+        super().__init__(width=width, depth=depth, fwft=fwft)
 
         self.r_domain = r_domain
         self.w_domain = w_domain
@@ -60,7 +60,7 @@ class FIFOModel(Elaboratable, FIFOInterface):
     def elaborate(self, platform):
         m = Module()
 
-        storage = Memory(self.width, self.depth)
+        storage = Memory(width=self.width, depth=self.depth)
         w_port  = m.submodules.w_port = storage.write_port(domain=self.w_domain)
         r_port  = m.submodules.r_port = storage.read_port (domain="comb")
 
@@ -110,7 +110,7 @@ class FIFOModelEquivalenceSpec(Elaboratable):
     def elaborate(self, platform):
         m = Module()
         m.submodules.dut  = dut  = self.fifo
-        m.submodules.gold = gold = FIFOModel(dut.width, dut.depth, fwft=dut.fwft,
+        m.submodules.gold = gold = FIFOModel(width=dut.width, depth=dut.depth, fwft=dut.fwft,
                                              r_domain=self.r_domain, w_domain=self.w_domain)
 
         m.d.comb += [
@@ -141,11 +141,11 @@ class FIFOContractSpec(Elaboratable):
     consecutively, they must be read out consecutively at some later point, no matter all other
     circumstances, with the exception of reset.
     """
-    def __init__(self, fifo, r_domain, w_domain, bound):
-        self.fifo    = fifo
+    def __init__(self, fifo, *, r_domain, w_domain, bound):
+        self.fifo     = fifo
         self.r_domain = r_domain
         self.w_domain = w_domain
-        self.bound   = bound
+        self.bound    = bound
 
     def elaborate(self, platform):
         m = Module()
