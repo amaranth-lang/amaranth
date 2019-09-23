@@ -13,8 +13,15 @@ __all__ = ["convert", "convert_fragment"]
 class _Namer:
     def __init__(self):
         super().__init__()
+        self._anon  = 0
         self._index = 0
         self._names = set()
+
+    def anonymous(self):
+        name = "U$${}".format(self._anon)
+        assert name not in self._names
+        self._anon += 1
+        return name
 
     def _make_name(self, name, local):
         if name is None:
@@ -771,6 +778,9 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         for subfragment, sub_name in fragment.subfragments:
             if not subfragment.ports:
                 continue
+
+            if sub_name is None:
+                sub_name = module.anonymous()
 
             sub_params = OrderedDict()
             if hasattr(subfragment, "parameters"):
