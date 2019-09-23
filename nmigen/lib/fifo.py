@@ -73,23 +73,6 @@ class FIFOInterface:
         self.r_rdy  = Signal() # not empty
         self.r_en   = Signal()
 
-    def read(self):
-        """Read method for simulation."""
-        assert (yield self.r_rdy)
-        yield self.r_en.eq(1)
-        yield
-        value = (yield self.r_data)
-        yield self.r_en.eq(0)
-        return value
-
-    def write(self, data):
-        """Write method for simulation."""
-        assert (yield self.w_rdy)
-        yield self.w_data.eq(data)
-        yield self.w_en.eq(1)
-        yield
-        yield self.w_en.eq(0)
-
     # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
     @property
     @deprecated("instead of `fifo.din`, use `fifo.w_data`")

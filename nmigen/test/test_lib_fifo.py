@@ -5,42 +5,6 @@ from ..back.pysim import *
 from ..lib.fifo import *
 
 
-class FIFOSmokeTestCase(FHDLTestCase):
-    def assertSyncFIFOWorks(self, fifo, xfrm=lambda x: x):
-        with Simulator(xfrm(Fragment.get(fifo, None)), vcd_file=open("test.vcd", "w")) as sim:
-            sim.add_clock(1e-6)
-            def process():
-                yield from fifo.write(1)
-                yield from fifo.write(2)
-                while not (yield fifo.r_rdy):
-                    yield
-                if not fifo.fwft:
-                    yield fifo.r_en.eq(1)
-                yield
-                self.assertEqual((yield from fifo.read()), 1)
-                self.assertEqual((yield from fifo.read()), 2)
-            sim.add_sync_process(process)
-            sim.run()
-
-    def assertAsyncFIFOWorks(self, fifo):
-        self.assertSyncFIFOWorks(fifo, xfrm=DomainRenamer({"read": "sync", "write": "sync"}))
-
-    def test_sync_fwft(self):
-        self.assertSyncFIFOWorks(SyncFIFO(width=8, depth=4, fwft=True))
-
-    def test_sync_not_fwft(self):
-        self.assertSyncFIFOWorks(SyncFIFO(width=8, depth=4, fwft=False))
-
-    def test_sync_buffered(self):
-        self.assertSyncFIFOWorks(SyncFIFOBuffered(width=8, depth=4))
-
-    def test_async(self):
-        self.assertAsyncFIFOWorks(AsyncFIFO(width=8, depth=4))
-
-    def test_async_buffered(self):
-        self.assertAsyncFIFOWorks(AsyncFIFOBuffered(width=8, depth=3))
-
-
 class FIFOModel(Elaboratable, FIFOInterface):
     """
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
