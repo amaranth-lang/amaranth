@@ -57,19 +57,22 @@ class FFSynchronizer(Elaboratable):
         self.i = i
         self.o = o
 
-        self._o_domain = o_domain
-        self._stages = [Signal(self.i.shape(), name="stage{}".format(index),
-                               reset=reset, reset_less=reset_less)
-                        for index in range(stages)]
+        self._reset      = reset
+        self._reset_less = reset_less
+        self._o_domain   = o_domain
+        self._stages     = stages
 
     def elaborate(self, platform):
         if hasattr(platform, "get_ff_sync"):
             return platform.get_ff_sync(self)
 
         m = Module()
-        for i, o in zip((self.i, *self._stages), self._stages):
+        flops = [Signal(self.i.shape(), name="stage{}".format(index),
+                        reset=self._reset, reset_less=self._reset_less)
+                 for index in range(self._stages)]
+        for i, o in zip((self.i, *flops), flops):
             m.d[self._o_domain] += o.eq(i)
-        m.d.comb += self.o.eq(self._stages[-1])
+        m.d.comb += self.o.eq(flops[-1])
         return m
 
 
@@ -82,8 +85,7 @@ class ResetSynchronizer(Elaboratable):
         self.arst = arst
 
         self._domain = domain
-        self._stages = [Signal(1, name="stage{}".format(i), reset=1)
-                        for i in range(stages)]
+        self._stages = stages
 
     def elaborate(self, platform):
         if hasattr(platform, "get_reset_sync"):
@@ -91,11 +93,13 @@ class ResetSynchronizer(Elaboratable):
 
         m = Module()
         m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
-        for i, o in zip((0, *self._stages), self._stages):
+        flops = [Signal(1, name="stage{}".format(index), reset=1)
+                 for index in range(self._stages)]
+        for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
         m.d.comb += [
             ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
             ResetSignal("reset_sync").eq(self.arst),
-            ResetSignal(self._domain).eq(self._stages[-1])
+            ResetSignal(self._domain).eq(flops[-1])
         ]
         return m

@@ -413,22 +413,27 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
 
     def get_ff_sync(self, ff_sync):
         m = Module()
-        for i, o in zip((ff_sync.i, *ff_sync._stages), ff_sync._stages):
-            o.attrs["ASYNC_REG"] = "TRUE"
+        flops = [Signal(ff_sync.i.shape(), name="stage{}".format(index),
+                        reset=ff_sync._reset, reset_less=ff_sync._reset_less,
+                        attrs={"ASYNC_REG": "TRUE"})
+                 for index in range(ff_sync._stages)]
+        for i, o in zip((ff_sync.i, *flops), flops):
             m.d[ff_sync._o_domain] += o.eq(i)
-        m.d.comb += ff_sync.o.eq(multireg._stages[-1])
+        m.d.comb += ff_sync.o.eq(flops[-1])
         return m
 
-    def get_reset_sync(self, resetsync):
+    def get_reset_sync(self, reset_sync):
         m = Module()
         m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
-        for i, o in zip((0, *resetsync._stages), resetsync._stages):
-            o.attrs["ASYNC_REG"] = "TRUE"
+        flops = [Signal(1, name="stage{}".format(index), reset=1,
+                        attrs={"ASYNC_REG": "TRUE"})
+                 for index in range(reset_sync._stages)]
+        for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
         m.d.comb += [
-            ClockSignal("reset_sync").eq(ClockSignal(resetsync._domain)),
-            ResetSignal("reset_sync").eq(resetsync.arst),
-            ResetSignal(resetsync._domain).eq(resetsync._stages[-1])
+            ClockSignal("reset_sync").eq(ClockSignal(reset_sync._domain)),
+            ResetSignal("reset_sync").eq(reset_sync.arst),
+            ResetSignal(reset_sync._domain).eq(flops[-1])
         ]
         return m
 

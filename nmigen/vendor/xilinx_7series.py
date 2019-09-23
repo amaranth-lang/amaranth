@@ -363,8 +363,11 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
 
     def get_ff_sync(self, ff_sync):
         m = Module()
-        for i, o in zip((ff_sync.i, *ff_sync._stages), ff_sync._stages):
-            o.attrs["ASYNC_REG"] = "TRUE"
+        flops = [Signal(ff_sync.i.shape(), name="stage{}".format(index),
+                        reset=ff_sync._reset, reset_less=ff_sync._reset_less,
+                        attrs={"ASYNC_REG": "TRUE"})
+                 for index in range(ff_sync._stages)]
+        for i, o in zip((ff_sync.i, *flops), flops):
             m.d[ff_sync._o_domain] += o.eq(i)
-        m.d.comb += ff_sync.o.eq(ff_sync._stages[-1])
+        m.d.comb += ff_sync.o.eq(flops[-1])
         return m
