@@ -7,11 +7,11 @@ from ..lib.fifo import *
 
 class FIFOTestCase(FHDLTestCase):
     def test_depth_wrong(self):
-        with self.assertRaises(ValueError,
-                msg="FIFO depth must be positive, not -1"):
-            FIFOInterface(width=8, depth=-1, fwft=True)
-        with self.assertRaises(ValueError,
-                msg="FIFO depth must be positive, not 0"):
+        with self.assertRaises(TypeError,
+                msg="FIFO width must be a non-negative integer, not '-1'"):
+            FIFOInterface(width=-1, depth=8, fwft=True)
+        with self.assertRaises(TypeError,
+                msg="FIFO depth must be a positive integer, not '0'"):
             FIFOInterface(width=8, depth=0, fwft=True)
 
     def test_async_depth(self):
