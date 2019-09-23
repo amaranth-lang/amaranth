@@ -115,17 +115,17 @@ class MemoryTestCase(FHDLTestCase):
 
 class DummyPortTestCase(FHDLTestCase):
     def test_name(self):
-        p1 = DummyPort(width=8, addr_bits=2)
+        p1 = DummyPort(data_width=8, addr_width=2)
         self.assertEqual(p1.addr.name, "p1_addr")
-        p2 = [DummyPort(width=8, addr_bits=2)][0]
+        p2 = [DummyPort(data_width=8, addr_width=2)][0]
         self.assertEqual(p2.addr.name, "dummy_addr")
-        p3 = DummyPort(width=8, addr_bits=2, name="foo")
+        p3 = DummyPort(data_width=8, addr_width=2, name="foo")
         self.assertEqual(p3.addr.name, "foo_addr")
 
     def test_sizes(self):
-        p1 = DummyPort(width=8, addr_bits=2)
+        p1 = DummyPort(data_width=8, addr_width=2)
         self.assertEqual(p1.addr.width, 2)
         self.assertEqual(p1.data.width, 8)
         self.assertEqual(p1.en.width, 1)
-        p2 = DummyPort(width=8, addr_bits=2, granularity=2)
+        p2 = DummyPort(data_width=8, addr_width=2, granularity=2)
         self.assertEqual(p2.en.width, 4)
