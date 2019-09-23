@@ -7,6 +7,14 @@ __all__ = ["FFSynchronizer", "ResetSynchronizer"]
 __all__ += ["MultiReg"]
 
 
+def _check_stages(stages):
+    if not isinstance(stages, int) or stages < 1:
+        raise TypeError("Synchronization stage count must be a positive integer, not '{!r}'"
+                        .format(stages))
+    if stages < 2:
+        raise ValueError("Synchronization stage count may not safely be less than 2")
+
+
 class FFSynchronizer(Elaboratable):
     """Resynchronise a signal to a different clock domain.
 
@@ -53,7 +61,9 @@ class FFSynchronizer(Elaboratable):
 
     :class:`FFSynchronizer` is reset by the ``o_domain`` reset only.
     """
-    def __init__(self, i, o, *, o_domain="sync", stages=2, reset=0, reset_less=True):
+    def __init__(self, i, o, *, o_domain="sync", reset=0, reset_less=True, stages=2):
+        _check_stages(stages)
+
         self.i = i
         self.o = o
 
@@ -108,6 +118,8 @@ class ResetSynchronizer(Elaboratable):
     :class:`ResetSynchronizer`, e.g. to instantiate library cells directly.
     """
     def __init__(self, arst, *, domain="sync", stages=2):
+        _check_stages(stages)
+
         self.arst = arst
 
         self._domain = domain
