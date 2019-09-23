@@ -5,6 +5,46 @@ from ..back.pysim import *
 from ..lib.fifo import *
 
 
+class FIFOTestCase(FHDLTestCase):
+    def test_depth_wrong(self):
+        with self.assertRaises(ValueError,
+                msg="FIFO depth must be positive, not -1"):
+            FIFOInterface(width=8, depth=-1, fwft=True)
+        with self.assertRaises(ValueError,
+                msg="FIFO depth must be positive, not 0"):
+            FIFOInterface(width=8, depth=0, fwft=True)
+
+    def test_async_depth(self):
+        self.assertEqual(AsyncFIFO(width=8, depth=1 ).depth, 1)
+        self.assertEqual(AsyncFIFO(width=8, depth=2 ).depth, 2)
+        self.assertEqual(AsyncFIFO(width=8, depth=3 ).depth, 4)
+        self.assertEqual(AsyncFIFO(width=8, depth=4 ).depth, 4)
+        self.assertEqual(AsyncFIFO(width=8, depth=15).depth, 16)
+        self.assertEqual(AsyncFIFO(width=8, depth=16).depth, 16)
+        self.assertEqual(AsyncFIFO(width=8, depth=17).depth, 32)
+
+    def test_async_depth_wrong(self):
+        with self.assertRaises(ValueError,
+                msg="AsyncFIFO only supports depths that are powers of 2; "
+                    "requested exact depth 15 is not"):
+            AsyncFIFO(width=8, depth=15, exact_depth=True)
+
+    def test_async_buffered_depth(self):
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=1 ).depth, 2)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=2 ).depth, 2)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=3 ).depth, 3)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=4 ).depth, 5)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=15).depth, 17)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=16).depth, 17)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=17).depth, 17)
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=18).depth, 33)
+
+    def test_async_buffered_depth_wrong(self):
+        with self.assertRaises(ValueError,
+                msg="AsyncFIFOBuffered only supports depths that are one higher than powers of 2; "
+                    "requested exact depth 16 is not"):
+            AsyncFIFOBuffered(width=8, depth=16, exact_depth=True)
+
 class FIFOModel(Elaboratable, FIFOInterface):
     """
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
@@ -211,4 +251,4 @@ class FIFOFormalCase(FHDLTestCase):
         self.check_async_fifo(AsyncFIFO(width=8, depth=4))
 
     def test_async_buffered(self):
-        self.check_async_fifo(AsyncFIFOBuffered(width=8, depth=3))
+        self.check_async_fifo(AsyncFIFOBuffered(width=8, depth=4))

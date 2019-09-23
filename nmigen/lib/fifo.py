@@ -61,6 +61,9 @@ class FIFOInterface:
     r_attributes="")
 
     def __init__(self, width, depth, *, fwft):
+        if depth <= 0:
+            raise ValueError("FIFO depth must be positive, not {}".format(depth))
+
         self.width = width
         self.depth = depth
         self.fwft  = fwft
@@ -258,7 +261,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     This queue's interface is identical to :class:`SyncFIFO` configured as ``fwft=True``, but it
     does not use asynchronous memory reads, which are incompatible with FPGA block RAMs.
 
-    In exchange, the latency betw_enen an entry being written to an empty queue and that entry
+    In exchange, the latency between an entry being written to an empty queue and that entry
     becoming available on the output is increased by one cycle compared to :class:`SyncFIFO`.
     """.strip(),
     parameters="""
@@ -312,6 +315,9 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
 
     Read and write interfaces are accessed from different clock domains, which can be set when
     constructing the FIFO.
+
+    :class:`AsyncFIFO` only supports power of 2 depths. Unless ``exact_depth`` is specified,
+    the ``depth`` parameter is rounded up to the next power of 2.
     """.strip(),
     parameters="""
     r_domain : str
@@ -327,16 +333,18 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth, *, r_domain="read", w_domain="write"):
-        super().__init__(width, depth, fwft=True)
+    def __init__(self, width, depth, *, r_domain="read", w_domain="write", exact_depth=False):
+        try:
+            depth_bits = log2_int(depth, need_pow2=exact_depth)
+        except ValueError as e:
+            raise ValueError("AsyncFIFO only supports depths that are powers of 2; requested "
+                             "exact depth {} is not"
+                             .format(depth)) from None
+        super().__init__(width, 1 << depth_bits, fwft=True)
 
         self._r_domain = r_domain
         self._w_domain = w_domain
-
-        try:
-            self._ctr_bits = log2_int(depth, need_pow2=True) + 1
-        except ValueError as e:
-            raise ValueError("AsyncFIFO only supports power-of-2 depths") from e
+        self._ctr_bits = depth_bits + 1
 
     def elaborate(self, platform):
         # The design of this queue is the "style #2" from Clifford E. Cummings' paper "Simulation
@@ -419,6 +427,10 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     Read and write interfaces are accessed from different clock domains, which can be set when
     constructing the FIFO.
 
+    :class:`AsyncFIFOBuffered` only supports power of 2 plus one depths. Unless ``exact_depth``
+    is specified, the ``depth`` parameter is rounded up to the next power of 2 plus one.
+    (The output buffer acts as an additional queue element.)
+
     This queue's interface is identical to :class:`AsyncFIFO`, but it has an additional register
     on the output, improving timing in case of block RAM that has large clock-to-output delay.
 
@@ -439,8 +451,14 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, width, depth, *, r_domain="read", w_domain="write"):
-        super().__init__(width, depth, fwft=True)
+    def __init__(self, width, depth, *, r_domain="read", w_domain="write", exact_depth=False):
+        try:
+            depth_bits = log2_int(max(0, depth - 1), need_pow2=exact_depth)
+        except ValueError as e:
+            raise ValueError("AsyncFIFOBuffered only supports depths that are one higher "
+                             "than powers of 2; requested exact depth {} is not"
+                             .format(depth)) from None
+        super().__init__(width, (1 << depth_bits) + 1, fwft=True)
 
         self._r_domain = r_domain
         self._w_domain = w_domain
