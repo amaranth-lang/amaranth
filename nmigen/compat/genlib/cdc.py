@@ -1,7 +1,7 @@
 import warnings
 
 from ...tools import deprecated
-from ...lib.cdc import MultiReg as NativeMultiReg
+from ...lib.cdc import FFSynchronizer as NativeFFSynchronizer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule
 from ..fhdl.structure import If
@@ -10,14 +10,20 @@ from ..fhdl.structure import If
 __all__ = ["MultiReg", "GrayCounter", "GrayDecoder"]
 
 
-class MultiReg(NativeMultiReg):
+class MultiReg(NativeFFSynchronizer):
     def __init__(self, i, o, odomain="sync", n=2, reset=0):
+        old_opts = []
+        new_opts = []
         if odomain != "sync":
-            warnings.warn("instead of `MultiReg(..., odomain={!r})`, "
-                          "use `MultiReg(..., o_domain={!r})`"
-                          .format(odomain, odomain),
-                          DeprecationWarning, stacklevel=2)
-        super().__init__(i, o, o_domain=odomain, n=n, reset=reset)
+            old_opts.append(", odomain={!r}".format(odomain))
+            new_opts.append(", o_domain={!r}".format(odomain))
+        if n != 2:
+            old_opts.append(", n={!r}".format(n))
+            new_opts.append(", stages={!r}".format(n))
+        warnings.warn("instead of `MultiReg(...{})`, use `FFSynchronizer(...{})`"
+                      .format("".join(old_opts), "".join(new_opts)),
+                      DeprecationWarning, stacklevel=2)
+        super().__init__(i, o, o_domain=odomain, stages=n, reset=reset)
         self.odomain = odomain
 
 

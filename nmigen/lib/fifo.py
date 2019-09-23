@@ -4,7 +4,7 @@ from .. import *
 from ..asserts import *
 from ..tools import log2_int, deprecated
 from .coding import GrayEncoder
-from .cdc import MultiReg
+from .cdc import FFSynchronizer
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -399,7 +399,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         produce_enc = m.submodules.produce_enc = \
             GrayEncoder(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
-            MultiReg(produce_w_gry, produce_r_gry, o_domain=self._r_domain)
+            FFSynchronizer(produce_w_gry, produce_r_gry, o_domain=self._r_domain)
         m.d.comb += produce_enc.i.eq(produce_w_nxt),
         m.d[self._w_domain] += produce_w_gry.eq(produce_enc.o)
 
@@ -408,7 +408,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
-            MultiReg(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
+            FFSynchronizer(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
         m.d.comb += consume_enc.i.eq(consume_r_nxt)
         m.d[self._r_domain] += consume_r_gry.eq(consume_enc.o)
 

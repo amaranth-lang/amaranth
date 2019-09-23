@@ -411,12 +411,12 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             )
         return m
 
-    def get_multi_reg(self, multireg):
+    def get_ff_sync(self, ff_sync):
         m = Module()
-        for i, o in zip((multireg.i, *multireg._regs), multireg._regs):
+        for i, o in zip((ff_sync.i, *ff_sync._stages), ff_sync._stages):
             o.attrs["ASYNC_REG"] = "TRUE"
-            m.d[multireg._o_domain] += o.eq(i)
-        m.d.comb += multireg.o.eq(multireg._regs[-1])
+            m.d[ff_sync._o_domain] += o.eq(i)
+        m.d.comb += ff_sync.o.eq(multireg._stages[-1])
         return m
 
 

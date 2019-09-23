@@ -4,11 +4,11 @@ from ..back.pysim import *
 from ..lib.cdc import *
 
 
-class MultiRegTestCase(FHDLTestCase):
+class FFSynchronizerTestCase(FHDLTestCase):
     def test_basic(self):
         i = Signal()
         o = Signal()
-        frag = MultiReg(i, o)
+        frag = FFSynchronizer(i, o)
         with Simulator(frag) as sim:
             sim.add_clock(1e-6)
             def process():
@@ -26,7 +26,7 @@ class MultiRegTestCase(FHDLTestCase):
     def test_reset_value(self):
         i = Signal(reset=1)
         o = Signal()
-        frag = MultiReg(i, o, reset=1)
+        frag = FFSynchronizer(i, o, reset=1)
         with Simulator(frag) as sim:
             sim.add_clock(1e-6)
             def process():
