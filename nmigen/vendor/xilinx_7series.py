@@ -77,7 +77,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                 read_xdc {{file}}
             {% endfor %}
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
-            synth_design -top {{name}} -part {{platform.device}}{{platform.package}}-{{platform.speed}}
+            synth_design -top {{name}}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             report_timing_summary -file {{name}}_timing_synth.rpt
             report_utilization -hierarchical -file {{name}}_utilization_hierachical_synth.rpt
