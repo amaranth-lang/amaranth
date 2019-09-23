@@ -11,10 +11,21 @@ class FIFOTestCase(FHDLTestCase):
                 msg="FIFO width must be a non-negative integer, not '-1'"):
             FIFOInterface(width=-1, depth=8, fwft=True)
         with self.assertRaises(TypeError,
-                msg="FIFO depth must be a positive integer, not '0'"):
-            FIFOInterface(width=8, depth=0, fwft=True)
+                msg="FIFO depth must be a non-negative integer, not '-1'"):
+            FIFOInterface(width=8, depth=-1, fwft=True)
+
+    def test_sync_depth(self):
+        self.assertEqual(SyncFIFO(width=8, depth=0).depth, 0)
+        self.assertEqual(SyncFIFO(width=8, depth=1).depth, 1)
+        self.assertEqual(SyncFIFO(width=8, depth=2).depth, 2)
+
+    def test_sync_buffered_depth(self):
+        self.assertEqual(SyncFIFOBuffered(width=8, depth=0).depth, 0)
+        self.assertEqual(SyncFIFOBuffered(width=8, depth=1).depth, 1)
+        self.assertEqual(SyncFIFOBuffered(width=8, depth=2).depth, 2)
 
     def test_async_depth(self):
+        self.assertEqual(AsyncFIFO(width=8, depth=0 ).depth, 0)
         self.assertEqual(AsyncFIFO(width=8, depth=1 ).depth, 1)
         self.assertEqual(AsyncFIFO(width=8, depth=2 ).depth, 2)
         self.assertEqual(AsyncFIFO(width=8, depth=3 ).depth, 4)
@@ -30,6 +41,7 @@ class FIFOTestCase(FHDLTestCase):
             AsyncFIFO(width=8, depth=15, exact_depth=True)
 
     def test_async_buffered_depth(self):
+        self.assertEqual(AsyncFIFOBuffered(width=8, depth=0 ).depth, 0)
         self.assertEqual(AsyncFIFOBuffered(width=8, depth=1 ).depth, 2)
         self.assertEqual(AsyncFIFOBuffered(width=8, depth=2 ).depth, 2)
         self.assertEqual(AsyncFIFOBuffered(width=8, depth=3 ).depth, 3)
