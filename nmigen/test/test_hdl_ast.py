@@ -276,6 +276,11 @@ class OperatorTestCase(FHDLTestCase):
         v4 = Mux(s, Const(0, (4, False)), Const(0, (4, True)))
         self.assertEqual(v4.shape(), (5, True))
 
+    def test_mux_wide(self):
+        s = Const(0b100)
+        v = Mux(s, Const(0, (4, False)), Const(0, (6, False)))
+        self.assertEqual(repr(v), "(m (b (const 3'd4)) (const 4'd0) (const 6'd0))")
+
     def test_bool(self):
         v = Const(0).bool()
         self.assertEqual(repr(v), "(b (const 1'd0))")
