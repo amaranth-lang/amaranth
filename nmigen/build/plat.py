@@ -37,7 +37,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     def default_clk_constraint(self):
         if self.default_clk is None:
             raise AttributeError("Platform '{}' does not define a default clock"
-                                 .format(self.__class__.__name__))
+                                 .format(type(self).__name__))
         return self.lookup(self.default_clk).clock
 
     @property
@@ -45,7 +45,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         constraint = self.default_clk_constraint
         if constraint is None:
             raise AttributeError("Platform '{}' does not constrain its default clock"
-                                 .format(self.__class__.__name__))
+                                 .format(type(self).__name__))
         return constraint.frequency
 
     def add_file(self, filename, content):
@@ -154,20 +154,20 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         """
         Extract bitstream for fragment ``name`` from ``products`` and download it to a target.
         """
-        raise NotImplementedError("Platform {} does not support programming"
-                                  .format(self.__class__.__name__))
+        raise NotImplementedError("Platform '{}' does not support programming"
+                                  .format(type(self).__name__))
 
     def _check_feature(self, feature, pin, attrs, valid_xdrs, valid_attrs):
         if not valid_xdrs:
-            raise NotImplementedError("Platform {} does not support {}"
-                                      .format(self.__class__.__name__, feature))
+            raise NotImplementedError("Platform '{}' does not support {}"
+                                      .format(type(self).__name__, feature))
         elif pin.xdr not in valid_xdrs:
-            raise NotImplementedError("Platform {} does not support {} for XDR {}"
-                                      .format(self.__class__.__name__, feature, pin.xdr))
+            raise NotImplementedError("Platform '{}' does not support {} for XDR {}"
+                                      .format(type(self).__name__, feature, pin.xdr))
 
         if not valid_attrs and attrs:
-            raise NotImplementedError("Platform {} does not support attributes for {}"
-                                      .format(self.__class__.__name__, feature))
+            raise NotImplementedError("Platform '{}' does not support attributes for {}"
+                                      .format(type(self).__name__, feature))
 
     @staticmethod
     def _invert_if(invert, value):
