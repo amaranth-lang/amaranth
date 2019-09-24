@@ -718,7 +718,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
                         self._wrap_assign = False
                         branch_value = ast.Const(branch, (width, signed))
                         with self.state.expand_to(legalize.value, branch_value):
-                            super().on_statement(stmt)
+                            self.on_statement(stmt)
             self._wrap_assign = True
 
     def on_statements(self, stmts):
