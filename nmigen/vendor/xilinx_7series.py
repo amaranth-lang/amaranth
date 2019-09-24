@@ -392,7 +392,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         if ff_sync._max_input_delay is None:
             flops[0].attrs["nmigen.vivado.false_path"] = "TRUE"
         else:
-            flops[0].attrs["nmigen.vivado.max_delay"] = ff_sync._max_input_delay
+            flops[0].attrs["nmigen.vivado.max_delay"] = str(ff_sync._max_input_delay * 1e9)
         for i, o in zip((ff_sync.i, *flops), flops):
             m.d[ff_sync._o_domain] += o.eq(i)
         m.d.comb += ff_sync.o.eq(flops[-1])
@@ -407,7 +407,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         if reset_sync._max_input_delay is None:
             flops[0].attrs["nmigen.vivado.false_path"] = "TRUE"
         else:
-            flops[0].attrs["nmigen.vivado.max_delay"] = reset_sync._max_input_delay
+            flops[0].attrs["nmigen.vivado.max_delay"] = str(reset_sync._max_input_delay * 1e9)
         for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
         m.d.comb += [
