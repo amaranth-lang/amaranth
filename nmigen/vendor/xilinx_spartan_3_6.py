@@ -411,6 +411,11 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             )
         return m
 
+    # The synchronizer implementations below apply the ASYNC_REG attribute. This attribute
+    # prevents inference of shift registers from synchronizer FFs, and constraints the FFs
+    # to be placed as close as possible, ideally in one CLB. This attribute only affects
+    # the synchronizer FFs themselves.
+
     def get_ff_sync(self, ff_sync):
         if ff_sync._max_input_delay is not None:
             raise NotImplementedError("Platform {!r} does not support constraining input delay "
