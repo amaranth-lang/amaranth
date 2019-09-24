@@ -21,14 +21,18 @@ def _yosys_version():
     return tuple(map(int, tag.split("."))), offset
 
 
-def _convert_il_text(il_text, strip_src):
+def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False):
     version, offset = _yosys_version()
     if version < (0, 9):
         raise YosysError("Yosys %d.%d is not suppored", *version)
 
     attr_map = []
-    if strip_src:
+    if strip_internal_attrs:
+        attr_map.append("-remove generator")
+        attr_map.append("-remove top")
         attr_map.append("-remove src")
+        attr_map.append("-remove nmigen.hierarchy")
+        attr_map.append("-remove nmigen.decoding")
 
     script = """
 # Convert nMigen's RTLIL to readable Verilog.
@@ -41,10 +45,13 @@ proc_arst
 proc_dff
 proc_clean
 memory_collect
-attrmap {}
+attrmap {attr_map}
+attrmap -modattr {attr_map}
 write_verilog -norename
-""".format(il_text, " ".join(attr_map),
-           prune="# " if version == (0, 9) and offset == 0 else "")
+""".format(rtlil_text,
+        prune="# " if version == (0, 9) and offset == 0 else "",
+        attr_map=" ".join(attr_map),
+    )
 
     popen = subprocess.Popen([require_tool("yosys"), "-q", "-"],
         stdin=subprocess.PIPE,
@@ -58,11 +65,11 @@ write_verilog -norename
         return verilog_text
 
 
-def convert_fragment(*args, strip_src=False, **kwargs):
-    il_text, name_map = rtlil.convert_fragment(*args, **kwargs)
-    return _convert_il_text(il_text, strip_src), name_map
+def convert_fragment(*args, strip_internal_attrs=False, **kwargs):
+    rtlil_text, name_map = rtlil.convert_fragment(*args, **kwargs)
+    return _convert_rtlil_text(rtlil_text, strip_internal_attrs=strip_internal_attrs), name_map
 
 
-def convert(*args, strip_src=False, **kwargs):
-    il_text = rtlil.convert(*args, **kwargs)
-    return _convert_il_text(il_text, strip_src)
+def convert(*args, strip_internal_attrs=False, **kwargs):
+    rtlil_text = rtlil.convert(*args, **kwargs)
+    return _convert_rtlil_text(rtlil_text, strip_internal_attrs=strip_internal_attrs)
