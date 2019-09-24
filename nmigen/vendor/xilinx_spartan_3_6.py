@@ -412,6 +412,10 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         return m
 
     def get_ff_sync(self, ff_sync):
+        if ff_sync._max_input_delay is not None:
+            raise NotImplementedError("Platform {!r} does not support constraining input delay "
+                                      "for FFSynchronizer".format(self))
+
         m = Module()
         flops = [Signal(ff_sync.i.shape(), name="stage{}".format(index),
                         reset=ff_sync._reset, reset_less=ff_sync._reset_less,
@@ -423,6 +427,10 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         return m
 
     def get_reset_sync(self, reset_sync):
+        if reset_sync._max_input_delay is not None:
+            raise NotImplementedError("Platform {!r} does not support constraining input delay "
+                                      "for ResetSynchronizer".format(self))
+
         m = Module()
         m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
         flops = [Signal(1, name="stage{}".format(index), reset=1,

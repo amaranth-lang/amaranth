@@ -78,6 +78,17 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             {% endfor %}
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_design -top {{name}}
+            foreach cell [get_cells -quiet -hier -filter {nmigen.vivado.false_path == "TRUE"}] {
+                set_false_path -to $cell
+            }
+            foreach cell [get_cells -quiet -hier -filter {nmigen.vivado.max_delay != ""}] {
+                set clock [get_clocks -of_objects \
+                    [all_fanin -flat -startpoints_only [get_pin $cell/D]]]
+                if {[llength $clock] != 0} {
+                    set_max_delay -datapath_only -from $clock \
+                        -to [get_cells $cell] [get_property nmigen.vivado.max_delay $cell]
+                }
+            }
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             report_timing_summary -file {{name}}_timing_synth.rpt
             report_utilization -hierarchical -file {{name}}_utilization_hierachical_synth.rpt
@@ -361,12 +372,27 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             )
         return m
 
+    # The synchronizer implementations below apply two separate but related timing constraints.
+    #
+    # First, the ASYNC_REG attribute prevents inference of shift registers from synchronizer FFs,
+    # and constraints the FFs to be placed as close as possible, ideally in one CLB. This attribute
+    # only affects the synchronizer FFs themselves.
+    #
+    # Second, the nmigen.vivado.false_path or nmigen.vivado.max_delay attribute affects the path
+    # into the synchronizer. If maximum input delay is specified, a datapath-only maximum delay
+    # constraint is applied, limiting routing delay (and therefore skew) at the synchronizer input.
+    # Otherwise, a false path constraint is used to omit the input path from the timing analysis.
+
     def get_ff_sync(self, ff_sync):
         m = Module()
         flops = [Signal(ff_sync.i.shape(), name="stage{}".format(index),
                         reset=ff_sync._reset, reset_less=ff_sync._reset_less,
                         attrs={"ASYNC_REG": "TRUE"})
                  for index in range(ff_sync._stages)]
+        if ff_sync._max_input_delay is None:
+            flops[0].attrs["nmigen.vivado.false_path"] = "TRUE"
+        else:
+            flops[0].attrs["nmigen.vivado.max_delay"] = ff_sync._max_input_delay
         for i, o in zip((ff_sync.i, *flops), flops):
             m.d[ff_sync._o_domain] += o.eq(i)
         m.d.comb += ff_sync.o.eq(flops[-1])
@@ -378,6 +404,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         flops = [Signal(1, name="stage{}".format(index), reset=1,
                         attrs={"ASYNC_REG": "TRUE"})
                  for index in range(reset_sync._stages)]
+        if reset_sync._max_input_delay is None:
+            flops[0].attrs["nmigen.vivado.false_path"] = "TRUE"
+        else:
+            flops[0].attrs["nmigen.vivado.max_delay"] = reset_sync._max_input_delay
         for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
         m.d.comb += [

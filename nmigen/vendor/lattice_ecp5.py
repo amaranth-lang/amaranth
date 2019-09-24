@@ -533,3 +533,6 @@ class LatticeECP5Platform(TemplatedPlatform):
                 io_B=p_port[bit],
             )
         return m
+
+    # CDC primitives are not currently specialized for ECP5. While Diamond supports the necessary
+    # attributes (TBD); nextpnr-ecp5 does not.
