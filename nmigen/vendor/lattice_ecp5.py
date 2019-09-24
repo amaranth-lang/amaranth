@@ -408,7 +408,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 o = pin_o
             if pin.dir in ("oe", "io"):
-                t = ~pin_oe
+                t = ~pin.oe
         elif pin.xdr == 1:
             # Note that currently nextpnr will not pack an FF (*FS1P3DX) into the PIO.
             if "i" in pin.dir:
