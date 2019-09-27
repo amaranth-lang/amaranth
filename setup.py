@@ -23,6 +23,11 @@ setup(
     setup_requires=["setuptools_scm"],
     install_requires=["setuptools", "pyvcd>=0.1.4", "bitarray", "Jinja2"],
     packages=find_packages(),
+    entry_points={
+        "console_scripts": [
+            "nmigen-rpc = nmigen.rpc:main",
+        ]
+    },
     project_urls={
         #"Documentation": "https://nmigen.readthedocs.io/",
         "Source Code": "https://github.com/m-labs/nmigen",
