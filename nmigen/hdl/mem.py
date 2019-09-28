@@ -132,7 +132,7 @@ class ReadPort(Elaboratable):
 
 
 class WritePort(Elaboratable):
-    def __init__(self, memory, *, domain="sync", priority=0, granularity=None):
+    def __init__(self, memory, *, domain="sync", granularity=None):
         if granularity is None:
             granularity = memory.width
         if not isinstance(granularity, int) or granularity < 0:
@@ -147,7 +147,6 @@ class WritePort(Elaboratable):
 
         self.memory       = memory
         self.domain       = domain
-        self.priority     = priority
         self.granularity  = granularity
 
         self.addr = Signal.range(memory.depth,
@@ -164,7 +163,7 @@ class WritePort(Elaboratable):
             p_WIDTH=self.data.width,
             p_CLK_ENABLE=1,
             p_CLK_POLARITY=1,
-            p_PRIORITY=self.priority,
+            p_PRIORITY=0,
             i_CLK=ClockSignal(self.domain),
             i_EN=Cat(Repl(en_bit, self.granularity) for en_bit in self.en),
             i_ADDR=self.addr,
