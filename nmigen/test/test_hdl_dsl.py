@@ -96,6 +96,13 @@ class DSLTestCase(FHDLTestCase):
                 msg="'Module' object has no attribute 'nonexistentattr'"):
             m.nonexistentattr
 
+    def test_d_suspicious(self):
+        m = Module()
+        with self.assertWarns(SyntaxWarning,
+                msg="Using '<module>.d.submodules' would add statements to clock domain "
+                    "'submodules'; did you mean <module>.submodules instead?"):
+            m.d.submodules += []
+
     def test_clock_signal(self):
         m = Module()
         m.d.comb += ClockSignal("pix").eq(ClockSignal())

@@ -28,7 +28,7 @@ class _ModuleBuilderProxy:
         object.__setattr__(self, "_depth", depth)
 
 
-class _ModuleBuilderDomainExplicit(_ModuleBuilderProxy):
+class _ModuleBuilderDomain(_ModuleBuilderProxy):
     def __init__(self, builder, depth, domain):
         super().__init__(builder, depth)
         self._domain = domain
@@ -38,13 +38,18 @@ class _ModuleBuilderDomainExplicit(_ModuleBuilderProxy):
         return self
 
 
-class _ModuleBuilderDomainImplicit(_ModuleBuilderProxy):
+class _ModuleBuilderDomains(_ModuleBuilderProxy):
     def __getattr__(self, name):
+        if name == "submodules":
+            warnings.warn("Using '<module>.d.{}' would add statements to clock domain {!r}; "
+                          "did you mean <module>.{} instead?"
+                          .format(name, name, name),
+                          SyntaxWarning, stacklevel=2)
         if name == "comb":
             domain = None
         else:
             domain = name
-        return _ModuleBuilderDomainExplicit(self._builder, self._depth, domain)
+        return _ModuleBuilderDomain(self._builder, self._depth, domain)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -52,7 +57,7 @@ class _ModuleBuilderDomainImplicit(_ModuleBuilderProxy):
     def __setattr__(self, name, value):
         if name == "_depth":
             object.__setattr__(self, name, value)
-        elif not isinstance(value, _ModuleBuilderDomainExplicit):
+        elif not isinstance(value, _ModuleBuilderDomain):
             raise AttributeError("Cannot assign 'd.{}' attribute; did you mean 'd.{} +='?"
                                  .format(name, name))
 
@@ -63,7 +68,7 @@ class _ModuleBuilderDomainImplicit(_ModuleBuilderProxy):
 class _ModuleBuilderRoot:
     def __init__(self, builder, depth):
         self._builder = builder
-        self.domain = self.d = _ModuleBuilderDomainImplicit(builder, depth)
+        self.domain = self.d = _ModuleBuilderDomains(builder, depth)
 
     def __getattr__(self, name):
         if name in ("comb", "sync"):
