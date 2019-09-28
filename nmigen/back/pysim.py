@@ -146,6 +146,10 @@ class _RHSValueCompiler(_ValueCompiler):
                 return lambda state: normalize(lhs(state) -  rhs(state), shape)
             if value.op == "*":
                 return lambda state: normalize(lhs(state) *  rhs(state), shape)
+            if value.op == "//":
+                def floordiv(lhs, rhs):
+                    return 0 if rhs == 0 else lhs // rhs
+                return lambda state: normalize(floordiv(lhs(state), rhs(state)), shape)
             if value.op == "&":
                 return lambda state: normalize(lhs(state) &  rhs(state), shape)
             if value.op == "|":

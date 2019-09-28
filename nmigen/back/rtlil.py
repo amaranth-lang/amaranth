@@ -388,7 +388,7 @@ class _RHSValueCompiler(_ValueCompiler):
         (2, "+"):    "$add",
         (2, "-"):    "$sub",
         (2, "*"):    "$mul",
-        (2, "/"):    "$div",
+        (2, "//"):   "$div",
         (2, "%"):    "$mod",
         (2, "**"):   "$pow",
         (2, "<<"):   "$sshl",

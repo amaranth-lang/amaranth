@@ -95,6 +95,12 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(2,  4), C(2,  4)], C(4,   8))
         self.assertStatement(stmt, [C(7,  4), C(7,  4)], C(49,  8))
 
+    def test_floordiv(self):
+        stmt = lambda y, a, b: y.eq(a // b)
+        self.assertStatement(stmt, [C(2,  4), C(1,  4)], C(2,   8))
+        self.assertStatement(stmt, [C(2,  4), C(2,  4)], C(1,   8))
+        self.assertStatement(stmt, [C(7,  4), C(2,  4)], C(3,   8))
+
     def test_and(self):
         stmt = lambda y, a, b: y.eq(a & b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b1000, 4))
