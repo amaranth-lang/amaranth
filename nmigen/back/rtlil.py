@@ -681,9 +681,17 @@ class _StatementCompiler(xfrm.StatementVisitor):
     def on_Switch(self, stmt):
         self._check_rhs(stmt.test)
 
-        if stmt not in self._test_cache:
-            self._test_cache[stmt] = self.rhs_compiler(stmt.test)
-        test_sigspec = self._test_cache[stmt]
+        if not self.state.expansions:
+            # We repeatedly translate the same switches over and over (see the LHSGroupAnalyzer
+            # related code below), and translating the switch test only once helps readability.
+            if stmt not in self._test_cache:
+                self._test_cache[stmt] = self.rhs_compiler(stmt.test)
+            test_sigspec = self._test_cache[stmt]
+        else:
+            # However, if the switch test contains an illegal value, then it may not be cached
+            # (since the illegal value will be repeatedly replaced with different constants), so
+            # don't cache anything in that case.
+            test_sigspec = self.rhs_compiler(stmt.test)
 
         with self._case.switch(test_sigspec, src=src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
