@@ -485,7 +485,7 @@ class _RHSValueCompiler(_ValueCompiler):
         lhs, rhs = value.operands
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
-        if lhs_sign == rhs_sign:
+        if lhs_sign == rhs_sign or value.op in ("<<", ">>", "**"):
             lhs_wire = self(lhs)
             rhs_wire = self(rhs)
         else:
