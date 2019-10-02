@@ -490,7 +490,6 @@ class _RHSValueCompiler(_ValueCompiler):
             rhs_wire = self(rhs)
         else:
             lhs_sign = rhs_sign = True
-            lhs_bits = rhs_bits = max(lhs_bits, rhs_bits)
             lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
             rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
         res_bits, res_sign = value.shape()
