@@ -18,6 +18,10 @@ class PinsTestCase(FHDLTestCase):
         self.assertEqual(repr(p), "(pins-n io A0)")
         self.assertEqual(p.invert, True)
 
+    def test_invert_arg(self):
+        p = Pins("A0", invert=True)
+        self.assertEqual(p.invert, True)
+
     def test_conn(self):
         p = Pins("0 1 2", conn=("pmod", 0))
         self.assertEqual(list(p), ["pmod_0:0", "pmod_0:1", "pmod_0:2"])

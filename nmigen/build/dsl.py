@@ -6,7 +6,7 @@ __all__ = ["Pins", "PinsN", "DiffPairs", "DiffPairsN",
 
 
 class Pins:
-    def __init__(self, names, *, dir="io", conn=None, assert_width=None):
+    def __init__(self, names, *, dir="io", invert=False, conn=None, assert_width=None):
         if not isinstance(names, str):
             raise TypeError("Names must be a whitespace-separated string, not {!r}"
                             .format(names))
@@ -29,7 +29,7 @@ class Pins:
 
         self.names  = names
         self.dir    = dir
-        self.invert = False
+        self.invert = bool(invert)
 
     def __len__(self):
         return len(self.names)
