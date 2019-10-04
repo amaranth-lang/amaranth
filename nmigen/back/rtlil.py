@@ -505,6 +505,18 @@ class _RHSValueCompiler(_ValueCompiler):
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
         }, src=src(value.src_loc))
+        if value.op in ("//", "%"):
+            # RTLIL leaves division by zero undefined, but we require it to return zero.
+            divmod_res = res
+            res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+            self.s.rtlil.cell("$mux", ports={
+                "\\A": divmod_res,
+                "\\B": self(ast.Const(0, (res_bits, res_sign))),
+                "\\S": self(lhs == 0),
+                "\\Y": res,
+            }, params={
+                "WIDTH": res_bits
+            }, src=src(value.src_loc))
         return res
 
     def on_Operator_mux(self, value):
