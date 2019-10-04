@@ -181,16 +181,33 @@ class OperatorTestCase(FHDLTestCase):
         v5 = 10 * Const(0, 4)
         self.assertEqual(v5.shape(), (8, False))
 
+    def test_mod(self):
+        v1 = Const(0, (4, False)) % Const(0, (6, False))
+        self.assertEqual(repr(v1), "(% (const 4'd0) (const 6'd0))")
+        self.assertEqual(v1.shape(), (4, False))
+        v3 = Const(0, (4, True)) % Const(0, (4, False))
+        self.assertEqual(v3.shape(), (4, True))
+        v5 = 10 % Const(0, 4)
+        self.assertEqual(v5.shape(), (4, False))
+
+    def test_mod_wrong(self):
+        with self.assertRaises(NotImplementedError,
+                msg="Division by a signed value is not supported"):
+            Const(0, (4, True)) % Const(0, (6, True))
+
     def test_floordiv(self):
         v1 = Const(0, (4, False)) // Const(0, (6, False))
         self.assertEqual(repr(v1), "(// (const 4'd0) (const 6'd0))")
         self.assertEqual(v1.shape(), (4, False))
-        v2 = Const(0, (4, True)) // Const(0, (6, True))
-        self.assertEqual(v2.shape(), (5, True))
         v3 = Const(0, (4, True)) // Const(0, (4, False))
         self.assertEqual(v3.shape(), (4, True))
         v5 = 10 // Const(0, 4)
         self.assertEqual(v5.shape(), (4, False))
+
+    def test_floordiv_wrong(self):
+        with self.assertRaises(NotImplementedError,
+                msg="Division by a signed value is not supported"):
+            Const(0, (4, True)) // Const(0, (6, True))
 
     def test_and(self):
         v1 = Const(0, (4, False)) & Const(0, (6, False))
