@@ -731,7 +731,8 @@ class _StatementCompiler(xfrm.StatementVisitor):
                                    src=src(legalize.src_loc)) as switch:
                 width, signed = legalize.value.shape()
                 tests = ["{:0{}b}".format(v, width) for v in legalize.branches]
-                tests[-1] = "-" * width
+                if tests:
+                    tests[-1] = "-" * width
                 for branch, test in zip(legalize.branches, tests):
                     with self.case(switch, (test,)):
                         self._wrap_assign = False
