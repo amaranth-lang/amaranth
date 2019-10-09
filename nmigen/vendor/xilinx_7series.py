@@ -1,6 +1,7 @@
 from abc import abstractproperty
 
 from ..hdl import *
+from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
 
@@ -164,7 +165,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
             m.submodules += Instance("BUFGCE", i_CE=ready, i_I=clk_i, o_O=ClockSignal("sync"))
             if self.default_rst is not None:
-                m.d.comb += ResetSignal("sync").eq(rst_i)
+                m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
             return m
 
     def _get_xdr_buffer(self, m, pin, *, i_invert=False, o_invert=False):

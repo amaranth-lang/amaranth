@@ -1,6 +1,7 @@
 from abc import abstractproperty
 
 from ..hdl import *
+from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
 
@@ -187,22 +188,23 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         # signal (if available). For details, see:
         #   * https://www.xilinx.com/support/answers/44174.html
         #   * https://www.xilinx.com/support/documentation/white_papers/wp272.pdf
+        if self.family != "6":
+            # Spartan 3 lacks a STARTUP primitive with EOS output; use a simple ResetSynchronizer
+            # in that case, as is the default.
+            return super().create_missing_domain(name)
+
         if name == "sync" and self.default_clk is not None:
             clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
 
             m = Module()
-            ready = Signal()
-            if self.family == "6":
-                m.submodules += Instance("STARTUP_SPARTAN6", o_EOS=ready)
-            else:
-                raise NotImplementedError("Spartan 3 devices lack an end-of-startup signal; "
-                                          "ensure the design has an appropriate reset")
+            eos = Signal()
+            m.submodules += Instance("STARTUP_SPARTAN6", o_EOS=eos)
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
-            m.submodules += Instance("BUFGCE", i_CE=ready, i_I=clk_i, o_O=ClockSignal("sync"))
+            m.submodules += Instance("BUFGCE", i_CE=eos, i_I=clk_i, o_O=ClockSignal("sync"))
             if self.default_rst is not None:
-                m.d.comb += ResetSignal("sync").eq(rst_i)
+                m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
             return m
 
     def _get_xdr_buffer(self, m, pin, *, i_invert=False, o_invert=False):

@@ -1,6 +1,7 @@
 from abc import abstractproperty
 
 from ..hdl import *
+from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
 
@@ -346,6 +347,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
+            else:
+                rst_i = Const(0)
 
             m = Module()
             # Power-on-reset domain
@@ -362,7 +365,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             m.domains += ClockDomain("sync")
             m.d.comb += ClockSignal("sync").eq(clk_i)
             if self.default_rst is not None:
-                m.d.comb += ResetSignal("sync").eq(~ready | rst_i)
+                m.submodules.reset_sync = ResetSynchronizer(~ready | rst_i, domain="sync")
             else:
                 m.d.comb += ResetSignal("sync").eq(~ready)
             return m

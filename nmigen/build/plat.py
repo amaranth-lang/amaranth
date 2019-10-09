@@ -7,10 +7,8 @@ import jinja2
 
 from .. import __version__
 from .._toolchain import *
-from ..hdl.ast import *
-from ..hdl.cd import *
-from ..hdl.dsl import *
-from ..hdl.ir import *
+from ..hdl import *
+from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
 from .res import *
 from .run import *
@@ -87,22 +85,25 @@ class Platform(ResourceManager, metaclass=ABCMeta):
             return True
         return all(has_tool(name) for name in self.required_tools)
 
-    @abstractmethod
     def create_missing_domain(self, name):
         # Simple instantiation of a clock domain driven directly by the board clock and reset.
-        # Because of device-specific considerations, this implementation generally does NOT provide
-        # reliable power-on/post-configuration reset, and the logic should be replaced with family
-        # specific logic based on vendor recommendations.
+        # This implementation uses a single ResetSynchronizer to ensure that:
+        #   * an external reset is definitely synchronized to the system clock;
+        #   * release of power-on reset, which is inherently asynchronous, is synchronized to
+        #     the system clock.
+        # Many device families provide advanced primitives for tackling reset. If these exist,
+        # they should be used instead.
         if name == "sync" and self.default_clk is not None:
             clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
+            else:
+                rst_i = Const(0)
 
             m = Module()
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
             m.d.comb += ClockSignal("sync").eq(clk_i)
-            if self.default_rst is not None:
-                m.d.comb += ResetSignal("sync").eq(rst_i)
+            m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
             return m
 
     def prepare(self, elaboratable, name="top", **kwargs):
