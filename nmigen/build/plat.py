@@ -101,7 +101,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 rst_i = Const(0)
 
             m = Module()
-            m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
+            m.domains += ClockDomain("sync")
             m.d.comb += ClockSignal("sync").eq(clk_i)
             m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
             return m
