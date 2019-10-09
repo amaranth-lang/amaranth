@@ -111,7 +111,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self._prepared = True
 
         fragment = Fragment.get(elaboratable, self)
-        fragment.create_missing_domains(self.create_missing_domain)
+        fragment.create_missing_domains(self.create_missing_domain, platform=self)
 
         def add_pin_fragment(pin, pin_fragment):
             pin_fragment = Fragment.get(pin_fragment, self)

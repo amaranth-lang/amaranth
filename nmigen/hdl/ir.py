@@ -355,7 +355,7 @@ class Fragment:
 
             subfrag._propagate_domains_down()
 
-    def create_missing_domains(self, missing_domain):
+    def create_missing_domains(self, missing_domain, *, platform=None):
         from .xfrm import DomainCollector
 
         collector = DomainCollector()
@@ -374,7 +374,7 @@ class Fragment:
                 # and there was no chance to add any logic driving it.
                 new_domains.append(value)
             else:
-                new_fragment = Fragment.get(value, platform=None)
+                new_fragment = Fragment.get(value, platform=platform)
                 if domain_name not in new_fragment.domains:
                     defined = new_fragment.domains.keys()
                     raise DomainError(
