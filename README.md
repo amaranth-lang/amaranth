@@ -47,6 +47,7 @@ nMigen can be used to target any FPGA or ASIC process that accepts behavioral Ve
   * Xilinx Spartan 3A (toolchains: ISE);
   * Xilinx Spartan 6 (toolchains: ISE);
   * Xilinx 7-series (toolchains: Vivado);
+  * Xilinx UltraScale (toolchains: Vivado);
   * Intel (toolchains: Quartus).
 
 FOSS toolchains are listed in **bold**.
