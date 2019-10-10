@@ -37,6 +37,19 @@ nMigen requires [Yosys][] 0.9 or newer, as well as a device-specific toolchain.
 
 TBD
 
+### Supported devices
+
+nMigen can be used to target any FPGA or ASIC process that accepts behavioral Verilog-2001 as input. It also offers extended support for many FPGA families, providing toolchain integration, abstractions for device-specific primitives, and more. Specifically:
+
+  * Lattice iCE40 (toolchains: **Yosys+nextpnr**, LSE-iCECube2, Synplify-iCECube2);
+  * Lattice ECP5 (toolchains: **Yosys+nextpnr**, Diamond);
+  * Xilinx Spartan 3A (toolchains: ISE);
+  * Xilinx Spartan 6 (toolchains: ISE);
+  * Xilinx 7-series (toolchains: Vivado);
+  * Intel (toolchains: Quartus).
+
+FOSS toolchains are listed in **bold**.
+
 ### Migration from [Migen][]
 
 If you are already familiar with [Migen][], the good news is that nMigen provides a comprehensive Migen compatibility layer! An existing Migen design can be synthesized and simulated with nMigen in three steps:
