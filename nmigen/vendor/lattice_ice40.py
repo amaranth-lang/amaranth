@@ -170,6 +170,7 @@ class LatticeICE40Platform(TemplatedPlatform):
     # iCECube2 templates
 
     _icecube2_required_tools = [
+        "yosys",
         "synthesis",
         "synpwrap",
         "tclsh",

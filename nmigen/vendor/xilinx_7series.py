@@ -51,7 +51,10 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     package = abstractproperty()
     speed   = abstractproperty()
 
-    required_tools = ["vivado"]
+    required_tools = [
+        "yosys",
+        "vivado"
+    ]
 
     file_templates = {
         **TemplatedPlatform.build_script_templates,

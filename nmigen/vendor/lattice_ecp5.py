@@ -165,6 +165,7 @@ class LatticeECP5Platform(TemplatedPlatform):
     # Diamond templates
 
     _diamond_required_tools = [
+        "yosys",
         "pnmainc",
         "ddtcmd"
     ]
