@@ -346,7 +346,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_enum(self):
         s = Signal.enum(SignedEnum)
         self.assertRepr(s.matches(SignedEnum.FOO), """
-        (== (& (sig s) (const 2'd3)) (const 2'd3))
+        (== (sig s) (const 1'sd-1))
         """)
 
     def test_matches_width_wrong(self):

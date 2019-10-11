@@ -40,11 +40,6 @@ def _enum_shape(enum_type):
     return (width, signed)
 
 
-def _enum_to_bits(enum_value):
-    width, signed = _enum_shape(type(enum_value))
-    return format(enum_value.value & ((1 << width) - 1), "b").rjust(width, "0")
-
-
 class Value(metaclass=ABCMeta):
     @staticmethod
     def cast(obj):
@@ -300,14 +295,14 @@ class Value(metaclass=ABCMeta):
                               .format(pattern, len(self)),
                               SyntaxWarning, stacklevel=3)
                 continue
-            if isinstance(pattern, int):
-                matches.append(self == pattern)
-            elif isinstance(pattern, (str, Enum)):
-                if isinstance(pattern, Enum):
-                    pattern = _enum_to_bits(pattern)
+            if isinstance(pattern, str):
                 mask    = int(pattern.replace("0", "1").replace("-", "0"), 2)
                 pattern = int(pattern.replace("-", "0"), 2)
                 matches.append((self & mask) == pattern)
+            elif isinstance(pattern, int):
+                matches.append(self == pattern)
+            elif isinstance(pattern, Enum):
+                matches.append(self == pattern.value)
             else:
                 assert False
         if not matches:
@@ -1304,12 +1299,12 @@ class Switch(Statement):
             # Map: 2 -> "0010"; "0010" -> "0010"
             new_keys = ()
             for key in keys:
-                if isinstance(key, (bool, int)):
-                    key = "{:0{}b}".format(key, len(self.test))
-                elif isinstance(key, str):
+                if isinstance(key, str):
                     pass
+                elif isinstance(key, int):
+                    key = format(key, "b").rjust(len(self.test), "0")
                 elif isinstance(key, Enum):
-                    key = _enum_to_bits(key)
+                    key = format(key.value, "b").rjust(len(self.test), "0")
                 else:
                     raise TypeError("Object '{!r}' cannot be used as a switch key"
                                     .format(key))
