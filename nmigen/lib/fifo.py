@@ -187,7 +187,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     def __init__(self, *, width, depth, fwft=True):
         super().__init__(width=width, depth=depth, fwft=fwft)
 
-        self.level = Signal.range(depth + 1)
+        self.level = Signal(range(depth + 1))
 
     def elaborate(self, platform):
         m = Module()
@@ -210,8 +210,8 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         w_port  = m.submodules.w_port = storage.write_port()
         r_port  = m.submodules.r_port = storage.read_port(
             domain="comb" if self.fwft else "sync", transparent=self.fwft)
-        produce = Signal.range(self.depth)
-        consume = Signal.range(self.depth)
+        produce = Signal(range(self.depth))
+        consume = Signal(range(self.depth))
 
         m.d.comb += [
             w_port.addr.eq(produce),
@@ -289,7 +289,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     def __init__(self, *, width, depth):
         super().__init__(width=width, depth=depth, fwft=True)
 
-        self.level = Signal.range(depth + 1)
+        self.level = Signal(range(depth + 1))
 
     def elaborate(self, platform):
         m = Module()

@@ -25,7 +25,7 @@ class Encoder(Elaboratable):
     ----------
     i : Signal(width), in
         One-hot input.
-    o : Signal.range(width), out
+    o : Signal(range(width)), out
         Encoded binary.
     n : Signal, out
         Invalid: either none or multiple input bits are asserted.
@@ -34,7 +34,7 @@ class Encoder(Elaboratable):
         self.width = width
 
         self.i = Signal(width)
-        self.o = Signal.range(width)
+        self.o = Signal(range(width))
         self.n = Signal()
 
     def elaborate(self, platform):
@@ -64,7 +64,7 @@ class PriorityEncoder(Elaboratable):
     ----------
     i : Signal(width), in
         Input requests.
-    o : Signal.range(width), out
+    o : Signal(range(width)), out
         Encoded binary.
     n : Signal, out
         Invalid: no input bits are asserted.
@@ -73,7 +73,7 @@ class PriorityEncoder(Elaboratable):
         self.width = width
 
         self.i = Signal(width)
-        self.o = Signal.range(width)
+        self.o = Signal(range(width))
         self.n = Signal()
 
     def elaborate(self, platform):
@@ -98,7 +98,7 @@ class Decoder(Elaboratable):
 
     Attributes
     ----------
-    i : Signal.range(width), in
+    i : Signal(range(width)), in
         Input binary.
     o : Signal(width), out
         Decoded one-hot.
@@ -108,7 +108,7 @@ class Decoder(Elaboratable):
     def __init__(self, width):
         self.width = width
 
-        self.i = Signal.range(width)
+        self.i = Signal(range(width))
         self.n = Signal()
         self.o = Signal(width)
 

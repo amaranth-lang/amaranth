@@ -31,9 +31,9 @@ class UART(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        tx_phase = Signal.range(self.divisor)
+        tx_phase = Signal(range(self.divisor))
         tx_shreg = Signal(1 + self.data_bits + 1, reset=-1)
-        tx_count = Signal.range(len(tx_shreg) + 1)
+        tx_count = Signal(range(len(tx_shreg) + 1))
 
         m.d.comb += self.tx_o.eq(tx_shreg[0])
         with m.If(tx_count == 0):
@@ -54,9 +54,9 @@ class UART(Elaboratable):
                     tx_phase.eq(self.divisor - 1),
                 ]
 
-        rx_phase = Signal.range(self.divisor)
+        rx_phase = Signal(range(self.divisor))
         rx_shreg = Signal(1 + self.data_bits + 1, reset=-1)
-        rx_count = Signal.range(len(rx_shreg) + 1)
+        rx_count = Signal(range(len(rx_shreg) + 1))
 
         m.d.comb += self.rx_data.eq(rx_shreg[1:-1])
         with m.If(rx_count == 0):

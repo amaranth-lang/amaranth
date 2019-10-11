@@ -368,7 +368,7 @@ class DSLTestCase(FHDLTestCase):
             RED  = 1
             BLUE = 2
         m = Module()
-        se = Signal.enum(Color)
+        se = Signal(Color)
         with m.Switch(se):
             with m.Case(Color.RED):
                 m.d.comb += self.c1.eq(1)

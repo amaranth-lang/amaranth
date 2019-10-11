@@ -445,7 +445,7 @@ class OperatorTestCase(FHDLTestCase):
         """)
 
     def test_matches_enum(self):
-        s = Signal.enum(SignedEnum)
+        s = Signal(SignedEnum)
         self.assertRepr(s.matches(SignedEnum.FOO), """
         (== (sig s) (const 1'sd-1))
         """)
@@ -520,7 +520,7 @@ class SliceTestCase(FHDLTestCase):
 class BitSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal.range(self.c.width)
+        self.s = Signal(range(self.c.width))
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
@@ -545,7 +545,7 @@ class BitSelectTestCase(FHDLTestCase):
 class WordSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal.range(self.c.width)
+        self.s = Signal(range(self.c.width))
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
@@ -617,8 +617,8 @@ class ArrayTestCase(FHDLTestCase):
 
     def test_becomes_immutable(self):
         a = Array([1,2,3])
-        s1 = Signal.range(len(a))
-        s2 = Signal.range(len(a))
+        s1 = Signal(range(len(a)))
+        s2 = Signal(range(len(a)))
         v1 = a[s1]
         v2 = a[s2]
         with self.assertRaisesRegex(ValueError,
@@ -634,7 +634,7 @@ class ArrayTestCase(FHDLTestCase):
     def test_repr(self):
         a = Array([1,2,3])
         self.assertEqual(repr(a), "(array mutable [1, 2, 3])")
-        s = Signal.range(len(a))
+        s = Signal(range(len(a)))
         v = a[s]
         self.assertEqual(repr(a), "(array [1, 2, 3])")
 
@@ -642,8 +642,8 @@ class ArrayTestCase(FHDLTestCase):
 class ArrayProxyTestCase(FHDLTestCase):
     def test_index_shape(self):
         m = Array(Array(x * y for y in range(1, 4)) for x in range(1, 4))
-        a = Signal.range(3)
-        b = Signal.range(3)
+        a = Signal(range(3))
+        b = Signal(range(3))
         v = m[a][b]
         self.assertEqual(v.shape(), (4, False))
 
@@ -651,14 +651,14 @@ class ArrayProxyTestCase(FHDLTestCase):
         from collections import namedtuple
         pair = namedtuple("pair", ("p", "n"))
         a = Array(pair(i, -i) for i in range(10))
-        s = Signal.range(len(a))
+        s = Signal(range(len(a)))
         v = a[s]
         self.assertEqual(v.p.shape(), (4, False))
         self.assertEqual(v.n.shape(), (6, True))
 
     def test_repr(self):
         a = Array([1, 2, 3])
-        s = Signal.range(3)
+        s = Signal(range(3))
         v = a[s]
         self.assertEqual(repr(v), "(proxy (array [1, 2, 3]) (sig s))")
 
@@ -676,17 +676,17 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s4.shape(), (2, True))
         s5 = Signal(0)
         self.assertEqual(s5.shape(), (0, False))
-        s6 = Signal.range(16)
+        s6 = Signal(range(16))
         self.assertEqual(s6.shape(), (4, False))
-        s7 = Signal.range(4, 16)
+        s7 = Signal(range(4, 16))
         self.assertEqual(s7.shape(), (4, False))
-        s8 = Signal.range(-4, 16)
+        s8 = Signal(range(-4, 16))
         self.assertEqual(s8.shape(), (5, True))
-        s9 = Signal.range(-20, 16)
+        s9 = Signal(range(-20, 16))
         self.assertEqual(s9.shape(), (6, True))
-        s10 = Signal.range(0)
+        s10 = Signal(range(0))
         self.assertEqual(s10.shape(), (0, False))
-        s11 = Signal.range(1)
+        s11 = Signal(range(1))
         self.assertEqual(s11.shape(), (1, False))
         # deprecated
         with warnings.catch_warnings():
@@ -709,7 +709,7 @@ class SignalTestCase(FHDLTestCase):
 
     def test_min_max_deprecated(self):
         with self.assertWarns(DeprecationWarning,
-                msg="instead of `Signal(min=0, max=10)`, use `Signal.range(0, 10)`"):
+                msg="instead of `Signal(min=0, max=10)`, use `Signal(range(0, 10))`"):
             Signal(max=10)
         with warnings.catch_warnings():
             warnings.filterwarnings(action="ignore", category=DeprecationWarning)
@@ -755,7 +755,7 @@ class SignalTestCase(FHDLTestCase):
     def test_like(self):
         s1 = Signal.like(Signal(4))
         self.assertEqual(s1.shape(), (4, False))
-        s2 = Signal.like(Signal.range(-15, 1))
+        s2 = Signal.like(Signal(range(-15, 1)))
         self.assertEqual(s2.shape(), (5, True))
         s3 = Signal.like(Signal(4, reset=0b111, reset_less=True))
         self.assertEqual(s3.reset, 0b111)
@@ -780,9 +780,9 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s.decoder(3), "3")
 
     def test_enum(self):
-        s1 = Signal.enum(UnsignedEnum)
+        s1 = Signal(UnsignedEnum)
         self.assertEqual(s1.shape(), (2, False))
-        s2 = Signal.enum(SignedEnum)
+        s2 = Signal(SignedEnum)
         self.assertEqual(s2.shape(), (2, True))
         self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
 

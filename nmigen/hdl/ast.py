@@ -35,7 +35,20 @@ class DUID:
 class Shape(typing.NamedTuple):
     """Bit width and signedness of a value.
 
-    Attributes
+    A ``Shape`` can be constructed using:
+      * explicit bit width and signedness;
+      * aliases :func:`signed` and :func:`unsigned`;
+      * casting from a variety of objects.
+
+    A ``Shape`` can be cast from:
+      * an integer, where the integer specifies the bit width;
+      * a range, where the result is wide enough to represent any element of the range, and is
+        signed if any element of the range is signed;
+      * an :class:`Enum` with all integer members or :class:`IntEnum`, where the result is wide
+        enough to represent any member of the enumeration, and is signed if any member of
+        the enumeration is signed.
+
+    Parameters
     ----------
     width : int
         The number of bits in the representation, including the sign bit (if any).
@@ -79,10 +92,12 @@ Shape.__init__ = _Shape___init__
 
 
 def unsigned(width):
+    """Shorthand for ``Shape(width, signed=False)``."""
     return Shape(width, signed=False)
 
 
 def signed(width):
+    """Shorthand for ``Shape(width, signed=True)``."""
     return Shape(width, signed=True)
 
 
@@ -806,7 +821,7 @@ class Signal(Value, DUID):
         # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
         if min is not None or max is not None:
             warnings.warn("instead of `Signal(min={min}, max={max})`, "
-                          "use `Signal.range({min}, {max})`"
+                          "use `Signal(range({min}, {max}))`"
                           .format(min=min or 0, max=max or 2),
                           DeprecationWarning, stacklevel=2 + src_loc_at)
 
@@ -846,6 +861,9 @@ class Signal(Value, DUID):
         self.reset_less = bool(reset_less)
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
+
+        if decoder is None and isinstance(shape, type) and issubclass(shape, Enum):
+            decoder = shape
         if isinstance(decoder, type) and issubclass(decoder, Enum):
             def enum_decoder(value):
                 try:
@@ -857,27 +875,16 @@ class Signal(Value, DUID):
             self.decoder = decoder
 
     @classmethod
+    @deprecated("instead of `Signal.range(...)`, use `Signal(range(...))`")
     def range(cls, *args, src_loc_at=0, **kwargs):
-        """Create Signal that can represent a given range.
-
-        The parameters to ``Signal.range`` are the same as for the built-in ``range`` function.
-        That is, for any given ``range(*args)``, ``Signal.range(*args)`` can represent any
-        ``x for x in range(*args)``.
-        """
-        return cls(Shape.cast(range(*args)), src_loc_at=1 + src_loc_at, **kwargs)
+        return cls(range(*args), src_loc_at=2 + src_loc_at, **kwargs)
 
     @classmethod
+    @deprecated("instead of `Signal.enum(...)`, use `Signal(...)`")
     def enum(cls, enum_type, *, src_loc_at=0, **kwargs):
-        """Create Signal that can represent a given enumeration.
-
-        Parameters
-        ----------
-        enum : type (inheriting from :class:`enum.Enum`)
-            Enumeration to base this Signal on.
-        """
         if not issubclass(enum_type, Enum):
             raise TypeError("Type {!r} is not an enumeration")
-        return cls(Shape.cast(enum_type), src_loc_at=1 + src_loc_at, decoder=enum_type, **kwargs)
+        return cls(enum_type, src_loc_at=2 + src_loc_at, **kwargs)
 
     @classmethod
     def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
