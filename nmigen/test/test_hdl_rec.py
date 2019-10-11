@@ -15,7 +15,7 @@ class LayoutTestCase(FHDLTestCase):
     def test_fields(self):
         layout = Layout.wrap([
             ("cyc",  1),
-            ("data", (32, True)),
+            ("data", signed(32)),
             ("stb",  1, DIR_FANOUT),
             ("ack",  1, DIR_FANIN),
             ("info", [

@@ -1,5 +1,6 @@
 import unittest
 
+from ...tools import _ignore_deprecated
 from ...compat import *
 
 
@@ -11,7 +12,8 @@ class SignalSizeCase(unittest.TestCase):
     def setUp(self):
         self.i = C(0xaa)
         self.j = C(-127)
-        self.s = Signal((13, True))
+        with _ignore_deprecated():
+            self.s = Signal((13, True))
 
     def test_len(self):
         self.assertEqual(len(self.s), 13)

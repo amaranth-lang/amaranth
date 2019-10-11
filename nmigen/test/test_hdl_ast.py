@@ -56,6 +56,14 @@ class ShapeTestCase(FHDLTestCase):
         self.assertEqual(s1.width, 2)
         self.assertEqual(s1.signed, True)
 
+    def test_cast_shape(self):
+        s1 = Shape.cast(unsigned(1))
+        self.assertEqual(s1.width, 1)
+        self.assertEqual(s1.signed, False)
+        s2 = Shape.cast(signed(3))
+        self.assertEqual(s2.width, 3)
+        self.assertEqual(s2.signed, True)
+
     def test_cast_int(self):
         s1 = Shape.cast(2)
         self.assertEqual(s1.width, 2)
@@ -67,17 +75,18 @@ class ShapeTestCase(FHDLTestCase):
             Shape.cast(-1)
 
     def test_cast_tuple(self):
-        s1 = Shape.cast((1, False))
-        self.assertEqual(s1.width, 1)
-        self.assertEqual(s1.signed, False)
-        s2 = Shape.cast((3, True))
-        self.assertEqual(s2.width, 3)
-        self.assertEqual(s2.signed, True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            s1 = Shape.cast((1, True))
+            self.assertEqual(s1.width, 1)
+            self.assertEqual(s1.signed, True)
 
     def test_cast_tuple_wrong(self):
-        with self.assertRaises(TypeError,
-                msg="Width must be a non-negative integer, not -1"):
-            Shape.cast((-1, True))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            with self.assertRaises(TypeError,
+                    msg="Width must be a non-negative integer, not -1"):
+                Shape.cast((-1, True))
 
     def test_cast_range(self):
         s1 = Shape.cast(range(0, 8))
@@ -134,10 +143,10 @@ class ValueTestCase(FHDLTestCase):
     def test_cast_enum(self):
         e1 = Value.cast(UnsignedEnum.FOO)
         self.assertIsInstance(e1, Const)
-        self.assertEqual(e1.shape(), (2, False))
+        self.assertEqual(e1.shape(), unsigned(2))
         e2 = Value.cast(SignedEnum.FOO)
         self.assertIsInstance(e2, Const)
-        self.assertEqual(e2.shape(), (2, True))
+        self.assertEqual(e2.shape(), signed(2))
 
     def test_cast_enum_wrong(self):
         with self.assertRaises(TypeError,
@@ -195,16 +204,16 @@ class ValueTestCase(FHDLTestCase):
 
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):
-        self.assertEqual(Const(0).shape(),   (1, False))
+        self.assertEqual(Const(0).shape(),   unsigned(1))
         self.assertIsInstance(Const(0).shape(), Shape)
-        self.assertEqual(Const(1).shape(),   (1, False))
-        self.assertEqual(Const(10).shape(),  (4, False))
-        self.assertEqual(Const(-10).shape(), (5, True))
+        self.assertEqual(Const(1).shape(),   unsigned(1))
+        self.assertEqual(Const(10).shape(),  unsigned(4))
+        self.assertEqual(Const(-10).shape(), signed(5))
 
-        self.assertEqual(Const(1, 4).shape(),          (4, False))
-        self.assertEqual(Const(-1, 4).shape(),         (4, True))
-        self.assertEqual(Const(1, (4, True)).shape(),  (4, True))
-        self.assertEqual(Const(0, (0, False)).shape(), (0, False))
+        self.assertEqual(Const(1, 4).shape(),          unsigned(4))
+        self.assertEqual(Const(-1, 4).shape(),         signed(4))
+        self.assertEqual(Const(1, signed(4)).shape(),  signed(4))
+        self.assertEqual(Const(0, unsigned(0)).shape(), unsigned(0))
 
     def test_shape_wrong(self):
         with self.assertRaises(TypeError,
@@ -212,7 +221,7 @@ class ConstTestCase(FHDLTestCase):
             Const(1, -1)
 
     def test_normalization(self):
-        self.assertEqual(Const(0b10110, (5, True)).value, -10)
+        self.assertEqual(Const(0b10110, signed(5)).value, -10)
 
     def test_value(self):
         self.assertEqual(Const(10).value, 10)
@@ -230,184 +239,184 @@ class OperatorTestCase(FHDLTestCase):
     def test_bool(self):
         v = Const(0, 4).bool()
         self.assertEqual(repr(v), "(b (const 4'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_invert(self):
         v = ~Const(0, 4)
         self.assertEqual(repr(v), "(~ (const 4'd0))")
-        self.assertEqual(v.shape(), (4, False))
+        self.assertEqual(v.shape(), unsigned(4))
 
     def test_neg(self):
-        v1 = -Const(0, (4, False))
+        v1 = -Const(0, unsigned(4))
         self.assertEqual(repr(v1), "(- (const 4'd0))")
-        self.assertEqual(v1.shape(), (5, True))
-        v2 = -Const(0, (4, True))
+        self.assertEqual(v1.shape(), signed(5))
+        v2 = -Const(0, signed(4))
         self.assertEqual(repr(v2), "(- (const 4'sd0))")
-        self.assertEqual(v2.shape(), (4, True))
+        self.assertEqual(v2.shape(), signed(4))
 
     def test_add(self):
-        v1 = Const(0, (4, False)) + Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) + Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(+ (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (7, False))
-        v2 = Const(0, (4, True)) + Const(0, (6, True))
-        self.assertEqual(v2.shape(), (7, True))
-        v3 = Const(0, (4, True)) + Const(0, (4, False))
-        self.assertEqual(v3.shape(), (6, True))
-        v4 = Const(0, (4, False)) + Const(0, (4, True))
-        self.assertEqual(v4.shape(), (6, True))
+        self.assertEqual(v1.shape(), unsigned(7))
+        v2 = Const(0, signed(4)) + Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(7))
+        v3 = Const(0, signed(4)) + Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(6))
+        v4 = Const(0, unsigned(4)) + Const(0, signed(4))
+        self.assertEqual(v4.shape(), signed(6))
         v5 = 10 + Const(0, 4)
-        self.assertEqual(v5.shape(), (5, False))
+        self.assertEqual(v5.shape(), unsigned(5))
 
     def test_sub(self):
-        v1 = Const(0, (4, False)) - Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) - Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(- (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (7, False))
-        v2 = Const(0, (4, True)) - Const(0, (6, True))
-        self.assertEqual(v2.shape(), (7, True))
-        v3 = Const(0, (4, True)) - Const(0, (4, False))
-        self.assertEqual(v3.shape(), (6, True))
-        v4 = Const(0, (4, False)) - Const(0, (4, True))
-        self.assertEqual(v4.shape(), (6, True))
+        self.assertEqual(v1.shape(), unsigned(7))
+        v2 = Const(0, signed(4)) - Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(7))
+        v3 = Const(0, signed(4)) - Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(6))
+        v4 = Const(0, unsigned(4)) - Const(0, signed(4))
+        self.assertEqual(v4.shape(), signed(6))
         v5 = 10 - Const(0, 4)
-        self.assertEqual(v5.shape(), (5, False))
+        self.assertEqual(v5.shape(), unsigned(5))
 
     def test_mul(self):
-        v1 = Const(0, (4, False)) * Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) * Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(* (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (10, False))
-        v2 = Const(0, (4, True)) * Const(0, (6, True))
-        self.assertEqual(v2.shape(), (10, True))
-        v3 = Const(0, (4, True)) * Const(0, (4, False))
-        self.assertEqual(v3.shape(), (8, True))
+        self.assertEqual(v1.shape(), unsigned(10))
+        v2 = Const(0, signed(4)) * Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(10))
+        v3 = Const(0, signed(4)) * Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(8))
         v5 = 10 * Const(0, 4)
-        self.assertEqual(v5.shape(), (8, False))
+        self.assertEqual(v5.shape(), unsigned(8))
 
     def test_mod(self):
-        v1 = Const(0, (4, False)) % Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) % Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(% (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (4, False))
-        v3 = Const(0, (4, True)) % Const(0, (4, False))
-        self.assertEqual(v3.shape(), (4, True))
+        self.assertEqual(v1.shape(), unsigned(4))
+        v3 = Const(0, signed(4)) % Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(4))
         v5 = 10 % Const(0, 4)
-        self.assertEqual(v5.shape(), (4, False))
+        self.assertEqual(v5.shape(), unsigned(4))
 
     def test_mod_wrong(self):
         with self.assertRaises(NotImplementedError,
                 msg="Division by a signed value is not supported"):
-            Const(0, (4, True)) % Const(0, (6, True))
+            Const(0, signed(4)) % Const(0, signed(6))
 
     def test_floordiv(self):
-        v1 = Const(0, (4, False)) // Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) // Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(// (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (4, False))
-        v3 = Const(0, (4, True)) // Const(0, (4, False))
-        self.assertEqual(v3.shape(), (4, True))
+        self.assertEqual(v1.shape(), unsigned(4))
+        v3 = Const(0, signed(4)) // Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(4))
         v5 = 10 // Const(0, 4)
-        self.assertEqual(v5.shape(), (4, False))
+        self.assertEqual(v5.shape(), unsigned(4))
 
     def test_floordiv_wrong(self):
         with self.assertRaises(NotImplementedError,
                 msg="Division by a signed value is not supported"):
-            Const(0, (4, True)) // Const(0, (6, True))
+            Const(0, signed(4)) // Const(0, signed(6))
 
     def test_and(self):
-        v1 = Const(0, (4, False)) & Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) & Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(& (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (6, False))
-        v2 = Const(0, (4, True)) & Const(0, (6, True))
-        self.assertEqual(v2.shape(), (6, True))
-        v3 = Const(0, (4, True)) & Const(0, (4, False))
-        self.assertEqual(v3.shape(), (5, True))
-        v4 = Const(0, (4, False)) & Const(0, (4, True))
-        self.assertEqual(v4.shape(), (5, True))
+        self.assertEqual(v1.shape(), unsigned(6))
+        v2 = Const(0, signed(4)) & Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(6))
+        v3 = Const(0, signed(4)) & Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(5))
+        v4 = Const(0, unsigned(4)) & Const(0, signed(4))
+        self.assertEqual(v4.shape(), signed(5))
         v5 = 10 & Const(0, 4)
-        self.assertEqual(v5.shape(), (4, False))
+        self.assertEqual(v5.shape(), unsigned(4))
 
     def test_or(self):
-        v1 = Const(0, (4, False)) | Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) | Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(| (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (6, False))
-        v2 = Const(0, (4, True)) | Const(0, (6, True))
-        self.assertEqual(v2.shape(), (6, True))
-        v3 = Const(0, (4, True)) | Const(0, (4, False))
-        self.assertEqual(v3.shape(), (5, True))
-        v4 = Const(0, (4, False)) | Const(0, (4, True))
-        self.assertEqual(v4.shape(), (5, True))
+        self.assertEqual(v1.shape(), unsigned(6))
+        v2 = Const(0, signed(4)) | Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(6))
+        v3 = Const(0, signed(4)) | Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(5))
+        v4 = Const(0, unsigned(4)) | Const(0, signed(4))
+        self.assertEqual(v4.shape(), signed(5))
         v5 = 10 | Const(0, 4)
-        self.assertEqual(v5.shape(), (4, False))
+        self.assertEqual(v5.shape(), unsigned(4))
 
     def test_xor(self):
-        v1 = Const(0, (4, False)) ^ Const(0, (6, False))
+        v1 = Const(0, unsigned(4)) ^ Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(^ (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (6, False))
-        v2 = Const(0, (4, True)) ^ Const(0, (6, True))
-        self.assertEqual(v2.shape(), (6, True))
-        v3 = Const(0, (4, True)) ^ Const(0, (4, False))
-        self.assertEqual(v3.shape(), (5, True))
-        v4 = Const(0, (4, False)) ^ Const(0, (4, True))
-        self.assertEqual(v4.shape(), (5, True))
+        self.assertEqual(v1.shape(), unsigned(6))
+        v2 = Const(0, signed(4)) ^ Const(0, signed(6))
+        self.assertEqual(v2.shape(), signed(6))
+        v3 = Const(0, signed(4)) ^ Const(0, unsigned(4))
+        self.assertEqual(v3.shape(), signed(5))
+        v4 = Const(0, unsigned(4)) ^ Const(0, signed(4))
+        self.assertEqual(v4.shape(), signed(5))
         v5 = 10 ^ Const(0, 4)
-        self.assertEqual(v5.shape(), (4, False))
+        self.assertEqual(v5.shape(), unsigned(4))
 
     def test_shl(self):
         v1 = Const(1, 4) << Const(4)
         self.assertEqual(repr(v1), "(<< (const 4'd1) (const 3'd4))")
-        self.assertEqual(v1.shape(), (11, False))
+        self.assertEqual(v1.shape(), unsigned(11))
         v2 = Const(1, 4) << Const(-3)
-        self.assertEqual(v2.shape(), (7, False))
+        self.assertEqual(v2.shape(), unsigned(7))
 
     def test_shr(self):
         v1 = Const(1, 4) >> Const(4)
         self.assertEqual(repr(v1), "(>> (const 4'd1) (const 3'd4))")
-        self.assertEqual(v1.shape(), (4, False))
+        self.assertEqual(v1.shape(), unsigned(4))
         v2 = Const(1, 4) >> Const(-3)
-        self.assertEqual(v2.shape(), (8, False))
+        self.assertEqual(v2.shape(), unsigned(8))
 
     def test_lt(self):
         v = Const(0, 4) < Const(0, 6)
         self.assertEqual(repr(v), "(< (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_le(self):
         v = Const(0, 4) <= Const(0, 6)
         self.assertEqual(repr(v), "(<= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_gt(self):
         v = Const(0, 4) > Const(0, 6)
         self.assertEqual(repr(v), "(> (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_ge(self):
         v = Const(0, 4) >= Const(0, 6)
         self.assertEqual(repr(v), "(>= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_eq(self):
         v = Const(0, 4) == Const(0, 6)
         self.assertEqual(repr(v), "(== (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_ne(self):
         v = Const(0, 4) != Const(0, 6)
         self.assertEqual(repr(v), "(!= (const 4'd0) (const 6'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_mux(self):
         s  = Const(0)
-        v1 = Mux(s, Const(0, (4, False)), Const(0, (6, False)))
+        v1 = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
         self.assertEqual(repr(v1), "(m (const 1'd0) (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), (6, False))
-        v2 = Mux(s, Const(0, (4, True)), Const(0, (6, True)))
-        self.assertEqual(v2.shape(), (6, True))
-        v3 = Mux(s, Const(0, (4, True)), Const(0, (4, False)))
-        self.assertEqual(v3.shape(), (5, True))
-        v4 = Mux(s, Const(0, (4, False)), Const(0, (4, True)))
-        self.assertEqual(v4.shape(), (5, True))
+        self.assertEqual(v1.shape(), unsigned(6))
+        v2 = Mux(s, Const(0, signed(4)), Const(0, signed(6)))
+        self.assertEqual(v2.shape(), signed(6))
+        v3 = Mux(s, Const(0, signed(4)), Const(0, unsigned(4)))
+        self.assertEqual(v3.shape(), signed(5))
+        v4 = Mux(s, Const(0, unsigned(4)), Const(0, signed(4)))
+        self.assertEqual(v4.shape(), signed(5))
 
     def test_mux_wide(self):
         s = Const(0b100)
-        v = Mux(s, Const(0, (4, False)), Const(0, (6, False)))
+        v = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
         self.assertEqual(repr(v), "(m (b (const 3'd4)) (const 4'd0) (const 6'd0))")
 
     def test_mux_bool(self):
@@ -417,7 +426,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_bool(self):
         v = Const(0).bool()
         self.assertEqual(repr(v), "(b (const 1'd0))")
-        self.assertEqual(v.shape(), (1, False))
+        self.assertEqual(v.shape(), unsigned(1))
 
     def test_any(self):
         v = Const(0b101).any()
@@ -480,10 +489,10 @@ class OperatorTestCase(FHDLTestCase):
 class SliceTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Const(10)[2]
-        self.assertEqual(s1.shape(), (1, False))
+        self.assertEqual(s1.shape(), unsigned(1))
         self.assertIsInstance(s1.shape(), Shape)
         s2 = Const(-10)[0:2]
-        self.assertEqual(s2.shape(), (2, False))
+        self.assertEqual(s2.shape(), unsigned(2))
 
     def test_start_end_negative(self):
         c  = Const(0, 8)
@@ -524,10 +533,10 @@ class BitSelectTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
-        self.assertEqual(s1.shape(), (2, False))
+        self.assertEqual(s1.shape(), unsigned(2))
         self.assertIsInstance(s1.shape(), Shape)
         s2 = self.c.bit_select(self.s, 0)
-        self.assertEqual(s2.shape(), (0, False))
+        self.assertEqual(s2.shape(), unsigned(0))
 
     def test_stride(self):
         s1 = self.c.bit_select(self.s, 2)
@@ -549,7 +558,7 @@ class WordSelectTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
-        self.assertEqual(s1.shape(), (2, False))
+        self.assertEqual(s1.shape(), unsigned(2))
         self.assertIsInstance(s1.shape(), Shape)
 
     def test_stride(self):
@@ -570,14 +579,14 @@ class WordSelectTestCase(FHDLTestCase):
 class CatTestCase(FHDLTestCase):
     def test_shape(self):
         c0 = Cat()
-        self.assertEqual(c0.shape(), (0, False))
+        self.assertEqual(c0.shape(), unsigned(0))
         self.assertIsInstance(c0.shape(), Shape)
         c1 = Cat(Const(10))
-        self.assertEqual(c1.shape(), (4, False))
+        self.assertEqual(c1.shape(), unsigned(4))
         c2 = Cat(Const(10), Const(1))
-        self.assertEqual(c2.shape(), (5, False))
+        self.assertEqual(c2.shape(), unsigned(5))
         c3 = Cat(Const(10), Const(1), Const(0))
-        self.assertEqual(c3.shape(), (6, False))
+        self.assertEqual(c3.shape(), unsigned(6))
 
     def test_repr(self):
         c1 = Cat(Const(10), Const(1))
@@ -587,10 +596,10 @@ class CatTestCase(FHDLTestCase):
 class ReplTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Repl(Const(10), 3)
-        self.assertEqual(s1.shape(), (12, False))
+        self.assertEqual(s1.shape(), unsigned(12))
         self.assertIsInstance(s1.shape(), Shape)
         s2 = Repl(Const(10), 0)
-        self.assertEqual(s2.shape(), (0, False))
+        self.assertEqual(s2.shape(), unsigned(0))
 
     def test_count_wrong(self):
         with self.assertRaises(TypeError):
@@ -645,7 +654,7 @@ class ArrayProxyTestCase(FHDLTestCase):
         a = Signal(range(3))
         b = Signal(range(3))
         v = m[a][b]
-        self.assertEqual(v.shape(), (4, False))
+        self.assertEqual(v.shape(), unsigned(4))
 
     def test_attr_shape(self):
         from collections import namedtuple
@@ -653,8 +662,8 @@ class ArrayProxyTestCase(FHDLTestCase):
         a = Array(pair(i, -i) for i in range(10))
         s = Signal(range(len(a)))
         v = a[s]
-        self.assertEqual(v.p.shape(), (4, False))
-        self.assertEqual(v.n.shape(), (6, True))
+        self.assertEqual(v.p.shape(), unsigned(4))
+        self.assertEqual(v.n.shape(), signed(6))
 
     def test_repr(self):
         a = Array([1, 2, 3])
@@ -666,41 +675,41 @@ class ArrayProxyTestCase(FHDLTestCase):
 class SignalTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Signal()
-        self.assertEqual(s1.shape(), (1, False))
+        self.assertEqual(s1.shape(), unsigned(1))
         self.assertIsInstance(s1.shape(), Shape)
         s2 = Signal(2)
-        self.assertEqual(s2.shape(), (2, False))
-        s3 = Signal((2, False))
-        self.assertEqual(s3.shape(), (2, False))
-        s4 = Signal((2, True))
-        self.assertEqual(s4.shape(), (2, True))
+        self.assertEqual(s2.shape(), unsigned(2))
+        s3 = Signal(unsigned(2))
+        self.assertEqual(s3.shape(), unsigned(2))
+        s4 = Signal(signed(2))
+        self.assertEqual(s4.shape(), signed(2))
         s5 = Signal(0)
-        self.assertEqual(s5.shape(), (0, False))
+        self.assertEqual(s5.shape(), unsigned(0))
         s6 = Signal(range(16))
-        self.assertEqual(s6.shape(), (4, False))
+        self.assertEqual(s6.shape(), unsigned(4))
         s7 = Signal(range(4, 16))
-        self.assertEqual(s7.shape(), (4, False))
+        self.assertEqual(s7.shape(), unsigned(4))
         s8 = Signal(range(-4, 16))
-        self.assertEqual(s8.shape(), (5, True))
+        self.assertEqual(s8.shape(), signed(5))
         s9 = Signal(range(-20, 16))
-        self.assertEqual(s9.shape(), (6, True))
+        self.assertEqual(s9.shape(), signed(6))
         s10 = Signal(range(0))
-        self.assertEqual(s10.shape(), (0, False))
+        self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
-        self.assertEqual(s11.shape(), (1, False))
+        self.assertEqual(s11.shape(), unsigned(1))
         # deprecated
         with warnings.catch_warnings():
             warnings.filterwarnings(action="ignore", category=DeprecationWarning)
             d6 = Signal(max=16)
-            self.assertEqual(d6.shape(), (4, False))
+            self.assertEqual(d6.shape(), unsigned(4))
             d7 = Signal(min=4, max=16)
-            self.assertEqual(d7.shape(), (4, False))
+            self.assertEqual(d7.shape(), unsigned(4))
             d8 = Signal(min=-4, max=16)
-            self.assertEqual(d8.shape(), (5, True))
+            self.assertEqual(d8.shape(), signed(5))
             d9 = Signal(min=-20, max=16)
-            self.assertEqual(d9.shape(), (6, True))
+            self.assertEqual(d9.shape(), signed(6))
             d10 = Signal(max=1)
-            self.assertEqual(d10.shape(), (0, False))
+            self.assertEqual(d10.shape(), unsigned(0))
 
     def test_shape_wrong(self):
         with self.assertRaises(TypeError,
@@ -737,10 +746,10 @@ class SignalTestCase(FHDLTestCase):
             Signal(3, reset=8)
         with self.assertWarns(SyntaxWarning,
                 msg="Reset value 4 requires 4 bits to represent, but the signal only has 3 bits"):
-            Signal((3, True), reset=4)
+            Signal(signed(3), reset=4)
         with self.assertWarns(SyntaxWarning,
                 msg="Reset value -5 requires 4 bits to represent, but the signal only has 3 bits"):
-            Signal((3, True), reset=-5)
+            Signal(signed(3), reset=-5)
 
     def test_attrs(self):
         s1 = Signal()
@@ -754,9 +763,9 @@ class SignalTestCase(FHDLTestCase):
 
     def test_like(self):
         s1 = Signal.like(Signal(4))
-        self.assertEqual(s1.shape(), (4, False))
+        self.assertEqual(s1.shape(), unsigned(4))
         s2 = Signal.like(Signal(range(-15, 1)))
-        self.assertEqual(s2.shape(), (5, True))
+        self.assertEqual(s2.shape(), signed(5))
         s3 = Signal.like(Signal(4, reset=0b111, reset_less=True))
         self.assertEqual(s3.reset, 0b111)
         self.assertEqual(s3.reset_less, True)
@@ -765,7 +774,7 @@ class SignalTestCase(FHDLTestCase):
         s5 = Signal.like(Signal(decoder=str))
         self.assertEqual(s5.decoder, str)
         s6 = Signal.like(10)
-        self.assertEqual(s6.shape(), (4, False))
+        self.assertEqual(s6.shape(), unsigned(4))
         s7 = [Signal.like(Signal(4))][0]
         self.assertEqual(s7.name, "$like")
         s8 = Signal.like(s1, name_suffix="_ff")
@@ -781,9 +790,9 @@ class SignalTestCase(FHDLTestCase):
 
     def test_enum(self):
         s1 = Signal(UnsignedEnum)
-        self.assertEqual(s1.shape(), (2, False))
+        self.assertEqual(s1.shape(), unsigned(2))
         s2 = Signal(SignedEnum)
-        self.assertEqual(s2.shape(), (2, True))
+        self.assertEqual(s2.shape(), signed(2))
         self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
 
 
@@ -800,7 +809,7 @@ class ClockSignalTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = ClockSignal()
-        self.assertEqual(s1.shape(), (1, False))
+        self.assertEqual(s1.shape(), unsigned(1))
         self.assertIsInstance(s1.shape(), Shape)
 
     def test_repr(self):
@@ -826,7 +835,7 @@ class ResetSignalTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = ResetSignal()
-        self.assertEqual(s1.shape(), (1, False))
+        self.assertEqual(s1.shape(), unsigned(1))
         self.assertIsInstance(s1.shape(), Shape)
 
     def test_repr(self):
@@ -853,21 +862,21 @@ class MockUserValue(UserValue):
 class UserValueTestCase(FHDLTestCase):
     def test_shape(self):
         uv = MockUserValue(1)
-        self.assertEqual(uv.shape(), (1, False))
+        self.assertEqual(uv.shape(), unsigned(1))
         self.assertIsInstance(uv.shape(), Shape)
         uv.lowered = 2
-        self.assertEqual(uv.shape(), (1, False))
+        self.assertEqual(uv.shape(), unsigned(1))
         self.assertEqual(uv.lower_count, 1)
 
 
 class SampleTestCase(FHDLTestCase):
     def test_const(self):
         s = Sample(1, 1, "sync")
-        self.assertEqual(s.shape(), (1, False))
+        self.assertEqual(s.shape(), unsigned(1))
 
     def test_signal(self):
         s1 = Sample(Signal(2), 1, "sync")
-        self.assertEqual(s1.shape(), (2, False))
+        self.assertEqual(s1.shape(), unsigned(2))
         s2 = Sample(ClockSignal(), 1, "sync")
         s3 = Sample(ResetSignal(), 1, "sync")
 
@@ -891,4 +900,4 @@ class SampleTestCase(FHDLTestCase):
 class InitialTestCase(FHDLTestCase):
     def test_initial(self):
         i = Initial()
-        self.assertEqual(i.shape(), (1, False))
+        self.assertEqual(i.shape(), unsigned(1))

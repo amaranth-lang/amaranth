@@ -19,12 +19,12 @@ DIR_FANIN  = Direction.FANIN
 
 class Layout:
     @staticmethod
-    def wrap(obj):
+    def wrap(obj, src_loc_at=0):
         if isinstance(obj, Layout):
             return obj
-        return Layout(obj)
+        return Layout(obj, src_loc_at=1 + src_loc_at)
 
-    def __init__(self, fields):
+    def __init__(self, fields, *, src_loc_at=0):
         self.fields = OrderedDict()
         for field in fields:
             if not isinstance(field, tuple) or len(field) not in (2, 3):
@@ -47,7 +47,7 @@ class Layout:
                                 .format(field))
             if not isinstance(shape, Layout):
                 try:
-                    shape = Shape.cast(shape)
+                    shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
                 except Exception as error:
                     raise TypeError("Field {!r} has invalid shape: should be castable to Shape "
                                     "or a list of fields of a nested record"
@@ -115,7 +115,7 @@ class Record(Value):
                 return b
             return "{}__{}".format(a, b)
 
-        self.layout = Layout.wrap(layout)
+        self.layout = Layout.wrap(layout, src_loc_at=1 + src_loc_at)
         self.fields = OrderedDict()
         for field_name, field_shape, field_dir in self.layout:
             if fields is not None and field_name in fields:

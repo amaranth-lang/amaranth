@@ -464,7 +464,7 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def match_shape(self, value, new_bits, new_sign):
         if isinstance(value, ast.Const):
-            return self(ast.Const(value.value, (new_bits, new_sign)))
+            return self(ast.Const(value.value, ast.Shape(new_bits, new_sign)))
 
         value_bits, value_sign = value.shape()
         if new_bits <= value_bits:
@@ -511,7 +511,7 @@ class _RHSValueCompiler(_ValueCompiler):
             res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
             self.s.rtlil.cell("$mux", ports={
                 "\\A": divmod_res,
-                "\\B": self(ast.Const(0, (res_bits, res_sign))),
+                "\\B": self(ast.Const(0, ast.Shape(res_bits, res_sign))),
                 "\\S": self(lhs == 0),
                 "\\Y": res,
             }, params={

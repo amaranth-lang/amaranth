@@ -59,11 +59,18 @@ class Shape(typing.NamedTuple):
     signed: bool = False
 
     @staticmethod
-    def cast(obj):
+    def cast(obj, *, src_loc_at=0):
+        if isinstance(obj, Shape):
+            return obj
         if isinstance(obj, int):
             return Shape(obj)
         if isinstance(obj, tuple):
-            return Shape(*obj)
+            width, signed = obj
+            warnings.warn("instead of `{tuple}`, use `{constructor}({width})`"
+                          .format(constructor="signed" if signed else "unsigned", width=width,
+                                  tuple=obj),
+                          DeprecationWarning, stacklevel=2 + src_loc_at)
+            return Shape(width, signed)
         if isinstance(obj, range):
             if len(obj) == 0:
                 return Shape(0, obj.start < 0)
@@ -446,7 +453,7 @@ class Const(Value):
             value |= ~mask
         return value
 
-    def __init__(self, value, shape=None):
+    def __init__(self, value, shape=None, *, src_loc_at=0):
         # We deliberately do not call Value.__init__ here.
         self.value = int(value)
         if shape is None:
@@ -454,7 +461,7 @@ class Const(Value):
         elif isinstance(shape, int):
             shape = Shape(shape, signed=self.value < 0)
         else:
-            shape = Shape.cast(shape)
+            shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width, self.signed = shape
         self.value = self.normalize(self.value, shape)
 
@@ -483,7 +490,7 @@ C = Const  # shorthand
 class AnyValue(Value, DUID):
     def __init__(self, shape, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.width, self.signed = Shape.cast(shape)
+        self.width, self.signed = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         if not isinstance(self.width, int) or self.width < 0:
             raise TypeError("Width must be a non-negative integer, not {!r}"
                             .format(self.width))
@@ -848,7 +855,7 @@ class Signal(Value, DUID):
         else:
             if not (min is None and max is None):
                 raise ValueError("Only one of bits/signedness or bounds may be specified")
-            self.width, self.signed = Shape.cast(shape)
+            self.width, self.signed = Shape.cast(shape, src_loc_at=1 + src_loc_at)
 
         reset_width = bits_for(reset, self.signed)
         if reset != 0 and reset_width > self.width:
