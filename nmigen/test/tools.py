@@ -20,7 +20,7 @@ __all__ = ["FHDLTestCase"]
 class FHDLTestCase(unittest.TestCase):
     def assertRepr(self, obj, repr_str):
         if isinstance(obj, list):
-            obj = Statement.wrap(obj)
+            obj = Statement.cast(obj)
         def prepare_repr(repr_str):
             repr_str = re.sub(r"\s+",   " ",  repr_str)
             repr_str = re.sub(r"\( (?=\()", "(", repr_str)

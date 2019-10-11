@@ -144,7 +144,7 @@ class Fragment:
         yield from self.domains
 
     def add_statements(self, *stmts):
-        self.statements += Statement.wrap(stmts)
+        self.statements += Statement.cast(stmts)
 
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)

@@ -1255,10 +1255,16 @@ class Statement:
     def __init__(self, *, src_loc_at=0):
         self.src_loc = tracer.get_src_loc(1 + src_loc_at)
 
+    # TODO(nmigen-0.2): remove this
+    @classmethod
+    @deprecated("instead of `Statement.wrap`, use `Statement.cast`")
+    def wrap(cls, obj):
+        return cls.cast(obj)
+
     @staticmethod
-    def wrap(obj):
+    def cast(obj):
         if isinstance(obj, Iterable):
-            return _StatementList(sum((Statement.wrap(e) for e in obj), []))
+            return _StatementList(sum((Statement.cast(e) for e in obj), []))
         else:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
@@ -1359,7 +1365,7 @@ class Switch(Statement):
                 new_keys = (*new_keys, key)
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
-            self.cases[new_keys] = Statement.wrap(stmts)
+            self.cases[new_keys] = Statement.cast(stmts)
             if orig_keys in case_src_locs:
                 self.case_src_locs[new_keys] = case_src_locs[orig_keys]
 

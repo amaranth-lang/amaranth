@@ -3,7 +3,7 @@ from collections import OrderedDict
 from functools import reduce
 
 from .. import tracer
-from ..tools import union
+from ..tools import union, deprecated
 from .ast import *
 
 
@@ -19,10 +19,16 @@ DIR_FANIN  = Direction.FANIN
 
 class Layout:
     @staticmethod
-    def wrap(obj, src_loc_at=0):
+    def cast(obj, *, src_loc_at=0):
         if isinstance(obj, Layout):
             return obj
         return Layout(obj, src_loc_at=1 + src_loc_at)
+
+    # TODO(nmigen-0.2): remove this
+    @classmethod
+    @deprecated("instead of `Layout.wrap`, use `Layout.cast`")
+    def wrap(cls, obj, *, src_loc_at=0):
+        return cls.cast(obj, src_loc_at=1 + src_loc_at)
 
     def __init__(self, fields, *, src_loc_at=0):
         self.fields = OrderedDict()
@@ -35,7 +41,7 @@ class Layout:
                 name, shape = field
                 direction = DIR_NONE
                 if isinstance(shape, list):
-                    shape = Layout.wrap(shape)
+                    shape = Layout.cast(shape)
             else:
                 name, shape, direction = field
                 if not isinstance(direction, Direction):
@@ -115,7 +121,7 @@ class Record(Value):
                 return b
             return "{}__{}".format(a, b)
 
-        self.layout = Layout.wrap(layout, src_loc_at=1 + src_loc_at)
+        self.layout = Layout.cast(layout, src_loc_at=1 + src_loc_at)
         self.fields = OrderedDict()
         for field_name, field_shape, field_dir in self.layout:
             if fields is not None and field_name in fields:

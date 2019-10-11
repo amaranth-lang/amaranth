@@ -22,7 +22,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = stmt(osig, *isigs)
         frag = Fragment()
         frag.add_statements(stmt)
-        for signal in flatten(s._lhs_signals() for s in Statement.wrap(stmt)):
+        for signal in flatten(s._lhs_signals() for s in Statement.cast(stmt)):
             frag.add_driver(signal)
 
         with Simulator(frag,

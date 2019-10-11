@@ -131,7 +131,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self.submodules    = _ModuleBuilderSubmodules(self)
         self.domains       = _ModuleBuilderDomainSet(self)
 
-        self._statements   = Statement.wrap([])
+        self._statements   = Statement.cast([])
         self._ctrl_context = None
         self._ctrl_stack   = []
 
@@ -433,7 +433,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
 
-        for assign in Statement.wrap(assigns):
+        for assign in Statement.cast(assigns):
             if not compat_mode and not isinstance(assign, (Assign, Assert, Assume, Cover)):
                 raise SyntaxError(
                     "Only assignments and property checks may be appended to d.{}"
