@@ -23,27 +23,27 @@ class StringEnum(Enum):
 
 
 class ValueTestCase(FHDLTestCase):
-    def test_wrap(self):
-        self.assertIsInstance(Value.wrap(0), Const)
-        self.assertIsInstance(Value.wrap(True), Const)
+    def test_cast(self):
+        self.assertIsInstance(Value.cast(0), Const)
+        self.assertIsInstance(Value.cast(True), Const)
         c = Const(0)
-        self.assertIs(Value.wrap(c), c)
+        self.assertIs(Value.cast(c), c)
         with self.assertRaises(TypeError,
-                msg="Object ''str'' is not an nMigen value"):
-            Value.wrap("str")
+                msg="Object 'str' is not an nMigen value"):
+            Value.cast("str")
 
-    def test_wrap_enum(self):
-        e1 = Value.wrap(UnsignedEnum.FOO)
+    def test_cast_enum(self):
+        e1 = Value.cast(UnsignedEnum.FOO)
         self.assertIsInstance(e1, Const)
         self.assertEqual(e1.shape(), (2, False))
-        e2 = Value.wrap(SignedEnum.FOO)
+        e2 = Value.cast(SignedEnum.FOO)
         self.assertIsInstance(e2, Const)
         self.assertEqual(e2.shape(), (2, True))
 
-    def test_wrap_enum_wrong(self):
+    def test_cast_enum_wrong(self):
         with self.assertRaises(TypeError,
                 msg="Only enumerations with integer values can be converted to nMigen values"):
-            Value.wrap(StringEnum.FOO)
+            Value.cast(StringEnum.FOO)
 
     def test_bool(self):
         with self.assertRaises(TypeError,

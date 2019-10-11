@@ -13,8 +13,8 @@ from ..back.pysim import *
 
 class SimulatorUnitTestCase(FHDLTestCase):
     def assertStatement(self, stmt, inputs, output, reset=0):
-        inputs = [Value.wrap(i) for i in inputs]
-        output = Value.wrap(output)
+        inputs = [Value.cast(i) for i in inputs]
+        output = Value.cast(output)
 
         isigs = [Signal(i.shape(), name=n) for i, n in zip(inputs, "abcd")]
         osig  = Signal(output.shape(), name="y", reset=reset)

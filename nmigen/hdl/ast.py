@@ -47,9 +47,12 @@ def _enum_to_bits(enum_value):
 
 class Value(metaclass=ABCMeta):
     @staticmethod
-    def wrap(obj):
-        """Ensures that the passed object is an nMigen value. Booleans and integers
-        are automatically wrapped into ``Const``."""
+    def cast(obj):
+        """Converts ``obj`` to an nMigen value.
+
+        Booleans and integers are wrapped into a :class:`Const`. Enumerations whose members are
+        all integers are converted to a :class:`Const` with a shape that fits every member.
+        """
         if isinstance(obj, Value):
             return obj
         elif isinstance(obj, (bool, int)):
@@ -57,7 +60,13 @@ class Value(metaclass=ABCMeta):
         elif isinstance(obj, Enum):
             return Const(obj.value, _enum_shape(type(obj)))
         else:
-            raise TypeError("Object '{!r}' is not an nMigen value".format(obj))
+            raise TypeError("Object {!r} is not an nMigen value".format(obj))
+
+    # TODO(nmigen-0.2): remove this
+    @classmethod
+    @deprecated("instead of `Value.wrap`, use `Value.cast`")
+    def wrap(cls, obj):
+        return cls.cast(obj)
 
     def __init__(self, *, src_loc_at=0):
         super().__init__()
@@ -93,14 +102,14 @@ class Value(metaclass=ABCMeta):
             # completely by prohibiting such division operations.
             raise NotImplementedError("Division by a signed value is not supported")
     def __mod__(self, other):
-        other = Value.wrap(other)
+        other = Value.cast(other)
         other.__check_divisor()
         return Operator("%", [self, other])
     def __rmod__(self, other):
         self.__check_divisor()
         return Operator("%", [other, self])
     def __floordiv__(self, other):
-        other = Value.wrap(other)
+        other = Value.cast(other)
         other.__check_divisor()
         return Operator("//", [self, other])
     def __rfloordiv__(self, other):
@@ -452,7 +461,7 @@ class Operator(Value):
     def __init__(self, op, operands, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.op = op
-        self.operands = [Value.wrap(o) for o in operands]
+        self.operands = [Value.cast(o) for o in operands]
 
     @staticmethod
     def _bitwise_binary_shape(a_shape, b_shape):
@@ -540,7 +549,7 @@ def Mux(sel, val1, val0):
     Value, out
         Output ``Value``. If ``sel`` is asserted, the Mux returns ``val1``, else ``val0``.
     """
-    sel = Value.wrap(sel)
+    sel = Value.cast(sel)
     if len(sel) != 1:
         sel = sel.bool()
     return Operator("m", [sel, val1, val0])
@@ -567,7 +576,7 @@ class Slice(Value):
             raise IndexError("Slice start {} must be less than slice end {}".format(start, end))
 
         super().__init__(src_loc_at=src_loc_at)
-        self.value = Value.wrap(value)
+        self.value = Value.cast(value)
         self.start = start
         self.end   = end
 
@@ -594,7 +603,7 @@ class Part(Value):
 
         super().__init__(src_loc_at=src_loc_at)
         self.value  = value
-        self.offset = Value.wrap(offset)
+        self.offset = Value.cast(offset)
         self.width  = width
         self.stride = stride
 
@@ -639,7 +648,7 @@ class Cat(Value):
     """
     def __init__(self, *args, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.parts = [Value.wrap(v) for v in flatten(args)]
+        self.parts = [Value.cast(v) for v in flatten(args)]
 
     def shape(self):
         return sum(len(part) for part in self.parts), False
@@ -688,7 +697,7 @@ class Repl(Value):
                             .format(count))
 
         super().__init__(src_loc_at=src_loc_at)
-        self.value = Value.wrap(value)
+        self.value = Value.cast(value)
         self.count = count
 
     def shape(self):
@@ -857,7 +866,7 @@ class Signal(Value, DUID):
             new_name = other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default="$like")
-        kw = dict(shape=cls.wrap(other).shape(), name=new_name)
+        kw = dict(shape=cls.cast(other).shape(), name=new_name)
         if isinstance(other, cls):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
@@ -1052,7 +1061,7 @@ class ArrayProxy(Value):
     def __init__(self, elems, index, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.elems = elems
-        self.index = Value.wrap(index)
+        self.index = Value.cast(index)
 
     def __getattr__(self, attr):
         return ArrayProxy([getattr(elem, attr) for elem in self.elems], self.index)
@@ -1061,7 +1070,7 @@ class ArrayProxy(Value):
         return ArrayProxy([        elem[index] for elem in self.elems], self.index)
 
     def _iter_as_values(self):
-        return (Value.wrap(elem) for elem in self.elems)
+        return (Value.cast(elem) for elem in self.elems)
 
     def shape(self):
         width, signed = 0, False
@@ -1113,7 +1122,7 @@ class UserValue(Value):
 
     def _lazy_lower(self):
         if self.__lowered is None:
-            self.__lowered = Value.wrap(self.lower())
+            self.__lowered = Value.cast(self.lower())
         return self.__lowered
 
     def shape(self):
@@ -1136,7 +1145,7 @@ class Sample(Value):
     """
     def __init__(self, expr, clocks, domain, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
-        self.value  = Value.wrap(expr)
+        self.value  = Value.cast(expr)
         self.clocks = int(clocks)
         self.domain = domain
         if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal, Initial)):
@@ -1219,8 +1228,8 @@ class Statement:
 class Assign(Statement):
     def __init__(self, lhs, rhs, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.lhs = Value.wrap(lhs)
-        self.rhs = Value.wrap(rhs)
+        self.lhs = Value.cast(lhs)
+        self.rhs = Value.cast(rhs)
 
     def _lhs_signals(self):
         return self.lhs._lhs_signals()
@@ -1235,7 +1244,7 @@ class Assign(Statement):
 class Property(Statement):
     def __init__(self, test, *, _check=None, _en=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.test   = Value.wrap(test)
+        self.test   = Value.cast(test)
         self._check = _check
         self._en    = _en
         if self._check is None:
@@ -1283,7 +1292,7 @@ class Switch(Statement):
         # be automatically traced, so whatever constructs a Switch may optionally provide it.
         self.case_src_locs = {}
 
-        self.test  = Value.wrap(test)
+        self.test  = Value.cast(test)
         self.cases = OrderedDict()
         for orig_keys, stmts in cases.items():
             # Map: None -> (); key -> (key,); (key...) -> (key...)
@@ -1466,7 +1475,7 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
 
 class ValueKey:
     def __init__(self, value):
-        self.value = Value.wrap(value)
+        self.value = Value.cast(value)
         if isinstance(self.value, Const):
             self._hash = hash(self.value.value)
         elif isinstance(self.value, (Signal, AnyValue)):

@@ -13,9 +13,9 @@ __all__ = ["DUID", "wrap", "Mux", "Cat", "Replicate", "Constant", "C", "Signal",
            "SPECIAL_INPUT", "SPECIAL_OUTPUT", "SPECIAL_INOUT"]
 
 
-@deprecated("instead of `wrap`, use `Value.wrap`")
+@deprecated("instead of `wrap`, use `Value.cast`")
 def wrap(v):
-    return Value.wrap(v)
+    return Value.cast(v)
 
 
 @extend(_Slice)
@@ -52,14 +52,14 @@ def choices(self):
 class If(ast.Switch):
     @deprecated("instead of `If(cond, ...)`, use `with m.If(cond): ...`")
     def __init__(self, cond, *stmts):
-        cond = Value.wrap(cond)
+        cond = Value.cast(cond)
         if len(cond) != 1:
             cond = cond.bool()
         super().__init__(cond, {("1",): ast.Statement.wrap(stmts)})
 
     @deprecated("instead of `.Elif(cond, ...)`, use `with m.Elif(cond): ...`")
     def Elif(self, cond, *stmts):
-        cond = Value.wrap(cond)
+        cond = Value.cast(cond)
         if len(cond) != 1:
             cond = cond.bool()
         self.cases = OrderedDict((("-" + k,), v) for (k,), v in self.cases.items())
