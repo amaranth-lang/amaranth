@@ -1,3 +1,4 @@
+from .ast import Shape, unsigned, signed
 from .ast import Value, Const, C, Mux, Cat, Repl, Array, Signal, ClockSignal, ResetSignal
 from .dsl import Module
 from .cd import ClockDomain

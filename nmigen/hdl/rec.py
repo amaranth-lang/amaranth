@@ -5,7 +5,6 @@ from functools import reduce
 from .. import tracer
 from ..tools import union
 from .ast import *
-from .ast import _enum_shape
 
 
 __all__ = ["Direction", "DIR_NONE", "DIR_FANOUT", "DIR_FANIN", "Layout", "Record"]
@@ -46,17 +45,16 @@ class Layout:
             if not isinstance(name, str):
                 raise TypeError("Field {!r} has invalid name: should be a string"
                                 .format(field))
-            if isinstance(shape, type) and issubclass(shape, Enum):
-                shape = _enum_shape(shape)
-            if not isinstance(shape, (int, tuple, Layout)):
-                raise TypeError("Field {!r} has invalid shape: should be an int, tuple, Enum, or "
-                                "list of fields of a nested record"
-                                .format(field))
+            if not isinstance(shape, Layout):
+                try:
+                    shape = Shape.cast(shape)
+                except Exception as error:
+                    raise TypeError("Field {!r} has invalid shape: should be castable to Shape "
+                                    "or a list of fields of a nested record"
+                                    .format(field))
             if name in self.fields:
                 raise NameError("Field {!r} has a name that is already present in the layout"
                                 .format(field))
-            if isinstance(shape, int):
-                shape = (shape, False)
             self.fields[name] = (shape, direction)
 
     def __getitem__(self, item):
@@ -159,7 +157,7 @@ class Record(Value):
             return super().__getitem__(item)
 
     def shape(self):
-        return sum(len(f) for f in self.fields.values()), False
+        return Shape(sum(len(f) for f in self.fields.values()))
 
     def _lhs_signals(self):
         return union((f._lhs_signals() for f in self.fields.values()), start=SignalSet())

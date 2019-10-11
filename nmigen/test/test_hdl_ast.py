@@ -22,6 +22,105 @@ class StringEnum(Enum):
     BAR = "b"
 
 
+class ShapeTestCase(FHDLTestCase):
+    def test_make(self):
+        s1 = Shape()
+        self.assertEqual(s1.width, 1)
+        self.assertEqual(s1.signed, False)
+        s2 = Shape(signed=True)
+        self.assertEqual(s2.width, 1)
+        self.assertEqual(s2.signed, True)
+        s3 = Shape(3, True)
+        self.assertEqual(s3.width, 3)
+        self.assertEqual(s3.signed, True)
+
+    def test_make_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Width must be a non-negative integer, not -1"):
+            Shape(-1)
+
+    def test_tuple(self):
+        width, signed = Shape()
+        self.assertEqual(width, 1)
+        self.assertEqual(signed, False)
+
+    def test_unsigned(self):
+        s1 = unsigned(2)
+        self.assertIsInstance(s1, Shape)
+        self.assertEqual(s1.width, 2)
+        self.assertEqual(s1.signed, False)
+
+    def test_signed(self):
+        s1 = signed(2)
+        self.assertIsInstance(s1, Shape)
+        self.assertEqual(s1.width, 2)
+        self.assertEqual(s1.signed, True)
+
+    def test_cast_int(self):
+        s1 = Shape.cast(2)
+        self.assertEqual(s1.width, 2)
+        self.assertEqual(s1.signed, False)
+
+    def test_cast_int_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Width must be a non-negative integer, not -1"):
+            Shape.cast(-1)
+
+    def test_cast_tuple(self):
+        s1 = Shape.cast((1, False))
+        self.assertEqual(s1.width, 1)
+        self.assertEqual(s1.signed, False)
+        s2 = Shape.cast((3, True))
+        self.assertEqual(s2.width, 3)
+        self.assertEqual(s2.signed, True)
+
+    def test_cast_tuple_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Width must be a non-negative integer, not -1"):
+            Shape.cast((-1, True))
+
+    def test_cast_range(self):
+        s1 = Shape.cast(range(0, 8))
+        self.assertEqual(s1.width, 3)
+        self.assertEqual(s1.signed, False)
+        s2 = Shape.cast(range(0, 9))
+        self.assertEqual(s2.width, 4)
+        self.assertEqual(s2.signed, False)
+        s3 = Shape.cast(range(-7, 8))
+        self.assertEqual(s3.width, 4)
+        self.assertEqual(s3.signed, True)
+        s4 = Shape.cast(range(0, 1))
+        self.assertEqual(s4.width, 1)
+        self.assertEqual(s4.signed, False)
+        s5 = Shape.cast(range(-1, 0))
+        self.assertEqual(s5.width, 1)
+        self.assertEqual(s5.signed, True)
+        s6 = Shape.cast(range(0, 0))
+        self.assertEqual(s6.width, 0)
+        self.assertEqual(s6.signed, False)
+        s7 = Shape.cast(range(-1, -1))
+        self.assertEqual(s7.width, 0)
+        self.assertEqual(s7.signed, True)
+
+    def test_cast_enum(self):
+        s1 = Shape.cast(UnsignedEnum)
+        self.assertEqual(s1.width, 2)
+        self.assertEqual(s1.signed, False)
+        s2 = Shape.cast(SignedEnum)
+        self.assertEqual(s2.width, 2)
+        self.assertEqual(s2.signed, True)
+
+    def test_cast_enum_bad(self):
+        with self.assertRaises(TypeError,
+                msg="Only enumerations with integer values can be used as value shapes"):
+            Shape.cast(StringEnum)
+
+    def test_cast_bad(self):
+        with self.assertRaises(TypeError,
+                msg="Object 'foo' cannot be used as value shape"):
+            Shape.cast("foo")
+
+
 class ValueTestCase(FHDLTestCase):
     def test_cast(self):
         self.assertIsInstance(Value.cast(0), Const)
@@ -29,7 +128,7 @@ class ValueTestCase(FHDLTestCase):
         c = Const(0)
         self.assertIs(Value.cast(c), c)
         with self.assertRaises(TypeError,
-                msg="Object 'str' is not an nMigen value"):
+                msg="Object 'str' cannot be converted to an nMigen value"):
             Value.cast("str")
 
     def test_cast_enum(self):
@@ -42,7 +141,7 @@ class ValueTestCase(FHDLTestCase):
 
     def test_cast_enum_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Only enumerations with integer values can be converted to nMigen values"):
+                msg="Only enumerations with integer values can be used as value shapes"):
             Value.cast(StringEnum.FOO)
 
     def test_bool(self):
@@ -97,11 +196,13 @@ class ValueTestCase(FHDLTestCase):
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):
         self.assertEqual(Const(0).shape(),   (1, False))
+        self.assertIsInstance(Const(0).shape(), Shape)
         self.assertEqual(Const(1).shape(),   (1, False))
         self.assertEqual(Const(10).shape(),  (4, False))
         self.assertEqual(Const(-10).shape(), (5, True))
 
         self.assertEqual(Const(1, 4).shape(),          (4, False))
+        self.assertEqual(Const(-1, 4).shape(),         (4, True))
         self.assertEqual(Const(1, (4, True)).shape(),  (4, True))
         self.assertEqual(Const(0, (0, False)).shape(), (0, False))
 
@@ -380,6 +481,7 @@ class SliceTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Const(10)[2]
         self.assertEqual(s1.shape(), (1, False))
+        self.assertIsInstance(s1.shape(), Shape)
         s2 = Const(-10)[0:2]
         self.assertEqual(s2.shape(), (2, False))
 
@@ -423,6 +525,7 @@ class BitSelectTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
         self.assertEqual(s1.shape(), (2, False))
+        self.assertIsInstance(s1.shape(), Shape)
         s2 = self.c.bit_select(self.s, 0)
         self.assertEqual(s2.shape(), (0, False))
 
@@ -447,6 +550,7 @@ class WordSelectTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
         self.assertEqual(s1.shape(), (2, False))
+        self.assertIsInstance(s1.shape(), Shape)
 
     def test_stride(self):
         s1 = self.c.word_select(self.s, 2)
@@ -467,6 +571,7 @@ class CatTestCase(FHDLTestCase):
     def test_shape(self):
         c0 = Cat()
         self.assertEqual(c0.shape(), (0, False))
+        self.assertIsInstance(c0.shape(), Shape)
         c1 = Cat(Const(10))
         self.assertEqual(c1.shape(), (4, False))
         c2 = Cat(Const(10), Const(1))
@@ -483,6 +588,7 @@ class ReplTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Repl(Const(10), 3)
         self.assertEqual(s1.shape(), (12, False))
+        self.assertIsInstance(s1.shape(), Shape)
         s2 = Repl(Const(10), 0)
         self.assertEqual(s2.shape(), (0, False))
 
@@ -561,6 +667,7 @@ class SignalTestCase(FHDLTestCase):
     def test_shape(self):
         s1 = Signal()
         self.assertEqual(s1.shape(), (1, False))
+        self.assertIsInstance(s1.shape(), Shape)
         s2 = Signal(2)
         self.assertEqual(s2.shape(), (2, False))
         s3 = Signal((2, False))
@@ -578,7 +685,7 @@ class SignalTestCase(FHDLTestCase):
         s9 = Signal.range(-20, 16)
         self.assertEqual(s9.shape(), (6, True))
         s10 = Signal.range(0)
-        self.assertEqual(s10.shape(), (1, False))
+        self.assertEqual(s10.shape(), (0, False))
         s11 = Signal.range(1)
         self.assertEqual(s11.shape(), (1, False))
         # deprecated
@@ -692,7 +799,9 @@ class ClockSignalTestCase(FHDLTestCase):
             ClockSignal(1)
 
     def test_shape(self):
-        self.assertEqual(ClockSignal().shape(), (1, False))
+        s1 = ClockSignal()
+        self.assertEqual(s1.shape(), (1, False))
+        self.assertIsInstance(s1.shape(), Shape)
 
     def test_repr(self):
         s1 = ClockSignal()
@@ -716,7 +825,9 @@ class ResetSignalTestCase(FHDLTestCase):
             ResetSignal(1)
 
     def test_shape(self):
-        self.assertEqual(ResetSignal().shape(), (1, False))
+        s1 = ResetSignal()
+        self.assertEqual(s1.shape(), (1, False))
+        self.assertIsInstance(s1.shape(), Shape)
 
     def test_repr(self):
         s1 = ResetSignal()
@@ -743,6 +854,7 @@ class UserValueTestCase(FHDLTestCase):
     def test_shape(self):
         uv = MockUserValue(1)
         self.assertEqual(uv.shape(), (1, False))
+        self.assertIsInstance(uv.shape(), Shape)
         uv.lowered = 2
         self.assertEqual(uv.shape(), (1, False))
         self.assertEqual(uv.lower_count, 1)

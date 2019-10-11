@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import builtins
 import traceback
 import warnings
+import typing
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum
@@ -11,6 +12,7 @@ from ..tools import *
 
 
 __all__ = [
+    "Shape", "signed", "unsigned",
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
@@ -23,21 +25,65 @@ __all__ = [
 
 
 class DUID:
-    """Deterministic Unique IDentifier"""
+    """Deterministic Unique IDentifier."""
     __next_uid = 0
     def __init__(self):
         self.duid = DUID.__next_uid
         DUID.__next_uid += 1
 
 
-def _enum_shape(enum_type):
-    min_value = min(member.value for member in enum_type)
-    max_value = max(member.value for member in enum_type)
-    if not isinstance(min_value, int) or not isinstance(max_value, int):
-        raise TypeError("Only enumerations with integer values can be converted to nMigen values")
-    signed = min_value < 0 or max_value < 0
-    width  = max(bits_for(min_value, signed), bits_for(max_value, signed))
-    return (width, signed)
+class Shape(typing.NamedTuple):
+    """Bit width and signedness of a value.
+
+    Attributes
+    ----------
+    width : int
+        The number of bits in the representation, including the sign bit (if any).
+    signed : bool
+        If ``False``, the value is unsigned. If ``True``, the value is signed two's complement.
+    """
+    width:  int  = 1
+    signed: bool = False
+
+    @staticmethod
+    def cast(obj):
+        if isinstance(obj, int):
+            return Shape(obj)
+        if isinstance(obj, tuple):
+            return Shape(*obj)
+        if isinstance(obj, range):
+            if len(obj) == 0:
+                return Shape(0, obj.start < 0)
+            signed = obj.start < 0 or (obj.stop - obj.step) < 0
+            width  = max(bits_for(obj.start, signed),
+                         bits_for(obj.stop - obj.step, signed))
+            return Shape(width, signed)
+        if isinstance(obj, type) and issubclass(obj, Enum):
+            min_value = min(member.value for member in obj)
+            max_value = max(member.value for member in obj)
+            if not isinstance(min_value, int) or not isinstance(max_value, int):
+                raise TypeError("Only enumerations with integer values can be used "
+                                "as value shapes")
+            signed = min_value < 0 or max_value < 0
+            width  = max(bits_for(min_value, signed), bits_for(max_value, signed))
+            return Shape(width, signed)
+        raise TypeError("Object {!r} cannot be used as value shape".format(obj))
+
+
+# TODO: use dataclasses instead of this hack
+def _Shape___init__(self, width=1, signed=False):
+    if not isinstance(width, int) or width < 0:
+        raise TypeError("Width must be a non-negative integer, not {!r}"
+                        .format(width))
+Shape.__init__ = _Shape___init__
+
+
+def unsigned(width):
+    return Shape(width, signed=False)
+
+
+def signed(width):
+    return Shape(width, signed=True)
 
 
 class Value(metaclass=ABCMeta):
@@ -50,12 +96,11 @@ class Value(metaclass=ABCMeta):
         """
         if isinstance(obj, Value):
             return obj
-        elif isinstance(obj, (bool, int)):
+        if isinstance(obj, int):
             return Const(obj)
-        elif isinstance(obj, Enum):
-            return Const(obj.value, _enum_shape(type(obj)))
-        else:
-            raise TypeError("Object {!r} is not an nMigen value".format(obj))
+        if isinstance(obj, Enum):
+            return Const(obj.value, Shape.cast(type(obj)))
+        raise TypeError("Object {!r} cannot be converted to an nMigen value".format(obj))
 
     # TODO(nmigen-0.2): remove this
     @classmethod
@@ -146,7 +191,7 @@ class Value(metaclass=ABCMeta):
         return Operator(">=", [self, other])
 
     def __len__(self):
-        return self.shape()[0]
+        return self.shape().width
 
     def __getitem__(self, key):
         n = len(self)
@@ -329,20 +374,19 @@ class Value(metaclass=ABCMeta):
 
     @abstractmethod
     def shape(self):
-        """Bit length and signedness of a value.
+        """Bit width and signedness of a value.
 
         Returns
         -------
-        int, bool
-            Number of bits required to store `v` or available in `v`, followed by
-            whether `v` has a sign bit (included in the bit count).
+        Shape
+            See :class:`Shape`.
 
         Examples
         --------
-        >>> Value.shape(Signal(8))
-        8, False
-        >>> Value.shape(C(0xaa))
-        8, False
+        >>> Signal(8).shape()
+        Shape(width=8, signed=False)
+        >>> Const(0xaa).shape()
+        Shape(width=8, signed=False)
         """
         pass # :nocov:
 
@@ -391,13 +435,12 @@ class Const(Value):
         # We deliberately do not call Value.__init__ here.
         self.value = int(value)
         if shape is None:
-            shape = bits_for(self.value), self.value < 0
-        if isinstance(shape, int):
-            shape = shape, self.value < 0
+            shape = Shape(bits_for(self.value), signed=self.value < 0)
+        elif isinstance(shape, int):
+            shape = Shape(shape, signed=self.value < 0)
+        else:
+            shape = Shape.cast(shape)
         self.width, self.signed = shape
-        if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}"
-                            .format(self.width))
         self.value = self.normalize(self.value, shape)
 
     # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
@@ -407,7 +450,7 @@ class Const(Value):
         return self.width
 
     def shape(self):
-        return self.width, self.signed
+        return Shape(self.width, self.signed)
 
     def _rhs_signals(self):
         return ValueSet()
@@ -425,15 +468,13 @@ C = Const  # shorthand
 class AnyValue(Value, DUID):
     def __init__(self, shape, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        if isinstance(shape, int):
-            shape = shape, False
-        self.width, self.signed = shape
+        self.width, self.signed = Shape.cast(shape)
         if not isinstance(self.width, int) or self.width < 0:
             raise TypeError("Width must be a non-negative integer, not {!r}"
                             .format(self.width))
 
     def shape(self):
-        return self.width, self.signed
+        return Shape(self.width, self.signed)
 
     def _rhs_signals(self):
         return ValueSet()
@@ -470,41 +511,41 @@ class Operator(Value):
             b_bits, b_sign = b_shape
             if not a_sign and not b_sign:
                 # both operands unsigned
-                return max(a_bits, b_bits), False
+                return Shape(max(a_bits, b_bits), False)
             elif a_sign and b_sign:
                 # both operands signed
-                return max(a_bits, b_bits), True
+                return Shape(max(a_bits, b_bits), True)
             elif not a_sign and b_sign:
                 # first operand unsigned (add sign bit), second operand signed
-                return max(a_bits + 1, b_bits), True
+                return Shape(max(a_bits + 1, b_bits), True)
             else:
                 # first signed, second operand unsigned (add sign bit)
-                return max(a_bits, b_bits + 1), True
+                return Shape(max(a_bits, b_bits + 1), True)
 
         op_shapes = list(map(lambda x: x.shape(), self.operands))
         if len(op_shapes) == 1:
             (a_width, a_signed), = op_shapes
             if self.operator in ("+", "~"):
-                return a_width, a_signed
+                return Shape(a_width, a_signed)
             if self.operator == "-":
                 if not a_signed:
-                    return a_width + 1, True
+                    return Shape(a_width + 1, True)
                 else:
-                    return a_width, a_signed
+                    return Shape(a_width, a_signed)
             if self.operator in ("b", "r|", "r&", "r^"):
-                return 1, False
+                return Shape(1, False)
         elif len(op_shapes) == 2:
             (a_width, a_signed), (b_width, b_signed) = op_shapes
-            if self.operator == "+" or self.operator == "-":
+            if self.operator in ("+", "-"):
                 width, signed = _bitwise_binary_shape(*op_shapes)
-                return width + 1, signed
+                return Shape(width + 1, signed)
             if self.operator == "*":
-                return a_width + b_width, a_signed or b_signed
+                return Shape(a_width + b_width, a_signed or b_signed)
             if self.operator in ("//", "%"):
                 assert not b_signed
-                return a_width, a_signed
+                return Shape(a_width, a_signed)
             if self.operator in ("<", "<=", "==", "!=", ">", ">="):
-                return 1, False
+                return Shape(1, False)
             if self.operator in ("&", "^", "|"):
                 return _bitwise_binary_shape(*op_shapes)
             if self.operator == "<<":
@@ -512,13 +553,13 @@ class Operator(Value):
                     extra = 2 ** (b_width - 1) - 1
                 else:
                     extra = 2 ** (b_width)     - 1
-                return a_width + extra, a_signed
+                return Shape(a_width + extra, a_signed)
             if self.operator == ">>":
                 if b_signed:
                     extra = 2 ** (b_width - 1)
                 else:
                     extra = 0
-                return a_width + extra, a_signed
+                return Shape(a_width + extra, a_signed)
         elif len(op_shapes) == 3:
             if self.operator == "m":
                 s_shape, a_shape, b_shape = op_shapes
@@ -581,7 +622,7 @@ class Slice(Value):
         self.end   = end
 
     def shape(self):
-        return self.end - self.start, False
+        return Shape(self.end - self.start)
 
     def _lhs_signals(self):
         return self.value._lhs_signals()
@@ -608,7 +649,7 @@ class Part(Value):
         self.stride = stride
 
     def shape(self):
-        return self.width, False
+        return Shape(self.width)
 
     def _lhs_signals(self):
         return self.value._lhs_signals()
@@ -651,7 +692,7 @@ class Cat(Value):
         self.parts = [Value.cast(v) for v in flatten(args)]
 
     def shape(self):
-        return sum(len(part) for part in self.parts), False
+        return Shape(sum(len(part) for part in self.parts))
 
     def _lhs_signals(self):
         return union((part._lhs_signals() for part in self.parts), start=ValueSet())
@@ -701,7 +742,7 @@ class Repl(Value):
         self.count = count
 
     def shape(self):
-        return len(self.value) * self.count, False
+        return Shape(len(self.value) * self.count)
 
     def _rhs_signals(self):
         return self.value._rhs_signals()
@@ -792,13 +833,7 @@ class Signal(Value, DUID):
         else:
             if not (min is None and max is None):
                 raise ValueError("Only one of bits/signedness or bounds may be specified")
-            if isinstance(shape, int):
-                self.width, self.signed = shape, False
-            else:
-                self.width, self.signed = shape
-
-        if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}".format(self.width))
+            self.width, self.signed = Shape.cast(shape)
 
         reset_width = bits_for(reset, self.signed)
         if reset != 0 and reset_width > self.width:
@@ -829,14 +864,7 @@ class Signal(Value, DUID):
         That is, for any given ``range(*args)``, ``Signal.range(*args)`` can represent any
         ``x for x in range(*args)``.
         """
-        value_range = range(*args)
-        if len(value_range) > 0:
-            signed = value_range.start < 0 or (value_range.stop - value_range.step) < 0
-        else:
-            signed = value_range.start < 0
-        width = max(bits_for(value_range.start, signed),
-                    bits_for(value_range.stop - value_range.step, signed))
-        return cls((width, signed), src_loc_at=1 + src_loc_at, **kwargs)
+        return cls(Shape.cast(range(*args)), src_loc_at=1 + src_loc_at, **kwargs)
 
     @classmethod
     def enum(cls, enum_type, *, src_loc_at=0, **kwargs):
@@ -849,7 +877,7 @@ class Signal(Value, DUID):
         """
         if not issubclass(enum_type, Enum):
             raise TypeError("Type {!r} is not an enumeration")
-        return cls(_enum_shape(enum_type), src_loc_at=1 + src_loc_at, decoder=enum_type, **kwargs)
+        return cls(Shape.cast(enum_type), src_loc_at=1 + src_loc_at, decoder=enum_type, **kwargs)
 
     @classmethod
     def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
@@ -885,7 +913,7 @@ class Signal(Value, DUID):
         self.width = value
 
     def shape(self):
-        return self.width, self.signed
+        return Shape(self.width, self.signed)
 
     def _lhs_signals(self):
         return ValueSet((self,))
@@ -919,7 +947,7 @@ class ClockSignal(Value):
         self.domain = domain
 
     def shape(self):
-        return 1, False
+        return Shape(1)
 
     def _lhs_signals(self):
         return ValueSet((self,))
@@ -956,7 +984,7 @@ class ResetSignal(Value):
         self.allow_reset_less = allow_reset_less
 
     def shape(self):
-        return 1, False
+        return Shape(1)
 
     def _lhs_signals(self):
         return ValueSet((self,))
@@ -1077,7 +1105,7 @@ class ArrayProxy(Value):
         for elem_width, elem_signed in (elem.shape() for elem in self._iter_as_values()):
             width  = max(width, elem_width + elem_signed)
             signed = max(signed, elem_signed)
-        return width, signed
+        return Shape(width, signed)
 
     def _lhs_signals(self):
         signals = union((elem._lhs_signals() for elem in self._iter_as_values()), start=ValueSet())
@@ -1195,7 +1223,7 @@ class Initial(Value):
         super().__init__(src_loc_at=1 + src_loc_at)
 
     def shape(self):
-        return (1, False)
+        return Shape(1)
 
     def _rhs_signals(self):
         return ValueSet((self,))
