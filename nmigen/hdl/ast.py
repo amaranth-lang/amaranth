@@ -396,7 +396,7 @@ class Const(Value):
             shape = shape, self.value < 0
         self.width, self.signed = shape
         if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not '{!r}'"
+            raise TypeError("Width must be a non-negative integer, not {!r}"
                             .format(self.width))
         self.value = self.normalize(self.value, shape)
 
@@ -429,7 +429,7 @@ class AnyValue(Value, DUID):
             shape = shape, False
         self.width, self.signed = shape
         if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not '{!r}'"
+            raise TypeError("Width must be a non-negative integer, not {!r}"
                             .format(self.width))
 
     def shape(self):
@@ -559,9 +559,9 @@ def Mux(sel, val1, val0):
 class Slice(Value):
     def __init__(self, value, start, end, *, src_loc_at=0):
         if not isinstance(start, int):
-            raise TypeError("Slice start must be an integer, not '{!r}'".format(start))
+            raise TypeError("Slice start must be an integer, not {!r}".format(start))
         if not isinstance(end, int):
-            raise TypeError("Slice end must be an integer, not '{!r}'".format(end))
+            raise TypeError("Slice end must be an integer, not {!r}".format(end))
 
         n = len(value)
         if start not in range(-(n+1), n+1):
@@ -597,9 +597,9 @@ class Slice(Value):
 class Part(Value):
     def __init__(self, value, offset, width, stride=1, *, src_loc_at=0):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("Part width must be a non-negative integer, not '{!r}'".format(width))
+            raise TypeError("Part width must be a non-negative integer, not {!r}".format(width))
         if not isinstance(stride, int) or stride <= 0:
-            raise TypeError("Part stride must be a positive integer, not '{!r}'".format(stride))
+            raise TypeError("Part stride must be a positive integer, not {!r}".format(stride))
 
         super().__init__(src_loc_at=src_loc_at)
         self.value  = value
@@ -693,7 +693,7 @@ class Repl(Value):
     """
     def __init__(self, value, count, *, src_loc_at=0):
         if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a non-negative integer, not '{!r}'"
+            raise TypeError("Replication count must be a non-negative integer, not {!r}"
                             .format(count))
 
         super().__init__(src_loc_at=src_loc_at)
@@ -770,7 +770,7 @@ class Signal(Value, DUID):
                           DeprecationWarning, stacklevel=2 + src_loc_at)
 
         if name is not None and not isinstance(name, str):
-            raise TypeError("Name must be a string, not '{!r}'".format(name))
+            raise TypeError("Name must be a string, not {!r}".format(name))
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
 
         if shape is None:
@@ -798,7 +798,7 @@ class Signal(Value, DUID):
                 self.width, self.signed = shape
 
         if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not '{!r}'".format(self.width))
+            raise TypeError("Width must be a non-negative integer, not {!r}".format(self.width))
 
         reset_width = bits_for(reset, self.signed)
         if reset != 0 and reset_width > self.width:
@@ -913,7 +913,7 @@ class ClockSignal(Value):
     def __init__(self, domain="sync", *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
+            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
         if domain == "comb":
             raise ValueError("Domain '{}' does not have a clock".format(domain))
         self.domain = domain
@@ -949,7 +949,7 @@ class ResetSignal(Value):
     def __init__(self, domain="sync", allow_reset_less=False, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not '{!r}'".format(domain))
+            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
         if domain == "comb":
             raise ValueError("Domain '{}' does not have a reset".format(domain))
         self.domain = domain
@@ -1221,7 +1221,7 @@ class Statement:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
             else:
-                raise TypeError("Object '{!r}' is not an nMigen statement".format(obj))
+                raise TypeError("Object {!r} is not an nMigen statement".format(obj))
 
 
 @final
@@ -1311,7 +1311,7 @@ class Switch(Statement):
                 elif isinstance(key, Enum):
                     key = format(key.value, "b").rjust(len(self.test), "0")
                 else:
-                    raise TypeError("Object '{!r}' cannot be used as a switch key"
+                    raise TypeError("Object {!r} cannot be used as a switch key"
                                     .format(key))
                 assert len(key) == len(self.test)
                 new_keys = (*new_keys, key)
@@ -1500,7 +1500,7 @@ class ValueKey:
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
-            raise TypeError("Object '{!r}' cannot be used as a key in value collections"
+            raise TypeError("Object {!r} cannot be used as a key in value collections"
                             .format(self.value))
 
     def __hash__(self):
@@ -1548,7 +1548,7 @@ class ValueKey:
         elif isinstance(self.value, Initial):
             return True
         else: # :nocov:
-            raise TypeError("Object '{!r}' cannot be used as a key in value collections"
+            raise TypeError("Object {!r} cannot be used as a key in value collections"
                             .format(self.value))
 
     def __lt__(self, other):
@@ -1566,7 +1566,7 @@ class ValueKey:
                     self.value.start < other.value.start and
                     self.value.end < other.value.end)
         else: # :nocov:
-            raise TypeError("Object '{!r}' cannot be used as a key in value collections")
+            raise TypeError("Object {!r} cannot be used as a key in value collections")
 
     def __repr__(self):
         return "<{}.ValueKey {!r}>".format(__name__, self.value)
@@ -1592,7 +1592,7 @@ class SignalKey:
         elif type(signal) is ResetSignal:
             self._intern = (2, signal.domain)
         else:
-            raise TypeError("Object '{!r}' is not an nMigen signal".format(signal))
+            raise TypeError("Object {!r} is not an nMigen signal".format(signal))
 
     def __hash__(self):
         return hash(self._intern)
@@ -1604,7 +1604,7 @@ class SignalKey:
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
-            raise TypeError("Object '{!r}' cannot be compared to a SignalKey".format(signal))
+            raise TypeError("Object {!r} cannot be compared to a SignalKey".format(signal))
         return self._intern < other._intern
 
     def __repr__(self):

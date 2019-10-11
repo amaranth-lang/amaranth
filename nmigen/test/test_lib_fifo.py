@@ -8,10 +8,10 @@ from ..lib.fifo import *
 class FIFOTestCase(FHDLTestCase):
     def test_depth_wrong(self):
         with self.assertRaises(TypeError,
-                msg="FIFO width must be a non-negative integer, not '-1'"):
+                msg="FIFO width must be a non-negative integer, not -1"):
             FIFOInterface(width=-1, depth=8, fwft=True)
         with self.assertRaises(TypeError,
-                msg="FIFO depth must be a non-negative integer, not '-1'"):
+                msg="FIFO depth must be a non-negative integer, not -1"):
             FIFOInterface(width=8, depth=-1, fwft=True)
 
     def test_sync_depth(self):

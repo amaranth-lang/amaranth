@@ -420,7 +420,7 @@ class Simulator:
         if inspect.isgeneratorfunction(process):
             process = process()
         if not (inspect.isgenerator(process) or inspect.iscoroutine(process)):
-            raise TypeError("Cannot add a process '{!r}' because it is not a generator or "
+            raise TypeError("Cannot add a process {!r} because it is not a generator or "
                             "a generator function"
                             .format(process))
         return process
@@ -744,12 +744,12 @@ class Simulator:
                     lhs_signals = cmd.lhs._lhs_signals()
                     for signal in lhs_signals:
                         if not signal in self._signals:
-                            raise ValueError("Process '{}' sent a request to set signal '{!r}', "
+                            raise ValueError("Process '{}' sent a request to set signal {!r}, "
                                              "which is not a part of simulation"
                                              .format(self._name_process(process), signal))
                         signal_slot = self._signal_slots[signal]
                         if self._comb_signals[signal_slot]:
-                            raise ValueError("Process '{}' sent a request to set signal '{!r}', "
+                            raise ValueError("Process '{}' sent a request to set signal {!r}, "
                                              "which is a part of combinatorial assignment in "
                                              "simulation"
                                              .format(self._name_process(process), signal))
@@ -780,7 +780,7 @@ class Simulator:
                     continue
 
                 else:
-                    raise TypeError("Received unsupported command '{!r}' from process '{}'"
+                    raise TypeError("Received unsupported command {!r} from process '{}'"
                                     .format(cmd, self._name_process(process)))
 
                 cmd = process.send(None)

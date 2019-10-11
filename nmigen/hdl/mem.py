@@ -11,10 +11,10 @@ __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
 class Memory:
     def __init__(self, *, width, depth, init=None, name=None, simulate=True):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("Memory width must be a non-negative integer, not '{!r}'"
+            raise TypeError("Memory width must be a non-negative integer, not {!r}"
                             .format(width))
         if not isinstance(depth, int) or depth < 0:
-            raise TypeError("Memory depth must be a non-negative integer, not '{!r}'"
+            raise TypeError("Memory depth must be a non-negative integer, not {!r}"
                             .format(depth))
 
         self.name    = name or tracer.get_var_name(depth=2, default="$memory")
@@ -136,7 +136,7 @@ class WritePort(Elaboratable):
         if granularity is None:
             granularity = memory.width
         if not isinstance(granularity, int) or granularity < 0:
-            raise TypeError("Write port granularity must be a non-negative integer, not '{!r}'"
+            raise TypeError("Write port granularity must be a non-negative integer, not {!r}"
                             .format(granularity))
         if granularity > memory.width:
             raise ValueError("Write port granularity must not be greater than memory width "

@@ -70,7 +70,7 @@ class Fragment:
                 code = obj.elaborate.__code__
                 obj = obj.elaborate(platform)
             else:
-                raise AttributeError("Object '{!r}' cannot be elaborated".format(obj))
+                raise AttributeError("Object {!r} cannot be elaborated".format(obj))
             if obj is None and code is not None:
                 warnings.warn_explicit(
                     message=".elaborate() returned None; missing return statement?",

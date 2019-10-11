@@ -426,7 +426,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaises(TypeError,
-                    msg="Cannot add a process '1' because it is not a generator or "
+                    msg="Cannot add a process 1 because it is not a generator or "
                         "a generator function"):
                 sim.add_process(1)
 
@@ -458,7 +458,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(self.m) as sim:
             def process():
                 with self.assertRaisesRegex(ValueError,
-                        regex=r"Process '.+?' sent a request to set signal '\(sig s\)', "
+                        regex=r"Process .+? sent a request to set signal \(sig s\), "
                               r"which is not a part of simulation"):
                     yield self.s.eq(0)
                 yield Delay()
@@ -469,7 +469,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(self.m) as sim:
             def process():
                 with self.assertRaisesRegex(ValueError,
-                        regex=r"Process '.+?' sent a request to set signal '\(sig o\)', "
+                        regex=r"Process .+? sent a request to set signal \(sig o\), "
                               r"which is a part of combinatorial assignment in simulation"):
                     yield self.o.eq(0)
                 yield Delay()
@@ -479,7 +479,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(Module()) as sim:
             def process():
                 with self.assertRaisesRegex(TypeError,
-                        regex=r"Received unsupported command '1' from process '.+?'"):
+                        regex=r"Received unsupported command 1 from process .+?"):
                     yield 1
                 yield Delay()
             sim.add_process(process)

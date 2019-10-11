@@ -62,10 +62,10 @@ class FIFOInterface:
 
     def __init__(self, *, width, depth, fwft):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("FIFO width must be a non-negative integer, not '{!r}'"
+            raise TypeError("FIFO width must be a non-negative integer, not {!r}"
                             .format(width))
         if not isinstance(depth, int) or depth < 0:
-            raise TypeError("FIFO depth must be a non-negative integer, not '{!r}'"
+            raise TypeError("FIFO depth must be a non-negative integer, not {!r}"
                             .format(depth))
         self.width = width
         self.depth = depth

@@ -7,7 +7,7 @@ from ..lib.cdc import *
 class FFSynchronizerTestCase(FHDLTestCase):
     def test_stages_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Synchronization stage count must be a positive integer, not '0'"):
+                msg="Synchronization stage count must be a positive integer, not 0"):
             FFSynchronizer(Signal(), Signal(), stages=0)
         with self.assertRaises(ValueError,
                 msg="Synchronization stage count may not safely be less than 2"):
@@ -53,7 +53,7 @@ class FFSynchronizerTestCase(FHDLTestCase):
 class ResetSynchronizerTestCase(FHDLTestCase):
     def test_stages_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Synchronization stage count must be a positive integer, not '0'"):
+                msg="Synchronization stage count must be a positive integer, not 0"):
             ResetSynchronizer(Signal(), stages=0)
         with self.assertRaises(ValueError,
                 msg="Synchronization stage count may not safely be less than 2"):

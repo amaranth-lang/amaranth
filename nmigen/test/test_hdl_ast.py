@@ -105,9 +105,9 @@ class ConstTestCase(FHDLTestCase):
         self.assertEqual(Const(1, (4, True)).shape(),  (4, True))
         self.assertEqual(Const(0, (0, False)).shape(), (0, False))
 
-    def test_shape_bad(self):
+    def test_shape_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Width must be a non-negative integer, not '-1'"):
+                msg="Width must be a non-negative integer, not -1"):
             Const(1, -1)
 
     def test_normalization(self):
@@ -392,10 +392,10 @@ class SliceTestCase(FHDLTestCase):
 
     def test_start_end_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Slice start must be an integer, not ''x''"):
+                msg="Slice start must be an integer, not 'x'"):
             Slice(0, "x", 1)
         with self.assertRaises(TypeError,
-                msg="Slice end must be an integer, not ''x''"):
+                msg="Slice end must be an integer, not 'x'"):
             Slice(0, 1, "x")
 
     def test_start_end_out_of_range(self):
@@ -430,7 +430,7 @@ class BitSelectTestCase(FHDLTestCase):
         s1 = self.c.bit_select(self.s, 2)
         self.assertEqual(s1.stride, 1)
 
-    def test_width_bad(self):
+    def test_width_wrong(self):
         with self.assertRaises(TypeError):
             self.c.bit_select(self.s, -1)
 
@@ -452,7 +452,7 @@ class WordSelectTestCase(FHDLTestCase):
         s1 = self.c.word_select(self.s, 2)
         self.assertEqual(s1.stride, 2)
 
-    def test_width_bad(self):
+    def test_width_wrong(self):
         with self.assertRaises(TypeError):
             self.c.word_select(self.s, 0)
         with self.assertRaises(TypeError):
@@ -595,9 +595,9 @@ class SignalTestCase(FHDLTestCase):
             d10 = Signal(max=1)
             self.assertEqual(d10.shape(), (0, False))
 
-    def test_shape_bad(self):
+    def test_shape_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Width must be a non-negative integer, not '-10'"):
+                msg="Width must be a non-negative integer, not -10"):
             Signal(-10)
 
     def test_min_max_deprecated(self):
@@ -688,7 +688,7 @@ class ClockSignalTestCase(FHDLTestCase):
         self.assertEqual(s2.domain, "pix")
 
         with self.assertRaises(TypeError,
-                msg="Clock domain name must be a string, not '1'"):
+                msg="Clock domain name must be a string, not 1"):
             ClockSignal(1)
 
     def test_shape(self):
@@ -712,7 +712,7 @@ class ResetSignalTestCase(FHDLTestCase):
         self.assertEqual(s2.domain, "pix")
 
         with self.assertRaises(TypeError,
-                msg="Clock domain name must be a string, not '1'"):
+                msg="Clock domain name must be a string, not 1"):
             ResetSignal(1)
 
     def test_shape(self):

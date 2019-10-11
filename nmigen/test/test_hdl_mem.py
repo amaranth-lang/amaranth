@@ -19,10 +19,10 @@ class MemoryTestCase(FHDLTestCase):
 
     def test_geometry_wrong(self):
         with self.assertRaises(TypeError,
-                msg="Memory width must be a non-negative integer, not '-1'"):
+                msg="Memory width must be a non-negative integer, not -1"):
             m = Memory(width=-1, depth=4)
         with self.assertRaises(TypeError,
-                msg="Memory depth must be a non-negative integer, not '-1'"):
+                msg="Memory depth must be a non-negative integer, not -1"):
             m = Memory(width=8, depth=-1)
 
     def test_init(self):
@@ -101,7 +101,7 @@ class MemoryTestCase(FHDLTestCase):
     def test_write_port_granularity_wrong(self):
         mem = Memory(width=8, depth=4)
         with self.assertRaises(TypeError,
-                msg="Write port granularity must be a non-negative integer, not '-1'"):
+                msg="Write port granularity must be a non-negative integer, not -1"):
             mem.write_port(granularity=-1)
         with self.assertRaises(ValueError,
                 msg="Write port granularity must not be greater than memory width (10 > 8)"):

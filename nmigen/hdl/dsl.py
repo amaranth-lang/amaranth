@@ -454,7 +454,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
     def _add_submodule(self, submodule, name=None):
         if not hasattr(submodule, "elaborate"):
-            raise TypeError("Trying to add '{!r}', which does not implement .elaborate(), as "
+            raise TypeError("Trying to add {!r}, which does not implement .elaborate(), as "
                             "a submodule".format(submodule))
         if name == None:
             self._anon_submodules.append(submodule)

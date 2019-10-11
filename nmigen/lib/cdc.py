@@ -9,7 +9,7 @@ __all__ += ["MultiReg"]
 
 def _check_stages(stages):
     if not isinstance(stages, int) or stages < 1:
-        raise TypeError("Synchronization stage count must be a positive integer, not '{!r}'"
+        raise TypeError("Synchronization stage count must be a positive integer, not {!r}"
                         .format(stages))
     if stages < 2:
         raise ValueError("Synchronization stage count may not safely be less than 2")

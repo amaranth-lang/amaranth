@@ -625,10 +625,10 @@ class DSLTestCase(FHDLTestCase):
     def test_submodule_wrong(self):
         m = Module()
         with self.assertRaises(TypeError,
-                msg="Trying to add '1', which does not implement .elaborate(), as a submodule"):
+                msg="Trying to add 1, which does not implement .elaborate(), as a submodule"):
             m.submodules.foo = 1
         with self.assertRaises(TypeError,
-                msg="Trying to add '1', which does not implement .elaborate(), as a submodule"):
+                msg="Trying to add 1, which does not implement .elaborate(), as a submodule"):
             m.submodules += 1
 
     def test_submodule_named_conflict(self):

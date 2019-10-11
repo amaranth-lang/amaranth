@@ -83,7 +83,7 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     def on_unknown_value(self, value):
-        raise TypeError("Cannot transform value '{!r}'".format(value)) # :nocov:
+        raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
 
     def replace_value_src_loc(self, value, new_value):
         return True
@@ -209,7 +209,7 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     def on_unknown_statement(self, stmt):
-        raise TypeError("Cannot transform statement '{!r}'".format(stmt)) # :nocov:
+        raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
 
     def replace_statement_src_loc(self, stmt, new_stmt):
         return True
@@ -321,7 +321,7 @@ class FragmentTransformer:
             value._transforms_.append(self)
             return value
         else:
-            raise AttributeError("Object '{!r}' cannot be elaborated".format(value))
+            raise AttributeError("Object {!r} cannot be elaborated".format(value))
 
 
 class TransformedElaboratable(Elaboratable):

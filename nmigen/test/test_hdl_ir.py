@@ -15,13 +15,13 @@ class BadElaboratable(Elaboratable):
 class FragmentGetTestCase(FHDLTestCase):
     def test_get_wrong(self):
         with self.assertRaises(AttributeError,
-                msg="Object 'None' cannot be elaborated"):
+                msg="Object None cannot be elaborated"):
             Fragment.get(None, platform=None)
 
         with self.assertWarns(UserWarning,
                 msg=".elaborate() returned None; missing return statement?"):
             with self.assertRaises(AttributeError,
-                    msg="Object 'None' cannot be elaborated"):
+                    msg="Object None cannot be elaborated"):
                 Fragment.get(BadElaboratable(), platform=None)
 
 
