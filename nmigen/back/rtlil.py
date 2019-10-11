@@ -452,7 +452,7 @@ class _RHSValueCompiler(_ValueCompiler):
         arg_bits, arg_sign = arg.shape()
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
-        self.s.rtlil.cell(self.operator_map[(1, value.op)], ports={
+        self.s.rtlil.cell(self.operator_map[(1, value.operator)], ports={
             "\\A": self(arg),
             "\\Y": res,
         }, params={
@@ -485,7 +485,7 @@ class _RHSValueCompiler(_ValueCompiler):
         lhs, rhs = value.operands
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
-        if lhs_sign == rhs_sign or value.op in ("<<", ">>", "**"):
+        if lhs_sign == rhs_sign or value.operator in ("<<", ">>", "**"):
             lhs_wire = self(lhs)
             rhs_wire = self(rhs)
         else:
@@ -494,7 +494,7 @@ class _RHSValueCompiler(_ValueCompiler):
             rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
-        self.s.rtlil.cell(self.operator_map[(2, value.op)], ports={
+        self.s.rtlil.cell(self.operator_map[(2, value.operator)], ports={
             "\\A": lhs_wire,
             "\\B": rhs_wire,
             "\\Y": res,
@@ -505,7 +505,7 @@ class _RHSValueCompiler(_ValueCompiler):
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
         }, src=src(value.src_loc))
-        if value.op in ("//", "%"):
+        if value.operator in ("//", "%"):
             # RTLIL leaves division by zero undefined, but we require it to return zero.
             divmod_res = res
             res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
@@ -544,7 +544,7 @@ class _RHSValueCompiler(_ValueCompiler):
         elif len(value.operands) == 2:
             return self.on_Operator_binary(value)
         elif len(value.operands) == 3:
-            assert value.op == "m"
+            assert value.operator == "m"
             return self.on_Operator_mux(value)
         else:
             raise TypeError # :nocov:

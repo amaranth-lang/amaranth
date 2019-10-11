@@ -453,79 +453,84 @@ class AnySeq(AnyValue):
 
 @final
 class Operator(Value):
-    def __init__(self, op, operands, *, src_loc_at=0):
+    def __init__(self, operator, operands, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
-        self.op = op
-        self.operands = [Value.cast(o) for o in operands]
+        self.operator = operator
+        self.operands = [Value.cast(op) for op in operands]
 
-    @staticmethod
-    def _bitwise_binary_shape(a_shape, b_shape):
-        a_bits, a_sign = a_shape
-        b_bits, b_sign = b_shape
-        if not a_sign and not b_sign:
-            # both operands unsigned
-            return max(a_bits, b_bits), False
-        elif a_sign and b_sign:
-            # both operands signed
-            return max(a_bits, b_bits), True
-        elif not a_sign and b_sign:
-            # first operand unsigned (add sign bit), second operand signed
-            return max(a_bits + 1, b_bits), True
-        else:
-            # first signed, second operand unsigned (add sign bit)
-            return max(a_bits, b_bits + 1), True
+    # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
+    @property
+    @deprecated("instead of `.op`, use `.operator`")
+    def op(self):
+        return self.operator
 
     def shape(self):
+        def _bitwise_binary_shape(a_shape, b_shape):
+            a_bits, a_sign = a_shape
+            b_bits, b_sign = b_shape
+            if not a_sign and not b_sign:
+                # both operands unsigned
+                return max(a_bits, b_bits), False
+            elif a_sign and b_sign:
+                # both operands signed
+                return max(a_bits, b_bits), True
+            elif not a_sign and b_sign:
+                # first operand unsigned (add sign bit), second operand signed
+                return max(a_bits + 1, b_bits), True
+            else:
+                # first signed, second operand unsigned (add sign bit)
+                return max(a_bits, b_bits + 1), True
+
         op_shapes = list(map(lambda x: x.shape(), self.operands))
         if len(op_shapes) == 1:
             (a_width, a_signed), = op_shapes
-            if self.op in ("+", "~"):
+            if self.operator in ("+", "~"):
                 return a_width, a_signed
-            if self.op == "-":
+            if self.operator == "-":
                 if not a_signed:
                     return a_width + 1, True
                 else:
                     return a_width, a_signed
-            if self.op in ("b", "r|", "r&", "r^"):
+            if self.operator in ("b", "r|", "r&", "r^"):
                 return 1, False
         elif len(op_shapes) == 2:
             (a_width, a_signed), (b_width, b_signed) = op_shapes
-            if self.op == "+" or self.op == "-":
-                width, signed = self._bitwise_binary_shape(*op_shapes)
+            if self.operator == "+" or self.operator == "-":
+                width, signed = _bitwise_binary_shape(*op_shapes)
                 return width + 1, signed
-            if self.op == "*":
+            if self.operator == "*":
                 return a_width + b_width, a_signed or b_signed
-            if self.op in ("//", "%"):
+            if self.operator in ("//", "%"):
                 assert not b_signed
                 return a_width, a_signed
-            if self.op in ("<", "<=", "==", "!=", ">", ">="):
+            if self.operator in ("<", "<=", "==", "!=", ">", ">="):
                 return 1, False
-            if self.op in ("&", "^", "|"):
-                return self._bitwise_binary_shape(*op_shapes)
-            if self.op == "<<":
+            if self.operator in ("&", "^", "|"):
+                return _bitwise_binary_shape(*op_shapes)
+            if self.operator == "<<":
                 if b_signed:
                     extra = 2 ** (b_width - 1) - 1
                 else:
                     extra = 2 ** (b_width)     - 1
                 return a_width + extra, a_signed
-            if self.op == ">>":
+            if self.operator == ">>":
                 if b_signed:
                     extra = 2 ** (b_width - 1)
                 else:
                     extra = 0
                 return a_width + extra, a_signed
         elif len(op_shapes) == 3:
-            if self.op == "m":
+            if self.operator == "m":
                 s_shape, a_shape, b_shape = op_shapes
-                return self._bitwise_binary_shape(a_shape, b_shape)
+                return _bitwise_binary_shape(a_shape, b_shape)
         raise NotImplementedError("Operator {}/{} not implemented"
-                                  .format(self.op, len(op_shapes))) # :nocov:
+                                  .format(self.operator, len(op_shapes))) # :nocov:
 
     def _rhs_signals(self):
         return union(op._rhs_signals() for op in self.operands)
 
     def __repr__(self):
-        return "({} {})".format(self.op, " ".join(map(repr, self.operands)))
+        return "({} {})".format(self.operator, " ".join(map(repr, self.operands)))
 
 
 def Mux(sel, val1, val0):
@@ -1478,7 +1483,8 @@ class ValueKey:
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
             self._hash = hash(self.value.domain)
         elif isinstance(self.value, Operator):
-            self._hash = hash((self.value.op, tuple(ValueKey(o) for o in self.value.operands)))
+            self._hash = hash((self.value.operator,
+                               tuple(ValueKey(o) for o in self.value.operands)))
         elif isinstance(self.value, Slice):
             self._hash = hash((ValueKey(self.value.value), self.value.start, self.value.end))
         elif isinstance(self.value, Part):
@@ -1513,7 +1519,7 @@ class ValueKey:
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
             return self.value.domain == other.value.domain
         elif isinstance(self.value, Operator):
-            return (self.value.op == other.value.op and
+            return (self.value.operator == other.value.operator and
                     len(self.value.operands) == len(other.value.operands) and
                     all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value.operands, other.value.operands)))

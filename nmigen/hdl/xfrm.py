@@ -157,7 +157,7 @@ class ValueTransformer(ValueVisitor):
         return value
 
     def on_Operator(self, value):
-        return Operator(value.op, [self.on_value(o) for o in value.operands])
+        return Operator(value.operator, [self.on_value(o) for o in value.operands])
 
     def on_Slice(self, value):
         return Slice(self.on_value(value.value), value.start, value.end)

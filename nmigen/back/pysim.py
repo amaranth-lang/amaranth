@@ -123,64 +123,64 @@ class _RHSValueCompiler(_ValueCompiler):
         shape = value.shape()
         if len(value.operands) == 1:
             arg, = map(self, value.operands)
-            if value.op == "~":
+            if value.operator == "~":
                 return lambda state: normalize(~arg(state), shape)
-            if value.op == "-":
+            if value.operator == "-":
                 return lambda state: normalize(-arg(state), shape)
-            if value.op == "b":
+            if value.operator == "b":
                 return lambda state: normalize(bool(arg(state)), shape)
-            if value.op == "r|":
+            if value.operator == "r|":
                 return lambda state: normalize(arg(state) != 0, shape)
-            if value.op == "r&":
+            if value.operator == "r&":
                 val, = value.operands
                 mask = (1 << len(val)) - 1
                 return lambda state: normalize(arg(state) == mask, shape)
-            if value.op == "r^":
+            if value.operator == "r^":
                 # Believe it or not, this is the fastest way to compute a sideways XOR in Python.
                 return lambda state: normalize(format(arg(state), "b").count("1") % 2, shape)
         elif len(value.operands) == 2:
             lhs, rhs = map(self, value.operands)
-            if value.op == "+":
+            if value.operator == "+":
                 return lambda state: normalize(lhs(state) +  rhs(state), shape)
-            if value.op == "-":
+            if value.operator == "-":
                 return lambda state: normalize(lhs(state) -  rhs(state), shape)
-            if value.op == "*":
+            if value.operator == "*":
                 return lambda state: normalize(lhs(state) *  rhs(state), shape)
-            if value.op == "//":
+            if value.operator == "//":
                 def floordiv(lhs, rhs):
                     return 0 if rhs == 0 else lhs // rhs
                 return lambda state: normalize(floordiv(lhs(state), rhs(state)), shape)
-            if value.op == "&":
+            if value.operator == "&":
                 return lambda state: normalize(lhs(state) &  rhs(state), shape)
-            if value.op == "|":
+            if value.operator == "|":
                 return lambda state: normalize(lhs(state) |  rhs(state), shape)
-            if value.op == "^":
+            if value.operator == "^":
                 return lambda state: normalize(lhs(state) ^  rhs(state), shape)
-            if value.op == "<<":
+            if value.operator == "<<":
                 def sshl(lhs, rhs):
                     return lhs << rhs if rhs >= 0 else lhs >> -rhs
                 return lambda state: normalize(sshl(lhs(state), rhs(state)), shape)
-            if value.op == ">>":
+            if value.operator == ">>":
                 def sshr(lhs, rhs):
                     return lhs >> rhs if rhs >= 0 else lhs << -rhs
                 return lambda state: normalize(sshr(lhs(state), rhs(state)), shape)
-            if value.op == "==":
+            if value.operator == "==":
                 return lambda state: normalize(lhs(state) == rhs(state), shape)
-            if value.op == "!=":
+            if value.operator == "!=":
                 return lambda state: normalize(lhs(state) != rhs(state), shape)
-            if value.op == "<":
+            if value.operator == "<":
                 return lambda state: normalize(lhs(state) <  rhs(state), shape)
-            if value.op == "<=":
+            if value.operator == "<=":
                 return lambda state: normalize(lhs(state) <= rhs(state), shape)
-            if value.op == ">":
+            if value.operator == ">":
                 return lambda state: normalize(lhs(state) >  rhs(state), shape)
-            if value.op == ">=":
+            if value.operator == ">=":
                 return lambda state: normalize(lhs(state) >= rhs(state), shape)
         elif len(value.operands) == 3:
-            if value.op == "m":
+            if value.operator == "m":
                 sel, val1, val0 = map(self, value.operands)
                 return lambda state: val1(state) if sel(state) else val0(state)
-        raise NotImplementedError("Operator '{}' not implemented".format(value.op)) # :nocov:
+        raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
 
     def on_Slice(self, value):
         shape = value.shape()
