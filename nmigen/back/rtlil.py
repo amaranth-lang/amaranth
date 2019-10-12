@@ -729,14 +729,14 @@ class _StatementCompiler(xfrm.StatementVisitor):
         except LegalizeValue as legalize:
             with self._case.switch(self.rhs_compiler(legalize.value),
                                    src=src(legalize.src_loc)) as switch:
-                width, signed = legalize.value.shape()
-                tests = ["{:0{}b}".format(v, width) for v in legalize.branches]
+                shape = legalize.value.shape()
+                tests = ["{:0{}b}".format(v, shape.width) for v in legalize.branches]
                 if tests:
-                    tests[-1] = "-" * width
+                    tests[-1] = "-" * shape.width
                 for branch, test in zip(legalize.branches, tests):
                     with self.case(switch, (test,)):
                         self._wrap_assign = False
-                        branch_value = ast.Const(branch, (width, signed))
+                        branch_value = ast.Const(branch, shape)
                         with self.state.expand_to(legalize.value, branch_value):
                             self.on_statement(stmt)
             self._wrap_assign = True
