@@ -9,8 +9,7 @@ from ...hdl.cd import ClockDomain
 
 
 __all__ = ["DUID", "wrap", "Mux", "Cat", "Replicate", "Constant", "C", "Signal", "ClockSignal",
-           "ResetSignal", "If", "Case", "Array", "ClockDomain",
-           "SPECIAL_INPUT", "SPECIAL_OUTPUT", "SPECIAL_INOUT"]
+           "ResetSignal", "If", "Case", "Array", "ClockDomain"]
 
 
 @deprecated("instead of `wrap`, use `Value.cast`")
@@ -113,6 +112,3 @@ class Case(ast.Switch):
         del self.cases[key]
         self.cases[()] = stmts
         return self
-
-
-(SPECIAL_INPUT, SPECIAL_OUTPUT, SPECIAL_INOUT) = range(3)
