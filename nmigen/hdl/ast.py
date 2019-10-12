@@ -620,31 +620,37 @@ def Mux(sel, val1, val0):
 
 @final
 class Slice(Value):
-    def __init__(self, value, start, end, *, src_loc_at=0):
+    def __init__(self, value, start, stop, *, src_loc_at=0):
         if not isinstance(start, int):
             raise TypeError("Slice start must be an integer, not {!r}".format(start))
-        if not isinstance(end, int):
-            raise TypeError("Slice end must be an integer, not {!r}".format(end))
+        if not isinstance(stop, int):
+            raise TypeError("Slice stop must be an integer, not {!r}".format(stop))
 
         n = len(value)
         if start not in range(-(n+1), n+1):
             raise IndexError("Cannot start slice {} bits into {}-bit value".format(start, n))
         if start < 0:
             start += n
-        if end not in range(-(n+1), n+1):
-            raise IndexError("Cannot end slice {} bits into {}-bit value".format(end, n))
-        if end < 0:
-            end += n
-        if start > end:
-            raise IndexError("Slice start {} must be less than slice end {}".format(start, end))
+        if stop not in range(-(n+1), n+1):
+            raise IndexError("Cannot stop slice {} bits into {}-bit value".format(stop, n))
+        if stop < 0:
+            stop += n
+        if start > stop:
+            raise IndexError("Slice start {} must be less than slice stop {}".format(start, stop))
 
         super().__init__(src_loc_at=src_loc_at)
         self.value = Value.cast(value)
         self.start = start
-        self.end   = end
+        self.stop   = stop
+
+    # TODO(nmigen-0.2): remove this
+    @property
+    @deprecated("instead of `slice.end`, use `slice.stop`")
+    def end(self):
+        return self.stop
 
     def shape(self):
-        return Shape(self.end - self.start)
+        return Shape(self.stop - self.start)
 
     def _lhs_signals(self):
         return self.value._lhs_signals()
@@ -653,7 +659,7 @@ class Slice(Value):
         return self.value._rhs_signals()
 
     def __repr__(self):
-        return "(slice {} {}:{})".format(repr(self.value), self.start, self.end)
+        return "(slice {} {}:{})".format(repr(self.value), self.start, self.stop)
 
 
 @final

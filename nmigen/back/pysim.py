@@ -186,7 +186,7 @@ class _RHSValueCompiler(_ValueCompiler):
         shape = value.shape()
         arg   = self(value.value)
         shift = value.start
-        mask  = (1 << (value.end - value.start)) - 1
+        mask  = (1 << (value.stop - value.start)) - 1
         return lambda state: normalize((arg(state) >> shift) & mask, shape)
 
     def on_Part(self, value):
@@ -265,7 +265,7 @@ class _LHSValueCompiler(_ValueCompiler):
         lhs_r = self.rhs_compiler(value.value)
         lhs_l = self(value.value)
         shift = value.start
-        mask  = (1 << (value.end - value.start)) - 1
+        mask  = (1 << (value.stop - value.start)) - 1
         def eval(state, rhs):
             lhs_value  = lhs_r(state)
             lhs_value &= ~(mask << shift)

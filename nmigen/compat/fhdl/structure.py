@@ -17,13 +17,6 @@ def wrap(v):
     return Value.cast(v)
 
 
-@extend(_Slice)
-@property
-@deprecated("instead of `_Slice.stop`, use `Slice.end`")
-def stop(self):
-    return self.end
-
-
 @extend(Cat)
 @property
 @deprecated("instead of `Cat.l`, use `Cat.parts`")

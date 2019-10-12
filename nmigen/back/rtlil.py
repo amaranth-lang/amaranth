@@ -354,16 +354,16 @@ class _ValueCompiler(xfrm.ValueVisitor):
         raise NotImplementedError # :nocov:
 
     def on_Slice(self, value):
-        if value.start == 0 and value.end == len(value.value):
+        if value.start == 0 and value.stop == len(value.value):
             return self(value.value)
 
         sigspec = self._prepare_value_for_Slice(value.value)
-        if value.start == value.end:
+        if value.start == value.stop:
             return "{}"
-        elif value.start + 1 == value.end:
+        elif value.start + 1 == value.stop:
             return "{} [{}]".format(sigspec, value.start)
         else:
-            return "{} [{}:{}]".format(sigspec, value.end - 1, value.start)
+            return "{} [{}:{}]".format(sigspec, value.stop - 1, value.start)
 
     def on_ArrayProxy(self, value):
         index = self.s.expand(value.index)

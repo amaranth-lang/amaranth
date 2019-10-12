@@ -166,11 +166,11 @@ class ValueTestCase(FHDLTestCase):
         s1 = Const(10)[0]
         self.assertIsInstance(s1, Slice)
         self.assertEqual(s1.start, 0)
-        self.assertEqual(s1.end, 1)
+        self.assertEqual(s1.stop, 1)
         s2 = Const(10)[-1]
         self.assertIsInstance(s2, Slice)
         self.assertEqual(s2.start, 3)
-        self.assertEqual(s2.end, 4)
+        self.assertEqual(s2.stop, 4)
         with self.assertRaises(IndexError,
                 msg="Cannot index 5 bits into 4-bit value"):
             Const(10)[5]
@@ -179,22 +179,22 @@ class ValueTestCase(FHDLTestCase):
         s1 = Const(10)[1:3]
         self.assertIsInstance(s1, Slice)
         self.assertEqual(s1.start, 1)
-        self.assertEqual(s1.end, 3)
+        self.assertEqual(s1.stop, 3)
         s2 = Const(10)[1:-2]
         self.assertIsInstance(s2, Slice)
         self.assertEqual(s2.start, 1)
-        self.assertEqual(s2.end, 2)
+        self.assertEqual(s2.stop, 2)
         s3 = Const(31)[::2]
         self.assertIsInstance(s3, Cat)
         self.assertIsInstance(s3.parts[0], Slice)
         self.assertEqual(s3.parts[0].start, 0)
-        self.assertEqual(s3.parts[0].end, 1)
+        self.assertEqual(s3.parts[0].stop, 1)
         self.assertIsInstance(s3.parts[1], Slice)
         self.assertEqual(s3.parts[1].start, 2)
-        self.assertEqual(s3.parts[1].end, 3)
+        self.assertEqual(s3.parts[1].stop, 3)
         self.assertIsInstance(s3.parts[2], Slice)
         self.assertEqual(s3.parts[2].start, 4)
-        self.assertEqual(s3.parts[2].end, 5)
+        self.assertEqual(s3.parts[2].stop, 5)
 
     def test_getitem_wrong(self):
         with self.assertRaises(TypeError,
@@ -497,16 +497,16 @@ class SliceTestCase(FHDLTestCase):
     def test_start_end_negative(self):
         c  = Const(0, 8)
         s1 = Slice(c, 0, -1)
-        self.assertEqual((s1.start, s1.end), (0, 7))
+        self.assertEqual((s1.start, s1.stop), (0, 7))
         s1 = Slice(c, -4, -1)
-        self.assertEqual((s1.start, s1.end), (4, 7))
+        self.assertEqual((s1.start, s1.stop), (4, 7))
 
     def test_start_end_wrong(self):
         with self.assertRaises(TypeError,
                 msg="Slice start must be an integer, not 'x'"):
             Slice(0, "x", 1)
         with self.assertRaises(TypeError,
-                msg="Slice end must be an integer, not 'x'"):
+                msg="Slice stop must be an integer, not 'x'"):
             Slice(0, 1, "x")
 
     def test_start_end_out_of_range(self):
@@ -515,10 +515,10 @@ class SliceTestCase(FHDLTestCase):
                 msg="Cannot start slice 10 bits into 8-bit value"):
             Slice(c, 10, 12)
         with self.assertRaises(IndexError,
-                msg="Cannot end slice 12 bits into 8-bit value"):
+                msg="Cannot stop slice 12 bits into 8-bit value"):
             Slice(c, 0, 12)
         with self.assertRaises(IndexError,
-                msg="Slice start 4 must be less than slice end 2"):
+                msg="Slice start 4 must be less than slice stop 2"):
             Slice(c, 4, 2)
 
     def test_repr(self):
