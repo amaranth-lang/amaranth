@@ -5,10 +5,10 @@ nMigen intends to provide as close to 100% compatibility to Migen as possible wi
 
 API change legend:
   - *id*: identical
-  - *obs*: removed or irreversibly changed with compatibility stub provided
-  - *obs →n*: removed or irreversibly changed with compatibility stub provided, use *n* instead
-  - *brk*: removed or irreversibly changed with no replacement provided
-  - *brk →n*: removed or irreversibly changed with no replacement provided, use *n* instead
+  - *obs*: removed or incompatibly changed with compatibility stub provided
+  - *obs →n*: removed or incompatibly changed with compatibility stub provided, use *n* instead
+  - *brk*: removed or incompatibly changed with no replacement provided
+  - *brk →n*: removed or incompatibly changed with no replacement provided, use *n* instead
   - *→n*: renamed to *n*
   - *⇒m*: merged into *m*
   - *a=→b=*: parameter *a* renamed to *b*
@@ -29,101 +29,83 @@ Compatibility summary
 ---------------------
 
   - (−) `fhdl` → `.hdl`
-    - (+) `bitcontainer` ⇒ `.tools`
-      - (+) `log2_int` id
-      - (+) `bits_for` id
-      - (+) `value_bits_sign` → `Value.shape`
-    - (−) `conv_output` ?
-    - (+) `decorators` ⇒ `.hdl.xfrm`
+    - (⊕) `bitcontainer` ⇒ `.tools`
+      - (⊕) `log2_int` id
+      - (⊕) `bits_for` id
+      - (⊕) `value_bits_sign` → `Value.shape`
+    - (⊕) `conv_output` **obs**
+    - (⊕) `decorators` ⇒ `.hdl.xfrm`
       <br>Note: `transform_*` methods not considered part of public API.
       - (⊙) `ModuleTransformer` **brk**
       - (⊙) `ControlInserter` **brk**
-      - (+) `CEInserter` → `EnableInserter`
-      - (+) `ResetInserter` id
-      - (+) `ClockDomainsRenamer` → `DomainRenamer`, `cd_remapping=`→`domain_map=`
+      - (⊕) `CEInserter` → `EnableInserter`
+      - (⊕) `ResetInserter` id
+      - (⊕) `ClockDomainsRenamer` → `DomainRenamer`, `cd_remapping=`→`domain_map=`
     - (⊙) `edif` **brk**
-    - (+) `module` **obs** → `.hdl.dsl`
-      - (+) `FinalizeError` **obs**
-      - (+) `Module` **obs** → `.hdl.dsl.Module`
+    - (⊕) `module` **obs** → `.hdl.dsl`
+      <br>Note: any class inheriting from `Module` in oMigen should inherit from `Elaboratable` in nMigen and use an nMigen `Module` in its `.elaborate()` method.
+      - (⊕) `FinalizeError` **obs**
+      - (⊕) `Module` **obs** → `.hdl.dsl.Module`
     - (⊙) `namer` **brk**
-    - (−) `simplify` ?
-      - (−) `FullMemoryWE` ?
-      - (−) `MemoryToArray` ?
-      - (−) `SplitMemory` ?
+    - (⊙) `simplify` **brk**
     - (⊕) `specials` **obs**
       - (⊙) `Special` **brk**
-      - (⊕) `Tristate` → `.lib.io.Tristate`, `target=`→`io=`
-      - (⊕) `TSTriple` → `.lib.io.TSTriple`, `bits_sign=`→`shape=`
+      - (⊕) `Tristate` **obs**
+      - (⊕) `TSTriple` **obs** → `.lib.io.Pin`
       - (⊕) `Instance` → `.hdl.ir.Instance`
       - (⊕) `Memory` id
+        <br>Note: nMigen memories should not be added as submodules.
         - (⊕) `.get_port` **obs** → `.read_port()` + `.write_port()`
-      - (⊕) `_MemoryPort` **obs**
-        <br>Note: nMigen separates read and write ports.
+      - (⊕) `_MemoryPort` **obs** → `.hdl.mem.ReadPort` + `.hdl.mem.WritePort`
       - (⊕) `READ_FIRST`/`WRITE_FIRST` **obs**
         <br>Note: `READ_FIRST` corresponds to `mem.read_port(transparent=False)`, and `WRITE_FIRST` to `mem.read_port(transparent=True)`.
       - (⊙) `NO_CHANGE` **brk**
-        <br>Note: in designs using `NO_CHANGE`, repalce it with an asynchronous read port and logic implementing required semantics explicitly.
-    - (−) `structure` → `.hdl.ast`
-      - (+) `DUID` id
-      - (+) `_Value` → `Value`
+        <br>Note: in designs using `NO_CHANGE`, replace it with logic implementing required semantics explicitly, or with a different mode.
+    - (⊕) `structure` → `.hdl.ast`
+      - (⊕) `DUID` id
+      - (⊕) `_Value` → `Value`
         <br>Note: values no longer valid as keys in `dict` and `set`; use `ValueDict` and `ValueSet` instead.
-      - (+) `wrap` → `Value.wrap`
-      - (+) `_Operator` → `Operator`
-      - (+) `Mux` id
-      - (+) `_Slice` → `Slice`, `stop=`→`end=`, `.stop`→`.end`
-      - (+) `_Part` → `Part`
-      - (+) `Cat` id, `.l`→`.parts`
-      - (+) `Replicate` → `Repl`, `v=`→`value=`, `n=`→`count=`, `.v`→`.value`, `.n`→`.count`
-      - (+) `Constant` → `Const`, `bits_sign=`→`shape=`
-      - (+) `Signal` id, `bits_sign=`→`shape=`, `attr=`→`attrs=`, `name_override=`∼, `related=`, `variable=`∼
-      - (+) `ClockSignal` id, `cd=`→`domain=`
-      - (+) `ResetSignal` id, `cd=`→`domain=`
-      - (+) `_Statement` → `Statement`
-      - (+) `_Assign` → `Assign`, `l=`→`lhs=`, `r=`→`rhs=`
-      - (+) `_check_statement` **obs** → `Statement.wrap`
-      - (+) `If` **obs** → `.hdl.dsl.Module.If`
-      - (+) `Case` **obs** → `.hdl.dsl.Module.Switch`
-      - (+) `_ArrayProxy` → `.hdl.ast.ArrayProxy`, `choices=`→`elems=`, `key=`→`index=`
-      - (+) `Array` id
-      - (+) `ClockDomain` → `.hdl.cd.ClockDomain`
-      - (−) `_ClockDomainList` ?
-      - (−) `SPECIAL_INPUT`/`SPECIAL_OUTPUT`/`SPECIAL_INOUT` ?
+      - (⊕) `wrap` → `Value.cast`
+      - (⊕) `_Operator` → `Operator`, `op=`→`operator=`, `.op`→`.operator`
+      - (⊕) `Mux` id
+      - (⊕) `_Slice` → `Slice` id
+      - (⊕) `_Part` → `Part` id
+      - (⊕) `Cat` id, `.l`→`.parts`
+      - (⊕) `Replicate` → `Repl`, `v=`→`value=`, `n=`→`count=`, `.v`→`.value`, `.n`→`.count`
+      - (⊕) `Constant` → `Const`, `bits_sign=`→`shape=`, `.nbits`→`.width`
+      - (⊕) `Signal` id, `bits_sign=`→`shape=`, `attr=`→`attrs=`, `name_override=`∼, `related=`, `variable=`∼, `.nbits`→`.width`
+      - (⊕) `ClockSignal` id, `cd=`→`domain=`, `.cd`→`.domain`
+      - (⊕) `ResetSignal` id, `cd=`→`domain=`, `.cd`→`.domain`
+      - (⊕) `_Statement` → `Statement`
+      - (⊕) `_Assign` → `Assign`, `l=`→`lhs=`, `r=`→`rhs=`
+      - (⊕) `_check_statement` **obs** → `Statement.cast`
+      - (⊕) `If` **obs** → `.hdl.dsl.Module.If`
+      - (⊕) `Case` **obs** → `.hdl.dsl.Module.Switch`
+      - (⊕) `_ArrayProxy` → `.hdl.ast.ArrayProxy`, `choices=`→`elems=`, `key=`→`index=`
+      - (⊕) `Array` id
+      - (⊕) `ClockDomain` → `.hdl.cd.ClockDomain`
+      - (⊙) `_ClockDomainList` **brk**
+      - (⊙) `SPECIAL_INPUT`/`SPECIAL_OUTPUT`/`SPECIAL_INOUT` **brk**
       - (⊙) `_Fragment` **brk** → `.hdl.ir.Fragment`
-    - (−) `tools` **brk**
-      - (−) `list_signals` ?
-      - (−) `list_targets` ?
-      - (−) `list_inputs` ?
-      - (−) `group_by_targets` ?
-      - (⊙) `list_special_ios` **brk**
-      - (⊙) `list_clock_domains_expr` **brk**
-      - (−) `list_clock_domains` ?
-      - (−) `is_variable` ?
-      - (⊙) `generate_reset` **brk**
-      - (⊙) `insert_reset` **brk**
+    - (⊙) `tools` **brk**
       - (⊙) `insert_resets` **brk** → `.hdl.xfrm.ResetInserter`
-      - (⊙) `lower_basics` **brk**
-      - (⊙) `lower_complex_slices` **brk**
-      - (⊙) `lower_complex_parts` **brk**
-      - (⊙) `rename_clock_domain_expr` **brk**
       - (⊙) `rename_clock_domain` **brk** → `.hdl.xfrm.DomainRenamer`
-      - (⊙) `call_special_classmethod` **brk**
-      - (⊙) `lower_specials` **brk**
-    - (−) `tracer` **brk**
-      - (−) `get_var_name` ?
-      - (−) `remove_underscore` ?
-      - (−) `get_obj_var_name` ?
-      - (−) `index_id` ?
-      - (−) `trace_back` ?
-    - (−) `verilog`
-      - (−) `DummyAttrTranslate` ?
-      - (−) `convert` **obs** → `.back.verilog.convert`
+    - (⊙) `tracer` **brk**
+      - (⊕) `get_var_name` → `.tracer.get_var_name`
+      - (⊙) `remove_underscore` **brk**
+      - (⊙) `get_obj_var_name` **brk**
+      - (⊙) `index_id` **brk**
+      - (⊙) `trace_back` **brk**
+    - (⊙) `verilog`
+      - (⊙) `DummyAttrTranslate` ?
+      - (⊕) `convert` **obs** → `.back.verilog.convert`
     - (⊙) `visit` **brk** → `.hdl.xfrm`
       - (⊙) `NodeVisitor` **brk**
       - (⊙) `NodeTransformer` **brk** → `.hdl.xfrm.ValueTransformer`/`.hdl.xfrm.StatementTransformer`
   - (−) `genlib` → `.lib`
     - (−) `cdc` ?
-      - (−) `MultiRegImpl` ?
-      - (⊕) `MultiReg` id
+      - (⊙) `MultiRegImpl` **brk**
+      - (⊕) `MultiReg` → `.lib.cdc.FFSynchronizer`
       - (−) `PulseSynchronizer` ?
       - (−) `BusSynchronizer` ?
       - (⊕) `GrayCounter` **obs** → `.lib.coding.GrayEncoder`
@@ -139,24 +121,16 @@ Compatibility summary
       - (⊕) `PriorityDecoder` id
     - (−) `divider` ?
       - (−) `Divider` ?
-    - (−) `fifo` ?
+    - (⊕) `fifo` → `.lib.fifo`
       - (⊕) `_FIFOInterface` → `FIFOInterface`
-      - (⊕) `SyncFIFO` id, `.fifo=`∼
+      - (⊕) `SyncFIFO` id, `.replace=`∼
       - (⊕) `SyncFIFOBuffered` id, `.fifo=`∼
-      - (−) `AsyncFIFO` ?
-      - (−) `AsyncFIFOBuffered` ?
-    - (+) `fsm` **obs**
-      - (+) `AnonymousState` **obs**
-      - (+) `NextState` **obs**
-      - (+) `NextValue` **obs**
-      - (+) `_LowerNext` **obs**
-      - (+) `FSM` **obs**
-    - (−) `io` ?
-      - (−) `DifferentialInput` ?
-      - (−) `DifferentialOutput` ?
-      - (−) `CRG` ?
-      - (−) `DDRInput` ?
-      - (−) `DDROutput` ?
+      - (⊕) `AsyncFIFO` ?
+      - (⊕) `AsyncFIFOBuffered`, `.fifo=`∼
+    - (⊕) `fsm` **obs**
+      <br>Note: FSMs are a part of core nMigen DSL; however, not all functionality is provided. The compatibility shim is a complete port of Migen FSM module.
+    - (⊙) `io` **brk**
+      <br>Note: all functionality in this module is a part of nMigen platform system.
     - (−) `misc` ?
       - (−) `split` ?
       - (−) `displacer` ?
@@ -164,33 +138,30 @@ Compatibility summary
       - (−) `timeline` ?
       - (−) `WaitTimer` ?
       - (−) `BitSlip` ?
-    - (−) `record` **obs** → `.hdl.rec.Record`
-      - (−) `DIR_NONE` id
-      - (−) `DIR_M_TO_S` → `DIR_FANOUT`
-      - (−) `DIR_S_TO_M` → `DIR_FANIN`
-      - (−) `set_layout_parameters` **brk**
-      - (−) `layout_len` **brk**
-      - (−) `layout_get` **brk**
-      - (−) `layout_partial` **brk**
-      - (−) `Record` id
-    - (+) `resetsync` ?
-      - (+) `AsyncResetSynchronizer` **obs** → `.lib.cdc.ResetSynchronizer`
+    - (⊕) `record` **obs** → `.hdl.rec.Record`
+      <br>Note: nMigen uses a `Layout` object to represent record layouts.
+      - (⊕) `DIR_NONE` id
+      - (⊕) `DIR_M_TO_S` → `DIR_FANOUT`
+      - (⊕) `DIR_S_TO_M` → `DIR_FANIN`
+      - (⊕) `Record` id
+      - (⊙) `set_layout_parameters` **brk**
+      - (⊙) `layout_len` **brk**
+      - (⊙) `layout_get` **brk**
+      - (⊙) `layout_partial` **brk**
+    - (⊕) `resetsync` **obs**
+      - (⊕) `AsyncResetSynchronizer` **obs** → `.lib.cdc.ResetSynchronizer`
     - (−) `roundrobin` ?
       - (−) `SP_WITHDRAW`/`SP_CE` ?
       - (−) `RoundRobin` ?
     - (−) `sort` ?
       - (−) `BitonicSort` ?
-  - (-) `sim` **obs** → `.back.pysim`
+  - (⊕) `sim` **obs** → `.back.pysim`
     <br>Note: only items directly under `nmigen.compat.sim`, not submodules, are provided.
     - (⊙) `core` **brk**
     - (⊙) `vcd` **brk** → `vcd`
     - (⊙) `Simulator` **brk**
     - (⊕) `run_simulation` **obs** → `.back.pysim.Simulator`
     - (⊕) `passive` **obs** → `.hdl.ast.Passive`
-  - (−) `build` ?
-  - (+) `util` **obs**
-    - (+) `misc` ⇒ `.tools`
-      - (+) `flat_iteration` → `.flatten`
-      - (⊙) `xdir` **brk**
-      - (⊙) `gcd_multiple` **brk**
-    - (⊙) `treeviz` **brk**
+  - (⊙) `build` **brk**
+    <br>Note: the build system has been completely redesigned in nMigen.
+  - (⊙) `util` **brk**
