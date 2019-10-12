@@ -1,6 +1,6 @@
 import warnings
 
-from ...tools import deprecated
+from ..._tools import deprecated
 from ...lib.cdc import FFSynchronizer as NativeFFSynchronizer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule

@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from ...tools import flatten, deprecated
+from ..._tools import flatten, deprecated
 from ...hdl import dsl, ir
 
 
@@ -97,7 +97,7 @@ class _CompatModuleClockDomains(_CompatModuleProxy):
 class CompatModule(ir.Elaboratable):
     _Elaboratable__silence = True
 
-    # Actually returns nmigen.fhdl.Module, not a Fragment.
+    # Actually returns another nMigen Elaboratable (nmigen.dsl.Module), not a Fragment.
     def get_fragment(self):
         assert not self.get_fragment_called
         self.get_fragment_called = True

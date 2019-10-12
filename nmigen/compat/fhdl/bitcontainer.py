@@ -1,6 +1,6 @@
 from ... import tools
 from ...hdl import ast
-from ...tools import deprecated
+from ..._tools import deprecated
 
 
 __all__ = ["log2_int", "bits_for", "value_bits_sign"]

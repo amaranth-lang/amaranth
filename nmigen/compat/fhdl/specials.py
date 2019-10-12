@@ -1,6 +1,6 @@
 import warnings
 
-from ...tools import deprecated, extend
+from ..._tools import deprecated, extend
 from ...hdl.ast import *
 from ...hdl.ir import Elaboratable
 from ...hdl.mem import Memory as NativeMemory

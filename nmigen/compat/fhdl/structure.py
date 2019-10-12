@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from ...tools import deprecated, extend
+from ..._tools import deprecated, extend
 from ...hdl import ast
 from ...hdl.ast import (DUID, Value, Signal, Mux, Slice as _Slice, Cat, Repl, Const, C,
                         ClockSignal, ResetSignal,

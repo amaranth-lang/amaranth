@@ -1,6 +1,6 @@
 import unittest
 
-from ...tools import _ignore_deprecated
+from ..._tools import _ignore_deprecated
 from ...compat import *
 
 

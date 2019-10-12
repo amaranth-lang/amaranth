@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from .tools import *
-from ..tools import flatten, union
+from .._tools import flatten, union
 from ..hdl.ast import *
 from ..hdl.cd import  *
 from ..hdl.mem import *

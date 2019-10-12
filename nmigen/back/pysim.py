@@ -6,7 +6,7 @@ from bitarray import bitarray
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
-from ..tools import flatten
+from .._tools import flatten
 from ..hdl.ast import *
 from ..hdl.ir import *
 from ..hdl.xfrm import ValueVisitor, StatementVisitor

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from enum import Enum
 import warnings
 
-from ..tools import flatten, bits_for, deprecated
+from .._tools import flatten, bits_for, deprecated
 from .. import tracer
 from .ast import *
 from .ir import *
