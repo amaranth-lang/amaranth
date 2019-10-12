@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from ..._tools import _ignore_deprecated
+from ..._tools import deprecated, _ignore_deprecated
 from ...hdl.xfrm import ValueTransformer, StatementTransformer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule, CompatFinalizeError
@@ -89,6 +89,8 @@ class _LowerNext(ValueTransformer, StatementTransformer):
             return node
 
 
+@deprecated("instead of `migen.genlib.fsm.FSM()`, use `with m.FSM():`; note that there is no "
+            "replacement for `{before,after}_{entering,leaving}` and `delayed_enter` methods")
 class FSM(CompatModule):
     def __init__(self, reset_state=None):
         self.actions = OrderedDict()
