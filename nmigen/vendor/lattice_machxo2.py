@@ -106,17 +106,17 @@ class LatticeMachXO2Platform(TemplatedPlatform):
     command_templates = [
         # These don't have any usable command-line option overrides.
         r"""
-        {{get_tool("pnmainc")}}
+        {{invoke_tool("pnmainc")}}
             {{name}}.tcl
         """,
         r"""
-        {{get_tool("ddtcmd")}}
+        {{invoke_tool("ddtcmd")}}
             -oft -jed
             -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}}
             -if {{name}}_impl/{{name}}_impl.jed -of {{name}}.jed
         """,
         r"""
-        {{get_tool("ddtcmd")}}
+        {{invoke_tool("ddtcmd")}}
             -oft -svfsingle -revd -op "FLASH Erase,Program,Verify"
             -if {{name}}_impl/{{name}}_impl.jed -of {{name}}.svf
         """,

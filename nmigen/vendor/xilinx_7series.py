@@ -139,7 +139,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     }
     command_templates = [
         r"""
-        {{get_tool("vivado")}}
+        {{invoke_tool("vivado")}}
             {{verbose("-verbose")}}
             {{get_override("vivado_opts")|options}}
             -mode batch

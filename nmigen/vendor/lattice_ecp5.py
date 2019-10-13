@@ -136,14 +136,14 @@ class LatticeECP5Platform(TemplatedPlatform):
     }
     _trellis_command_templates = [
         r"""
-        {{get_tool("yosys")}}
+        {{invoke_tool("yosys")}}
             {{quiet("-q")}}
             {{get_override("yosys_opts")|options}}
             -l {{name}}.rpt
             {{name}}.ys
         """,
         r"""
-        {{get_tool("nextpnr-ecp5")}}
+        {{invoke_tool("nextpnr-ecp5")}}
             {{quiet("--quiet")}}
             {{get_override("nextpnr_opts")|options}}
             --log {{name}}.tim
@@ -155,7 +155,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             --textcfg {{name}}.config
         """,
         r"""
-        {{get_tool("ecppack")}}
+        {{invoke_tool("ecppack")}}
             {{verbose("--verbose")}}
             {{get_override("ecppack_opts")|options}}
             --input {{name}}.config
@@ -235,16 +235,16 @@ class LatticeECP5Platform(TemplatedPlatform):
     _diamond_command_templates = [
         # These don't have any usable command-line option overrides.
         r"""
-        {{get_tool("pnmainc")}}
+        {{invoke_tool("pnmainc")}}
             {{name}}.tcl
         """,
         r"""
-        {{get_tool("ddtcmd")}}
+        {{invoke_tool("ddtcmd")}}
             -oft -bit
             -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.bit
         """,
         r"""
-        {{get_tool("ddtcmd")}}
+        {{invoke_tool("ddtcmd")}}
             -oft -svfsingle -revd -op "Fast Program"
             -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.svf
         """,

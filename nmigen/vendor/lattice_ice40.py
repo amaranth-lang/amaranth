@@ -140,14 +140,14 @@ class LatticeICE40Platform(TemplatedPlatform):
     }
     _icestorm_command_templates = [
         r"""
-        {{get_tool("yosys")}}
+        {{invoke_tool("yosys")}}
             {{quiet("-q")}}
             {{get_override("yosys_opts")|options}}
             -l {{name}}.rpt
             {{name}}.ys
         """,
         r"""
-        {{get_tool("nextpnr-ice40")}}
+        {{invoke_tool("nextpnr-ice40")}}
             {{quiet("--quiet")}}
             {{get_override("nextpnr_opts")|options}}
             --log {{name}}.tim
@@ -160,7 +160,7 @@ class LatticeICE40Platform(TemplatedPlatform):
             --asc {{name}}.asc
         """,
         r"""
-        {{get_tool("icepack")}}
+        {{invoke_tool("icepack")}}
             {{verbose("-v")}}
             {{name}}.asc
             {{name}}.bin

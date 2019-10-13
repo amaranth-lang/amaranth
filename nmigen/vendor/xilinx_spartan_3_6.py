@@ -141,12 +141,12 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     }
     command_templates = [
         r"""
-        {{get_tool("xst")}}
+        {{invoke_tool("xst")}}
             {{get_override("xst_opts")|options}}
             -ifn {{name}}.xst
         """,
         r"""
-        {{get_tool("ngdbuild")}}
+        {{invoke_tool("ngdbuild")}}
             {{quiet("-quiet")}}
             {{verbose("-verbose")}}
             {{get_override("ngdbuild_opts")|options}}
@@ -154,7 +154,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             {{name}}.ngc
         """,
         r"""
-        {{get_tool("map")}}
+        {{invoke_tool("map")}}
             {{verbose("-detail")}}
             {{get_override("map_opts")|default([])|options}}
             -w
@@ -163,7 +163,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             {{name}}.pcf
         """,
         r"""
-        {{get_tool("par")}}
+        {{invoke_tool("par")}}
             {{get_override("par_opts")|default([])|options}}
             -w
             {{name}}_map.ncd
@@ -171,7 +171,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             {{name}}.pcf
         """,
         r"""
-        {{get_tool("bitgen")}}
+        {{invoke_tool("bitgen")}}
             {{get_override("bitgen_opts")|default(["-g Compress"])|options}}
             -w
             -g Binary:Yes

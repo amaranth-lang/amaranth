@@ -103,22 +103,22 @@ class IntelPlatform(TemplatedPlatform):
     }
     command_templates = [
         r"""
-        {{get_tool("quartus_map")}}
+        {{invoke_tool("quartus_map")}}
             {{get_override("quartus_map_opts")|options}}
             --rev={{name}} {{name}}
         """,
         r"""
-        {{get_tool("quartus_fit")}}
+        {{invoke_tool("quartus_fit")}}
             {{get_override("quartus_fit_opts")|options}}
             --rev={{name}} {{name}}
         """,
         r"""
-        {{get_tool("quartus_asm")}}
+        {{invoke_tool("quartus_asm")}}
             {{get_override("quartus_asm_opts")|options}}
             --rev={{name}} {{name}}
         """,
         r"""
-        {{get_tool("quartus_sta")}}
+        {{invoke_tool("quartus_sta")}}
             {{get_override("quartus_sta_opts")|options}}
             --rev={{name}} {{name}}
         """,
