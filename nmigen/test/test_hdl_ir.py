@@ -4,7 +4,7 @@ from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.ir import *
 from ..hdl.mem import *
-from .tools import *
+from .utils import *
 
 
 class BadElaboratable(Elaboratable):

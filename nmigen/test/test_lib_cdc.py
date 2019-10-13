@@ -1,4 +1,4 @@
-from .tools import *
+from .utils import *
 from ..hdl import *
 from ..back.pysim import *
 from ..lib.cdc import *

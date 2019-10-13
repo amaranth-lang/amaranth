@@ -4,7 +4,7 @@ from enum import Enum
 from ..hdl.ast import *
 from ..hdl.cd import *
 from ..hdl.dsl import *
-from .tools import *
+from .utils import *
 
 
 class DSLTestCase(FHDLTestCase):

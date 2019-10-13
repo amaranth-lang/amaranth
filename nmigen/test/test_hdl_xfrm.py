@@ -3,7 +3,7 @@ from ..hdl.cd import *
 from ..hdl.ir import *
 from ..hdl.xfrm import *
 from ..hdl.mem import *
-from .tools import *
+from .utils import *
 
 
 class DomainRenamerTestCase(FHDLTestCase):

@@ -3,7 +3,7 @@ import textwrap
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 
-from .._tools import bits_for, flatten
+from .._utils import bits_for, flatten
 from ..hdl import ast, rec, ir, mem, xfrm
 
 

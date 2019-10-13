@@ -2,7 +2,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-from .tools import *
+from .utils import *
 
 
 def example_test(name):

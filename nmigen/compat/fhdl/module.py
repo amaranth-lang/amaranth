@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from ..._tools import flatten, deprecated
+from ..._utils import flatten, deprecated
 from ...hdl import dsl, ir
 
 

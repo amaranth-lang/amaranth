@@ -1,4 +1,4 @@
-from ..._tools import _ignore_deprecated
+from ..._utils import _ignore_deprecated
 from ...compat import *
 from ...compat.fhdl import verilog
 

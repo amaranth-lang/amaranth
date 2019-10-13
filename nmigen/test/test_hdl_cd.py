@@ -1,5 +1,5 @@
 from ..hdl.cd import *
-from .tools import *
+from .utils import *
 
 
 class ClockDomainTestCase(FHDLTestCase):

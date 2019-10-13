@@ -3,7 +3,7 @@ from ..hdl.rec import *
 from ..lib.io import *
 from ..build.dsl import *
 from ..build.res import *
-from .tools import *
+from .utils import *
 
 
 class ResourceManagerTestCase(FHDLTestCase):

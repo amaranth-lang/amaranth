@@ -1,6 +1,6 @@
 from ..hdl.ir import Fragment
 from ..compat import *
-from .tools import *
+from .utils import *
 
 
 class CompatTestCase(FHDLTestCase):

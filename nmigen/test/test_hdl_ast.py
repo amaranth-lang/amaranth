@@ -2,7 +2,7 @@ import warnings
 from enum import Enum
 
 from ..hdl.ast import *
-from .tools import *
+from .utils import *
 
 
 class UnsignedEnum(Enum):

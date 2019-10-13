@@ -2,7 +2,7 @@
 
 from .. import *
 from ..asserts import *
-from .._tools import log2_int, deprecated
+from .._utils import log2_int, deprecated
 from .coding import GrayEncoder
 from .cdc import FFSynchronizer
 

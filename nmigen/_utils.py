@@ -5,7 +5,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from contextlib import contextmanager
 
-from .tools import *
+from .utils import *
 
 
 __all__ = ["flatten", "union" , "log2_int", "bits_for", "memoize", "final", "deprecated"]

@@ -2,7 +2,7 @@ from enum import Enum
 
 from ..hdl.ast import *
 from ..hdl.rec import *
-from .tools import *
+from .utils import *
 
 
 class UnsignedEnum(Enum):

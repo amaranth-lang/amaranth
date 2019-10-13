@@ -1,4 +1,4 @@
-from .._tools import deprecated
+from .._utils import deprecated
 from .. import *
 
 

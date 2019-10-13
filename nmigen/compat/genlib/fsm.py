@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from ..._tools import deprecated, _ignore_deprecated
+from ..._utils import deprecated, _ignore_deprecated
 from ...hdl.xfrm import ValueTransformer, StatementTransformer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule, CompatFinalizeError

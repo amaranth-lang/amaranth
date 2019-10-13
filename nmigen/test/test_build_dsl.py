@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from ..build.dsl import *
-from .tools import *
+from .utils import *
 
 
 class PinsTestCase(FHDLTestCase):

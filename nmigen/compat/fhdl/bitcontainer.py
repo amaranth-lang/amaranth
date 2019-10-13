@@ -1,19 +1,19 @@
-from ... import tools
+from ... import utils
 from ...hdl import ast
-from ..._tools import deprecated
+from ..._utils import deprecated
 
 
 __all__ = ["log2_int", "bits_for", "value_bits_sign"]
 
 
-@deprecated("instead of `log2_int`, use `nmigen.tools.log2_int`")
+@deprecated("instead of `log2_int`, use `nmigen.utils.log2_int`")
 def log2_int(n, need_pow2=True):
-    return tools.log2_int(n, need_pow2)
+    return utils.log2_int(n, need_pow2)
 
 
-@deprecated("instead of `bits_for`, use `nmigen.tools.bits_for`")
+@deprecated("instead of `bits_for`, use `nmigen.utils.bits_for`")
 def bits_for(n, require_sign_bit=False):
-    return tools.bits_for(n, require_sign_bit)
+    return utils.bits_for(n, require_sign_bit)
 
 
 @deprecated("instead of `value_bits_sign(v)`, use `v.shape()`")

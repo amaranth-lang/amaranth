@@ -1,6 +1,6 @@
 from ..hdl.ast import *
 from ..hdl.mem import *
-from .tools import *
+from .utils import *
 
 
 class MemoryTestCase(FHDLTestCase):
