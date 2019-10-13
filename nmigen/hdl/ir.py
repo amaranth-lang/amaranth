@@ -563,7 +563,7 @@ class Instance(Fragment):
             elif kind == "p":
                 self.parameters[name] = value
             elif kind in ("i", "o", "io"):
-                self.named_ports[name] = (value, kind)
+                self.named_ports[name] = (Value.cast(value), kind)
             else:
                 raise NameError("Instance argument {!r} should be a tuple (kind, name, value) "
                                 "where kind is one of \"p\", \"i\", \"o\", or \"io\""
@@ -575,11 +575,11 @@ class Instance(Fragment):
             elif kw.startswith("p_"):
                 self.parameters[kw[2:]] = arg
             elif kw.startswith("i_"):
-                self.named_ports[kw[2:]] = (arg, "i")
+                self.named_ports[kw[2:]] = (Value.cast(arg), "i")
             elif kw.startswith("o_"):
-                self.named_ports[kw[2:]] = (arg, "o")
+                self.named_ports[kw[2:]] = (Value.cast(arg), "o")
             elif kw.startswith("io_"):
-                self.named_ports[kw[3:]] = (arg, "io")
+                self.named_ports[kw[3:]] = (Value.cast(arg), "io")
             else:
                 raise NameError("Instance keyword argument {}={!r} does not start with one of "
                                 "\"p_\", \"i_\", \"o_\", or \"io_\""

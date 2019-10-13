@@ -667,6 +667,22 @@ class InstanceTestCase(FHDLTestCase):
             ("s6", (s6, "io")),
         ]))
 
+    def test_cast_ports(self):
+        inst = Instance("foo",
+            ("i", "s1", 1),
+            ("o", "s2", 2),
+            ("io", "s3", 3),
+            i_s4=4,
+            o_s5=5,
+            io_s6=6,
+        )
+        self.assertRepr(inst.named_ports["s1"][0], "(const 1'd1)")
+        self.assertRepr(inst.named_ports["s2"][0], "(const 2'd2)")
+        self.assertRepr(inst.named_ports["s3"][0], "(const 2'd3)")
+        self.assertRepr(inst.named_ports["s4"][0], "(const 3'd4)")
+        self.assertRepr(inst.named_ports["s5"][0], "(const 3'd5)")
+        self.assertRepr(inst.named_ports["s6"][0], "(const 3'd6)")
+
     def test_wrong_construct_arg(self):
         s = Signal()
         with self.assertRaises(NameError,
