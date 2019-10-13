@@ -45,6 +45,11 @@ class CompatCEInserter(_CompatControlInserter):
     _native_inserter = NativeEnableInserter
 
 
+class CompatClockDomainsRenamer(NativeDomainRenamer):
+    def __init__(self, cd_remapping):
+        super().__init__(cd_remapping)
+
+
 ResetInserter = CompatResetInserter
 CEInserter = CompatCEInserter
-ClockDomainsRenamer = NativeDomainRenamer
+ClockDomainsRenamer = CompatClockDomainsRenamer
