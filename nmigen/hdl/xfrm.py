@@ -486,8 +486,8 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
-    def __init__(self):
-        self.domains = None
+    def __init__(self, domains=None):
+        self.domains = domains
 
     def _resolve(self, domain, context):
         if domain not in self.domains:

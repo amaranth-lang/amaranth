@@ -264,6 +264,17 @@ class FragmentPortsTestCase(FHDLTestCase):
             (s, "io")
         ]))
 
+    def test_clk_rst(self):
+        sync = ClockDomain()
+        f = Fragment()
+        f.add_domains(sync)
+
+        f = f.prepare(ports=(ClockSignal("sync"), ResetSignal("sync")))
+        self.assertEqual(f.ports, SignalDict([
+            (sync.clk, "i"),
+            (sync.rst, "i"),
+        ]))
+
 
 class FragmentDomainsTestCase(FHDLTestCase):
     def test_iter_signals(self):

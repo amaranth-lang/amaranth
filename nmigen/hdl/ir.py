@@ -540,6 +540,7 @@ class Fragment:
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
+            ports = map(DomainLowerer(fragment.domains).on_value, ports)
             new_ports = []
             for cd in new_domains:
                 new_ports.append(cd.clk)
