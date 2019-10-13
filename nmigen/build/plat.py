@@ -295,8 +295,8 @@ class TemplatedPlatform(Platform):
                     template = ": ${{{env_var}:={name}}}"
                 elif syntax == "bat":
                     template = \
-                        "if [%{env_var}%] eq [\"\"] set {env_var}=\n" \
-                        "if [%{env_var}%] eq [] set {env_var}={name}"
+                        "if [%{env_var}%] equ [\"\"] set {env_var}=\n" \
+                        "if [%{env_var}%] equ [] set {env_var}={name}"
                 else:
                     assert False
                 commands.append(template.format(env_var=env_var, name=name))
