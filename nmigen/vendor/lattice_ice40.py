@@ -132,7 +132,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                 set_io {{port_name}} {{pin_name}}
             {% endfor %}
             {% for signal, frequency in platform.iter_clock_constraints() -%}
-                set_frequency "{{signal|hierarchy(".")}}" {{frequency/1000000}}
+                set_frequency {{signal|hierarchy(".")}} {{frequency/1000000}}
             {% endfor%}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
@@ -155,7 +155,6 @@ class LatticeICE40Platform(TemplatedPlatform):
                 {{platform.package|lower}}{{platform._nextpnr_package_options[platform.device]}}
             --json {{name}}.json
             --pcf {{name}}.pcf
-            --pre-pack {{name}}_pre_pack.py
             --asc {{name}}.asc
         """,
         r"""
