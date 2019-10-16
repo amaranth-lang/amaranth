@@ -134,7 +134,7 @@ class ResourceManager:
                 if dir == "-":
                     pin = None
                 else:
-                    pin = Pin(len(phys), dir, xdr, name=name)
+                    pin = Pin(len(phys), dir, xdr=xdr, name=name)
 
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
