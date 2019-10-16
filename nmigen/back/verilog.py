@@ -24,7 +24,7 @@ def _yosys_version():
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
     version, offset = _yosys_version()
     if version < (0, 9):
-        raise YosysError("Yosys %d.%d is not suppored".format(*version))
+        raise YosysError("Yosys {}.{} is not supported".format(*version))
 
     attr_map = []
     if strip_internal_attrs:
