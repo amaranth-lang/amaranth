@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 def scm_version():
     def local_scheme(version):
-        if version.tag:
+        if version.tag and not version.distance:
             return version.format_with("")
         else:
             return version.format_choice("+{node}", "+{node}.dirty")
