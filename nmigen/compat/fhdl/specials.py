@@ -84,6 +84,9 @@ def elaborate(self, platform):
 
 
 class CompatMemory(NativeMemory, Elaboratable):
+    def __init__(self, width, depth, init=None, name=None):
+        super().__init__(width=width, depth=depth, init=init, name=name)
+
     @deprecated("instead of `get_port()`, use `read_port()` and `write_port()`")
     def get_port(self, write_capable=False, async_read=False, has_re=False, we_granularity=0,
                  mode=WRITE_FIRST, clock_domain="sync"):
