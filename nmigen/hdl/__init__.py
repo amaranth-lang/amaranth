@@ -6,4 +6,17 @@ from .ir import Elaboratable, Fragment, Instance
 from .mem import Memory
 from .rec import Record
 from .xfrm import DomainRenamer, ResetInserter, EnableInserter, \
-                  CEInserter # deprecated
+                  CEInserter # TODO(nmigen-0.2): remove this
+
+
+__all__ = [
+    "Shape", "unsigned", "signed",
+    "Value", "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",
+    "Module",
+    "ClockDomain",
+    "Elaboratable", "Fragment", "Instance",
+    "Memory",
+    "Record",
+    "DomainRenamer", "ResetInserter", "EnableInserter",
+    "CEInserter", # TODO(nmigen-0.2): remove this
+]

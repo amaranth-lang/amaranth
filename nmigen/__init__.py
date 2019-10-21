@@ -4,4 +4,18 @@ try:
 except pkg_resources.DistributionNotFound:
     pass
 
+
 from .hdl import *
+
+
+__all__ = [
+    "Shape", "unsigned", "signed",
+    "Value", "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",
+    "Module",
+    "ClockDomain",
+    "Elaboratable", "Fragment", "Instance",
+    "Memory",
+    "Record",
+    "DomainRenamer", "ResetInserter", "EnableInserter",
+    "CEInserter", # TODO(nmigen-0.2): remove this
+]
