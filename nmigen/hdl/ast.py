@@ -304,6 +304,9 @@ class Value(metaclass=ABCMeta):
         Part, out
             Selected part of the ``Value``
         """
+        offset = Value.cast(offset)
+        if type(offset) is Const and isinstance(width, int):
+            return self[offset.value:offset.value + width]
         return Part(self, offset, width, stride=1, src_loc_at=1)
 
     def word_select(self, offset, width):
@@ -324,6 +327,9 @@ class Value(metaclass=ABCMeta):
         Part, out
             Selected part of the ``Value``
         """
+        offset = Value.cast(offset)
+        if type(offset) is Const and isinstance(width, int):
+            return self[offset.value * width:(offset.value + 1) * width]
         return Part(self, offset, width, stride=width, src_loc_at=1)
 
     def matches(self, *patterns):

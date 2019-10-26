@@ -533,14 +533,22 @@ class BitSelectTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
+        self.assertIsInstance(s1, Part)
         self.assertEqual(s1.shape(), unsigned(2))
         self.assertIsInstance(s1.shape(), Shape)
         s2 = self.c.bit_select(self.s, 0)
+        self.assertIsInstance(s2, Part)
         self.assertEqual(s2.shape(), unsigned(0))
 
     def test_stride(self):
         s1 = self.c.bit_select(self.s, 2)
+        self.assertIsInstance(s1, Part)
         self.assertEqual(s1.stride, 1)
+
+    def test_const(self):
+        s1 = self.c.bit_select(1, 2)
+        self.assertIsInstance(s1, Slice)
+        self.assertRepr(s1, """(slice (const 8'd0) 1:3)""")
 
     def test_width_wrong(self):
         with self.assertRaises(TypeError):
@@ -558,12 +566,19 @@ class WordSelectTestCase(FHDLTestCase):
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
+        self.assertIsInstance(s1, Part)
         self.assertEqual(s1.shape(), unsigned(2))
         self.assertIsInstance(s1.shape(), Shape)
 
     def test_stride(self):
         s1 = self.c.word_select(self.s, 2)
+        self.assertIsInstance(s1, Part)
         self.assertEqual(s1.stride, 2)
+
+    def test_const(self):
+        s1 = self.c.word_select(1, 2)
+        self.assertIsInstance(s1, Slice)
+        self.assertRepr(s1, """(slice (const 8'd0) 2:4)""")
 
     def test_width_wrong(self):
         with self.assertRaises(TypeError):
