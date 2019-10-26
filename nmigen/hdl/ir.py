@@ -21,19 +21,24 @@ class Elaboratable(metaclass=ABCMeta):
     _Elaboratable__silence = False
 
     def __new__(cls, *args, src_loc_at=0, **kwargs):
+        frame = sys._getframe(1 + src_loc_at)
         self = super().__new__(cls)
-        self._Elaboratable__src_loc = traceback.extract_stack(limit=2 + src_loc_at)[0]
         self._Elaboratable__used    = False
+        self._Elaboratable__context = dict(
+            filename=frame.f_code.co_filename,
+            lineno=frame.f_lineno,
+            source=self)
         return self
 
     def __del__(self):
         if self._Elaboratable__silence:
             return
         if hasattr(self, "_Elaboratable__used") and not self._Elaboratable__used:
-            warnings.warn_explicit("{!r} created but never used".format(self), UnusedElaboratable,
-                                   filename=self._Elaboratable__src_loc.filename,
-                                   lineno=self._Elaboratable__src_loc.lineno,
-                                   source=self)
+            if get_linter_option(self._Elaboratable__context["filename"],
+                                 "UnusedElaboratable", bool, True):
+                warnings.warn_explicit(
+                    "{!r} created but never used".format(self), UnusedElaboratable,
+                    **self._Elaboratable__context)
 
 
 _old_excepthook = sys.excepthook
