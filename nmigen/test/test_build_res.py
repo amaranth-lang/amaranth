@@ -1,3 +1,5 @@
+# nmigen: UnusedElaboratable=no
+
 from .. import *
 from ..hdl.rec import *
 from ..lib.io import *

@@ -1,3 +1,5 @@
+# nmigen: UnusedElaboratable=no
+
 import unittest
 
 from ...compat import *

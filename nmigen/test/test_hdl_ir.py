@@ -1,3 +1,5 @@
+# nmigen: UnusedElaboratable=no
+
 from collections import OrderedDict
 
 from ..hdl.ast import *

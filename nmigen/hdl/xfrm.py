@@ -310,14 +310,14 @@ class FragmentTransformer:
         self.map_drivers(fragment, new_fragment)
         return new_fragment
 
-    def __call__(self, value):
+    def __call__(self, value, *, src_loc_at=0):
         if isinstance(value, Fragment):
             return self.on_fragment(value)
         elif isinstance(value, TransformedElaboratable):
             value._transforms_.append(self)
             return value
         elif hasattr(value, "elaborate"):
-            value = TransformedElaboratable(value)
+            value = TransformedElaboratable(value, src_loc_at=1 + src_loc_at)
             value._transforms_.append(self)
             return value
         else:
@@ -325,7 +325,7 @@ class FragmentTransformer:
 
 
 class TransformedElaboratable(Elaboratable):
-    def __init__(self, elaboratable):
+    def __init__(self, elaboratable, *, src_loc_at=0):
         assert hasattr(elaboratable, "elaborate")
 
         # Fields prefixed and suffixed with underscore to avoid as many conflicts with the inner
@@ -725,9 +725,9 @@ class _ControlInserter(FragmentTransformer):
     def _insert_control(self, fragment, domain, signals):
         raise NotImplementedError # :nocov:
 
-    def __call__(self, value):
-        self.src_loc = tracer.get_src_loc()
-        return super().__call__(value)
+    def __call__(self, value, *, src_loc_at=0):
+        self.src_loc = tracer.get_src_loc(src_loc_at=src_loc_at)
+        return super().__call__(value, src_loc_at=1 + src_loc_at)
 
 
 class ResetInserter(_ControlInserter):

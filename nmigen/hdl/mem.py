@@ -53,11 +53,11 @@ class Memory:
             raise TypeError("Memory initialization value at address {:x}: {}"
                             .format(addr, e)) from None
 
-    def read_port(self, **kwargs):
-        return ReadPort(self, **kwargs)
+    def read_port(self, *, src_loc_at=0, **kwargs):
+        return ReadPort(self, src_loc_at=1 + src_loc_at, **kwargs)
 
-    def write_port(self, **kwargs):
-        return WritePort(self, **kwargs)
+    def write_port(self, *, src_loc_at=0, **kwargs):
+        return WritePort(self, src_loc_at=1 + src_loc_at, **kwargs)
 
     def __getitem__(self, index):
         """Simulation only."""
@@ -65,7 +65,7 @@ class Memory:
 
 
 class ReadPort(Elaboratable):
-    def __init__(self, memory, *, domain="sync", transparent=True):
+    def __init__(self, memory, *, domain="sync", transparent=True, src_loc_at=0):
         if domain == "comb" and not transparent:
             raise ValueError("Read port cannot be simultaneously asynchronous and non-transparent")
 
@@ -74,11 +74,12 @@ class ReadPort(Elaboratable):
         self.transparent = transparent
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_r_addr".format(memory.name), src_loc_at=2)
+                           name="{}_r_addr".format(memory.name), src_loc_at=2 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_r_data".format(memory.name), src_loc_at=2)
+                           name="{}_r_data".format(memory.name), src_loc_at=2 + src_loc_at)
         if self.domain != "comb" and not transparent:
-            self.en = Signal(name="{}_r_en".format(memory.name), src_loc_at=2, reset=1)
+            self.en = Signal(name="{}_r_en".format(memory.name), reset=1,
+                             src_loc_at=2 + src_loc_at)
         else:
             self.en = Const(1)
 
@@ -132,7 +133,7 @@ class ReadPort(Elaboratable):
 
 
 class WritePort(Elaboratable):
-    def __init__(self, memory, *, domain="sync", granularity=None):
+    def __init__(self, memory, *, domain="sync", granularity=None, src_loc_at=0):
         if granularity is None:
             granularity = memory.width
         if not isinstance(granularity, int) or granularity < 0:
@@ -150,11 +151,11 @@ class WritePort(Elaboratable):
         self.granularity  = granularity
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_w_addr".format(memory.name), src_loc_at=2)
+                           name="{}_w_addr".format(memory.name), src_loc_at=2 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_w_data".format(memory.name), src_loc_at=2)
+                           name="{}_w_data".format(memory.name), src_loc_at=2 + src_loc_at)
         self.en   = Signal(memory.width // granularity,
-                           name="{}_w_en".format(memory.name), src_loc_at=2)
+                           name="{}_w_en".format(memory.name), src_loc_at=2 + src_loc_at)
 
     def elaborate(self, platform):
         f = Instance("$memwr",

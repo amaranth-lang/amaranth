@@ -1,3 +1,5 @@
+# nmigen: UnusedElaboratable=no
+
 from .utils import *
 from ..hdl import *
 from ..asserts import *
