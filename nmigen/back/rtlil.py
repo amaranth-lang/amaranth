@@ -899,6 +899,14 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     # by looking for any signals on RHS. If there aren't any, we add some logic
                     # whose only purpose is to trigger Verilog simulators when it converts
                     # through RTLIL and to Verilog, by populating the sensitivity list.
+                    #
+                    # Unfortunately, while this workaround allows true (event-driven) Verilog
+                    # simulators to work properly, and is universally ignored by synthesizers,
+                    # Verilator rejects it.
+                    #
+                    # Running the Yosys proc_prune pass converts such pathological `always @*`
+                    # blocks to `assign` statements, so this workaround can be removed completely
+                    # once support for Yosys 0.9 is dropped.
                     if not stmt_compiler._has_rhs:
                         if verilog_trigger is None:
                             verilog_trigger = \

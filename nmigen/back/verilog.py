@@ -39,6 +39,7 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
 read_ilang <<rtlil
 {}
 rtlil
+{prune}delete w:$verilog_initial_trigger
 {prune}proc_prune
 proc_init
 proc_arst
