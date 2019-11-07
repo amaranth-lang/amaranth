@@ -642,6 +642,20 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [])
 
+    def test_no_conflict_local_domains(self):
+        f1 = Fragment()
+        cd1 = ClockDomain("d", local=True)
+        f1.add_domains(cd1)
+        f1.add_driver(ClockSignal("d"))
+        f2 = Fragment()
+        cd2 = ClockDomain("d", local=True)
+        f2.add_domains(cd2)
+        f2.add_driver(ClockSignal("d"))
+        f3 = Fragment()
+        f3.add_subfragment(f1)
+        f3.add_subfragment(f2)
+        f3.prepare()
+
 
 class InstanceTestCase(FHDLTestCase):
     def test_construct(self):

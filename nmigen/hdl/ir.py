@@ -540,8 +540,8 @@ class Fragment:
 
         fragment = SampleLowerer()(self)
         new_domains = fragment._propagate_domains(missing_domain)
-        fragment._resolve_hierarchy_conflicts()
         fragment = DomainLowerer()(fragment)
+        fragment._resolve_hierarchy_conflicts()
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
