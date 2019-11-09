@@ -83,8 +83,8 @@ class Layout:
 
 # Unlike most Values, Record *can* be subclassed.
 class Record(Value):
-    @classmethod
-    def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0):
+    @staticmethod
+    def like(other, *, name=None, name_suffix=None, src_loc_at=0):
         if name is not None:
             new_name = str(name)
         elif name_suffix is not None:
@@ -107,7 +107,7 @@ class Record(Value):
                 fields[field_name] = Signal.like(field, name=concat(new_name, field_name),
                                                  src_loc_at=1 + src_loc_at)
 
-        return cls(other.layout, name=new_name, fields=fields, src_loc_at=1)
+        return Record(other.layout, name=new_name, fields=fields, src_loc_at=1)
 
     def __init__(self, layout, *, name=None, fields=None, src_loc_at=0):
         if name is None:
