@@ -107,9 +107,9 @@ class Record(Value):
                 fields[field_name] = Signal.like(field, name=concat(new_name, field_name),
                                                  src_loc_at=1 + src_loc_at)
 
-        return cls(other.layout, new_name, fields=fields, src_loc_at=1)
+        return cls(other.layout, name=new_name, fields=fields, src_loc_at=1)
 
-    def __init__(self, layout, name=None, *, fields=None, src_loc_at=0):
+    def __init__(self, layout, *, name=None, fields=None, src_loc_at=0):
         if name is None:
             name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
 
