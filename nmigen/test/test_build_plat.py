@@ -25,6 +25,10 @@ class PlatformTestCase(FHDLTestCase):
         self.platform.add_file("x.txt", b"foo")
         self.assertEqual(self.platform.extra_files["x.txt"], b"foo")
 
+    def test_add_file_exact_duplicate(self):
+        self.platform.add_file("x.txt", b"foo")
+        self.platform.add_file("x.txt", b"foo")
+
     def test_add_file_io(self):
         with open(__file__) as f:
             self.platform.add_file("x.txt", f)
