@@ -48,14 +48,16 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
     def add_file(self, filename, content):
         if not isinstance(filename, str):
-            raise TypeError("File name must be a string")
+            raise TypeError("File name must be a string, not {!r}"
+                            .format(filename))
         if filename in self.extra_files:
-            raise ValueError("File {} already exists"
+            raise ValueError("File {!r} already exists"
                              .format(filename))
         if hasattr(content, "read"):
             content = content.read()
         elif not isinstance(content, (str, bytes)):
-            raise TypeError("File contents must be str, bytes, or a file-like object")
+            raise TypeError("File contents must be str, bytes, or a file-like object, not {!r}"
+                            .format(content))
         self.extra_files[filename] = content
 
     @property
