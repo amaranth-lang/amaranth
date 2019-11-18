@@ -212,16 +212,14 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         def get_dff(clk, d, q):
             # SDR I/O is performed by packing a flip-flop into the pad IOB.
             for bit in range(len(q)):
-                _q = Signal()
-                _q.attrs["IOB"] = "TRUE"
                 m.submodules += Instance("FDCE",
+                    a_IOB="TRUE",
                     i_C=clk,
                     i_CE=Const(1),
                     i_CLR=Const(0),
                     i_D=d[bit],
-                    o_Q=_q,
+                    o_Q=q[bit]
                 )
-                m.d.comb += q[bit].eq(_q)
 
         def get_iddr(clk, d, q0, q1):
             for bit in range(len(q0)):
