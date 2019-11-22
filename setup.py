@@ -24,7 +24,11 @@ setup(
     license="BSD",
     python_requires="~=3.6",
     setup_requires=["setuptools_scm"],
-    install_requires=["setuptools", "pyvcd>=0.1.4", "bitarray", "Jinja2"],
+    install_requires=[
+        "setuptools",
+        "pyvcd~=0.1.4", # for nmigen.pysim
+        "Jinja2", # for nmigen.build
+    ],
     packages=find_packages(),
     entry_points={
         "console_scripts": [

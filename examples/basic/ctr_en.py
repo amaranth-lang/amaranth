@@ -19,17 +19,15 @@ ctr = Counter(width=16)
 
 print(verilog.convert(ctr, ports=[ctr.o, ctr.en]))
 
-with pysim.Simulator(ctr,
-        vcd_file=open("ctrl.vcd", "w"),
-        gtkw_file=open("ctrl.gtkw", "w"),
-        traces=[ctr.en, ctr.v, ctr.o]) as sim:
-    sim.add_clock(1e-6)
-    def ce_proc():
-        yield; yield; yield
-        yield ctr.en.eq(1)
-        yield; yield; yield
-        yield ctr.en.eq(0)
-        yield; yield; yield
-        yield ctr.en.eq(1)
-    sim.add_sync_process(ce_proc())
+sim = pysim.Simulator(ctr)
+sim.add_clock(1e-6)
+def ce_proc():
+    yield; yield; yield
+    yield ctr.en.eq(1)
+    yield; yield; yield
+    yield ctr.en.eq(0)
+    yield; yield; yield
+    yield ctr.en.eq(1)
+sim.add_sync_process(ce_proc)
+with sim.write_vcd("ctrl.vcd", "ctrl.gtkw", traces=[ctr.en, ctr.v, ctr.o]):
     sim.run_until(100e-6, run_passive=True)
