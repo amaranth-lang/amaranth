@@ -433,7 +433,9 @@ class Fragment:
             if isinstance(subfrag, Instance):
                 for port_name, (value, dir) in subfrag.named_ports.items():
                     if dir == "i":
-                        subfrag.add_ports(value._rhs_signals(), dir=dir)
+                        # Prioritize defs over uses.
+                        rhs_without_outputs = value._rhs_signals() - subfrag.iter_ports(dir="o")
+                        subfrag.add_ports(rhs_without_outputs, dir=dir)
                         add_uses(value._rhs_signals())
                     if dir == "o":
                         subfrag.add_ports(value._lhs_signals(), dir=dir)

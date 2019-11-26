@@ -266,6 +266,27 @@ class FragmentPortsTestCase(FHDLTestCase):
             (s, "io")
         ]))
 
+    def test_in_out_same_signal(self):
+        s = Signal()
+
+        f1 = Instance("foo", i_x=s, o_y=s)
+        f2 = Fragment()
+        f2.add_subfragment(f1)
+
+        f2._propagate_ports(ports=(), all_undef_as_ports=True)
+        self.assertEqual(f1.ports, SignalDict([
+            (s, "o")
+        ]))
+
+        f3 = Instance("foo", o_y=s, i_x=s)
+        f4 = Fragment()
+        f4.add_subfragment(f3)
+
+        f4._propagate_ports(ports=(), all_undef_as_ports=True)
+        self.assertEqual(f3.ports, SignalDict([
+            (s, "o")
+        ]))
+
     def test_clk_rst(self):
         sync = ClockDomain()
         f = Fragment()
