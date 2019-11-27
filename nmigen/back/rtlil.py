@@ -128,8 +128,8 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
                 self._append("    parameter \\{} \"{}\"\n",
                              param, value.translate(self._escape_map))
             elif isinstance(value, int):
-                self._append("    parameter \\{} {:d}\n",
-                             param, value)
+                self._append("    parameter \\{} {}'{:b}\n",
+                             param, bits_for(value), value)
             elif isinstance(value, float):
                 self._append("    parameter real \\{} \"{!r}\"\n",
                              param, value)
