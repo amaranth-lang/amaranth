@@ -38,6 +38,17 @@ class IntelPlatform(TemplatedPlatform):
     speed   = abstractproperty()
     suffix  = ""
 
+    quartus_suppressed_warnings = [
+        10264,  # All case item expressions in this case statement are onehot
+        10270,  # Incomplete Verilog case statement has no default case item
+        10335,  # Unrecognized synthesis attribute
+        10763,  # Verilog case statement has overlapping case item expressions with non-constant or don't care bits
+        10935,  # Verilog casex/casez overlaps with a previous casex/vasez item expression
+        12125,  # Using design file which is not specified as a design file for the current project, but contains definitions used in project
+        18236,  # Number of processors not specified in QSF
+        292013, # Feature is only available with a valid subscription license
+    ]
+
     required_tools = [
         "quartus_map",
         "quartus_fit",
@@ -100,6 +111,11 @@ class IntelPlatform(TemplatedPlatform):
                 create_clock -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("|")}}]
             {% endfor %}
         """,
+        "{{name}}.srf": r"""
+            {% for warning in platform.quartus_suppressed_warnings %}
+            { "" "" "" "{{name}}.v" {  } {  } 0 {{warning}} "" 0 0 "Design Software" 0 -1 0 ""}
+            {% endfor %}
+        """,      
     }
     command_templates = [
         r"""
