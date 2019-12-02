@@ -18,8 +18,8 @@ __all__ = [
     "Signal", "ClockSignal", "ResetSignal",
     "UserValue",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
-    "Statement", "Assign", "Assert", "Assume", "Cover", "Switch", "Delay", "Tick",
-    "Passive", "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
+    "Statement", "Assign", "Assert", "Assume", "Cover", "Switch",
+    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
     "SignalSet",
 ]
 
@@ -1402,47 +1402,6 @@ class Switch(Statement):
                 return "(case ({}) {})".format(" ".join(keys), stmts_repr)
         case_reprs = [case_repr(keys, stmts) for keys, stmts in self.cases.items()]
         return "(switch {!r} {})".format(self.test, " ".join(case_reprs))
-
-
-@final
-class Delay(Statement):
-    def __init__(self, interval=None, *, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
-        self.interval = None if interval is None else float(interval)
-
-    def _rhs_signals(self):
-        return ValueSet()
-
-    def __repr__(self):
-        if self.interval is None:
-            return "(delay ε)"
-        else:
-            return "(delay {:.3}us)".format(self.interval * 1e6)
-
-
-@final
-class Tick(Statement):
-    def __init__(self, domain="sync", *, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
-        self.domain = str(domain)
-
-    def _rhs_signals(self):
-        return ValueSet()
-
-    def __repr__(self):
-        return "(tick {})".format(self.domain)
-
-
-@final
-class Passive(Statement):
-    def __init__(self, *, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
-
-    def _rhs_signals(self):
-        return ValueSet()
-
-    def __repr__(self):
-        return "(passive)"
 
 
 class _MappedKeyCollection(metaclass=ABCMeta):
