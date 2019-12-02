@@ -424,9 +424,9 @@ class _RHSValueCompiler(_ValueCompiler):
             lhs_mask = (1 << len(lhs)) - 1
             rhs_mask = (1 << len(rhs)) - 1
             if value.operator == "+":
-                return f"({mask(lhs)} + {mask(rhs)})"
+                return f"({sign(lhs)} + {sign(rhs)})"
             if value.operator == "-":
-                return f"({mask(lhs)} - {mask(rhs)})"
+                return f"({sign(lhs)} - {sign(rhs)})"
             if value.operator == "*":
                 return f"({sign(lhs)} * {sign(rhs)})"
             if value.operator == "//":
