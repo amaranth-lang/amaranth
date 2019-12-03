@@ -252,7 +252,7 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(v1.shape(), signed(5))
         v2 = -Const(0, signed(4))
         self.assertEqual(repr(v2), "(- (const 4'sd0))")
-        self.assertEqual(v2.shape(), signed(4))
+        self.assertEqual(v2.shape(), signed(5))
 
     def test_add(self):
         v1 = Const(0, unsigned(4)) + Const(0, unsigned(6))

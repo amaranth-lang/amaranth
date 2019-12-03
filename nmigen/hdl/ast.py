@@ -556,10 +556,7 @@ class Operator(Value):
             if self.operator in ("+", "~"):
                 return Shape(a_width, a_signed)
             if self.operator == "-":
-                if not a_signed:
-                    return Shape(a_width + 1, True)
-                else:
-                    return Shape(a_width, a_signed)
+                return Shape(a_width + 1, True)
             if self.operator in ("b", "r|", "r&", "r^"):
                 return Shape(1, False)
         elif len(op_shapes) == 2:
