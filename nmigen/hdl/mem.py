@@ -74,9 +74,9 @@ class ReadPort(Elaboratable):
         self.transparent = transparent
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_r_addr".format(memory.name), src_loc_at=2 + src_loc_at)
+                           name="{}_r_addr".format(memory.name), src_loc_at=1 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_r_data".format(memory.name), src_loc_at=2 + src_loc_at)
+                           name="{}_r_data".format(memory.name), src_loc_at=1 + src_loc_at)
         if self.domain != "comb" and not transparent:
             self.en = Signal(name="{}_r_en".format(memory.name), reset=1,
                              src_loc_at=2 + src_loc_at)
@@ -151,11 +151,11 @@ class WritePort(Elaboratable):
         self.granularity  = granularity
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_w_addr".format(memory.name), src_loc_at=2 + src_loc_at)
+                           name="{}_w_addr".format(memory.name), src_loc_at=1 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_w_data".format(memory.name), src_loc_at=2 + src_loc_at)
+                           name="{}_w_data".format(memory.name), src_loc_at=1 + src_loc_at)
         self.en   = Signal(memory.width // granularity,
-                           name="{}_w_en".format(memory.name), src_loc_at=2 + src_loc_at)
+                           name="{}_w_en".format(memory.name), src_loc_at=1 + src_loc_at)
 
     def elaborate(self, platform):
         f = Instance("$memwr",
