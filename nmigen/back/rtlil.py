@@ -374,7 +374,9 @@ class _ValueCompiler(xfrm.ValueVisitor):
                 elem = value.elems[-1]
             return self.match_shape(elem, *value.shape())
         else:
-            raise LegalizeValue(value.index, range(len(value.elems)), value.src_loc)
+            max_index = 1 << len(value.index)
+            max_elem  = len(value.elems)
+            raise LegalizeValue(value.index, range(min(max_index, max_elem)), value.src_loc)
 
 
 class _RHSValueCompiler(_ValueCompiler):
