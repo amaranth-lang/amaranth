@@ -97,7 +97,7 @@ class BuildPlan:
                 else:
                     subprocess.check_call(["sh", "{}.sh".format(self.script)])
 
-                return LocalBuildProducts(os.getcwd())
+            return LocalBuildProducts(os.getcwd())
 
         finally:
             os.chdir(cwd)
