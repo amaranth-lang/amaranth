@@ -221,8 +221,9 @@ class IntelPlatform(TemplatedPlatform):
 
     @staticmethod
     def _get_oereg(m, pin):
+        # altiobuf_ requires an output enable signal for each pin, but pin.oe is 1 bit wide.
         if pin.xdr == 0:
-            return pin.oe
+            return Repl(pin.oe, pin.width)
         elif pin.xdr in (1, 2):
             oe_reg = Signal(pin.width, name="{}_oe_reg".format(pin.name))
             oe_reg.attrs["useioff"] = "1"
@@ -283,7 +284,7 @@ class IntelPlatform(TemplatedPlatform):
             p_use_oe="TRUE",
             i_datain=self._get_oreg(m, pin, invert),
             o_dataout=port,
-            i_oe=pin.oe,
+            i_oe=self._get_oereg(m, pin)
         )
         return m
 
