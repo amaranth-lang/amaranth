@@ -797,7 +797,7 @@ class Signal(Value, DUID):
         name this ``Signal`` is assigned to. Name collisions are automatically resolved by
         prepending names of objects that contain this ``Signal`` and by appending integer
         sequences.
-    reset : int
+    reset : int or integral Enum
         Reset (synchronous) or default (combinatorial) value.
         When this ``Signal`` is assigned to in synchronous context and the corresponding clock
         domain is reset, the ``Signal`` assumes the given value. When this ``Signal`` is unassigned
@@ -833,6 +833,11 @@ class Signal(Value, DUID):
     def __init__(self, shape=None, *, name=None, reset=0, reset_less=False, min=None, max=None,
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
+
+        if isinstance(reset, Enum):
+            reset = reset.value
+        if not isinstance(reset, int):
+            raise TypeError("Reset value has to be an int or an integral Enum")
 
         # TODO(nmigen-0.2): move this to nmigen.compat and make it a deprecated extension
         if min is not None or max is not None:

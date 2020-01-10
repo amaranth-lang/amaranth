@@ -755,6 +755,14 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s1.reset, 0b111)
         self.assertEqual(s1.reset_less, True)
 
+    def test_reset_enum(self):
+        s1 = Signal(2, reset=UnsignedEnum.BAR)
+        self.assertEqual(s1.reset, 2)
+        with self.assertRaises(TypeError,
+                msg="Reset value has to be an int or an integral Enum"
+        ):
+            Signal(1, reset=StringEnum.FOO)
+
     def test_reset_narrow(self):
         with self.assertWarns(SyntaxWarning,
                 msg="Reset value 8 requires 4 bits to represent, but the signal only has 3 bits"):
