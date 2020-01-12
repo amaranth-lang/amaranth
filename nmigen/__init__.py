@@ -17,5 +17,4 @@ __all__ = [
     "Memory",
     "Record",
     "DomainRenamer", "ResetInserter", "EnableInserter",
-    "CEInserter", # TODO(nmigen-0.2): remove this
 ]

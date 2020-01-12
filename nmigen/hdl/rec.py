@@ -24,12 +24,6 @@ class Layout:
             return obj
         return Layout(obj, src_loc_at=1 + src_loc_at)
 
-    # TODO(nmigen-0.2): remove this
-    @classmethod
-    @deprecated("instead of `Layout.wrap`, use `Layout.cast`")
-    def wrap(cls, obj, *, src_loc_at=0):
-        return cls.cast(obj, src_loc_at=1 + src_loc_at)
-
     def __init__(self, fields, *, src_loc_at=0):
         self.fields = OrderedDict()
         for field in fields:

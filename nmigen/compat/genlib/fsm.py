@@ -3,8 +3,9 @@ from collections import OrderedDict
 from ..._utils import deprecated, _ignore_deprecated
 from ...hdl.xfrm import ValueTransformer, StatementTransformer
 from ...hdl.ast import *
+from ...hdl.ast import Signal as NativeSignal
 from ..fhdl.module import CompatModule, CompatFinalizeError
-from ..fhdl.structure import If, Case
+from ..fhdl.structure import Signal, If, Case
 
 
 __all__ = ["AnonymousState", "NextState", "NextValue", "FSM"]
@@ -33,7 +34,7 @@ def _target_eq(a, b):
     ty = type(a)
     if ty == Const:
         return a.value == b.value
-    elif ty == Signal:
+    elif ty == NativeSignal or ty == Signal:
         return a is b
     elif ty == Cat:
         return all(_target_eq(x, y) for x, y in zip(a.l, b.l))
@@ -164,7 +165,7 @@ class FSM(CompatModule):
         self.decoding = {n: s for s, n in self.encoding.items()}
 
         decoder = lambda n: "{}/{}".format(self.decoding[n], n)
-        self.state = Signal(max=nstates, reset=self.encoding[self.reset_state], decoder=decoder)
+        self.state = Signal(range(nstates), reset=self.encoding[self.reset_state], decoder=decoder)
         self.next_state = Signal.like(self.state)
 
         for state, signal in self.before_leaving_signals.items():

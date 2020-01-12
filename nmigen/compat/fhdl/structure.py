@@ -1,8 +1,14 @@
+import builtins
+import warnings
 from collections import OrderedDict
 
+from ...utils import bits_for
 from ..._utils import deprecated, extend
 from ...hdl import ast
-from ...hdl.ast import (DUID, Value, Signal, Mux, Slice as _Slice, Cat, Repl, Const, C,
+from ...hdl.ast import (DUID,
+                        Shape, signed, unsigned,
+                        Value, Const, C, Mux, Slice as _Slice, Part, Cat, Repl,
+                        Signal as NativeSignal,
                         ClockSignal, ResetSignal,
                         Array, ArrayProxy as _ArrayProxy)
 from ...hdl.cd import ClockDomain
@@ -17,11 +23,47 @@ def wrap(v):
     return Value.cast(v)
 
 
-@extend(Cat)
-@property
-@deprecated("instead of `Cat.l`, use `Cat.parts`")
-def l(self):
-    return self.parts
+class CompatSignal(NativeSignal):
+    def __init__(self, bits_sign=None, name=None, variable=False, reset=0,
+                 reset_less=False, name_override=None, min=None, max=None,
+                 related=None, attr=None, src_loc_at=0, **kwargs):
+        if min is not None or max is not None:
+            warnings.warn("instead of `Signal(min={min}, max={max})`, "
+                          "use `Signal(range({min}, {max}))`"
+                          .format(min=min or 0, max=max or 2),
+                          DeprecationWarning, stacklevel=2 + src_loc_at)
+
+        if bits_sign is None:
+            if min is None:
+                min = 0
+            if max is None:
+                max = 2
+            max -= 1  # make both bounds inclusive
+            if min > max:
+                raise ValueError("Lower bound {} should be less or equal to higher bound {}"
+                                 .format(min, max + 1))
+            sign = min < 0 or max < 0
+            if min == max:
+                bits = 0
+            else:
+                bits = builtins.max(bits_for(min, sign), bits_for(max, sign))
+            shape = signed(bits) if sign else unsigned(bits)
+        else:
+            if not (min is None and max is None):
+                raise ValueError("Only one of bits/signedness or bounds may be specified")
+            shape = bits_sign
+
+        super().__init__(shape=shape, name=name_override or name,
+                         reset=reset, reset_less=reset_less,
+                         attrs=attr, src_loc_at=1 + src_loc_at, **kwargs)
+
+
+Signal = CompatSignal
+
+
+@deprecated("instead of `Constant`, use `Const`")
+def Constant(value, bits_sign=None):
+    return Const(value, bits_sign)
 
 
 @deprecated("instead of `Replicate`, use `Repl`")
@@ -29,9 +71,45 @@ def Replicate(v, n):
     return Repl(v, n)
 
 
-@deprecated("instead of `Constant`, use `Const`")
-def Constant(value, bits_sign=None):
-    return Const(value, bits_sign)
+@extend(Const)
+@property
+@deprecated("instead of `.nbits`, use `.width`")
+def nbits(self):
+    return self.width
+
+
+@extend(NativeSignal)
+@property
+@deprecated("instead of `.nbits`, use `.width`")
+def nbits(self):
+    return self.width
+
+
+@extend(NativeSignal)
+@NativeSignal.nbits.setter
+@deprecated("instead of `.nbits = x`, use `.width = x`")
+def nbits(self, value):
+    self.width = value
+
+
+@extend(NativeSignal)
+@deprecated("instead of `.part`, use `.bit_select`")
+def part(self, offset, width):
+    return Part(self, offset, width, src_loc_at=2)
+
+
+@extend(Cat)
+@property
+@deprecated("instead of `.l`, use `.parts`")
+def l(self):
+    return self.parts
+
+
+@extend(ast.Operator)
+@property
+@deprecated("instead of `.op`, use `.operator`")
+def op(self):
+    return self.operator
 
 
 @extend(_ArrayProxy)
@@ -47,7 +125,7 @@ class If(ast.Switch):
         cond = Value.cast(cond)
         if len(cond) != 1:
             cond = cond.bool()
-        super().__init__(cond, {("1",): ast.Statement.wrap(stmts)})
+        super().__init__(cond, {("1",): ast.Statement.cast(stmts)})
 
     @deprecated("instead of `.Elif(cond, ...)`, use `with m.Elif(cond): ...`")
     def Elif(self, cond, *stmts):
@@ -55,13 +133,13 @@ class If(ast.Switch):
         if len(cond) != 1:
             cond = cond.bool()
         self.cases = OrderedDict((("-" + k,), v) for (k,), v in self.cases.items())
-        self.cases[("1" + "-" * len(self.test),)] = ast.Statement.wrap(stmts)
+        self.cases[("1" + "-" * len(self.test),)] = ast.Statement.cast(stmts)
         self.test = Cat(self.test, cond)
         return self
 
     @deprecated("instead of `.Else(...)`, use `with m.Else(): ...`")
     def Else(self, *stmts):
-        self.cases[()] = ast.Statement.wrap(stmts)
+        self.cases[()] = ast.Statement.cast(stmts)
         return self
 
 
@@ -100,7 +178,7 @@ class Case(ast.Switch):
         elif isinstance(key, str) and key == "default":
             key = ()
         else:
-            key = ("{:0{}b}".format(wrap(key).value, len(self.test)),)
+            key = ("{:0{}b}".format(ast.Value.cast(key).value, len(self.test)),)
         stmts = self.cases[key]
         del self.cases[key]
         self.cases[()] = stmts

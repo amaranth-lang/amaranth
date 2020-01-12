@@ -712,37 +712,11 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
         self.assertEqual(s11.shape(), unsigned(1))
-        # deprecated
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            d6 = Signal(max=16)
-            self.assertEqual(d6.shape(), unsigned(4))
-            d7 = Signal(min=4, max=16)
-            self.assertEqual(d7.shape(), unsigned(4))
-            d8 = Signal(min=-4, max=16)
-            self.assertEqual(d8.shape(), signed(5))
-            d9 = Signal(min=-20, max=16)
-            self.assertEqual(d9.shape(), signed(6))
-            d10 = Signal(max=1)
-            self.assertEqual(d10.shape(), unsigned(0))
 
     def test_shape_wrong(self):
         with self.assertRaises(TypeError,
                 msg="Width must be a non-negative integer, not -10"):
             Signal(-10)
-
-    def test_min_max_deprecated(self):
-        with self.assertWarns(DeprecationWarning,
-                msg="instead of `Signal(min=0, max=10)`, use `Signal(range(0, 10))`"):
-            Signal(max=10)
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            with self.assertRaises(ValueError,
-                    msg="Lower bound 10 should be less or equal to higher bound 4"):
-                Signal(min=10, max=4)
-            with self.assertRaises(ValueError,
-                    msg="Only one of bits/signedness or bounds may be specified"):
-                Signal(2, min=10)
 
     def test_name(self):
         s1 = Signal()

@@ -18,7 +18,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
            "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
-           "ResetInserter", "EnableInserter", "CEInserter"]
+           "ResetInserter", "EnableInserter"]
 
 
 class ValueVisitor(metaclass=ABCMeta):
@@ -95,7 +95,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_AnyConst(value)
         elif type(value) is AnySeq:
             new_value = self.on_AnySeq(value)
-        elif type(value) is Signal:
+        elif isinstance(value, Signal):
+            # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
             new_value = self.on_Signal(value)
         elif isinstance(value, Record):
             # Uses `isinstance()` and not `type() is` to allow inheriting from Record.
@@ -110,8 +111,7 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Slice(value)
         elif type(value) is Part:
             new_value = self.on_Part(value)
-        elif isinstance(value, Cat):
-            # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
+        elif type(value) is Cat:
             new_value = self.on_Cat(value)
         elif type(value) is Repl:
             new_value = self.on_Repl(value)
@@ -750,7 +750,3 @@ class EnableInserter(_ControlInserter):
                 en_port = Mux(self.controls[clk_port.domain], en_port, Const(0, len(en_port)))
                 new_fragment.named_ports["EN"] = en_port, en_dir
         return new_fragment
-
-
-CEInserter = staticmethod(
-    deprecated("instead of `CEInserter`, use `EnableInserter`")(EnableInserter))

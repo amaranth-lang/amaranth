@@ -5,8 +5,7 @@ from .cd import ClockDomain
 from .ir import Elaboratable, Fragment, Instance
 from .mem import Memory
 from .rec import Record
-from .xfrm import DomainRenamer, ResetInserter, EnableInserter, \
-                  CEInserter # TODO(nmigen-0.2): remove this
+from .xfrm import DomainRenamer, ResetInserter, EnableInserter
 
 
 __all__ = [
@@ -18,5 +17,4 @@ __all__ = [
     "Memory",
     "Record",
     "DomainRenamer", "ResetInserter", "EnableInserter",
-    "CEInserter", # TODO(nmigen-0.2): remove this
 ]
