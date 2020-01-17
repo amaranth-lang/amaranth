@@ -289,6 +289,12 @@ class LatticeECP5Platform(TemplatedPlatform):
             return self._diamond_command_templates
         assert False
 
+    @property
+    def default_clk_constraint(self):
+        if self.default_clk == "OSCG":
+            return Clock(310e6 / self.oscg_div)
+        return super().default_clk_constraint
+
     def create_missing_domain(self, name):
         # Lattice ECP5 devices have two global set/reset signals: PUR, which is driven at startup
         # by the configuration logic and unconditionally resets every storage element, and GSR,
@@ -297,7 +303,19 @@ class LatticeECP5Platform(TemplatedPlatform):
         # network, its deassertion may violate a setup/hold constraint with relation to a user
         # clock. To avoid this, a GSR/SGSR instance should be driven synchronized to user clock.
         if name == "sync" and self.default_clk is not None:
-            clk_i = self.request(self.default_clk).i
+            m = Module()
+            if self.default_clk == "OSCG":
+                if not hasattr(self, "oscg_div"):
+                    raise ValueError("OSCG divider (oscg_div) must be an integer between 2 "
+                                     "and 128")
+                if not isinstance(self.oscg_div, int) or self.oscg_div < 2 or self.oscg_div > 128:
+                    raise ValueError("OSCG divider (oscg_div) must be an integer between 2 "
+                                     "and 128, not {!r}"
+                                     .format(self.oscg_div))
+                clk_i = Signal()
+                m.submodules += Instance("OSCG", p_DIV=self.oscg_div, o_OSC=clk_i)
+            else:
+                clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
             else:
@@ -305,7 +323,6 @@ class LatticeECP5Platform(TemplatedPlatform):
 
             gsr0 = Signal()
             gsr1 = Signal()
-            m = Module()
             # There is no end-of-startup signal on ECP5, but PUR is released after IOB enable, so
             # a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
             m.submodules += [
