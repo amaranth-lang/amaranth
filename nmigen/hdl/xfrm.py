@@ -482,7 +482,7 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
             if domain in self.domain_map:
                 domain = self.domain_map[domain]
             for signal in signals:
-                new_fragment.add_driver(signal, domain)
+                new_fragment.add_driver(self.on_value(signal), domain)
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):

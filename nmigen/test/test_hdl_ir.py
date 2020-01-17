@@ -389,6 +389,25 @@ class FragmentDomainsTestCase(FHDLTestCase):
                     "domains explicitly, or give distinct names to subfragments"):
             f._propagate_domains_up()
 
+    def test_domain_conflict_rename_drivers(self):
+        cda = ClockDomain("sync")
+        cdb = ClockDomain("sync")
+
+        fa = Fragment()
+        fa.add_domains(cda)
+        fb = Fragment()
+        fb.add_domains(cdb)
+        fb.add_driver(ResetSignal("sync"), None)
+        f = Fragment()
+        f.add_subfragment(fa, "a")
+        f.add_subfragment(fb, "b")
+
+        f._propagate_domains_up()
+        fb_new, _ = f.subfragments[1]
+        self.assertEqual(fb_new.drivers, OrderedDict({
+            None: SignalSet((ResetSignal("b_sync"),))
+        }))
+
     def test_propagate_down(self):
         cd = ClockDomain()
 
