@@ -203,6 +203,15 @@ class Fragment:
         driver_subfrags = SignalDict()
         memory_subfrags = OrderedDict()
         def add_subfrag(registry, entity, entry):
+            # Because of missing domain insertion, at the point when this code runs, we have
+            # a mixture of bound and unbound {Clock,Reset}Signals. Map the bound ones to
+            # the actual signals (because the signal itself can be driven as well); but leave
+            # the unbound ones as it is, because there's no concrete signal for it yet anyway.
+            if isinstance(entity, ClockSignal) and entity.domain in self.domains:
+                entity = self.domains[entity.domain].clk
+            elif isinstance(entity, ResetSignal) and entity.domain in self.domains:
+                entity = self.domains[entity.domain].rst
+
             if entity not in registry:
                 registry[entity] = set()
             registry[entity].add(entry)
@@ -387,11 +396,14 @@ class Fragment:
                         "requested domain '{}' (defines {})."
                         .format(domain_name, ", ".join("'{}'".format(n) for n in defined)))
                 self.add_subfragment(new_fragment, "cd_{}".format(domain_name))
+                self.add_domains(new_fragment.domains.values())
         return new_domains
 
     def _propagate_domains(self, missing_domain):
-        new_domains = self.create_missing_domains(missing_domain)
         self._propagate_domains_up()
+        self._propagate_domains_down()
+        self._resolve_hierarchy_conflicts()
+        new_domains = self.create_missing_domains(missing_domain)
         self._propagate_domains_down()
         return new_domains
 
@@ -543,7 +555,6 @@ class Fragment:
         fragment = SampleLowerer()(self)
         new_domains = fragment._propagate_domains(missing_domain)
         fragment = DomainLowerer()(fragment)
-        fragment._resolve_hierarchy_conflicts()
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:

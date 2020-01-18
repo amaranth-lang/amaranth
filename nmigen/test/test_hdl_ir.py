@@ -408,6 +408,22 @@ class FragmentDomainsTestCase(FHDLTestCase):
             None: SignalSet((ResetSignal("b_sync"),))
         }))
 
+    def test_domain_conflict_rename_drivers(self):
+        cda = ClockDomain("sync")
+        cdb = ClockDomain("sync")
+        s = Signal()
+
+        fa = Fragment()
+        fa.add_domains(cda)
+        fb = Fragment()
+        fb.add_domains(cdb)
+        f = Fragment()
+        f.add_subfragment(fa, "a")
+        f.add_subfragment(fb, "b")
+        f.add_driver(s, "b_sync")
+
+        f._propagate_domains(lambda name: ClockDomain(name))
+
     def test_propagate_down(self):
         cd = ClockDomain()
 
