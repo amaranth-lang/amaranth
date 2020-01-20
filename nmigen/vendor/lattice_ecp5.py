@@ -115,6 +115,9 @@ class LatticeECP5Platform(TemplatedPlatform):
             {% for file in platform.iter_extra_files(".sv") -%}
                 read_verilog -sv {{get_override("read_verilog_opts")|options}} {{file}}
             {% endfor %}
+            {% for file in platform.iter_extra_files(".il") -%}
+                read_ilang {{file}}
+            {% endfor %}
             read_ilang {{name}}.il
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_ecp5 {{get_override("synth_opts")|options}} -top {{name}}
