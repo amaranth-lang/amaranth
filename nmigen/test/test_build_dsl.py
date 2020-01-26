@@ -25,6 +25,8 @@ class PinsTestCase(FHDLTestCase):
     def test_conn(self):
         p = Pins("0 1 2", conn=("pmod", 0))
         self.assertEqual(list(p), ["pmod_0:0", "pmod_0:1", "pmod_0:2"])
+        p = Pins("0 1 2", conn=("pmod", "a"))
+        self.assertEqual(list(p), ["pmod_a:0", "pmod_a:1", "pmod_a:2"])
 
     def test_map_names(self):
         p = Pins("0 1 2", conn=("pmod", 0))
@@ -52,6 +54,12 @@ class PinsTestCase(FHDLTestCase):
         with self.assertRaises(TypeError,
                 msg="Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not 'wrong'"):
             p = Pins("A0 A1", dir="wrong")
+
+    def test_wrong_conn(self):
+        with self.assertRaises(TypeError,
+                msg="Connector must be None or a pair of string (connector name) and "
+                    "integer/string (connector number), not ('foo', None)"):
+            p = Pins("A0 A1", conn=("foo", None))
 
     def test_wrong_map_names(self):
         p = Pins("0 1 2", conn=("pmod", 0))
@@ -294,6 +302,17 @@ class ConnectorTestCase(FHDLTestCase):
             ("9", "expansion_0:6"),
             ("10", "expansion_0:7"),
         ]))
+
+    def test_str_name(self):
+        c = Connector("ext", "A", "0 1 2")
+        self.assertEqual(c.name, "ext")
+        self.assertEqual(c.number, "A")
+
+    def test_conn_wrong_name(self):
+        with self.assertRaises(TypeError,
+                msg="Connector must be None or a pair of string (connector name) and "
+                    "integer/string (connector number), not ('foo', None)"):
+            Connector("ext", "A", "0 1 2", conn=("foo", None))
 
     def test_wrong_io(self):
         with self.assertRaises(TypeError,
