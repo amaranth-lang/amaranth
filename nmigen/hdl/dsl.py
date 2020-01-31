@@ -1,6 +1,7 @@
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
-from contextlib import contextmanager
+from contextlib import contextmanager, _GeneratorContextManager
+from functools import wraps
 from enum import Enum
 import warnings
 
@@ -113,6 +114,27 @@ class _ModuleBuilderDomainSet:
         self._builder._add_domain(domain)
 
 
+# It's not particularly clean to depend on an internal interface, but, unfortunately, __bool__
+# must be defined on a class to be called during implicit conversion.
+class _GuardedContextManager(_GeneratorContextManager):
+    def __init__(self, keyword, func, args, kwds):
+        self.keyword = keyword
+        return super().__init__(func, args, kwds)
+
+    def __bool__(self):
+        raise SyntaxError("`if m.{kw}(...):` does not work; use `with m.{kw}(...)`"
+                          .format(kw=self.keyword))
+
+
+def _guardedcontextmanager(keyword):
+    def decorator(func):
+        @wraps(func)
+        def helper(*args, **kwds):
+            return _GuardedContextManager(keyword, func, args, kwds)
+        return helper
+    return decorator
+
+
 class FSM:
     def __init__(self, state, encoding, decoding):
         self.state    = state
@@ -183,7 +205,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                           SyntaxWarning, stacklevel=4)
         return cond
 
-    @contextmanager
+    @_guardedcontextmanager("If")
     def If(self, cond):
         self._check_context("If", context=None)
         cond = self._check_signed_cond(cond)
@@ -206,7 +228,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self.domain._depth -= 1
             self._statements = _outer_case
 
-    @contextmanager
+    @_guardedcontextmanager("Elif")
     def Elif(self, cond):
         self._check_context("Elif", context=None)
         cond = self._check_signed_cond(cond)
@@ -226,7 +248,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self.domain._depth -= 1
             self._statements = _outer_case
 
-    @contextmanager
+    @_guardedcontextmanager("Else")
     def Else(self):
         self._check_context("Else", context=None)
         src_loc = tracer.get_src_loc(src_loc_at=1)

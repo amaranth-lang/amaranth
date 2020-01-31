@@ -300,6 +300,23 @@ class DSLTestCase(FHDLTestCase):
             with m.Elif(~True):
                 pass
 
+    def test_if_If_Elif_Else(self):
+        m = Module()
+        with self.assertRaises(SyntaxError,
+                msg="`if m.If(...):` does not work; use `with m.If(...)`"):
+            if m.If(0):
+                pass
+        with m.If(0):
+            pass
+        with self.assertRaises(SyntaxError,
+                msg="`if m.Elif(...):` does not work; use `with m.Elif(...)`"):
+            if m.Elif(0):
+                pass
+        with self.assertRaises(SyntaxError,
+                msg="`if m.Else(...):` does not work; use `with m.Else(...)`"):
+            if m.Else():
+                pass
+
     def test_Switch(self):
         m = Module()
         with m.Switch(self.w1):
