@@ -12,7 +12,7 @@ Other nMigen libraries are built on FHDL and provide various tools and logic cor
 
 See the [doc/](doc/) folder for more technical information.
 
-nMigen is a direct descendant of [Migen][] rewritten from scratch to address many issues that became clear in the many years Migen has been used in production. nMigen provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
+nMigen is based on [Migen][], a hardware description language developed by [M-Labs][]. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
 nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend requires [Yosys][] 0.9 or a newer version.
 
