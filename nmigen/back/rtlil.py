@@ -278,6 +278,9 @@ class _ValueCompilerState:
         self.ports[signal] = (len(self.ports), kind)
 
     def resolve(self, signal, prefix=None):
+        if len(signal) == 0:
+            return "{ }", "{ }"
+
         if signal in self.wires:
             return self.wires[signal]
 
