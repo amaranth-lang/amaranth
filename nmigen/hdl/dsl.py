@@ -309,6 +309,13 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                               .format(pattern, len(switch_data["test"])),
                               SyntaxWarning, stacklevel=3)
                 continue
+            if isinstance(pattern, Enum) and bits_for(pattern.value) > len(switch_data["test"]):
+                warnings.warn("Case pattern '{:b}' ({}.{}) is wider than switch value "
+                              "(which has width {}); comparison will never be true"
+                              .format(pattern.value, pattern.__class__.__name__, pattern.name,
+                                      len(switch_data["test"])),
+                              SyntaxWarning, stacklevel=3)
+                continue
             new_patterns = (*new_patterns, pattern)
         try:
             _outer_case, self._statements = self._statements, []

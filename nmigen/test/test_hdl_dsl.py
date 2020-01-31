@@ -400,6 +400,8 @@ class DSLTestCase(FHDLTestCase):
         """)
 
     def test_Case_width_wrong(self):
+        class Color(Enum):
+            RED = 0b10101010
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaises(SyntaxError,
@@ -410,6 +412,11 @@ class DSLTestCase(FHDLTestCase):
                     msg="Case pattern '10110' is wider than switch value (which has width 4); "
                         "comparison will never be true"):
                 with m.Case(0b10110):
+                    pass
+            with self.assertWarns(SyntaxWarning,
+                    msg="Case pattern '10101010' (Color.RED) is wider than switch value "
+                        "(which has width 4); comparison will never be true"):
+                with m.Case(Color.RED):
                     pass
         self.assertRepr(m._statements, """
         (
