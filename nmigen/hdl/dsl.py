@@ -148,6 +148,11 @@ class FSM:
 
 
 class Module(_ModuleBuilderRoot, Elaboratable):
+    @classmethod
+    def __init_subclass__(cls):
+        raise SyntaxError("Instead of inheriting from `Module`, inherit from `Elaboratable` "
+                          "and return a `Module` from the `elaborate(self, platform)` method")
+
     def __init__(self):
         _ModuleBuilderRoot.__init__(self, self, depth=0)
         self.submodules    = _ModuleBuilderSubmodules(self)

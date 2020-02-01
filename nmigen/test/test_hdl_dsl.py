@@ -19,6 +19,13 @@ class DSLTestCase(FHDLTestCase):
         self.c3 = Signal()
         self.w1 = Signal(4)
 
+    def test_cant_inherit(self):
+        with self.assertRaises(SyntaxError,
+                msg="Instead of inheriting from `Module`, inherit from `Elaboratable` and "
+                    "return a `Module` from the `elaborate(self, platform)` method"):
+            class ORGate(Module):
+                pass
+
     def test_d_comb(self):
         m = Module()
         m.d.comb += self.c1.eq(1)
