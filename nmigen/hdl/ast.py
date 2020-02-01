@@ -773,15 +773,13 @@ class Signal(Value, DUID):
 
     Parameters
     ----------
-    shape : int or tuple or None
-        Either an integer ``width`` or a tuple ``(width, signed)`` specifying the number of bits
-        in this ``Signal`` and whether it is signed (can represent negative values).
-        ``shape`` defaults to 1-bit and non-signed.
+    shape : ``Shape``-castable object or None
+        Specification for the number of bits in this ``Signal`` and its signedness (whether it
+        can represent negative values). See ``Shape.cast`` for details.
+        If not specified, ``shape`` defaults to 1-bit and non-signed.
     name : str
         Name hint for this signal. If ``None`` (default) the name is inferred from the variable
-        name this ``Signal`` is assigned to. Name collisions are automatically resolved by
-        prepending names of objects that contain this ``Signal`` and by appending integer
-        sequences.
+        name this ``Signal`` is assigned to.
     reset : int or integral Enum
         Reset (synchronous) or default (combinatorial) value.
         When this ``Signal`` is assigned to in synchronous context and the corresponding clock
@@ -792,11 +790,6 @@ class Signal(Value, DUID):
         If ``True``, do not generate reset logic for this ``Signal`` in synchronous statements.
         The ``reset`` value is only used as a combinatorial default or as the initial value.
         Defaults to ``False``.
-    min : int or None
-    max : int or None
-        If ``shape`` is ``None``, the signal bit width and signedness are
-        determined by the integer range given by ``min`` (inclusive,
-        defaults to 0) and ``max`` (exclusive, defaults to 2).
     attrs : dict
         Dictionary of synthesis attributes.
     decoder : function or Enum
@@ -813,6 +806,7 @@ class Signal(Value, DUID):
     reset : int
     reset_less : bool
     attrs : dict
+    decoder : function
     """
 
     def __init__(self, shape=None, *, name=None, reset=0, reset_less=False,
