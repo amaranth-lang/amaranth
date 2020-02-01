@@ -121,7 +121,9 @@ class Fragment:
         yield from self.domains
 
     def add_statements(self, *stmts):
-        self.statements += Statement.cast(stmts)
+        for stmt in Statement.cast(stmts):
+            stmt._MustUse__used = True
+            self.statements.append(stmt)
 
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)

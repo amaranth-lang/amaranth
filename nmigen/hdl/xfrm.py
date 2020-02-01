@@ -234,6 +234,8 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt.src_loc = stmt.src_loc
             if isinstance(new_stmt, Switch) and isinstance(stmt, Switch):
                 new_stmt.case_src_locs = stmt.case_src_locs
+        if isinstance(new_stmt, Property):
+            new_stmt._MustUse__used = True
         return new_stmt
 
     def __call__(self, stmt):

@@ -8,6 +8,7 @@ from enum import Enum
 
 from .. import tracer
 from .._utils import *
+from .._unused import *
 
 
 __all__ = [
@@ -17,9 +18,9 @@ __all__ = [
     "Signal", "ClockSignal", "ResetSignal",
     "UserValue",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
-    "Statement", "Assign", "Assert", "Assume", "Cover", "Switch",
-    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict",
-    "SignalSet",
+    "Statement", "Switch",
+    "Property", "Assign", "Assert", "Assume", "Cover",
+    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
 ]
 
 
@@ -493,13 +494,13 @@ class AnyValue(Value, DUID):
 @final
 class AnyConst(AnyValue):
     def __repr__(self):
-        return "(anyconst {}'{})".format(self.nbits, "s" if self.signed else "")
+        return "(anyconst {}'{})".format(self.width, "s" if self.signed else "")
 
 
 @final
 class AnySeq(AnyValue):
     def __repr__(self):
-        return "(anyseq {}'{})".format(self.nbits, "s" if self.signed else "")
+        return "(anyseq {}'{})".format(self.width, "s" if self.signed else "")
 
 
 @final
@@ -1221,7 +1222,13 @@ class Assign(Statement):
         return "(eq {!r} {!r})".format(self.lhs, self.rhs)
 
 
-class Property(Statement):
+class UnusedProperty(UnusedMustUse):
+    pass
+
+
+class Property(Statement, MustUse):
+    _MustUse__warning = UnusedProperty
+
     def __init__(self, test, *, _check=None, _en=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         self.test   = Value.cast(test)

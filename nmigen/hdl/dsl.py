@@ -462,14 +462,16 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
 
-        for assign in Statement.cast(assigns):
-            if not compat_mode and not isinstance(assign, (Assign, Assert, Assume, Cover)):
+        for stmt in Statement.cast(assigns):
+            if not compat_mode and not isinstance(stmt, (Assign, Assert, Assume, Cover)):
                 raise SyntaxError(
                     "Only assignments and property checks may be appended to d.{}"
                     .format(domain_name(domain)))
 
-            assign = SampleDomainInjector(domain)(assign)
-            for signal in assign._lhs_signals():
+            stmt._MustUse__used = True
+            stmt = SampleDomainInjector(domain)(stmt)
+
+            for signal in stmt._lhs_signals():
                 if signal not in self._driving:
                     self._driving[signal] = domain
                 elif self._driving[signal] != domain:
@@ -479,7 +481,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                         "already driven from d.{}"
                         .format(signal, domain_name(domain), domain_name(cd_curr)))
 
-            self._statements.append(assign)
+            self._statements.append(stmt)
 
     def _add_submodule(self, submodule, name=None):
         if not hasattr(submodule, "elaborate"):
