@@ -343,7 +343,7 @@ class Fragment:
 
             subfrag._propagate_domains_down()
 
-    def create_missing_domains(self, missing_domain, *, platform=None):
+    def _create_missing_domains(self, missing_domain, *, platform=None):
         from .xfrm import DomainCollector
 
         collector = DomainCollector()
@@ -373,11 +373,11 @@ class Fragment:
                 self.add_domains(new_fragment.domains.values())
         return new_domains
 
-    def _propagate_domains(self, missing_domain):
+    def _propagate_domains(self, missing_domain, *, platform=None):
         self._propagate_domains_up()
         self._propagate_domains_down()
         self._resolve_hierarchy_conflicts()
-        new_domains = self.create_missing_domains(missing_domain)
+        new_domains = self._create_missing_domains(missing_domain, platform=platform)
         self._propagate_domains_down()
         return new_domains
 

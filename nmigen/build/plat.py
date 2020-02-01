@@ -8,6 +8,7 @@ import jinja2
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
+from ..hdl.xfrm import SampleLowerer, DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
 from .res import *
@@ -115,7 +116,9 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self._prepared = True
 
         fragment = Fragment.get(elaboratable, self)
-        fragment.create_missing_domains(self.create_missing_domain, platform=self)
+        fragment = SampleLowerer()(fragment)
+        fragment._propagate_domains(self.create_missing_domain, platform=self)
+        fragment = DomainLowerer()(fragment)
 
         def add_pin_fragment(pin, pin_fragment):
             pin_fragment = Fragment.get(pin_fragment, self)
@@ -144,7 +147,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 add_pin_fragment(pin,
                     self.get_diff_input_output(pin, p_port, n_port, attrs, invert))
 
-        fragment = fragment.prepare(ports=self.iter_ports(), missing_domain=lambda name: None)
+        fragment._propagate_ports(ports=self.iter_ports(), all_undef_as_ports=False)
         return self.toolchain_prepare(fragment, name, **kwargs)
 
     @abstractmethod
