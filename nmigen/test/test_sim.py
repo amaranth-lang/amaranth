@@ -116,13 +116,11 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a, b: y.eq(a << b)
         self.assertStatement(stmt, [C(0b1001, 4), C(0)],  C(0b1001,    5))
         self.assertStatement(stmt, [C(0b1001, 4), C(3)],  C(0b1001000, 7))
-        self.assertStatement(stmt, [C(0b1001, 4), C(-2)], C(0b10,      7))
 
     def test_shr(self):
         stmt = lambda y, a, b: y.eq(a >> b)
         self.assertStatement(stmt, [C(0b1001, 4), C(0)],  C(0b1001,    4))
         self.assertStatement(stmt, [C(0b1001, 4), C(2)],  C(0b10,      4))
-        self.assertStatement(stmt, [C(0b1001, 4), C(-2)], C(0b100100,  5))
 
     def test_eq(self):
         stmt = lambda y, a, b: y.eq(a == b)

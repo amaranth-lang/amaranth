@@ -172,14 +172,28 @@ class Value(metaclass=ABCMeta):
         self.__check_divisor()
         return Operator("//", [other, self])
 
+    def __check_shamt(self):
+        width, signed = self.shape()
+        if signed:
+            # Neither Python nor HDLs implement shifts by negative values; prohibit any shifts
+            # by a signed value to make sure the shift amount can always be interpreted as
+            # an unsigned value.
+            raise NotImplementedError("Shift by a signed value is not supported")
     def __lshift__(self, other):
+        other = Value.cast(other)
+        other.__check_shamt()
         return Operator("<<", [self, other])
     def __rlshift__(self, other):
+        self.__check_shamt()
         return Operator("<<", [other, self])
     def __rshift__(self, other):
+        other = Value.cast(other)
+        other.__check_shamt()
         return Operator(">>", [self, other])
     def __rrshift__(self, other):
+        self.__check_shamt()
         return Operator(">>", [other, self])
+
     def __and__(self, other):
         return Operator("&", [self, other])
     def __rand__(self, other):
