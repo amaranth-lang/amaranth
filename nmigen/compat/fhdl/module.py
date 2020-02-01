@@ -95,7 +95,7 @@ class _CompatModuleClockDomains(_CompatModuleProxy):
 
 
 class CompatModule(ir.Elaboratable):
-    _Elaboratable__silence = True
+    _MustUse__silence = True
 
     # Actually returns another nMigen Elaboratable (nmigen.dsl.Module), not a Fragment.
     def get_fragment(self):
