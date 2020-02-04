@@ -357,11 +357,12 @@ class Value(metaclass=ABCMeta):
                 raise SyntaxError("Match pattern must be an integer, a string, or an enumeration, "
                                   "not {!r}"
                                   .format(pattern))
-            if isinstance(pattern, str) and any(bit not in "01-" for bit in pattern):
+            if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
                 raise SyntaxError("Match pattern '{}' must consist of 0, 1, and - (don't care) "
-                                  "bits"
+                                  "bits, and may include whitespace"
                                   .format(pattern))
-            if isinstance(pattern, str) and len(pattern) != len(self):
+            if (isinstance(pattern, str) and
+                    len("".join(pattern.split())) != len(self)):
                 raise SyntaxError("Match pattern '{}' must have the same width as match value "
                                   "(which is {})"
                                   .format(pattern, len(self)))
@@ -372,6 +373,7 @@ class Value(metaclass=ABCMeta):
                               SyntaxWarning, stacklevel=3)
                 continue
             if isinstance(pattern, str):
+                pattern = "".join(pattern.split()) # remove whitespace
                 mask    = int(pattern.replace("0", "1").replace("-", "0"), 2)
                 pattern = int(pattern.replace("-", "0"), 2)
                 matches.append((self & mask) == pattern)
@@ -1300,7 +1302,7 @@ class Switch(Statement):
             new_keys = ()
             for key in keys:
                 if isinstance(key, str):
-                    pass
+                    key = "".join(key.split()) # remove whitespace
                 elif isinstance(key, int):
                     key = format(key, "b").rjust(len(self.test), "0")
                 elif isinstance(key, Enum):

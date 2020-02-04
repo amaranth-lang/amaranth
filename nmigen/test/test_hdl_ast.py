@@ -464,6 +464,9 @@ class OperatorTestCase(FHDLTestCase):
         self.assertRepr(s.matches("10--"), """
         (== (& (sig s) (const 4'd12)) (const 4'd8))
         """)
+        self.assertRepr(s.matches("1 0--"), """
+        (== (& (sig s) (const 4'd12)) (const 4'd8))
+        """)
 
     def test_matches_enum(self):
         s = Signal(SignedEnum)
@@ -484,7 +487,8 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_bits_wrong(self):
         s = Signal(4)
         with self.assertRaises(SyntaxError,
-                msg="Match pattern 'abc' must consist of 0, 1, and - (don't care) bits"):
+                msg="Match pattern 'abc' must consist of 0, 1, and - (don't care) bits, "
+                    "and may include whitespace"):
             s.matches("abc")
 
     def test_matches_pattern_wrong(self):

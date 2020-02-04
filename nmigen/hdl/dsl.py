@@ -301,10 +301,12 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 raise SyntaxError("Case pattern must be an integer, a string, or an enumeration, "
                                   "not {!r}"
                                   .format(pattern))
-            if isinstance(pattern, str) and any(bit not in "01-" for bit in pattern):
-                raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) bits"
+            if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
+                raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) "
+                                  "bits, and may include whitespace"
                                   .format(pattern))
-            if isinstance(pattern, str) and len(pattern) != len(switch_data["test"]):
+            if (isinstance(pattern, str) and
+                    len("".join(pattern.split())) != len(switch_data["test"])):
                 raise SyntaxError("Case pattern '{}' must have the same width as switch value "
                                   "(which is {})"
                                   .format(pattern, len(switch_data["test"])))

@@ -331,12 +331,15 @@ class DSLTestCase(FHDLTestCase):
                 m.d.comb += self.c1.eq(1)
             with m.Case("11--"):
                 m.d.comb += self.c2.eq(1)
+            with m.Case("1 0--"):
+                m.d.comb += self.c2.eq(1)
         m._flush()
         self.assertRepr(m._statements, """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
                 (case 11-- (eq (sig c2) (const 1'd1)))
+                (case 10-- (eq (sig c2) (const 1'd1)))
             )
         )
         """)
@@ -435,7 +438,8 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaises(SyntaxError,
-                    msg="Case pattern 'abc' must consist of 0, 1, and - (don't care) bits"):
+                    msg="Case pattern 'abc' must consist of 0, 1, and - (don't care) bits, "
+                        "and may include whitespace"):
                 with m.Case("abc"):
                     pass
 
