@@ -132,9 +132,9 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                     NET "{{port_name}}" {{attr_name}}={{attr_value}};
                 {% endfor %}
             {% endfor %}
-            {% for signal, frequency in platform.iter_clock_constraints() -%}
-                NET "{{signal|hierarchy("/")}}" TNM_NET="PRD{{signal|hierarchy("/")}}";
-                TIMESPEC "TS{{signal|hierarchy("/")}}"=PERIOD "PRD{{signal|hierarchy("/")}}" {{1000000000/frequency}} ns HIGH 50%;
+            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
+                NET "{{net_signal|hierarchy("/")}}" TNM_NET="PRD{{net_signal|hierarchy("/")}}";
+                TIMESPEC "TS{{net_signal|hierarchy("/")}}"=PERIOD "PRD{{net_signal|hierarchy("/")}}" {{1000000000/frequency}} ns HIGH 50%;
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """

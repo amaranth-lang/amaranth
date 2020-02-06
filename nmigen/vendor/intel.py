@@ -107,15 +107,19 @@ class IntelPlatform(TemplatedPlatform):
             set_global_assignment -name GENERATE_RBF_FILE ON
         """,
         "{{name}}.sdc": r"""
-            {% for signal, frequency in platform.iter_clock_constraints() -%}
-                create_clock -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("|")}}]
+            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
+                {% if port_signal is not none -%}
+                    create_clock -name {{port_signal.name}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                {% else -%}
+                    create_clock -name {{net_signal.name}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("|")}}]
+                {% endif %}
             {% endfor %}
         """,
         "{{name}}.srf": r"""
             {% for warning in platform.quartus_suppressed_warnings %}
             { "" "" "" "{{name}}.v" {  } {  } 0 {{warning}} "" 0 0 "Design Software" 0 -1 0 ""}
             {% endfor %}
-        """,      
+        """,
     }
     command_templates = [
         r"""

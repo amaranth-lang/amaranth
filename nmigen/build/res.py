@@ -226,4 +226,25 @@ class ResourceManager:
             self._clocks[clock] = float(frequency)
 
     def iter_clock_constraints(self):
-        return iter(self._clocks.items())
+        # Back-propagate constraints through the input buffer. For clock constraints on pins
+        # (the majority of cases), toolchains work better if the constraint is defined on the pin
+        # and not on the buffered internal net; and if the toolchain is advanced enough that
+        # it considers clock phase and delay of the input buffer, it is *necessary* to define
+        # the constraint on the pin to match the designer's expectation of phase being referenced
+        # to the pin.
+        #
+        # Constraints on nets with no corresponding input pin (e.g. PLL or SERDES outputs) are not
+        # affected.
+        pin_i_to_port = SignalDict()
+        for res, pin, port, attrs in self._ports:
+            if hasattr(pin, "i"):
+                if isinstance(res.ios[0], Pins):
+                    pin_i_to_port[pin.i] = port.io
+                elif isinstance(res.ios[0], DiffPairs):
+                    pin_i_to_port[pin.i] = port.p
+                else:
+                    assert False
+
+        for net_signal, frequency in self._clocks.items():
+            port_signal = pin_i_to_port.get(net_signal)
+            yield net_signal, port_signal, frequency

@@ -133,8 +133,12 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                     set_property {{attr_name}} {{attr_value}} [get_ports {{port_name}}]
                 {% endfor %}
             {% endfor %}
-            {% for signal, frequency in platform.iter_clock_constraints() -%}
-                create_clock -name {{signal.name}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")}}]
+            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
+                {% if port_signal is not none -%}
+                    create_clock -name {{port_signal.name}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                {% else -%}
+                    create_clock -name {{net_signal.name}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
+                {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """

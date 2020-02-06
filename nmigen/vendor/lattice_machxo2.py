@@ -91,14 +91,15 @@ class LatticeMachXO2Platform(TemplatedPlatform):
                     {%- for key, value in extras.items() %} {{key}}={{value}}{% endfor %};
                 {% endif %}
             {% endfor %}
-            {% for signal, frequency in platform.iter_clock_constraints() -%}
-                FREQUENCY NET "{{signal|hierarchy("/")}}" {{frequency/1000000}} MHZ;
-            {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """,
         "{{name}}.sdc": r"""
-            {% for signal, frequency in platform.iter_clock_constraints() -%}
-                create_clock -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")}}]
+            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
+                {% if port_signal is not none -%}
+                    create_clock -name {{port_signal.name}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                {% else -%}
+                    create_clock -name {{net_signal.name}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
+                {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
