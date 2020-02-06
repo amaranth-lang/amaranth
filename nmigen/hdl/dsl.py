@@ -118,6 +118,10 @@ class _ModuleBuilderDomainSet:
         if not isinstance(domain, ClockDomain):
             raise TypeError("Only clock domains may be added to `m.domains`, not {!r}"
                             .format(domain))
+        if domain.name != name:
+            raise NameError("Clock domain name {!r} must match name in `m.domains.{} += ...` "
+                            "syntax"
+                            .format(domain.name, name))
         self._builder._add_domain(domain)
 
 

@@ -716,6 +716,12 @@ class DSLTestCase(FHDLTestCase):
                 msg="Only clock domains may be added to `m.domains`, not 1"):
             m.domains += 1
 
+    def test_domain_add_wrong_name(self):
+        m = Module()
+        with self.assertRaises(NameError,
+                msg="Clock domain name 'bar' must match name in `m.domains.foo += ...` syntax"):
+            m.domains.foo = ClockDomain("bar")
+
     def test_lower(self):
         m1 = Module()
         m1.d.comb += self.c1.eq(self.s1)
