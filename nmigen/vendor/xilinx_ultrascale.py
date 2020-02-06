@@ -38,6 +38,7 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
         * ``{{name}}_clock_utilization.rpt``:  Vivado report.
         * ``{{name}}_route_status.rpt``: Vivado report.
         * ``{{name}}_drc.rpt``: Vivado report.
+        * ``{{name}}_methodology.rpt``: Vivado report.
         * ``{{name}}_timing.rpt``: Vivado report.
         * ``{{name}}_power.rpt``: Vivado report.
         * ``{{name}}_route.dcp``: Vivado design checkpoint.
@@ -116,6 +117,7 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
             write_checkpoint -force {{name}}_route.dcp
             report_route_status -file {{name}}_route_status.rpt
             report_drc -file {{name}}_drc.rpt
+            report_methodology -file {{name}}_methodology.rpt
             report_timing_summary -datasheet -max_paths 10 -file {{name}}_timing.rpt
             report_power -file {{name}}_power.rpt
             {{get_override("script_before_bitstream")|default("# (script_before_bitstream placeholder)")}}
