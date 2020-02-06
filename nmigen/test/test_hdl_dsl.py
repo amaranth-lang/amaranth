@@ -582,12 +582,19 @@ class DSLTestCase(FHDLTestCase):
             with m.FSM(domain="comb"):
                 pass
 
+    def test_FSM_wrong_undefined(self):
+        m = Module()
+        with self.assertRaises(NameError,
+                msg="FSM state 'FOO' is referenced but not defined"):
+            with m.FSM() as fsm:
+                fsm.ongoing("FOO")
+
     def test_FSM_wrong_redefined(self):
         m = Module()
         with m.FSM():
             with m.State("FOO"):
                 pass
-            with self.assertRaises(SyntaxError,
+            with self.assertRaises(NameError,
                     msg="FSM state 'FOO' is already defined"):
                 with m.State("FOO"):
                     pass

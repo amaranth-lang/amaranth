@@ -375,6 +375,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = "FSM"
             self.domain._depth += 1
             yield fsm
+            for state_name in fsm_data["encoding"]:
+                if state_name not in fsm_data["states"]:
+                    raise NameError("FSM state '{}' is referenced but not defined"
+                                    .format(state_name))
         finally:
             self.domain._depth -= 1
             self._ctrl_context = None
@@ -386,7 +390,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         fsm_data = self._get_ctrl("FSM")
         if name in fsm_data["states"]:
-            raise SyntaxError("FSM state '{}' is already defined".format(name))
+            raise NameError("FSM state '{}' is already defined".format(name))
         if name not in fsm_data["encoding"]:
             fsm_data["encoding"][name] = len(fsm_data["encoding"])
         try:
