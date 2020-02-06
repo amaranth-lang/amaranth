@@ -1,4 +1,5 @@
 import operator
+from collections import OrderedDict
 
 from .. import tracer
 from .ast import *
@@ -24,14 +25,17 @@ class Memory:
     name : str
         Name hint for this memory. If ``None`` (default) the name is inferred from the variable
         name this ``Signal`` is assigned to.
+    attrs : dict
+        Dictionary of synthesis attributes.
 
     Attributes
     ----------
     width : int
     depth : int
     init : list of int
+    attrs : dict
     """
-    def __init__(self, *, width, depth, init=None, name=None, simulate=True):
+    def __init__(self, *, width, depth, init=None, name=None, attrs=None, simulate=True):
         if not isinstance(width, int) or width < 0:
             raise TypeError("Memory width must be a non-negative integer, not {!r}"
                             .format(width))
@@ -44,6 +48,7 @@ class Memory:
 
         self.width = width
         self.depth = depth
+        self.attrs = OrderedDict(() if attrs is None else attrs)
 
         # Array of signals for simulation.
         self._array = Array()

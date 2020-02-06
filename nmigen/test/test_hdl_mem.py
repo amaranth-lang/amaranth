@@ -42,6 +42,12 @@ class MemoryTestCase(FHDLTestCase):
                     "'str' object cannot be interpreted as an integer"):
             m = Memory(width=8, depth=4, init=[1, "0"])
 
+    def test_attrs(self):
+        m1 = Memory(width=8, depth=4)
+        self.assertEqual(m1.attrs, {})
+        m2 = Memory(width=8, depth=4, attrs={"ram_block": True})
+        self.assertEqual(m2.attrs, {"ram_block": True})
+
     def test_read_port_transparent(self):
         mem    = Memory(width=8, depth=4)
         rdport = mem.read_port()

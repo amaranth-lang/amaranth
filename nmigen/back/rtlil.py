@@ -826,7 +826,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         memory = param_value
                         if memory not in memories:
                             memories[memory] = module.memory(width=memory.width, size=memory.depth,
-                                                             name=memory.name)
+                                                             name=memory.name, attrs=memory.attrs)
                             addr_bits = bits_for(memory.depth)
                             data_parts = []
                             data_mask = (1 << memory.width) - 1
