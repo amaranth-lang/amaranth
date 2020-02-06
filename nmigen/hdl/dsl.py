@@ -9,6 +9,7 @@ from .._utils import flatten, bits_for, deprecated
 from .. import tracer
 from .ast import *
 from .ir import *
+from .cd import *
 from .xfrm import *
 
 
@@ -107,10 +108,16 @@ class _ModuleBuilderDomainSet:
 
     def __iadd__(self, domains):
         for domain in flatten([domains]):
+            if not isinstance(domain, ClockDomain):
+                raise TypeError("Only clock domains may be added to `m.domains`, not {!r}"
+                                .format(domain))
             self._builder._add_domain(domain)
         return self
 
     def __setattr__(self, name, domain):
+        if not isinstance(domain, ClockDomain):
+            raise TypeError("Only clock domains may be added to `m.domains`, not {!r}"
+                            .format(domain))
         self._builder._add_domain(domain)
 
 
