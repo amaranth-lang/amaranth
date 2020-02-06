@@ -1,6 +1,7 @@
 import inspect
 import warnings
 from contextlib import contextmanager
+import itertools
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
@@ -85,7 +86,15 @@ class _VCDWaveformWriter(_WaveformWriter):
         self.gtkw_file = gtkw_file
         self.gtkw_save = gtkw_file and GTKWSave(self.gtkw_file)
 
-        for signal, names in signal_names.items():
+        self.traces = []
+
+        trace_names = SignalDict()
+        for trace in traces:
+            if trace not in signal_names:
+                trace_names[trace] = trace.name
+            self.traces.append(trace)
+
+        for signal, names in itertools.chain(signal_names.items(), trace_names.items()):
             if signal.decoder:
                 var_type = "string"
                 var_size = 1
@@ -137,12 +146,12 @@ class _VCDWaveformWriter(_WaveformWriter):
             self.gtkw_save.dumpfile_size(self.vcd_file.tell())
 
             self.gtkw_save.treeopen("top")
-            for signal, hierarchy in self.gtkw_names.items():
+            for signal in self.traces:
                 if len(signal) > 1 and not signal.decoder:
                     suffix = "[{}:0]".format(len(signal) - 1)
                 else:
                     suffix = ""
-                self.gtkw_save.trace(".".join(hierarchy) + suffix)
+                self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)
 
         self.vcd_file.close()
         if self.gtkw_file is not None:
