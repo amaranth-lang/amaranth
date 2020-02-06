@@ -192,6 +192,8 @@ class FIFOContractSpec(Elaboratable):
                         fifo.w_en.eq(1)
                     ]
                     m.next = "DONE"
+            with m.State("DONE"):
+                pass
 
         with m.FSM(domain=self.r_domain) as read_fsm:
             read_1 = Signal(fifo.width)
@@ -209,6 +211,8 @@ class FIFOContractSpec(Elaboratable):
                     ]
                 with m.If((read_1 == entry_1) & (read_2 == entry_2)):
                     m.next = "DONE"
+            with m.State("DONE"):
+                pass
 
         with m.If(Initial()):
             m.d.comb += Assume(write_fsm.ongoing("WRITE-1"))
