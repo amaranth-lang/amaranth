@@ -704,9 +704,6 @@ class _FragmentCompiler:
                 self.signal_names[signal].add(hierarchical_signal_name)
 
         for domain_name, domain_signals in fragment.drivers.items():
-            for domain_signal in domain_signals:
-                add_signal_name(domain_signal)
-
             domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
             domain_process = _CompiledProcess(self.state, comb=domain_name is None,
                 name=".".join((*hierarchy, "<{}>".format(domain_name or "comb"))))
@@ -761,6 +758,9 @@ class _FragmentCompiler:
             domain_process.run = exec_locals["run"]
 
             processes.add(domain_process)
+
+            for used_signal in domain_process.context.indexes:
+                add_signal_name(used_signal)
 
         for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
             if subfragment_name is None:
