@@ -532,13 +532,22 @@ class Fragment:
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
-            ports = map(DomainLowerer(fragment.domains).on_value, ports)
-            new_ports = []
+            mapped_ports = []
+            # Lower late bound signals like ClockSignal() to ports.
+            port_lowerer = DomainLowerer(fragment.domains)
+            for port in ports:
+                if not isinstance(port, (Signal, ClockSignal, ResetSignal)):
+                    raise TypeError("Only signals may be added as ports, not {!r}"
+                                    .format(port))
+                mapped_ports.append(port_lowerer.on_value(port))
+            # Add ports for all newly created missing clock domains, since not doing so defeats
+            # the purpose of domain auto-creation. (It's possible to refer to these ports before
+            # the domain actually exists through late binding, but it's inconvenient.)
             for cd in new_domains:
-                new_ports.append(cd.clk)
+                mapped_ports.append(cd.clk)
                 if cd.rst is not None:
-                    new_ports.append(cd.rst)
-            fragment._propagate_ports(ports=(*ports, *new_ports), all_undef_as_ports=False)
+                    mapped_ports.append(cd.rst)
+            fragment._propagate_ports(ports=mapped_ports, all_undef_as_ports=False)
         return fragment
 
 

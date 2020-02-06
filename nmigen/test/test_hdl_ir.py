@@ -298,6 +298,11 @@ class FragmentPortsTestCase(FHDLTestCase):
             (sync.rst, "i"),
         ]))
 
+    def test_port_wrong(self):
+        f = Fragment()
+        with self.assertRaises(TypeError,
+                msg="Only signals may be added as ports, not (const 1'd1)"):
+            f.prepare(ports=(Const(1),))
 
 class FragmentDomainsTestCase(FHDLTestCase):
     def test_iter_signals(self):
