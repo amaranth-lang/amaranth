@@ -454,6 +454,10 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Operator_unary(self, value):
         arg, = value.operands
+        if value.operator in ("u", "s"):
+            # These operators don't change the bit pattern, only its interpretation.
+            return self(arg)
+
         arg_bits, arg_sign = arg.shape()
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))

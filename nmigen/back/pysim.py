@@ -426,6 +426,9 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "r^":
                 # Believe it or not, this is the fastest way to compute a sideways XOR in Python.
                 return f"(format({mask(arg)}, 'b').count('1') % 2)"
+            if value.operator in ("u", "s"):
+                # These operators don't change the bit pattern, only its interpretation.
+                return self(arg)
         elif len(value.operands) == 2:
             lhs, rhs = value.operands
             lhs_mask = (1 << len(lhs)) - 1
