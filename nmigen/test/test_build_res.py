@@ -196,15 +196,15 @@ class ResourceManagerTestCase(FHDLTestCase):
         clk50 = self.cm.request("clk50", 0, dir="i")
         clk100_port_p, clk100_port_n, clk50_port = self.cm.iter_ports()
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (clk100.i, 100e6),
-            (clk50.i, 50e6)
+            (clk100.i, clk100_port_p, 100e6),
+            (clk50.i, clk50_port, 50e6)
         ])
 
     def test_add_clock(self):
         i2c = self.cm.request("i2c")
         self.cm.add_clock_constraint(i2c.scl.o, 100e3)
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (i2c.scl.o, 100e3)
+            (i2c.scl.o, None, 100e3)
         ])
 
     def test_wrong_resources(self):
