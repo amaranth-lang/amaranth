@@ -60,6 +60,10 @@ Note that nMigen will **not** produce the exact same RTL as Migen did. nMigen ha
 
 Once your design passes verification with nMigen, you can migrate it to the nMigen syntax one module at a time. Migen modules can be added to nMigen modules and vice versa, so there is no restriction on the order of migration, either.
 
+### Community
+
+nMigen has a dedicated IRC channel, [#nmigen at freenode.net](https://webchat.freenode.net/?channels=nmigen). Feel free to join to ask questions about using nMigen or discuss ongoing development of nMigen and its related projects.
+
 ### License
 
 nMigen is released under the very permissive two-clause BSD license. Under the terms of this license, you are authorized to use nMigen for closed-source proprietary designs.
