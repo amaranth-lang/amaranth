@@ -14,8 +14,6 @@ See the [doc/](doc/) folder for more technical information.
 
 nMigen is based on [Migen][], a hardware description language developed by [M-Labs][]. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-nMigen is designed for Python 3.6 and newer. nMigen's Verilog backend requires [Yosys][] 0.9 or a newer version.
-
 The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept][] and [M-Labs][].
 
 [migen]: https://m-labs.hk/migen
@@ -26,7 +24,7 @@ The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept
 
 ### Installation
 
-nMigen requires [Yosys][] 0.9 or newer, as well as a device-specific toolchain.
+nMigen requires Python 3.6 (or newer), [Yosys][] 0.9 (or newer), as well as a device-specific toolchain.
 
     pip install git+https://github.com/nmigen/nmigen.git
     pip install git+https://github.com/nmigen/nmigen-boards.git
