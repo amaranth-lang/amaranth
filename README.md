@@ -70,7 +70,6 @@ nMigen is released under the very permissive two-clause BSD license. Under the t
 
 Even though we do not require you to do so, these things are awesome, so please do them if possible:
   * tell us that you are using nMigen
-  * put the [nMigen logo](doc/nmigen_logo.svg) on the page of a product using it
   * cite nMigen in publications related to research it has helped
   * send us feedback and suggestions for improvements
   * send us bug reports when something goes wrong
