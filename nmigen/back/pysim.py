@@ -94,6 +94,9 @@ class _VCDWaveformWriter(_WaveformWriter):
                 trace_names[trace] = trace.name
             self.traces.append(trace)
 
+        if self.vcd_writer is None:
+            return
+
         for signal, names in itertools.chain(signal_names.items(), trace_names.items()):
             if signal.decoder:
                 var_type = "string"
@@ -139,7 +142,8 @@ class _VCDWaveformWriter(_WaveformWriter):
             self.vcd_writer.change(vcd_var, vcd_timestamp, var_value)
 
     def close(self, timestamp):
-        self.vcd_writer.close(self.timestamp_to_vcd(timestamp))
+        if self.vcd_writer is not None:
+            self.vcd_writer.close(self.timestamp_to_vcd(timestamp))
 
         if self.gtkw_save is not None:
             self.gtkw_save.dumpfile(self.vcd_file.name)
@@ -153,7 +157,8 @@ class _VCDWaveformWriter(_WaveformWriter):
                     suffix = ""
                 self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)
 
-        self.vcd_file.close()
+        if self.vcd_file is not None:
+            self.vcd_file.close()
         if self.gtkw_file is not None:
             self.gtkw_file.close()
 
