@@ -63,11 +63,9 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
 
     if args.action == "simulate":
         fragment = Fragment.get(design, platform)
-        with pysim.Simulator(fragment,
-                vcd_file=args.vcd_file,
-                gtkw_file=args.gtkw_file,
-                traces=ports) as sim:
-            sim.add_clock(args.sync_period)
+        sim = pysim.Simulator(fragment)
+        sim.add_clock(args.sync_period)
+        with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
 
 
