@@ -1,10 +1,13 @@
 import warnings
 
 from ..fhdl.module import CompatModule
+from ..fhdl.structure import *
 
 
 __all__ = ["split", "displacer", "chooser", "timeline", "WaitTimer", "BitSlip"]
 
+"""Take a signal and some indices, return a tuple containing the slices of the
+signal between those indices."""
 def split(v, *counts):
     r = []
     offset = 0
@@ -17,6 +20,10 @@ def split(v, *counts):
     return tuple(r)
 
 
+"""Take an input signal, shift, output signal, width, and reverse flag.
+The output signal is assigned such that the input signal is located at
+len(input signal) * shift * n, with all other bits being 0.
+"""
 def displacer(signal, shift, output, n=None, reverse=False):
     if shift is None:
         return output.eq(signal)
@@ -28,9 +35,16 @@ def displacer(signal, shift, output, n=None, reverse=False):
     else:
         r = range(n)
     l = [Replicate(shift == i, w) & signal for i in r]
+    print(l)
+    print()
+    print(l[0])
     return output.eq(Cat(*l))
 
 
+"""Take an input signal, shift, output signal, width, and reverse flag.
+The output signal is assigned such that it contains bits 
+[n*len(output signal):(n+1)*len(output signal)] of the input signal.
+"""
 def chooser(signal, shift, output, n=None, reverse=False):
     if shift is None:
         return output.eq(signal)
@@ -47,6 +61,8 @@ def chooser(signal, shift, output, n=None, reverse=False):
     return Case(shift, cases).makedefault()
 
 
+"""Creates a triggerable counter and returns a list of signals which are
+asserted when the counter is equal to the corresponding value in events."""
 def timeline(trigger, events):
     lastevent = max([e[0] for e in events])
     counter = Signal(max=lastevent+1)
