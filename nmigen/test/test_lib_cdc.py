@@ -100,3 +100,39 @@ class ResetSynchronizerTestCase(FHDLTestCase):
         sim.add_process(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
+
+
+# TODO: test with distinct clocks
+class PulseSynchronizerTestCase(FHDLTestCase):
+    def test_paramcheck(self):
+        with self.assertRaises(TypeError):
+            ps = PulseSynchronizer("w", "r", sync_stages=0)
+        with self.assertRaises(TypeError):
+            ps = PulseSynchronizer("w", "r", sync_stages="abc")
+        ps = PulseSynchronizer("w", "r", sync_stages = 1)
+
+    def test_smoke(self):
+        m = Module()
+        m.domains += ClockDomain("sync")
+        ps = m.submodules.dut = PulseSynchronizer("sync", "sync")
+
+        sim = Simulator(m)
+        sim.add_clock(1e-6)
+        def process():
+            yield ps.i.eq(0)
+            # TODO: think about reset
+            for n in range(5):
+                yield Tick()
+            # Make sure no pulses are generated in quiescent state
+            for n in range(3):
+                yield Tick()
+                self.assertEqual((yield ps.o), 0)
+            # Check conservation of pulses
+            accum = 0
+            for n in range(10):
+                yield ps.i.eq(1 if n < 4 else 0)
+                yield Tick()
+                accum += yield ps.o
+            self.assertEqual(accum, 4)
+        sim.add_process(process)
+        sim.run()
