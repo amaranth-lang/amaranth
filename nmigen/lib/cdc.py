@@ -160,10 +160,12 @@ class ResetSynchronizer(Elaboratable):
 
 class PulseSynchronizer(Elaboratable):
     """A one-clock pulse on the input produces a one-clock pulse on the output.
+
     If the output clock is faster than the input clock, then the input may be safely asserted at
     100% duty cycle. Otherwise, if the clock ratio is n : 1, the input may be asserted at most once
     in every n input clocks, else pulses may be dropped.
     Other than this there is no constraint on the ratio of input and output clock frequency.
+
     Parameters
     ----------
     i_domain : str
