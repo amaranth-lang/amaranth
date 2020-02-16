@@ -2,12 +2,13 @@ import warnings
 
 from ..._utils import deprecated
 from ...lib.cdc import FFSynchronizer as NativeFFSynchronizer
+from ...lib.cdc import PulseSynchronizer as NativePulseSynchronizer
 from ...hdl.ast import *
 from ..fhdl.module import CompatModule
 from ..fhdl.structure import If
 
 
-__all__ = ["MultiReg", "GrayCounter", "GrayDecoder"]
+__all__ = ["MultiReg", "PulseSynchronizer", "GrayCounter", "GrayDecoder"]
 
 
 class MultiReg(NativeFFSynchronizer):
@@ -25,6 +26,12 @@ class MultiReg(NativeFFSynchronizer):
                       DeprecationWarning, stacklevel=2)
         super().__init__(i, o, o_domain=odomain, stages=n, reset=reset)
         self.odomain = odomain
+
+
+@deprecated("instead of `migen.genlib.cdc.PulseSynchronizer`, use `nmigen.lib.cdc.PulseSynchronizer`")
+class PulseSynchronizer(NativePulseSynchronizer):
+    def __init__(self, idomain, odomain):
+        super().__init__(i_domain=idomain, o_domain=odomain)
 
 
 @deprecated("instead of `migen.genlib.cdc.GrayCounter`, use `nmigen.lib.coding.GrayEncoder`")
