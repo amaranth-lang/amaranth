@@ -712,3 +712,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             with sim.write_vcd(open(os.path.devnull, "wt")):
                 with sim.write_vcd(open(os.path.devnull, "wt")):
                     pass
+
+
+class SimulatorRegressionTestCase(FHDLTestCase):
+    def test_bug_325(self):
+        dut = Module()
+        dut.d.comb += Signal().eq(Cat())
+        Simulator(dut).run()
+
+    def test_bug_325_bis(self):
+        dut = Module()
+        dut.d.comb += Signal().eq(Repl(Const(1), 0))
+        Simulator(dut).run()

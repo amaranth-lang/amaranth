@@ -492,7 +492,9 @@ class _RHSValueCompiler(_ValueCompiler):
             part_mask = (1 << len(part)) - 1
             gen_parts.append(f"(({self(part)} & {part_mask}) << {offset})")
             offset += len(part)
-        return f"({' | '.join(gen_parts)})"
+        if gen_parts:
+            return f"({' | '.join(gen_parts)})"
+        return f"0"
 
     def on_Repl(self, value):
         part_mask = (1 << len(value.value)) - 1
@@ -502,7 +504,9 @@ class _RHSValueCompiler(_ValueCompiler):
         for _ in range(value.count):
             gen_parts.append(f"({gen_part} << {offset})")
             offset += len(value.value)
-        return f"({' | '.join(gen_parts)})"
+        if gen_parts:
+            return f"({' | '.join(gen_parts)})"
+        return f"0"
 
     def on_ArrayProxy(self, value):
         index_mask = (1 << len(value.index)) - 1
