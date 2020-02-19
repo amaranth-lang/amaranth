@@ -1,5 +1,7 @@
-import inspect
+import os
+import tempfile
 import warnings
+import inspect
 from contextlib import contextmanager
 import itertools
 from vcd import VCDWriter
@@ -761,8 +763,19 @@ class _FragmentCompiler:
                 signal_index = domain_process.context.get_signal(signal)
                 emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
 
+            # There shouldn't be any exceptions raised by the generated code, but if there are
+            # (almost certainly due to a bug in the code generator), use this environment variable
+            # to make backtraces useful.
+            code = emitter.flush()
+            if os.getenv("NMIGEN_pysim_dump"):
+                file = tempfile.NamedTemporaryFile("w", prefix="nmigen_pysim_", delete=False)
+                file.write(code)
+                filename = file.name
+            else:
+                filename = "<string>"
+
             exec_locals = {"slots": domain_process.context.slots, **_ValueCompiler.helpers}
-            exec(emitter.flush(), exec_locals)
+            exec(compile(code, filename, "exec"), exec_locals)
             domain_process.run = exec_locals["run"]
 
             processes.add(domain_process)
