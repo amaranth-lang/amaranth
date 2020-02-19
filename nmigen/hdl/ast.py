@@ -1207,7 +1207,7 @@ class Initial(Value):
     An ``Initial`` signal is ``1`` at the first cycle of model checking, and ``0`` at any other.
     """
     def __init__(self, *, src_loc_at=0):
-        super().__init__(src_loc_at=1 + src_loc_at)
+        super().__init__(src_loc_at=src_loc_at)
 
     def shape(self):
         return Shape(1)
