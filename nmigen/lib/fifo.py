@@ -3,8 +3,8 @@
 from .. import *
 from ..asserts import *
 from .._utils import log2_int, deprecated
-from .coding import GrayEncoder
-from .cdc import FFSynchronizer
+from .coding import GrayEncoder, GrayDecoder
+from .cdc import FFSynchronizer, ResetSynchronizer
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -317,7 +317,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += produce_w_nxt.eq(produce_w_bin + do_write)
         m.d[self._w_domain] += produce_w_bin.eq(produce_w_nxt)
 
-        consume_r_bin = Signal(self._ctr_bits)
+        # Note: Both read-domain counters must be reset_less
+        consume_r_bin = Signal(self._ctr_bits, reset_less=True)
         consume_r_nxt = Signal(self._ctr_bits)
         m.d.comb += consume_r_nxt.eq(consume_r_bin + do_read)
         m.d[self._r_domain] += consume_r_bin.eq(consume_r_nxt)
@@ -331,7 +332,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += produce_enc.i.eq(produce_w_nxt),
         m.d[self._w_domain] += produce_w_gry.eq(produce_enc.o)
 
-        consume_r_gry = Signal(self._ctr_bits)
+        consume_r_gry = Signal(self._ctr_bits, reset_less = True)
         consume_w_gry = Signal(self._ctr_bits)
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
@@ -365,6 +366,31 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             r_port.en.eq(1),
             self.r_rdy.eq(~r_empty),
         ]
+
+        # Reset handling to maintain FIFO and CDC invariants in the presence of a write-domain
+        # reset. For further discussion, see https://github.com/nmigen/nmigen/issues/181.
+        w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
+        r_rst = Signal()
+        
+        # Create synthetic clock domain to work around ResetSynchronizer expecting a domain
+        fake_domain = ClockDomain(name="rst_cdc", async_reset=True, local=True)
+        m.domains += fake_domain
+        rst_cdc = m.submodules.rst_cdc = \
+                ResetSynchronizer(w_rst, domain = "rst_cdc")
+        m.d.comb += [
+                fake_domain.clk.eq(ClockSignal(domain = self._r_domain)),
+                r_rst.eq(ResetSignal(domain = "rst_cdc", allow_reset_less=True)),
+        ]
+
+        # Decode Gray code counter synchronized from write domain to overwrite binary
+        # counter in read domain.
+        rst_dec = m.submodules.rst_dec = \
+            GrayDecoder(self._ctr_bits)
+        m.d.comb += rst_dec.i.eq(produce_r_gry),
+        with m.If(r_rst):
+            m.d.comb += r_empty.eq(1)
+            m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry)
+            m.d[self._r_domain] += consume_r_bin.eq(rst_dec.o)
 
         if platform == "formal":
             with m.If(Initial()):
