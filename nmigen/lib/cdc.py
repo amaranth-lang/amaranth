@@ -95,6 +95,52 @@ class FFSynchronizer(Elaboratable):
         return m
 
 
+class ReleaseSynchronizer(Elaboratable):
+    """Synchronize deassertion of an asynchronous signal.
+
+    The signal driven by the :class:`ReleaseSynchronizer` is asserted asynchronously and deasserted
+    synchronously, eliminating metastability during deassertion.
+
+    This synchronizer is primarily useful for resets and reset-like signals.
+
+    Parameters
+    ----------
+    i : Signal(1), in
+        Asynchronous input signal, to be synchronized.
+    o : Signal(1), out
+        Synchronously released output signal.
+    domain : str
+        Name of clock domain to reset.
+    stages : int, >=2
+        Number of synchronization stages between input and output. The lowest safe number is 2,
+        with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
+    """
+    def __init__(self, i, o, *, domain="sync", stages=2):
+        _check_stages(stages)
+
+        self.i = i
+        self.o = o
+
+        self._domain = domain
+        self._stages = stages
+
+    def elaborate(self, platform):
+        m = Module()
+        m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
+        flops = [Signal(1, name="stage{}".format(index), reset=1)
+                 for index in range(self._stages)]
+        for i, o in zip((0, *flops), flops):
+            m.d.reset_sync += o.eq(i)
+
+        m.d.comb += [
+            ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
+            ResetSignal("reset_sync").eq(self.i),
+            self.o.eq(flops[-1])
+        ]
+
+        return m
+
+
 class ResetSynchronizer(Elaboratable):
     """Synchronize deassertion of a clock domain reset.
 
@@ -119,11 +165,6 @@ class ResetSynchronizer(Elaboratable):
     max_input_delay : None or float
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
-    reset_less : bool
-        If set to `True`, the synchronized signal will not be assigned to the `ResetSignal` of the
-        `domain` clock domain. `rst` will still be set appropriately.
-    rst : Signal(1), out
-        The synchronously released reset signal.
 
     Platform override
     -----------------
@@ -134,7 +175,6 @@ class ResetSynchronizer(Elaboratable):
         _check_stages(stages)
 
         self.arst = arst
-        self.rst = Signal()
 
         self._domain = domain
         self._stages = stages
@@ -144,32 +184,14 @@ class ResetSynchronizer(Elaboratable):
 
     def elaborate(self, platform):
         if hasattr(platform, "get_reset_sync"):
-            m = platform.get_reset_sync(self)
-            m.d.comb += self.rst.eq(ResetSignal(self._domain))
-            return m
+            return platform.get_reset_sync(self)
 
         if self._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for ResetSynchronizer"
                                       .format(type(platform).__name__))
 
-        m = Module()
-        m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
-        flops = [Signal(1, name="stage{}".format(index), reset=1)
-                 for index in range(self._stages)]
-        for i, o in zip((0, *flops), flops):
-            m.d.reset_sync += o.eq(i)
-
-        m.d.comb += [
-            ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
-            ResetSignal("reset_sync").eq(self.arst),
-            self.rst.eq(ResetSignal(self._domain))
-        ]
-
-        if not self._reset_less:
-            m.d.comb += ResetSignal(self._domain).eq(flops[-1])
-
-        return m
+        return ReleaseSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain, stages=self._stages)
 
 
 class PulseSynchronizer(Elaboratable):
