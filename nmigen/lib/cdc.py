@@ -109,7 +109,7 @@ class ResetSynchronizer(Elaboratable):
 
     Parameters
     ----------
-    arst : Signal(1), out
+    arst : Signal(1), in
         Asynchronous reset signal, to be synchronized.
     domain : str
         Name of clock domain to reset.
@@ -119,6 +119,11 @@ class ResetSynchronizer(Elaboratable):
     max_input_delay : None or float
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
+    reset_less : bool
+        If set to `True`, the synchronized signal will not be assigned to the `ResetSignal` of the
+        `domain` clock domain. `rst` will still be set appropriately.
+    rst : Signal(1), out
+        The synchronously released reset signal.
 
     Platform override
     -----------------
@@ -139,7 +144,9 @@ class ResetSynchronizer(Elaboratable):
 
     def elaborate(self, platform):
         if hasattr(platform, "get_reset_sync"):
-            return platform.get_reset_sync(self)
+            m = platform.get_reset_sync(self)
+            m.d.comb += self.rst.eq(ResetSignal(self._domain))
+            return m
 
         if self._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
@@ -160,9 +167,7 @@ class ResetSynchronizer(Elaboratable):
         ]
 
         if not self._reset_less:
-            m.d.comb += [
-                ResetSignal(self._domain).eq(flops[-1]),
-            ]
+            m.d.comb += ResetSignal(self._domain).eq(flops[-1])
 
         return m
 
