@@ -9,7 +9,7 @@ from .._utils import *
 from .._unused import *
 from .ast import *
 from .cd import *
-
+from .. import tracer
 
 __all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance"]
 
@@ -21,6 +21,12 @@ class UnusedElaboratable(UnusedMustUse):
 class Elaboratable(MustUse, metaclass=ABCMeta):
     _MustUse__warning = UnusedElaboratable
 
+    @staticmethod
+    def __new__(cls, *args, **kwargs):
+        default_name = tracer.get_var_name(default = None)
+        inst = super().__new__(cls, *args, **kwargs)
+        inst.nmigen_default_name = default_name
+        return inst
 
 class DriverConflict(UserWarning):
     pass
@@ -36,7 +42,9 @@ class Fragment:
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
                 obj._MustUse__used = True
+                nmigen_default_name = obj.nmigen_default_name
                 obj = obj.elaborate(platform)
+                obj.nmigen_default_name = nmigen_default_name
             elif hasattr(obj, "elaborate"):
                 warnings.warn(
                     message="Class {!r} is an elaboratable that does not explicitly inherit from "
@@ -127,6 +135,8 @@ class Fragment:
 
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)
+        if name == None and hasattr(subfragment, 'nmigen_default_name'):
+            name = subfragment.nmigen_default_name
         self.subfragments.append((subfragment, name))
 
     def find_subfragment(self, name_or_index):
