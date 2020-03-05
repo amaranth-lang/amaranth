@@ -125,13 +125,15 @@ class ResetSynchronizer(Elaboratable):
     Define the ``get_reset_sync`` platform method to override the implementation of
     :class:`ResetSynchronizer`, e.g. to instantiate library cells directly.
     """
-    def __init__(self, arst, *, domain="sync", stages=2, max_input_delay=None):
+    def __init__(self, arst, *, domain="sync", stages=2, max_input_delay=None, reset_less=False):
         _check_stages(stages)
 
         self.arst = arst
+        self.rst = Signal()
 
         self._domain = domain
         self._stages = stages
+        self._reset_less = reset_less
 
         self._max_input_delay = None
 
@@ -150,11 +152,18 @@ class ResetSynchronizer(Elaboratable):
                  for index in range(self._stages)]
         for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
+
         m.d.comb += [
             ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
             ResetSignal("reset_sync").eq(self.arst),
-            ResetSignal(self._domain).eq(flops[-1])
+            self.rst.eq(ResetSignal(self._domain))
         ]
+
+        if not self._reset_less:
+            m.d.comb += [
+                ResetSignal(self._domain).eq(flops[-1]),
+            ]
+
         return m
 
 
