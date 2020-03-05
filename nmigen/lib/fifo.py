@@ -372,14 +372,14 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
         
-        # Create synthetic clock domain to work around ResetSynchronizer expecting a domain
-        fake_domain = ClockDomain(name="rst_cdc", async_reset=True, local=True)
-        m.domains += fake_domain
+        # Create clock domain for ResetSynchronizer
+        rst_domain = ClockDomain(name="rst_cdc", async_reset=True, local=True)
+        m.domains += rst_domain
         rst_cdc = m.submodules.rst_cdc = \
                 ResetSynchronizer(w_rst, domain = "rst_cdc")
         m.d.comb += [
-                fake_domain.clk.eq(ClockSignal(domain = self._r_domain)),
-                r_rst.eq(ResetSignal(domain = "rst_cdc", allow_reset_less=True)),
+                rst_domain.clk.eq(ClockSignal(domain = self._r_domain)),
+                r_rst.eq(ResetSignal(domain = "rst_cdc")),
         ]
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
