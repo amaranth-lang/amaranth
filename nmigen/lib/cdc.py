@@ -2,7 +2,7 @@ from .._utils import deprecated
 from .. import *
 
 
-__all__ = ["FFSynchronizer", "ResetSynchronizer", "PulseSynchronizer"]
+__all__ = ["FFSynchronizer", "AsyncFFSynchronizer", "ResetSynchronizer", "PulseSynchronizer"]
 
 
 def _check_stages(stages):
