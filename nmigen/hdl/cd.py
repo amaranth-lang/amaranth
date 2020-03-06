@@ -21,6 +21,8 @@ class ClockDomain:
         If ``True``, the domain does not use a reset signal. Registers within this domain are
         still all initialized to their reset state once, e.g. through Verilog `"initial"`
         statements.
+    clock_edge : str
+        The edge of the clock signal on which signals are sampled. Must be one of "pos" or "neg".
     async_reset : bool
         If ``True``, the domain uses an asynchronous reset, and registers within this domain
         are initialized to their reset state when reset level changes. Otherwise, registers

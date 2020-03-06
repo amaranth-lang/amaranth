@@ -114,6 +114,8 @@ class AsyncFFSynchronizer(Elaboratable):
     stages : int, >=2
         Number of synchronization stages between input and output. The lowest safe number is 2,
         with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
+    async_edge : str
+        The edge of the input signal which causes the output to be set. Must be one of "pos" or "neg".
     """
     def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos", max_input_delay=None):
         _check_stages(stages)

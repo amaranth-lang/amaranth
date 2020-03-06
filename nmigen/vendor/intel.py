@@ -402,13 +402,14 @@ class IntelPlatform(TemplatedPlatform):
 
     def get_async_ff_sync(self, async_ff_sync):
         m = Module()
+        sync_output = Signal()
         if async_ff_sync.edge == "pos":
             m.submodules += Instance("altera_std_synchronizer",
                 p_depth=async_ff_sync._stages,
                 i_clk=ClockSignal(async_ff_sync._domain),
                 i_reset_n=~async_ff_sync.i,
                 i_din=Const(1),
-                o_dout=async_ff_sync.o,
+                o_dout=sync_output,
             )
         else:
             m.submodules += Instance("altera_std_synchronizer",
@@ -416,6 +417,7 @@ class IntelPlatform(TemplatedPlatform):
                 i_clk=ClockSignal(async_ff_sync._domain),
                 i_reset_n=async_ff_sync.i,
                 i_din=Const(1),
-                o_dout=async_ff_sync.o,
+                o_dout=sync_output,
             )
+        m.d.comb += async_ff_sync.o.eq(~sync_output)
         return m
