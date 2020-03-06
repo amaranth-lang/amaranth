@@ -4,7 +4,7 @@ from .. import *
 from ..asserts import *
 from .._utils import log2_int, deprecated
 from .coding import GrayEncoder, GrayDecoder
-from .cdc import FFSynchronizer, ResetSynchronizer
+from .cdc import FFSynchronizer, AsyncFFSynchronizer
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -372,15 +372,9 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
         
-        # Create clock domain for ResetSynchronizer
-        rst_domain = ClockDomain(name="rst_cdc", async_reset=True, local=True)
-        m.domains += rst_domain
+        # Async-set-sync-release synchronizer avoids CDC hazards
         rst_cdc = m.submodules.rst_cdc = \
-                ResetSynchronizer(w_rst, domain = "rst_cdc")
-        m.d.comb += [
-                rst_domain.clk.eq(ClockSignal(domain = self._r_domain)),
-                r_rst.eq(ResetSignal(domain = "rst_cdc")),
-        ]
+                AsyncFFSynchronizer(w_rst, r_rst, domain = "rst_cdc")
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.
