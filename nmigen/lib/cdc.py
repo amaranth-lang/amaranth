@@ -95,10 +95,10 @@ class FFSynchronizer(Elaboratable):
         return m
 
 
-class ReleaseSynchronizer(Elaboratable):
+class AsyncFFSynchronizer(Elaboratable):
     """Synchronize deassertion of an asynchronous signal.
 
-    The signal driven by the :class:`ReleaseSynchronizer` is asserted asynchronously and deasserted
+    The signal driven by the :class:`AsyncFFSynchronizer` is asserted asynchronously and deasserted
     synchronously, eliminating metastability during deassertion.
 
     This synchronizer is primarily useful for resets and reset-like signals.
@@ -115,7 +115,7 @@ class ReleaseSynchronizer(Elaboratable):
         Number of synchronization stages between input and output. The lowest safe number is 2,
         with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
     """
-    def __init__(self, i, o, *, domain="sync", stages=2):
+    def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos"):
         _check_stages(stages)
 
         self.i = i
@@ -123,6 +123,11 @@ class ReleaseSynchronizer(Elaboratable):
 
         self._domain = domain
         self._stages = stages
+
+        if async_edge not in ("pos", "neg"):
+            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', not {!r}"
+                             .format(async_edge))
+        self._edge = async_edge
 
     def elaborate(self, platform):
         m = Module()
@@ -132,9 +137,13 @@ class ReleaseSynchronizer(Elaboratable):
         for i, o in zip((0, *flops), flops):
             m.d.reset_sync += o.eq(i)
 
+        if self._edge == "pos":
+            m.d.comb += ResetSignal("reset_sync").eq(self.i)
+        else:
+            m.d.comb += ResetSignal("reset_sync").eq(~self.i)
+
         m.d.comb += [
             ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
-            ResetSignal("reset_sync").eq(self.i),
             self.o.eq(flops[-1])
         ]
 
@@ -191,7 +200,7 @@ class ResetSynchronizer(Elaboratable):
                                       "for ResetSynchronizer"
                                       .format(type(platform).__name__))
 
-        return ReleaseSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain, stages=self._stages)
+        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain, stages=self._stages)
 
 
 class PulseSynchronizer(Elaboratable):
