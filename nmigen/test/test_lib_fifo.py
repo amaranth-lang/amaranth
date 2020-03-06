@@ -220,6 +220,9 @@ class FIFOContractSpec(Elaboratable):
         with m.If(Past(Initial(), self.bound - 1)):
             m.d.comb += Assert(read_fsm.ongoing("DONE"))
 
+        with m.If(ResetSignal(domain=self.w_domain)):
+            m.d.comb += Assert(~fifo.r_rdy)
+
         if self.w_domain != "sync" or self.r_domain != "sync":
             m.d.comb += Assume(Rose(ClockSignal(self.w_domain)) |
                                Rose(ClockSignal(self.r_domain)))
