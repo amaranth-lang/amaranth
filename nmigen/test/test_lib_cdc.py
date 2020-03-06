@@ -68,9 +68,9 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
                 msg="AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', not 'xxx'"):
             AsyncFFSynchronizer(Signal(), Signal(), domain="sync", async_edge="xxx")
 
-    def test_basic(self):
-        i = Signal(reset=0)
-        o = Signal(reset=0)
+    def test_pos_edge(self):
+        i = Signal()
+        o = Signal()
         m = Module()
         m.domains += ClockDomain("sync")
         m.submodules += AsyncFFSynchronizer(i, o)
@@ -95,6 +95,44 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
             yield Tick(); yield Delay(1e-8)
             self.assertEqual((yield o), 1)
             yield i.eq(0)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 1)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 0)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 0)
+            yield Tick(); yield Delay(1e-8)
+        sim.add_process(process)
+        with sim.write_vcd("test.vcd"):
+            sim.run()
+
+    def test_neg_edge(self):
+        i = Signal(reset=1)
+        o = Signal()
+        m = Module()
+        m.domains += ClockDomain("sync")
+        m.submodules += AsyncFFSynchronizer(i, o, async_edge="neg")
+
+        sim = Simulator(m)
+        sim.add_clock(1e-6)
+        def process():
+            # initial reset
+            self.assertEqual((yield i), 1)
+            self.assertEqual((yield o), 1)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 1)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 0)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 0)
+            yield Tick(); yield Delay(1e-8)
+
+            yield i.eq(0)
+            yield Delay(1e-8)
+            self.assertEqual((yield o), 1)
+            yield Tick(); yield Delay(1e-8)
+            self.assertEqual((yield o), 1)
+            yield i.eq(1)
             yield Tick(); yield Delay(1e-8)
             self.assertEqual((yield o), 1)
             yield Tick(); yield Delay(1e-8)
