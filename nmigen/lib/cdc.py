@@ -115,7 +115,7 @@ class AsyncFFSynchronizer(Elaboratable):
         Number of synchronization stages between input and output. The lowest safe number is 2,
         with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
     """
-    def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos"):
+    def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos", max_input_delay=None):
         _check_stages(stages)
 
         self.i = i
@@ -129,21 +129,31 @@ class AsyncFFSynchronizer(Elaboratable):
                              .format(async_edge))
         self._edge = async_edge
 
+        self._max_input_delay = max_input_delay
+
     def elaborate(self, platform):
+        if hasattr(platform, "get_async_ff_sync"):
+            return platform.get_async_ff_sync(self)
+
+        if self._max_input_delay is not None:
+            raise NotImplementedError("Platform '{}' does not support constraining input delay "
+                                      "for AsyncFFSynchronizer"
+                                      .format(type(platform).__name__))
+
         m = Module()
-        m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
+        m.domains += ClockDomain("async_ff", async_reset=True, local=True)
         flops = [Signal(1, name="stage{}".format(index), reset=1)
                  for index in range(self._stages)]
         for i, o in zip((0, *flops), flops):
-            m.d.reset_sync += o.eq(i)
+            m.d.async_ff += o.eq(i)
 
         if self._edge == "pos":
-            m.d.comb += ResetSignal("reset_sync").eq(self.i)
+            m.d.comb += ResetSignal("async_ff").eq(self.i)
         else:
-            m.d.comb += ResetSignal("reset_sync").eq(~self.i)
+            m.d.comb += ResetSignal("async_ff").eq(~self.i)
 
         m.d.comb += [
-            ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
+            ClockSignal("async_ff").eq(ClockSignal(self._domain)),
             self.o.eq(flops[-1])
         ]
 
@@ -180,27 +190,19 @@ class ResetSynchronizer(Elaboratable):
     Define the ``get_reset_sync`` platform method to override the implementation of
     :class:`ResetSynchronizer`, e.g. to instantiate library cells directly.
     """
-    def __init__(self, arst, *, domain="sync", stages=2, max_input_delay=None, reset_less=False):
+    def __init__(self, arst, *, domain="sync", stages=2, max_input_delay=None):
         _check_stages(stages)
 
         self.arst = arst
 
         self._domain = domain
         self._stages = stages
-        self._reset_less = reset_less
 
-        self._max_input_delay = None
+        self._max_input_delay = max_input_delay
 
     def elaborate(self, platform):
-        if hasattr(platform, "get_reset_sync"):
-            return platform.get_reset_sync(self)
-
-        if self._max_input_delay is not None:
-            raise NotImplementedError("Platform '{}' does not support constraining input delay "
-                                      "for ResetSynchronizer"
-                                      .format(type(platform).__name__))
-
-        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain, stages=self._stages)
+        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain,
+                stages=self._stages, max_input_delay=self._max_input_delay)
 
 
 class PulseSynchronizer(Elaboratable):
