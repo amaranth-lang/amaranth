@@ -2,7 +2,7 @@ from .._utils import deprecated
 from .. import *
 
 
-__all__ = ["FFSynchronizer", "ResetSynchronizer", "PulseSynchronizer"]
+__all__ = ["FFSynchronizer", "AsyncFFSynchronizer", "ResetSynchronizer", "PulseSynchronizer"]
 
 
 def _check_stages(stages):
@@ -95,6 +95,73 @@ class FFSynchronizer(Elaboratable):
         return m
 
 
+class AsyncFFSynchronizer(Elaboratable):
+    """Synchronize deassertion of an asynchronous signal.
+
+    The signal driven by the :class:`AsyncFFSynchronizer` is asserted asynchronously and deasserted
+    synchronously, eliminating metastability during deassertion.
+
+    This synchronizer is primarily useful for resets and reset-like signals.
+
+    Parameters
+    ----------
+    i : Signal(1), in
+        Asynchronous input signal, to be synchronized.
+    o : Signal(1), out
+        Synchronously released output signal.
+    domain : str
+        Name of clock domain to reset.
+    stages : int, >=2
+        Number of synchronization stages between input and output. The lowest safe number is 2,
+        with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
+    async_edge : str
+        The edge of the input signal which causes the output to be set. Must be one of "pos" or "neg".
+    """
+    def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos", max_input_delay=None):
+        _check_stages(stages)
+
+        self.i = i
+        self.o = o
+
+        self._domain = domain
+        self._stages = stages
+
+        if async_edge not in ("pos", "neg"):
+            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', not {!r}"
+                             .format(async_edge))
+        self._edge = async_edge
+
+        self._max_input_delay = max_input_delay
+
+    def elaborate(self, platform):
+        if hasattr(platform, "get_async_ff_sync"):
+            return platform.get_async_ff_sync(self)
+
+        if self._max_input_delay is not None:
+            raise NotImplementedError("Platform '{}' does not support constraining input delay "
+                                      "for AsyncFFSynchronizer"
+                                      .format(type(platform).__name__))
+
+        m = Module()
+        m.domains += ClockDomain("async_ff", async_reset=True, local=True)
+        flops = [Signal(1, name="stage{}".format(index), reset=1)
+                 for index in range(self._stages)]
+        for i, o in zip((0, *flops), flops):
+            m.d.async_ff += o.eq(i)
+
+        if self._edge == "pos":
+            m.d.comb += ResetSignal("async_ff").eq(self.i)
+        else:
+            m.d.comb += ResetSignal("async_ff").eq(~self.i)
+
+        m.d.comb += [
+            ClockSignal("async_ff").eq(ClockSignal(self._domain)),
+            self.o.eq(flops[-1])
+        ]
+
+        return m
+
+
 class ResetSynchronizer(Elaboratable):
     """Synchronize deassertion of a clock domain reset.
 
@@ -109,7 +176,7 @@ class ResetSynchronizer(Elaboratable):
 
     Parameters
     ----------
-    arst : Signal(1), out
+    arst : Signal(1), in
         Asynchronous reset signal, to be synchronized.
     domain : str
         Name of clock domain to reset.
@@ -133,29 +200,11 @@ class ResetSynchronizer(Elaboratable):
         self._domain = domain
         self._stages = stages
 
-        self._max_input_delay = None
+        self._max_input_delay = max_input_delay
 
     def elaborate(self, platform):
-        if hasattr(platform, "get_reset_sync"):
-            return platform.get_reset_sync(self)
-
-        if self._max_input_delay is not None:
-            raise NotImplementedError("Platform '{}' does not support constraining input delay "
-                                      "for ResetSynchronizer"
-                                      .format(type(platform).__name__))
-
-        m = Module()
-        m.domains += ClockDomain("reset_sync", async_reset=True, local=True)
-        flops = [Signal(1, name="stage{}".format(index), reset=1)
-                 for index in range(self._stages)]
-        for i, o in zip((0, *flops), flops):
-            m.d.reset_sync += o.eq(i)
-        m.d.comb += [
-            ClockSignal("reset_sync").eq(ClockSignal(self._domain)),
-            ResetSignal("reset_sync").eq(self.arst),
-            ResetSignal(self._domain).eq(flops[-1])
-        ]
-        return m
+        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain,
+                stages=self._stages, max_input_delay=self._max_input_delay)
 
 
 class PulseSynchronizer(Elaboratable):
