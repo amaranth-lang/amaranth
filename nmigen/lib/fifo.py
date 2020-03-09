@@ -321,7 +321,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += produce_w_nxt.eq(produce_w_bin + do_write)
         m.d[self._w_domain] += produce_w_bin.eq(produce_w_nxt)
 
-        # Note: Both read-domain counters must be reset_less
+        # Note: Both read-domain counters must be reset_less (see comments below)
         consume_r_bin = Signal(self._ctr_bits, reset_less=True)
         consume_r_nxt = Signal(self._ctr_bits)
         m.d.comb += consume_r_nxt.eq(consume_r_bin + do_read)
@@ -372,13 +372,22 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         ]
 
         # Reset handling to maintain FIFO and CDC invariants in the presence of a write-domain
-        # reset. For further discussion, see https://github.com/nmigen/nmigen/issues/181.
+        # reset.
+        # There is a CDC hazard associated with resetting an async FIFO - Gray code counters which
+        # are reset to 0 violate their Gray code invariant. One way to handle this is to ensure
+        # that both sides of the FIFO are asynchronously reset by the same signal. We adopt a
+        # slight variation on this approach - reset control rests entirely with the write domain.
+        # The write domain's reset signal is used to asynchronously reset the read domain's
+        # counters and force the FIFO to be empty when the write domain's reset is asserted.
+        # This requires the two read domain counters to be marked as "reset_less", as they are
+        # reset through another mechanism. See https://github.com/nmigen/nmigen/issues/181 for the
+        # full discussion.
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
         
         # Async-set-sync-release synchronizer avoids CDC hazards
         rst_cdc = m.submodules.rst_cdc = \
-            AsyncFFSynchronizer(w_rst, r_rst, domain="rst_cdc")
+            AsyncFFSynchronizer(w_rst, r_rst, domain=self._r_domain)
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.
