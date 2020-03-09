@@ -261,6 +261,10 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     Read and write interfaces are accessed from different clock domains, which can be set when
     constructing the FIFO.
 
+    :class:`AsyncFIFO` can be reset from the write clock domain. When the write domain reset is
+    asserted, the FIFO becomes empty. When the read domain is reset, data remains in the FIFO - the
+    read domain logic should correctly handle this case.
+
     :class:`AsyncFIFO` only supports power of 2 depths. Unless ``exact_depth`` is specified,
     the ``depth`` parameter is rounded up to the next power of 2.
     """.strip(),
@@ -332,7 +336,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += produce_enc.i.eq(produce_w_nxt),
         m.d[self._w_domain] += produce_w_gry.eq(produce_enc.o)
 
-        consume_r_gry = Signal(self._ctr_bits, reset_less = True)
+        consume_r_gry = Signal(self._ctr_bits, reset_less=True)
         consume_w_gry = Signal(self._ctr_bits)
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
@@ -374,7 +378,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         
         # Async-set-sync-release synchronizer avoids CDC hazards
         rst_cdc = m.submodules.rst_cdc = \
-                AsyncFFSynchronizer(w_rst, r_rst, domain = "rst_cdc")
+            AsyncFFSynchronizer(w_rst, r_rst, domain="rst_cdc")
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.
