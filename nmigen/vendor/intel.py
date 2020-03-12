@@ -403,7 +403,7 @@ class IntelPlatform(TemplatedPlatform):
     def get_async_ff_sync(self, async_ff_sync):
         m = Module()
         sync_output = Signal()
-        if async_ff_sync.edge == "pos":
+        if async_ff_sync._edge == "pos":
             m.submodules += Instance("altera_std_synchronizer",
                 p_depth=async_ff_sync._stages,
                 i_clk=ClockSignal(async_ff_sync._domain),

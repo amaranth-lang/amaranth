@@ -127,7 +127,8 @@ class AsyncFFSynchronizer(Elaboratable):
         self._stages = stages
 
         if async_edge not in ("pos", "neg"):
-            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', not {!r}"
+            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', "
+                             "not {!r}"
                              .format(async_edge))
         self._edge = async_edge
 

@@ -416,7 +416,7 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
         for i, o in zip((0, *flops), flops):
             m.d.async_ff += o.eq(i)
 
-        if self._edge == "pos":
+        if async_ff_sync._edge == "pos":
             m.d.comb += ResetSignal("async_ff").eq(asnyc_ff_sync.i)
         else:
             m.d.comb += ResetSignal("async_ff").eq(~asnyc_ff_sync.i)
