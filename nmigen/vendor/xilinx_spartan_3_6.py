@@ -452,12 +452,12 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
             m.d.async_ff += o.eq(i)
 
         if async_ff_sync._edge == "pos":
-            m.d.comb += ResetSignal("async_ff").eq(asnyc_ff_sync.i)
+            m.d.comb += ResetSignal("async_ff").eq(async_ff_sync.i)
         else:
-            m.d.comb += ResetSignal("async_ff").eq(~asnyc_ff_sync.i)
+            m.d.comb += ResetSignal("async_ff").eq(~async_ff_sync.i)
 
         m.d.comb += [
-            ClockSignal("async_ff").eq(ClockSignal(asnyc_ff_sync._domain)),
+            ClockSignal("async_ff").eq(ClockSignal(async_ff_sync._domain)),
             async_ff_sync.o.eq(flops[-1])
         ]
 
