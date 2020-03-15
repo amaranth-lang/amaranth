@@ -363,6 +363,7 @@ class _ValueCompiler(ValueVisitor, _Compiler):
     helpers = {
         "sign": lambda value, sign: value | sign if value & sign else value,
         "zdiv": lambda lhs, rhs: 0 if rhs == 0 else lhs // rhs,
+        "zmod": lambda lhs, rhs: 0 if rhs == 0 else lhs % rhs,
     }
 
     def on_ClockSignal(self, value):
@@ -448,6 +449,8 @@ class _RHSValueCompiler(_ValueCompiler):
                 return f"({sign(lhs)} * {sign(rhs)})"
             if value.operator == "//":
                 return f"zdiv({sign(lhs)}, {sign(rhs)})"
+            if value.operator == "%":
+                return f"zmod({sign(lhs)}, {sign(rhs)})"
             if value.operator == "&":
                 return f"({self(lhs)} & {self(rhs)})"
             if value.operator == "|":
