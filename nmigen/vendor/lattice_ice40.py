@@ -358,6 +358,9 @@ class LatticeICE40Platform(TemplatedPlatform):
         # (We add a margin of 5x to allow for PVT variation.) If the board includes a dedicated
         # reset line, this line is ORed with the power on reset.
         #
+        # If either internal oscillator is selected as the default clock source, the
+        # power-on-reset delay needs to be increased to 100us.
+        #
         # The power-on reset timer counts up because the vendor tools do not support initialization
         # of flip-flops.
         if name == "sync" and self.default_clk is not None:
@@ -378,6 +381,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                                          i_CLKHFPU=1,
                                          p_CLKHF_DIV="0b{0:b}".format(self.hfosc_div),
                                          o_CLKHF=clk_i)
+                delay = int(100e-6 * self.default_clk_frequency)
             # Internal low-speed clock: 10KHz.
             elif self.default_clk == "SB_LFOSC":
                 clk_i = Signal()
@@ -385,9 +389,11 @@ class LatticeICE40Platform(TemplatedPlatform):
                                          i_CLKLFEN=1,
                                          i_CLKLFPU=1,
                                          o_CLKLF=clk_i)
+                delay = int(100e-6 * self.default_clk_frequency)
             # User-defined clock signal.
             else:
                 clk_i = self.request(self.default_clk).i
+                delay = int(15e-6 * self.default_clk_frequency)
 
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
@@ -396,7 +402,6 @@ class LatticeICE40Platform(TemplatedPlatform):
 
             # Power-on-reset domain
             m.domains += ClockDomain("por", reset_less=True, local=True)
-            delay = int(15e-6 * self.default_clk_frequency)
             timer = Signal(range(delay))
             ready = Signal()
             m.d.comb += ClockSignal("por").eq(clk_i)
