@@ -336,10 +336,10 @@ class LatticeICE40Platform(TemplatedPlatform):
 
     @property
     def default_clk_constraint(self):
-        # Internal high-speed oscillator: 48MHz / (2 ^ div)
+        # Internal high-speed oscillator: 48 MHz / (2 ^ div)
         if self.default_clk == "SB_HFOSC":
-            return Clock(48e6 / pow(2, self.hfosc_div))
-        # Internal low-speed oscillator: 10KHz
+            return Clock(48e6 / 2 ** self.hfosc_div)
+        # Internal low-speed oscillator: 10 KHz
         elif self.default_clk == "SB_LFOSC":
             return Clock(10e3)
         # Otherwise, use the defined Clock resource.
@@ -358,15 +358,15 @@ class LatticeICE40Platform(TemplatedPlatform):
         # (We add a margin of 5x to allow for PVT variation.) If the board includes a dedicated
         # reset line, this line is ORed with the power on reset.
         #
-        # If either internal oscillator is selected as the default clock source, the
-        # power-on-reset delay needs to be increased to 100us.
+        # If an internal oscillator is selected as the default clock source, the power-on-reset
+        # delay is increased to 100 us, since the oscillators are only stable after that long.
         #
         # The power-on reset timer counts up because the vendor tools do not support initialization
         # of flip-flops.
         if name == "sync" and self.default_clk is not None:
             m = Module()
 
-            # Internal high-speed clock: 6MHz, 12MHz, 24MHz, or 48MHz depending on the divider.
+            # Internal high-speed clock: 6 MHz, 12 MHz, 24 MHz, or 48 MHz depending on the divider.
             if self.default_clk == "SB_HFOSC":
                 if not hasattr(self, "hfosc_div"):
                     raise ValueError("SB_HFOSC divider exponent (hfosc_div) must be an integer "
@@ -382,7 +382,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                                          p_CLKHF_DIV="0b{0:b}".format(self.hfosc_div),
                                          o_CLKHF=clk_i)
                 delay = int(100e-6 * self.default_clk_frequency)
-            # Internal low-speed clock: 10KHz.
+            # Internal low-speed clock: 10 KHz.
             elif self.default_clk == "SB_LFOSC":
                 clk_i = Signal()
                 m.submodules += Instance("SB_LFOSC",
