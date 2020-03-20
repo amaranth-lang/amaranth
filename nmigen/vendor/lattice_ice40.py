@@ -334,6 +334,17 @@ class LatticeICE40Platform(TemplatedPlatform):
             return self._synplify_icecube2_command_templates
         assert False
 
+    @property
+    def default_clk_constraint(self):
+        # Internal high-speed oscillator: 48 MHz / (2 ^ div)
+        if self.default_clk == "SB_HFOSC":
+            return Clock(48e6 / 2 ** self.hfosc_div)
+        # Internal low-speed oscillator: 10 KHz
+        elif self.default_clk == "SB_LFOSC":
+            return Clock(10e3)
+        # Otherwise, use the defined Clock resource.
+        return super().default_clk_constraint
+
     def create_missing_domain(self, name):
         # For unknown reasons (no errata was ever published, and no documentation mentions this
         # issue), iCE40 BRAMs read as zeroes for ~3 us after configuration and release of internal
@@ -347,20 +358,50 @@ class LatticeICE40Platform(TemplatedPlatform):
         # (We add a margin of 5x to allow for PVT variation.) If the board includes a dedicated
         # reset line, this line is ORed with the power on reset.
         #
+        # If an internal oscillator is selected as the default clock source, the power-on-reset
+        # delay is increased to 100 us, since the oscillators are only stable after that long.
+        #
         # The power-on reset timer counts up because the vendor tools do not support initialization
         # of flip-flops.
         if name == "sync" and self.default_clk is not None:
-            clk_i = self.request(self.default_clk).i
+            m = Module()
+
+            # Internal high-speed clock: 6 MHz, 12 MHz, 24 MHz, or 48 MHz depending on the divider.
+            if self.default_clk == "SB_HFOSC":
+                if not hasattr(self, "hfosc_div"):
+                    raise ValueError("SB_HFOSC divider exponent (hfosc_div) must be an integer "
+                                     "between 0 and 3")
+                if not isinstance(self.hfosc_div, int) or self.hfosc_div < 0 or self.hfosc_div > 3:
+                    raise ValueError("SB_HFOSC divider exponent (hfosc_div) must be an integer "
+                                     "between 0 and 3, not {!r}"
+                                     .format(self.hfosc_div))
+                clk_i = Signal()
+                m.submodules += Instance("SB_HFOSC",
+                                         i_CLKHFEN=1,
+                                         i_CLKHFPU=1,
+                                         p_CLKHF_DIV="0b{0:b}".format(self.hfosc_div),
+                                         o_CLKHF=clk_i)
+                delay = int(100e-6 * self.default_clk_frequency)
+            # Internal low-speed clock: 10 KHz.
+            elif self.default_clk == "SB_LFOSC":
+                clk_i = Signal()
+                m.submodules += Instance("SB_LFOSC",
+                                         i_CLKLFEN=1,
+                                         i_CLKLFPU=1,
+                                         o_CLKLF=clk_i)
+                delay = int(100e-6 * self.default_clk_frequency)
+            # User-defined clock signal.
+            else:
+                clk_i = self.request(self.default_clk).i
+                delay = int(15e-6 * self.default_clk_frequency)
+
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
             else:
                 rst_i = Const(0)
 
-            m = Module()
-
             # Power-on-reset domain
             m.domains += ClockDomain("por", reset_less=True, local=True)
-            delay = int(15e-6 * self.default_clk_frequency)
             timer = Signal(range(delay))
             ready = Signal()
             m.d.comb += ClockSignal("por").eq(clk_i)
