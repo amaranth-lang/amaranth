@@ -180,6 +180,13 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(3, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(2, 4))
 
+    def test_abs(self):
+        stmt = lambda y, a: y.eq(abs(a))
+        self.assertStatement(stmt, [C(3,  unsigned(8))], C(3,  unsigned(8)))
+        self.assertStatement(stmt, [C(-3, unsigned(8))], C(-3, unsigned(8)))
+        self.assertStatement(stmt, [C(3,  signed(8))],   C(3,  signed(8)))
+        self.assertStatement(stmt, [C(-3, signed(8))],   C(3,  signed(8)))
+
     def test_slice(self):
         stmt1 = lambda y, a: y.eq(a[2])
         self.assertStatement(stmt1, [C(0b10110100, 8)], C(0b1,  1))

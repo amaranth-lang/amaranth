@@ -220,6 +220,13 @@ class Value(metaclass=ABCMeta):
     def __ge__(self, other):
         return Operator(">=", [self, other])
 
+    def __abs__(self):
+        width, signed = self.shape()
+        if signed:
+            return Mux(self >= 0, self, -self)
+        else:
+            return self
+
     def __len__(self):
         return self.shape().width
 
