@@ -4,6 +4,7 @@ from ...hdl.ir import Fragment
 from ...hdl.cd import ClockDomain
 from ...back import verilog
 from .conv_output import ConvOutput
+from .module import Module
 
 
 def convert(fi, ios=None, name="top", special_overrides=dict(),
@@ -17,11 +18,14 @@ def convert(fi, ios=None, name="top", special_overrides=dict(),
                       DeprecationWarning, stacklevel=1)
     # TODO: attr_translate
 
+    if isinstance(fi, Module):
+        fi = fi.get_fragment()
+
     def missing_domain(name):
         if create_clock_domains:
             return ClockDomain(name)
     v_output = verilog.convert(
-        elaboratable=fi.get_fragment(),
+        elaboratable=fi,
         name=name,
         ports=ios or (),
         missing_domain=missing_domain
