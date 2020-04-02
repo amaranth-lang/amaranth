@@ -27,7 +27,7 @@ setup(
     install_requires=[
         "setuptools",
         "pyvcd~=0.1.4", # for nmigen.pysim
-        "Jinja2", # for nmigen.build
+        "Jinja2~=2.11", # for nmigen.build
     ],
     packages=find_packages(),
     entry_points={
