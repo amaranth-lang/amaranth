@@ -3,6 +3,7 @@ import inspect
 from collections.abc import Iterable
 from ...hdl.cd import ClockDomain
 from ...back.pysim import *
+from ...hdl.ir import Fragment
 
 
 __all__ = ["run_simulation", "passive"]
@@ -17,9 +18,12 @@ def run_simulation(fragment_or_module, generators, clocks={"sync": 10}, vcd_name
     else:
         fragment = fragment_or_module
 
+    fragment = Fragment.get(fragment, platform=None)
+
     if not isinstance(generators, dict):
         generators = {"sync": generators}
-        fragment.domains += ClockDomain("sync")
+        if "sync" not in fragment.domains:
+            fragment.add_domains(ClockDomain("sync"))
 
     sim = Simulator(fragment)
     for domain, period in clocks.items():
