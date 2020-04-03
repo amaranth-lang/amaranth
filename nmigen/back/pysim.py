@@ -93,7 +93,7 @@ class _VCDWaveformWriter(_WaveformWriter):
         trace_names = SignalDict()
         for trace in traces:
             if trace not in signal_names:
-                trace_names[trace] = trace.name
+                trace_names[trace] = {("top", trace.name)}
             self.traces.append(trace)
 
         if self.vcd_writer is None:
