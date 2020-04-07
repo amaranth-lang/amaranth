@@ -132,7 +132,8 @@ class _VCDWaveformWriter(_WaveformWriter):
                     self.gtkw_names[signal] = (*var_scope, var_name_suffix)
 
     def update(self, timestamp, signal, value):
-        if signal not in self.vcd_vars:
+        vcd_vars = self.vcd_vars.get(signal)
+        if vcd_vars is None:
             return
 
         vcd_timestamp = self.timestamp_to_vcd(timestamp)
@@ -140,7 +141,7 @@ class _VCDWaveformWriter(_WaveformWriter):
             var_value = self.decode_to_vcd(signal, value)
         else:
             var_value = value
-        for vcd_var in self.vcd_vars[signal]:
+        for vcd_var in vcd_vars:
             self.vcd_writer.change(vcd_var, vcd_timestamp, var_value)
 
     def close(self, timestamp):
