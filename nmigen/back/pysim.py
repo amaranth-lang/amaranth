@@ -1021,11 +1021,14 @@ class Simulator:
             # Behave correctly if the process is added after the clock signal is manipulated, or if
             # its reset state is high.
             initial = (yield domain.clk)
+            steps = (
+                domain.clk.eq(~initial),
+                Delay(half_period),
+                domain.clk.eq(initial),
+                Delay(half_period),
+            )
             while True:
-                yield domain.clk.eq(~initial)
-                yield Delay(half_period)
-                yield domain.clk.eq(initial)
-                yield Delay(half_period)
+                yield from iter(steps)
         self._add_coroutine_process(clk_process, default_cmd=None)
         self._clocked.add(domain)
 
