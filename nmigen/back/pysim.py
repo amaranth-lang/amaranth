@@ -819,6 +819,7 @@ class _CoroutineProcess(_Process):
             **_ValueCompiler.helpers
         }
         self.waits_on = set()
+        self.compilation_cache = {}
 
     @property
     def name(self):
@@ -856,13 +857,19 @@ class _CoroutineProcess(_Process):
                 response = None
 
                 if isinstance(command, Value):
-                    exec(_RHSValueCompiler.compile(self.eval_context, command, mode="curr"),
-                        self.exec_locals)
+                    key = command._key
+                    if key not in self.compilation_cache:
+                        src = _RHSValueCompiler.compile(self.eval_context, command, mode="curr")
+                        self.compilation_cache[key] = compile(src, '<_RHSValueCompiler>', 'exec')
+                    exec(self.compilation_cache[key], self.exec_locals)
                     response = Const.normalize(self.exec_locals["result"], command.shape())
 
                 elif isinstance(command, Statement):
-                    exec(_StatementCompiler.compile(self.eval_context, command),
-                        self.exec_locals)
+                    key = command._key
+                    if key not in self.compilation_cache:
+                        src = _StatementCompiler.compile(self.eval_context, command)
+                        self.compilation_cache[key] = compile(src, '<_StatementCompiler>', 'exec')
+                    exec(self.compilation_cache[key], self.exec_locals)
 
                 elif type(command) is Tick:
                     domain = command.domain
