@@ -251,6 +251,7 @@ class _SimulatorState:
                 if self.waveform_writer is not None:
                     self.waveform_writer.update(self.timestamp,
                         signal_state.signal, signal_state.curr)
+        self.pending.clear()
         return awoken_any
 
     def advance(self):
