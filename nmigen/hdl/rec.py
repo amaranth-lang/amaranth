@@ -132,6 +132,13 @@ class Record(Value):
                 else:
                     self.fields[field_name] = Signal(field_shape, name=concat(name, field_name),
                                                      src_loc_at=1 + src_loc_at)
+        self.__key = self._Intern(
+            self,
+            tuple(self.fields[f]._key.properties for f, _, _ in self.layout))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def __getattr__(self, name):
         return self[name]

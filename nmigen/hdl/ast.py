@@ -108,7 +108,69 @@ def signed(width):
     return Shape(width, signed=True)
 
 
-class Value(metaclass=ABCMeta):
+class _Internable(object):
+
+    class _Intern(object):
+        """Interned object representation suitable for fast hash lookups."""
+        def __init__(self, obj, properties, ordered=False):
+            super().__init__()
+            self.obj = obj
+            self.properties = properties
+            self.ordered = ordered
+            self._hash = hash(self.properties)
+
+        def __hash__(self):
+            return self._hash
+
+        def __eq__(self, other):
+            if type(self.obj) is not type(other.obj):
+                return False
+            return self.properties == other.properties
+
+        def __lt__(self, other):
+            if type(self.obj) is not type(other.obj):
+                raise TypeError(f"No ordering defined for objects of differing "
+                                f"type: {self!r} and {other!r}")
+            if not self.ordered:
+                raise TypeError(f"No ordering defined for object {self!r}")
+            if not other.ordered:
+                raise TypeError(f"No ordering defined for object {other!r}")
+            return self.properties < other.properties
+
+        def __repr__(self):
+            return "<{}._Internable._Intern {!r}>".format(__name__, self.obj)
+
+    class _Unhashable(object):
+        """Non-key for objects discovered at run time to be unhashable."""
+        def __init__(self, obj, reason):
+            super().__init__()
+            self.obj = obj
+            self.reason = reason
+
+        def __hash__(self):
+            raise TypeError(self.reason)
+
+        def __eq__(self, other):
+            raise TypeError(self.reason)
+
+        def __lt__(self, other):
+            raise TypeError(self.reason)
+
+        def __repr__(self):
+            return "<{}._Internable._Unhashable {!r}>".format(__name__, self.obj)
+
+    @property
+    def _key(self):
+        # Should be provided by concrete classes during __init__. This is not
+        # done by Value itself because the subclass instance data needed to
+        # create the key isn't available until after Value.__init__ returns. We
+        # create the key once per Value/Signal/etc. at initialization because
+        # hashing is on a VERY hot code path.
+        return self._Unhashable(
+            self, f"No interning information provided for object {self!r}")
+
+
+class Value(_Internable, metaclass=ABCMeta):
     @staticmethod
     def cast(obj):
         """Converts ``obj`` to an nMigen value.
@@ -123,6 +185,14 @@ class Value(metaclass=ABCMeta):
         if isinstance(obj, Enum):
             return Const(obj.value, Shape.cast(type(obj)))
         raise TypeError("Object {!r} cannot be converted to an nMigen value".format(obj))
+
+    @staticmethod
+    def _castable(obj):
+        try:
+            _ = Value.cast(obj)
+            return True
+        except TypeError:
+            return False
 
     def __init__(self, *, src_loc_at=0):
         super().__init__()
@@ -502,6 +572,11 @@ class Const(Value):
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width, self.signed = shape
         self.value = self.normalize(self.value, shape)
+        self.__key = self._Intern(self, (self.value,), ordered=True)
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -526,6 +601,11 @@ class AnyValue(Value, DUID):
         if not isinstance(self.width, int) or self.width < 0:
             raise TypeError("Width must be a non-negative integer, not {!r}"
                             .format(self.width))
+        self.__key = self._Intern(self, (self.duid,), ordered=True)
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -552,8 +632,19 @@ class Operator(Value):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.operator = operator
         self.operands = [Value.cast(op) for op in operands]
+        self._shape = self._compute_shape()
+        self.__key = self._Intern(
+            self,
+            (self.operator, tuple(o._key.properties for o in self.operands)))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
+        return self._shape
+
+    def _compute_shape(self):
         def _bitwise_binary_shape(a_shape, b_shape):
             a_bits, a_sign = a_shape
             b_bits, b_sign = b_shape
@@ -570,7 +661,7 @@ class Operator(Value):
                 # first signed, second operand unsigned (add sign bit)
                 return Shape(max(a_bits, b_bits + 1), True)
 
-        op_shapes = list(map(lambda x: x.shape(), self.operands))
+        op_shapes = [x.shape() for x in self.operands]
         if len(op_shapes) == 1:
             (a_width, a_signed), = op_shapes
             if self.operator in ("+", "~"):
@@ -669,6 +760,14 @@ class Slice(Value):
         self.value = Value.cast(value)
         self.start = start
         self.stop  = stop
+        self.__key = self._Intern(
+            self,
+            (self.value._key.properties, self.start, self.stop),
+            ordered=self.value._key.ordered)
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(self.stop - self.start)
@@ -696,6 +795,13 @@ class Part(Value):
         self.offset = Value.cast(offset)
         self.width  = width
         self.stride = stride
+        self.__key = self._Intern(
+            self,
+            (self.value._key.properties, self.offset._key.properties, self.width, self.stride))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(self.width)
@@ -739,6 +845,11 @@ class Cat(Value):
     def __init__(self, *args, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         self.parts = [Value.cast(v) for v in flatten(args)]
+        self.__key = self._Intern(self, tuple(p._key.properties for p in self.parts))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(sum(len(part) for part in self.parts))
@@ -789,6 +900,11 @@ class Repl(Value):
         super().__init__(src_loc_at=src_loc_at)
         self.value = Value.cast(value)
         self.count = count
+        self.__key = self._Intern(self, (self.value._key.properties, self.count))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(len(self.value) * self.count)
@@ -883,6 +999,12 @@ class Signal(Value, DUID):
         else:
             self.decoder = decoder
 
+        self.__key = self._Intern(self, (self.duid,), ordered=True)
+
+    @property
+    def _key(self):
+        return self.__key
+
     # Not a @classmethod because nmigen.compat requires it.
     @staticmethod
     def like(other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
@@ -939,6 +1061,11 @@ class ClockSignal(Value):
         if domain == "comb":
             raise ValueError("Domain '{}' does not have a clock".format(domain))
         self.domain = domain
+        self.__key = self._Intern(self, (self.domain,))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(1)
@@ -976,6 +1103,11 @@ class ResetSignal(Value):
             raise ValueError("Domain '{}' does not have a reset".format(domain))
         self.domain = domain
         self.allow_reset_less = allow_reset_less
+        self.__key = self._Intern(self, (self.domain,))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(1)
@@ -1084,6 +1216,26 @@ class ArrayProxy(Value):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.elems = elems
         self.index = Value.cast(index)
+        if all(isinstance(e, Array) for e in self.elems):
+            # Multidimensional array, not actually a value. Special case of the
+            # next clause with a better error message.
+            self.__key = self._Unhashable(
+                self, f"Object {self!r} is an incomplete proxy into a "
+                f"multidimensional array and cannot be hashed as a Value.")
+        elif any(not Value._castable(e) for e in self.elems):
+            self.__key = self._Unhashable(
+                self, f"Object {self!r} contains non-value elements and cannot "
+                f"be hashed as a Value.")
+        else:
+            # One-dimensional array
+            self.__key = self._Intern(
+                self,
+                (self.index._key.properties,
+                 tuple(e._key.properties for e in self._iter_as_values())))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def __getattr__(self, attr):
         return ArrayProxy([getattr(elem, attr) for elem in self.elems], self.index)
@@ -1137,6 +1289,13 @@ class UserValue(Value):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.__lowered = None
 
+    @property
+    def _key(self):
+        # A new key cannot be constructed in __init__ because the implementation
+        # of _lazy_lower may reference state not created until
+        # UserValue.__init__ returns to the subclass's constructor.
+        return self._lazy_lower()._key
+
     @abstractmethod
     def lower(self):
         """Conversion to a concrete representation."""
@@ -1179,6 +1338,13 @@ class Sample(Value):
         if not (self.domain is None or isinstance(self.domain, str)):
             raise TypeError("Domain name must be a string or None, not {!r}"
                             .format(self.domain))
+        self.__key = self._Intern(
+            self,
+            (self.value._key.properties, self.clocks, self.domain))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return self.value.shape()
@@ -1215,6 +1381,11 @@ class Initial(Value):
     """
     def __init__(self, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
+        self.__key = self._Intern(self, ())
+
+    @property
+    def _key(self):
+        return self.__key
 
     def shape(self):
         return Shape(1)
@@ -1231,7 +1402,7 @@ class _StatementList(list):
         return "({})".format(" ".join(map(repr, self)))
 
 
-class Statement:
+class Statement(_Internable):
     def __init__(self, *, src_loc_at=0):
         self.src_loc = tracer.get_src_loc(1 + src_loc_at)
 
@@ -1245,6 +1416,10 @@ class Statement:
             else:
                 raise TypeError("Object {!r} is not an nMigen statement".format(obj))
 
+    @property
+    def _key(self):
+        raise TypeError(f"Object {self!r} cannot be used as a key in value collections")
+
 
 @final
 class Assign(Statement):
@@ -1252,6 +1427,12 @@ class Assign(Statement):
         super().__init__(src_loc_at=src_loc_at)
         self.lhs = Value.cast(lhs)
         self.rhs = Value.cast(rhs)
+        self.__key = self._Intern(
+            self, (self.lhs._key.properties, self.rhs._key.properties))
+
+    @property
+    def _key(self):
+        return self.__key
 
     def _lhs_signals(self):
         return self.lhs._lhs_signals()
@@ -1281,6 +1462,10 @@ class Property(Statement, MustUse):
         if _en is None:
             self._en = Signal(reset_less=True, name="${}$en".format(self._kind))
             self._en.src_loc = self.src_loc
+
+    @property
+    def _key(self):
+        return self._Intern(self, (self.test._key.properties))
 
     def _lhs_signals(self):
         return ValueSet((self._en, self._check))
@@ -1373,13 +1558,7 @@ class Switch(Statement):
 
 
 class _MappedKeyCollection(metaclass=ABCMeta):
-    @abstractmethod
-    def _map_key(self, key):
-        pass # :nocov:
-
-    @abstractmethod
-    def _unmap_key(self, key):
-        pass # :nocov:
+    pass
 
 
 class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
@@ -1389,15 +1568,15 @@ class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
             self[key] = value
 
     def __getitem__(self, key):
-        key = None if key is None else self._map_key(key)
+        key = None if key is None else key._key
         return self._storage[key]
 
     def __setitem__(self, key, value):
-        key = None if key is None else self._map_key(key)
+        key = None if key is None else key._key
         self._storage[key] = value
 
     def __delitem__(self, key):
-        key = None if key is None else self._map_key(key)
+        key = None if key is None else key._key
         del self._storage[key]
 
     def __iter__(self):
@@ -1405,7 +1584,7 @@ class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
             if key is None:
                 yield None
             else:
-                yield self._unmap_key(key)
+                yield key.obj
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
@@ -1435,7 +1614,7 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
             self.add(elem)
 
     def add(self, value):
-        self._storage[self._map_key(value)] = None
+        self._storage[value._key] = None
 
     def update(self, values):
         for value in values:
@@ -1443,14 +1622,14 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
 
     def discard(self, value):
         if value in self:
-            del self._storage[self._map_key(value)]
+            del self._storage[value._key]
 
     def __contains__(self, value):
-        return self._map_key(value) in self._storage
+        return value._key in self._storage
 
     def __iter__(self):
         for key in [k for k in self._storage]:
-            yield self._unmap_key(key)
+            yield key.obj
 
     def __len__(self):
         return len(self._storage)
@@ -1463,146 +1642,60 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
 class ValueKey:
     def __init__(self, value):
         self.value = Value.cast(value)
-        if isinstance(self.value, Const):
-            self._hash = hash(self.value.value)
-        elif isinstance(self.value, (Signal, AnyValue)):
-            self._hash = hash(self.value.duid)
-        elif isinstance(self.value, (ClockSignal, ResetSignal)):
-            self._hash = hash(self.value.domain)
-        elif isinstance(self.value, Operator):
-            self._hash = hash((self.value.operator,
-                               tuple(ValueKey(o) for o in self.value.operands)))
-        elif isinstance(self.value, Slice):
-            self._hash = hash((ValueKey(self.value.value), self.value.start, self.value.stop))
-        elif isinstance(self.value, Part):
-            self._hash = hash((ValueKey(self.value.value), ValueKey(self.value.offset),
-                              self.value.width, self.value.stride))
-        elif isinstance(self.value, Cat):
-            self._hash = hash(tuple(ValueKey(o) for o in self.value.parts))
-        elif isinstance(self.value, ArrayProxy):
-            self._hash = hash((ValueKey(self.value.index),
-                              tuple(ValueKey(e) for e in self.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
-        elif isinstance(self.value, Initial):
-            self._hash = 0
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections"
-                            .format(self.value))
 
     def __hash__(self):
-        return self._hash
+        return self.value._key.__hash__()
 
     def __eq__(self, other):
         if type(other) is not ValueKey:
             return False
-        if type(self.value) is not type(other.value):
-            return False
-
-        if isinstance(self.value, Const):
-            return self.value.value == other.value.value
-        elif isinstance(self.value, (Signal, AnyValue)):
-            return self.value is other.value
-        elif isinstance(self.value, (ClockSignal, ResetSignal)):
-            return self.value.domain == other.value.domain
-        elif isinstance(self.value, Operator):
-            return (self.value.operator == other.value.operator and
-                    len(self.value.operands) == len(other.value.operands) and
-                    all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.operands, other.value.operands)))
-        elif isinstance(self.value, Slice):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.start == other.value.start and
-                    self.value.stop == other.value.stop)
-        elif isinstance(self.value, Part):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    ValueKey(self.value.offset) == ValueKey(other.value.offset) and
-                    self.value.width == other.value.width and
-                    self.value.stride == other.value.stride)
-        elif isinstance(self.value, Cat):
-            return all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.parts, other.value.parts))
-        elif isinstance(self.value, ArrayProxy):
-            return (ValueKey(self.value.index) == ValueKey(other.value.index) and
-                    len(self.value.elems) == len(other.value.elems) and
-                    all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value._iter_as_values(),
-                                        other.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.clocks == other.value.clocks and
-                    self.value.domain == self.value.domain)
-        elif isinstance(self.value, Initial):
-            return True
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections"
-                            .format(self.value))
+        return self.value._key.__eq__(other.value._key)
 
     def __lt__(self, other):
-        if not isinstance(other, ValueKey):
-            return False
-        if type(self.value) != type(other.value):
-            return False
-
-        if isinstance(self.value, Const):
-            return self.value < other.value
-        elif isinstance(self.value, (Signal, AnyValue)):
-            return self.value.duid < other.value.duid
-        elif isinstance(self.value, Slice):
-            return (ValueKey(self.value.value) < ValueKey(other.value.value) and
-                    self.value.start < other.value.start and
-                    self.value.end < other.value.end)
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections")
+        if type(other) is not ValueKey:
+            raise TypeError(f"No ordering defined for objects of differing "
+                            f"type: {self!r} and {other!r}")
+        return self.value._key.__lt__(other.value._key)
 
     def __repr__(self):
         return "<{}.ValueKey {!r}>".format(__name__, self.value)
 
 
 class ValueDict(_MappedKeyDict):
-    _map_key   = ValueKey
-    _unmap_key = lambda self, key: key.value
+    pass
 
 
 class ValueSet(_MappedKeySet):
-    _map_key   = ValueKey
-    _unmap_key = lambda self, key: key.value
+    pass
 
 
 class SignalKey:
     def __init__(self, signal):
-        self.signal = signal
-        if isinstance(signal, Signal):
-            self._intern = (0, signal.duid)
-        elif type(signal) is ClockSignal:
-            self._intern = (1, signal.domain)
-        elif type(signal) is ResetSignal:
-            self._intern = (2, signal.domain)
-        else:
+        if not isinstance(signal, Signal):
             raise TypeError("Object {!r} is not an nMigen signal".format(signal))
+        self.signal = signal
 
     def __hash__(self):
-        return hash(self._intern)
+        return self.signal._key.__hash__()
 
     def __eq__(self, other):
         if type(other) is not SignalKey:
             return False
-        return self._intern == other._intern
+        return self.signal._key.__eq__(other.signal._key)
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
-            raise TypeError("Object {!r} cannot be compared to a SignalKey".format(signal))
-        return self._intern < other._intern
+            raise TypeError(f"No ordering defined for objects of differing "
+                            f"type: {self!r} and {other!r}")
+        return self.signal._key.__lt__(other.signal._key)
 
     def __repr__(self):
         return "<{}.SignalKey {!r}>".format(__name__, self.signal)
 
 
 class SignalDict(_MappedKeyDict):
-    _map_key   = SignalKey
-    _unmap_key = lambda self, key: key.signal
+    pass
 
 
 class SignalSet(_MappedKeySet):
-    _map_key   = SignalKey
-    _unmap_key = lambda self, key: key.signal
+    pass
