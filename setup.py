@@ -23,7 +23,7 @@ setup(
     #long_description="""TODO""",
     license="BSD",
     python_requires="~=3.6",
-    setup_requires=["setuptools_scm"],
+    setup_requires=["setuptools_scm", "wheel"],
     install_requires=[
         "setuptools",
         "pyvcd~=0.2.0", # for nmigen.pysim
