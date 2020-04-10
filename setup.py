@@ -24,7 +24,7 @@ setup(
     license="BSD",
     python_requires="~=3.6",
     setup_requires=["setuptools_scm"],
-    extra_requires=["wheel"],
+    extra_require="wheel",
     install_requires=[
         "setuptools",
         "pyvcd~=0.2.0", # for nmigen.pysim
