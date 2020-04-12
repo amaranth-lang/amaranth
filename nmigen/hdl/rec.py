@@ -74,6 +74,15 @@ class Layout:
     def __eq__(self, other):
         return self.fields == other.fields
 
+    def __repr__(self):
+        field_reprs = []
+        for name, shape, dir in self:
+            if dir == DIR_NONE:
+                field_reprs.append("({!r}, {!r})".format(name, shape))
+            else:
+                field_reprs.append("({!r}, {!r}, Direction.{})".format(name, shape, dir.name))
+        return "Layout([{}])".format(", ".join(field_reprs))
+
 
 # Unlike most Values, Record *can* be subclassed.
 class Record(Value):
