@@ -71,7 +71,19 @@ class Platform(ResourceManager, metaclass=ABCMeta):
               build_dir="build", do_build=True,
               program_opts=None, do_program=False,
               **kwargs):
-        if self._toolchain_env_var not in os.environ:
+        # The following code performs a best-effort check for presence of required tools upfront,
+        # before performing any build actions, to provide a better diagnostic. It does not handle
+        # several corner cases:
+        #  1. `require_tool` does not source toolchain environment scripts, so if such a script
+        #     is used, the check is skipped, and `execute_local()` may fail;
+        #  2. if the design is not built (do_build=False), most of the tools are not required and
+        #     in fact might not be available if the design will be built manually with a different
+        #     environment script specified, or on a different machine; however, Yosys is required
+        #     by virtually every platform anyway, to provide debug Verilog output, and `prepare()`
+        #     may fail.
+        # This is OK because even if `require_tool` succeeds, the toolchain might be broken anyway.
+        # The check only serves to catch common errors earlier.
+        if do_build and self._toolchain_env_var not in os.environ:
             for tool in self.required_tools:
                 require_tool(tool)
 
