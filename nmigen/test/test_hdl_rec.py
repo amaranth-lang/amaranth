@@ -59,6 +59,13 @@ class LayoutTestCase(FHDLTestCase):
         ])
         self.assertEqual(layout["a", "c"], expect)
 
+    def test_repr(self):
+        self.assertEqual(repr(Layout([("a", 1), ("b", signed(2))])),
+                         "Layout([('a', unsigned(1)), ('b', signed(2))])")
+        self.assertEqual(repr(Layout([("a", 1), ("b", [("c", signed(3))])])),
+                         "Layout([('a', unsigned(1)), "
+                            "('b', Layout([('c', signed(3))]))])")
+
     def test_wrong_field(self):
         with self.assertRaises(TypeError,
                 msg="Field (1,) has invalid layout: should be either (name, shape) or "
