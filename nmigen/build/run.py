@@ -136,8 +136,9 @@ class BuildProducts(metaclass=ABCMeta):
                 # On Windows, a named temporary file (as created by Python) is not accessible to
                 # others if it's still open within the Python process, so we close it and delete
                 # it manually.
-                file = tempfile.NamedTemporaryFile(prefix="nmigen_", suffix="_" + filename,
-                                                   delete=False)
+                file = tempfile.NamedTemporaryFile(
+                    prefix="nmigen_", suffix="_" + os.path.basename(filename),
+                    delete=False)
                 files.append(file)
                 file.write(self.get(filename))
                 file.close()
