@@ -89,6 +89,12 @@ class Shape(typing.NamedTuple):
             return Shape(width, signed)
         raise TypeError("Object {!r} cannot be used as value shape".format(obj))
 
+    def __repr__(self):
+        if self.signed:
+            return "signed({})".format(self.width)
+        else:
+            return "unsigned({})".format(self.width)
+
 
 # TODO: use dataclasses instead of this hack
 def _Shape___init__(self, width=1, signed=False):

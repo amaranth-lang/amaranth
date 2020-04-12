@@ -39,6 +39,10 @@ class ShapeTestCase(FHDLTestCase):
                 msg="Width must be a non-negative integer, not -1"):
             Shape(-1)
 
+    def test_repr(self):
+        self.assertEqual(repr(Shape()), "unsigned(1)")
+        self.assertEqual(repr(Shape(2, True)), "signed(2)")
+
     def test_tuple(self):
         width, signed = Shape()
         self.assertEqual(width, 1)
