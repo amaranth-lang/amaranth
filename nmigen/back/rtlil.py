@@ -880,7 +880,8 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                 if not isinstance(subfragment, ir.Instance):
                     for signal in value._rhs_signals():
                         compiler_state.resolve_curr(signal, prefix=sub_name)
-                sub_ports[port] = rhs_compiler(value)
+                if len(value) > 0:
+                    sub_ports[port] = rhs_compiler(value)
 
             module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params,
                         attrs=subfragment.attrs)
