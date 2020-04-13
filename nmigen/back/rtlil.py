@@ -632,12 +632,14 @@ class _LHSValueCompiler(_ValueCompiler):
     def on_Part(self, value):
         offset = self.s.expand(value.offset)
         if isinstance(offset, ast.Const):
-            if offset.value == len(value.value):
-                dummy_wire = self.s.rtlil.wire(value.width)
-                return dummy_wire
-            return self(ast.Slice(value.value,
-                                  offset.value * value.stride,
-                                  offset.value * value.stride + value.width))
+            start = offset.value * value.stride
+            stop  = start + value.width
+            slice = self(ast.Slice(value.value, start, min(len(value.value), stop)))
+            if len(value.value) >= stop:
+                return slice
+            else:
+                dummy_wire = self.s.rtlil.wire(stop - len(value.value))
+                return "{{ {} {} }}".format(dummy_wire, slice)
         else:
             # Only so many possible parts. The amount of branches is exponential; if value.offset
             # is large (e.g. 32-bit wide), trying to naively legalize it is likely to exhaust
