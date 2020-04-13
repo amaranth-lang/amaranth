@@ -576,7 +576,7 @@ class _RHSValueCompiler(_ValueCompiler):
         res_bits, res_sign = value.shape()
         res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
         # Note: Verilog's x[o+:w] construct produces a $shiftx cell, not a $shift cell.
-        # However, Migen's semantics defines the out-of-range bits to be zero, so it is correct
+        # However, nMigen's semantics defines the out-of-range bits to be zero, so it is correct
         # to use a $shift cell here instead, even though it produces less idiomatic Verilog.
         self.s.rtlil.cell("$shift", ports={
             "\\A": self(lhs),
