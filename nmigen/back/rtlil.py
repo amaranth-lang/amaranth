@@ -10,6 +10,10 @@ from ..hdl import ast, rec, ir, mem, xfrm
 __all__ = ["convert", "convert_fragment"]
 
 
+class ImplementationLimit(Exception):
+    pass
+
+
 class _Namer:
     def __init__(self):
         super().__init__()
@@ -101,6 +105,15 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
         self.rtlil._buffer.write(str(self))
 
     def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src=""):
+        # Very large wires are unlikely to work. Verilog 1364-2005 requires the limit on vectors
+        # to be at least 2**16 bits, and Yosys 0.9 breaks on wires of more than 2**32 bits, so
+        # those numbers are our hard bounds. Use 2**24 as the arbitrary boundary beyond which
+        # downstream bugs are more likely than not.
+        if width > 2 ** 24:
+            raise ImplementationLimit("Wire created at {} is {} bits wide, which is unlikely to "
+                                      "synthesize correctly"
+                                      .format(src or "unknown location", width))
+
         self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
         if port_id is None:
