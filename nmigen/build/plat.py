@@ -383,7 +383,8 @@ class TemplatedPlatform(Platform):
         def render(source, origin, syntax=None):
             try:
                 source   = textwrap.dedent(source).strip()
-                compiled = jinja2.Template(source, trim_blocks=True, lstrip_blocks=True)
+                compiled = jinja2.Template(source,
+                    trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined)
                 compiled.environment.filters["options"] = options
                 compiled.environment.filters["hierarchy"] = hierarchy
             except jinja2.TemplateSyntaxError as e:

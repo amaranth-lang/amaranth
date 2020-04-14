@@ -155,7 +155,8 @@ class LatticeICE40Platform(TemplatedPlatform):
             --log {{name}}.tim
             {{platform._nextpnr_device_options[platform.device]}}
             --package
-                {{platform.package|lower}}{{platform._nextpnr_package_options[platform.device]}}
+                {{platform.package|lower}}{{platform._nextpnr_package_options[platform.device]|
+                                            default("")}}
             --json {{name}}.json
             --pcf {{name}}.pcf
             --asc {{name}}.asc
