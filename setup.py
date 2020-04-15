@@ -23,7 +23,7 @@ setup(
     #long_description="""TODO""",
     license="BSD",
     python_requires="~=3.6",
-    setup_requires=["setuptools_scm", "wheel"],
+    setup_requires=["setuptools_scm"],
     extra_requires=["wheel"],
     install_requires=[
         "setuptools",
