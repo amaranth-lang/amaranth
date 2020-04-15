@@ -306,10 +306,15 @@ class _ValueCompilerState:
         else:
             wire_name = signal.name
 
+        attrs = dict(signal.attrs)
+        if signal._enum_class is not None:
+            attrs["enum_base_type"] = signal._enum_class.__name__
+            for value in signal._enum_class:
+                attrs["enum_value_{:0{}b}".format(value.value, signal.width)] = value.name
+
         wire_curr = self.rtlil.wire(width=signal.width, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
-                                    attrs=signal.attrs,
-                                    src=src(signal.src_loc))
+                                    attrs=attrs, src=src(signal.src_loc))
         if signal in self.driven and self.driven[signal]:
             wire_next = self.rtlil.wire(width=signal.width, name=wire_curr + "$next",
                                         src=src(signal.src_loc))

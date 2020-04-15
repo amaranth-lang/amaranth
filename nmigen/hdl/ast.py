@@ -425,7 +425,7 @@ class Value(metaclass=ABCMeta):
 
     def rotate_left(self, offset):
         """Rotate left by constant modulo 2**len(self).
-        
+
         Parameters
         ----------
         offset : int
@@ -443,7 +443,7 @@ class Value(metaclass=ABCMeta):
 
     def rotate_right(self, offset):
         """Rotate right by constant modulo 2**len(self).
-        
+
         Parameters
         ----------
         offset : int
@@ -922,8 +922,10 @@ class Signal(Value, DUID):
                 except ValueError:
                     return str(value)
             self.decoder = enum_decoder
+            self._enum_class = decoder
         else:
             self.decoder = decoder
+            self._enum_class = None
 
     # Not a @classmethod because nmigen.compat requires it.
     @staticmethod
