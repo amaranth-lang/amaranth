@@ -1186,7 +1186,10 @@ class UserValue(Value):
 
     def _lazy_lower(self):
         if self.__lowered is None:
-            self.__lowered = Value.cast(self.lower())
+            lowered = self.lower()
+            if isinstance(lowered, UserValue):
+                lowered = lowered._lazy_lower()
+            self.__lowered = Value.cast(lowered)
         return self.__lowered
 
     def shape(self):

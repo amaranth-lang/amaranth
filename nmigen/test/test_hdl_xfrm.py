@@ -620,3 +620,12 @@ class UserValueTestCase(FHDLTestCase):
             )
         )
         """)
+
+
+class UserValueRecursiveTestCase(UserValueTestCase):
+    def setUp(self):
+        self.s = Signal()
+        self.c = Signal()
+        self.uv = MockUserValue(MockUserValue(self.s))
+
+    # inherit the test_lower method from UserValueTestCase because the checks are the same

@@ -39,10 +39,6 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Record(self, value):
-        pass # :nocov:
-
-    @abstractmethod
     def on_ClockSignal(self, value):
         pass # :nocov:
 
@@ -98,9 +94,6 @@ class ValueVisitor(metaclass=ABCMeta):
         elif isinstance(value, Signal):
             # Uses `isinstance()` and not `type() is` because nmigen.compat requires it.
             new_value = self.on_Signal(value)
-        elif isinstance(value, Record):
-            # Uses `isinstance()` and not `type() is` to allow inheriting from Record.
-            new_value = self.on_Record(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
         elif type(value) is ResetSignal:
@@ -145,9 +138,6 @@ class ValueTransformer(ValueVisitor):
         return value
 
     def on_Signal(self, value):
-        return value
-
-    def on_Record(self, value):
         return value
 
     def on_ClockSignal(self, value):
@@ -371,8 +361,6 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
     def on_ResetSignal(self, value):
         self._add_used_domain(value.domain)
-
-    on_Record = on_ignore
 
     def on_Operator(self, value):
         for o in value.operands:

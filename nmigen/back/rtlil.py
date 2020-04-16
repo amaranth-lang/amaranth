@@ -360,9 +360,6 @@ class _ValueCompiler(xfrm.ValueVisitor):
     def on_Initial(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Record(self, value):
-        return self(ast.Cat(value.fields.values()))
-
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.parts])))
 
@@ -373,7 +370,11 @@ class _ValueCompiler(xfrm.ValueVisitor):
         if value.start == 0 and value.stop == len(value.value):
             return self(value.value)
 
-        sigspec = self._prepare_value_for_Slice(value.value)
+        if isinstance(value.value, ast.UserValue):
+            sigspec = self._prepare_value_for_Slice(value.value._lazy_lower())
+        else:
+            sigspec = self._prepare_value_for_Slice(value.value)
+
         if value.start == value.stop:
             return "{}"
         elif value.start + 1 == value.stop:
@@ -639,7 +640,7 @@ class _LHSValueCompiler(_ValueCompiler):
         return wire_next or wire_curr
 
     def _prepare_value_for_Slice(self, value):
-        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat, rec.Record))
+        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat))
         return self(value)
 
     def on_Part(self, value):

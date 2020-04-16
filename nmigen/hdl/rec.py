@@ -85,7 +85,7 @@ class Layout:
 
 
 # Unlike most Values, Record *can* be subclassed.
-class Record(Value):
+class Record(UserValue):
     @staticmethod
     def like(other, *, name=None, name_suffix=None, src_loc_at=0):
         if name is not None:
@@ -113,6 +113,8 @@ class Record(Value):
         return Record(other.layout, name=new_name, fields=fields, src_loc_at=1)
 
     def __init__(self, layout, *, name=None, fields=None, src_loc_at=0):
+        super().__init__(src_loc_at=src_loc_at)
+
         if name is None:
             name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
 
@@ -165,8 +167,8 @@ class Record(Value):
         else:
             return super().__getitem__(item)
 
-    def shape(self):
-        return Shape(sum(len(f) for f in self.fields.values()))
+    def lower(self):
+        return Cat(self.fields.values())
 
     def _lhs_signals(self):
         return union((f._lhs_signals() for f in self.fields.values()), start=SignalSet())
