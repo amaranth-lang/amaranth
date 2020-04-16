@@ -916,6 +916,14 @@ class UserValueTestCase(FHDLTestCase):
         self.assertEqual(uv.shape(), unsigned(1))
         self.assertEqual(uv.lower_count, 1)
 
+    def test_lower_to_user_value(self):
+        uv = MockUserValue(MockUserValue(1))
+        self.assertEqual(uv.shape(), unsigned(1))
+        self.assertIsInstance(uv.shape(), Shape)
+        uv.lowered = MockUserValue(2)
+        self.assertEqual(uv.shape(), unsigned(1))
+        self.assertEqual(uv.lower_count, 1)
+
 
 class SampleTestCase(FHDLTestCase):
     def test_const(self):

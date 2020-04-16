@@ -374,9 +374,6 @@ class _ValueCompiler(ValueVisitor, _Compiler):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Record(self, value):
-        return self(Cat(value.fields.values()))
-
     def on_AnyConst(self, value):
         raise NotImplementedError # :nocov:
 
