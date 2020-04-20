@@ -71,15 +71,13 @@ class LatticeECP5Platform(TemplatedPlatform):
     # Trellis templates
 
     _nextpnr_device_options = {
-        "LFE5U-12F":    "--25k",
+        "LFE5U-12F":    "--12k",
         "LFE5U-25F":    "--25k",
         "LFE5U-45F":    "--45k",
         "LFE5U-85F":    "--85k",
-        "LFE5UM-12F":   "--um-25k",
         "LFE5UM-25F":   "--um-25k",
         "LFE5UM-45F":   "--um-45k",
         "LFE5UM-85F":   "--um-85k",
-        "LFE5UM5G-12F": "--um5g-25k",
         "LFE5UM5G-25F": "--um5g-25k",
         "LFE5UM5G-45F": "--um5g-45k",
         "LFE5UM5G-85F": "--um5g-85k",
