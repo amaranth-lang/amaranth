@@ -16,6 +16,7 @@ class YosysError(Exception):
 def _yosys_version():
     yosys_path = require_tool("yosys")
     version = subprocess.check_output([yosys_path, "-V"], encoding="utf-8")
+    # If Yosys is built with Verific, then Verific license information is printed first.
     m = re.search(r"^Yosys ([\d.]+)(?:\+(\d+))?", version, flags=re.M)
     tag, offset = m[1], m[2] or 0
     return tuple(map(int, tag.split("."))), offset
