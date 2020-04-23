@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import itertools
 
 from .._toolchain import *
 from . import rtlil
@@ -65,6 +66,12 @@ write_verilog -norename {write_verilog_opts}
     if popen.returncode:
         raise YosysError(error.strip())
     else:
+        # Remove empty lines and things that are not legal Verilog
+        # syntax at start of file
+        verilog_text = "\n".join(itertools.dropwhile(
+            lambda x: not x or x.strip().startswith("--"),
+            verilog_text.splitlines()
+        ))
         return verilog_text
 
 
