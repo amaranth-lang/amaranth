@@ -66,10 +66,10 @@ write_verilog -norename {write_verilog_opts}
     if popen.returncode:
         raise YosysError(error.strip())
     else:
-        # Remove empty lines and things that are not legal Verilog
-        # syntax at start of file
+        # If Yosys is built with an evaluation version of Verific, 
+        # then Verific license information is printed first.
         verilog_text = "\n".join(itertools.dropwhile(
-            lambda x: not x or x.strip().startswith("--"),
+            lambda x: x == "" or x.startswith("--"),
             verilog_text.splitlines()
         ))
         return verilog_text
