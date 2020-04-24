@@ -280,7 +280,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     """.strip(),
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
-    r_rst : out
+    r_rst : Signal, out
         Asserted when the FIFO is reset by the write-domain reset.
     """.strip(),
     w_attributes="")
