@@ -307,11 +307,11 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_port_not_iterable(self):
         f = Fragment()
         with self.assertRaises(TypeError,
-                msg="`ports` must be either a list or a tuple, not 'int'"):
+                msg="`ports` must be either a list or a tuple, not 1"):
             f.prepare(ports=1)
         with self.assertRaises(TypeError,
-                msg="`ports` must be either a list or a tuple, not 'Const'" +
-                " (did you mean `ports=(<signal>,)`?)"):
+                msg="`ports` must be either a list or a tuple, not (const 1'd1)" +
+                " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"):
             f.prepare(ports=Const(1))
 
 class FragmentDomainsTestCase(FHDLTestCase):

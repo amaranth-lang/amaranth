@@ -535,9 +535,9 @@ class Fragment:
             # typecheck ports is either list or tuple (#362)
             if not isinstance(ports, tuple) and not isinstance(ports, list):
                 msg = "`ports` must be either a list or a tuple, not {!r}"\
-                        .format(type(ports).__name__)
+                        .format(ports)
                 if isinstance(ports, Value):
-                    msg += " (did you mean `ports=(<signal>,)`?)"
+                    msg += " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"
                 raise TypeError(msg)
             mapped_ports = []
             # Lower late bound signals like ClockSignal() to ports.
