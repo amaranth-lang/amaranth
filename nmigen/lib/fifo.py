@@ -279,7 +279,11 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         Always set.
     """.strip(),
     r_data_valid="Valid if ``r_rdy`` is asserted.",
-    r_attributes="",
+    r_attributes="""
+    r_rst : Signal, out
+        Asserted while the FIFO is being reset by the write-domain reset (for at least one
+        read-domain clock cycle).
+    """.strip(),
     w_attributes="")
 
     def __init__(self, *, width, depth, r_domain="read", w_domain="write", exact_depth=False):
@@ -295,6 +299,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             depth_bits = 0
         super().__init__(width=width, depth=depth, fwft=True)
 
+        self.r_rst = Signal()
         self._r_domain = r_domain
         self._w_domain = w_domain
         self._ctr_bits = depth_bits + 1
@@ -393,11 +398,14 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         # counter in read domain.
         rst_dec = m.submodules.rst_dec = \
             GrayDecoder(self._ctr_bits)
-        m.d.comb += rst_dec.i.eq(produce_r_gry),
+        m.d.comb += rst_dec.i.eq(produce_r_gry)
         with m.If(r_rst):
             m.d.comb += r_empty.eq(1)
             m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry)
             m.d[self._r_domain] += consume_r_bin.eq(rst_dec.o)
+            m.d[self._r_domain] += self.r_rst.eq(1)
+        with m.Else():
+            m.d[self._r_domain] += self.r_rst.eq(0)
 
         if platform == "formal":
             with m.If(Initial()):
@@ -436,7 +444,11 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         Always set.
     """.strip(),
     r_data_valid="Valid if ``r_rdy`` is asserted.",
-    r_attributes="",
+    r_attributes="""
+    r_rst : Signal, out
+        Asserted while the FIFO is being reset by the write-domain reset (for at least one
+        read-domain clock cycle).
+    """.strip(),
     w_attributes="")
 
     def __init__(self, *, width, depth, r_domain="read", w_domain="write", exact_depth=False):
@@ -450,6 +462,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
                                  .format(depth)) from None
         super().__init__(width=width, depth=depth, fwft=True)
 
+        self.r_rst = Signal()
         self._r_domain = r_domain
         self._w_domain = w_domain
 
@@ -475,6 +488,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
             m.d[self._r_domain] += [
                 self.r_data.eq(fifo.r_data),
                 self.r_rdy.eq(fifo.r_rdy),
+                self.r_rst.eq(fifo.r_rst),
             ]
             m.d.comb += [
                 fifo.r_en.eq(1)
