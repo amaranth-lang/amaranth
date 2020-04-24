@@ -281,7 +281,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
     r_rst : Signal, out
-        Asserted when the FIFO is reset by the write-domain reset.
+        Asserted while the FIFO is being reset by the write-domain reset (for at least one
+        read-domain clock cycle).
     """.strip(),
     w_attributes="")
 
@@ -444,8 +445,9 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
     """.strip(),
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
-    r_rst : out
-        Asserted when the FIFO is reset by the write-domain reset.
+    r_rst : Signal, out
+        Asserted while the FIFO is being reset by the write-domain reset (for at least one
+        read-domain clock cycle).
     """.strip(),
     w_attributes="")
 
