@@ -1,6 +1,7 @@
 from enum import Enum
 from collections import OrderedDict
 from functools import reduce
+import warnings
 
 from .. import tracer
 from .._utils import union, deprecated
@@ -37,6 +38,8 @@ class Layout:
                 if isinstance(shape, list):
                     shape = Layout.cast(shape)
             else:
+                warnings.warn("`Record` field directions are deprecated and will be removed",
+                          DeprecationWarning, stacklevel=2 + src_loc_at)
                 name, shape, direction = field
                 if not isinstance(direction, Direction):
                     raise TypeError("Field {!r} has invalid direction: should be a Direction "
@@ -59,11 +62,13 @@ class Layout:
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            return Layout([
-                (name, shape, dir)
-                for (name, (shape, dir)) in self.fields.items()
-                if name in item
-            ])
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+                return Layout([
+                    (name, shape, dir)
+                    for (name, (shape, dir)) in self.fields.items()
+                    if name in item
+                ])
 
         return self.fields[item]
 
@@ -188,6 +193,8 @@ class Record(UserValue):
             name = "<unnamed>"
         return "(rec {} {})".format(name, " ".join(fields))
 
+    # TODO(nmigen-0.3): remove
+    @deprecated("`connect(...)` is deprecated and will be removed: manually connect fields instead")
     def connect(self, *subordinates, include=None, exclude=None):
         def rec_name(record):
             if record.name is None:

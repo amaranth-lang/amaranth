@@ -1,4 +1,5 @@
 from enum import Enum
+import warnings
 
 from ..hdl.ast import *
 from ..hdl.rec import *
@@ -13,16 +14,18 @@ class UnsignedEnum(Enum):
 
 class LayoutTestCase(FHDLTestCase):
     def test_fields(self):
-        layout = Layout.cast([
-            ("cyc",  1),
-            ("data", signed(32)),
-            ("stb",  1, DIR_FANOUT),
-            ("ack",  1, DIR_FANIN),
-            ("info", [
-                ("a", 1),
-                ("b", 1),
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            layout = Layout.cast([
+                ("cyc",  1),
+                ("data", signed(32)),
+                ("stb",  1, DIR_FANOUT),
+                ("ack",  1, DIR_FANIN),
+                ("info", [
+                    ("a", 1),
+                    ("b", 1),
+                ])
             ])
-        ])
 
         self.assertEqual(layout["cyc"], ((1, False), DIR_NONE))
         self.assertEqual(layout["data"], ((32, True), DIR_NONE))
@@ -34,10 +37,12 @@ class LayoutTestCase(FHDLTestCase):
         self.assertEqual(sublayout["b"], ((1, False), DIR_NONE))
 
     def test_enum_field(self):
-        layout = Layout.cast([
-            ("enum", UnsignedEnum),
-            ("enum_dir", UnsignedEnum, DIR_FANOUT),
-        ])
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            layout = Layout.cast([
+                ("enum", UnsignedEnum),
+                ("enum_dir", UnsignedEnum, DIR_FANOUT),
+            ])
         self.assertEqual(layout["enum"], ((2, False), DIR_NONE))
         self.assertEqual(layout["enum_dir"], ((2, False), DIR_FANOUT))
 
@@ -83,10 +88,12 @@ class LayoutTestCase(FHDLTestCase):
             Layout.cast([("a", 1), ("a", 2)])
 
     def test_wrong_direction(self):
-        with self.assertRaises(TypeError,
-                msg="Field ('a', 1, 0) has invalid direction: should be a Direction "
-                    "instance like DIR_FANIN"):
-            Layout.cast([("a", 1, 0)])
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            with self.assertRaises(TypeError,
+                    msg="Field ('a', 1, 0) has invalid direction: should be a Direction "
+                        "instance like DIR_FANIN"):
+                Layout.cast([("a", 1, 0)])
 
     def test_wrong_shape(self):
         with self.assertRaises(TypeError,
@@ -232,89 +239,103 @@ class ConnectTestCase(FHDLTestCase):
         ]
 
     def test_flat(self):
-        self.setUp_flat()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.setUp_flat()
 
-        core    = Record(self.core_layout)
-        periph1 = Record(self.periph_layout)
-        periph2 = Record(self.periph_layout)
+            core    = Record(self.core_layout)
+            periph1 = Record(self.periph_layout)
+            periph2 = Record(self.periph_layout)
 
-        stmts = core.connect(periph1, periph2)
-        self.assertRepr(stmts, """(
-            (eq (sig periph1__addr) (sig core__addr))
-            (eq (sig periph2__addr) (sig core__addr))
-            (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
-            (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
-        )""")
+            stmts = core.connect(periph1, periph2)
+            self.assertRepr(stmts, """(
+                (eq (sig periph1__addr) (sig core__addr))
+                (eq (sig periph2__addr) (sig core__addr))
+                (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
+                (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
+            )""")
 
     def test_flat_include(self):
-        self.setUp_flat()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.setUp_flat()
 
-        core    = Record(self.core_layout)
-        periph1 = Record(self.periph_layout)
-        periph2 = Record(self.periph_layout)
+            core    = Record(self.core_layout)
+            periph1 = Record(self.periph_layout)
+            periph2 = Record(self.periph_layout)
 
-        stmts = core.connect(periph1, periph2, include={"addr": True})
-        self.assertRepr(stmts, """(
-            (eq (sig periph1__addr) (sig core__addr))
-            (eq (sig periph2__addr) (sig core__addr))
-        )""")
+            stmts = core.connect(periph1, periph2, include={"addr": True})
+            self.assertRepr(stmts, """(
+                (eq (sig periph1__addr) (sig core__addr))
+                (eq (sig periph2__addr) (sig core__addr))
+            )""")
 
     def test_flat_exclude(self):
-        self.setUp_flat()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.setUp_flat()
 
-        core    = Record(self.core_layout)
-        periph1 = Record(self.periph_layout)
-        periph2 = Record(self.periph_layout)
+            core    = Record(self.core_layout)
+            periph1 = Record(self.periph_layout)
+            periph2 = Record(self.periph_layout)
 
-        stmts = core.connect(periph1, periph2, exclude={"addr": True})
-        self.assertRepr(stmts, """(
-            (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
-            (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
-        )""")
+            stmts = core.connect(periph1, periph2, exclude={"addr": True})
+            self.assertRepr(stmts, """(
+                (eq (sig core__data_r) (| (sig periph1__data_r) (sig periph2__data_r)))
+                (eq (sig core__data_w) (| (sig periph1__data_w) (sig periph2__data_w)))
+            )""")
 
     def test_nested(self):
-        self.setUp_nested()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.setUp_nested()
 
-        core    = Record(self.core_layout)
-        periph1 = Record(self.periph_layout)
-        periph2 = Record(self.periph_layout)
+            core    = Record(self.core_layout)
+            periph1 = Record(self.periph_layout)
+            periph2 = Record(self.periph_layout)
 
-        stmts = core.connect(periph1, periph2)
-        self.maxDiff = None
-        self.assertRepr(stmts, """(
-            (eq (sig periph1__addr) (sig core__addr))
-            (eq (sig periph2__addr) (sig core__addr))
-            (eq (sig core__data__r) (| (sig periph1__data__r) (sig periph2__data__r)))
-            (eq (sig core__data__w) (| (sig periph1__data__w) (sig periph2__data__w)))
-        )""")
+            stmts = core.connect(periph1, periph2)
+            self.maxDiff = None
+            self.assertRepr(stmts, """(
+                (eq (sig periph1__addr) (sig core__addr))
+                (eq (sig periph2__addr) (sig core__addr))
+                (eq (sig core__data__r) (| (sig periph1__data__r) (sig periph2__data__r)))
+                (eq (sig core__data__w) (| (sig periph1__data__w) (sig periph2__data__w)))
+            )""")
 
     def test_wrong_include_exclude(self):
-        self.setUp_flat()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.setUp_flat()
 
-        core   = Record(self.core_layout)
-        periph = Record(self.periph_layout)
+            core   = Record(self.core_layout)
+            periph = Record(self.periph_layout)
 
-        with self.assertRaises(AttributeError,
-                msg="Cannot include field 'foo' because it is not present in record 'core'"):
-            core.connect(periph, include={"foo": True})
+            with self.assertRaises(AttributeError,
+                    msg="Cannot include field 'foo' because it is not present in record 'core'"):
+                core.connect(periph, include={"foo": True})
 
-        with self.assertRaises(AttributeError,
-                msg="Cannot exclude field 'foo' because it is not present in record 'core'"):
-            core.connect(periph, exclude={"foo": True})
+            with self.assertRaises(AttributeError,
+                    msg="Cannot exclude field 'foo' because it is not present in record 'core'"):
+                core.connect(periph, exclude={"foo": True})
 
     def test_wrong_direction(self):
-        recs = [Record([("x", 1)]) for _ in range(2)]
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            recs = [Record([("x", 1)]) for _ in range(2)]
 
-        with self.assertRaises(TypeError,
-                msg="Cannot connect field 'x' of unnamed record because it does not have "
-                    "a direction"):
-            recs[0].connect(recs[1])
+            with self.assertRaises(TypeError,
+                    msg="Cannot connect field 'x' of unnamed record because it does not have "
+                        "a direction"):
+                recs[0].connect(recs[1])
 
     def test_wrong_missing_field(self):
-        core   = Record([("addr", 32, DIR_FANOUT)])
-        periph = Record([])
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            core   = Record([("addr", 32, DIR_FANOUT)])
+            periph = Record([])
 
-        with self.assertRaises(AttributeError,
-                msg="Cannot connect field 'addr' of record 'core' to subordinate record 'periph' "
+            with self.assertRaises(AttributeError,
+                    msg="Cannot connect field 'addr' of record 'core' to subordinate record 'periph' "
                     "because the subordinate record does not have this field"):
-            core.connect(periph)
+                core.connect(periph)
