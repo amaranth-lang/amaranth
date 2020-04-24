@@ -532,7 +532,7 @@ class Fragment:
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
-            # typecheck ports is either list or tuple (#362)
+            # typecheck ports is either list or tuple
             if not isinstance(ports, tuple) and not isinstance(ports, list):
                 msg = "`ports` must be either a list or a tuple, not {!r}"\
                         .format(ports)
