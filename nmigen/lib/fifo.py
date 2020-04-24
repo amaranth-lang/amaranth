@@ -369,10 +369,12 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             w_port.en.eq(do_write),
             self.w_rdy.eq(~w_full),
         ]
+        # There is a CDC hazard associated with simultaneous read and write from a dual port BRAM.
+        # We avoid this by disabling `r_port.en` when `r_empty` is true.
         m.d.comb += [
             r_port.addr.eq(consume_r_nxt[:-1]),
             self.r_data.eq(r_port.data),
-            r_port.en.eq(1),
+            r_port.en.eq(~r_empty),
             self.r_rdy.eq(~r_empty),
         ]
 
