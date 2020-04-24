@@ -532,6 +532,12 @@ class Fragment:
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
+            if not isinstance(ports, tuple) and not isinstance(ports, list):
+                msg = "`ports` must be either a list or a tuple, not {!r}"\
+                        .format(ports)
+                if isinstance(ports, Value):
+                    msg += " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"
+                raise TypeError(msg)
             mapped_ports = []
             # Lower late bound signals like ClockSignal() to ports.
             port_lowerer = DomainLowerer(fragment.domains)
