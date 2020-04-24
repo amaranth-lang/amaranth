@@ -26,8 +26,12 @@ The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept
 
 nMigen requires Python 3.6 (or newer), [Yosys][] 0.9 (or newer), as well as a device-specific toolchain.
 
+First, install Yosys, either using your system package manager, or [from source][yosyssrc]. Then, install nMigen and pinouts for many common FPGA developer boards:
+
     pip install git+https://github.com/nmigen/nmigen.git
     pip install git+https://github.com/nmigen/nmigen-boards.git
+
+[yosyssrc]: https://github.com/yosysHQ/yosys/#setup
 
 ### Introduction
 
