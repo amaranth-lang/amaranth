@@ -116,6 +116,14 @@ class AsyncFFSynchronizer(Elaboratable):
         with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
     async_edge : str
         The edge of the input signal which causes the output to be set. Must be one of "pos" or "neg".
+    max_input_delay : None or float
+        Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
+        If specified and the platform does not support it, elaboration will fail.
+
+    Platform override
+    -----------------
+    Define the ``get_async_ff_sync`` platform method to override the implementation of
+    :class:`AsyncFFSynchronizer`, e.g. to instantiate library cells directly.
     """
     def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos", max_input_delay=None):
         _check_stages(stages)
