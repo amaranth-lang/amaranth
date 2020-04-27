@@ -289,9 +289,9 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with self.assertWarns(SyntaxWarning,
                 msg="Signed values in If/Elif conditions usually result from inverting Python "
-                    "booleans with ~, which leads to unexpected results: ~True is -2, which is "
-                    "truthful. Replace `~flag` with `not flag`. (If this is a false positive, "
-                    "silence this warning with `m.If(x)` → `m.If(x.bool())`.)"):
+                    "booleans with ~, which leads to unexpected results. Replace `~flag` with "
+                    "`not flag`. (If this is a false positive, silence this warning with "
+                    "`m.If(x)` → `m.If(x.bool())`.)"):
             with m.If(~True):
                 pass
 
@@ -301,9 +301,9 @@ class DSLTestCase(FHDLTestCase):
             pass
         with self.assertWarns(SyntaxWarning,
                 msg="Signed values in If/Elif conditions usually result from inverting Python "
-                    "booleans with ~, which leads to unexpected results: ~True is -2, which is "
-                    "truthful. Replace `~flag` with `not flag`. (If this is a false positive, "
-                    "silence this warning with `m.If(x)` → `m.If(x.bool())`.)"):
+                    "booleans with ~, which leads to unexpected results. Replace `~flag` with "
+                    "`not flag`. (If this is a false positive, silence this warning with "
+                    "`m.If(x)` → `m.If(x.bool())`.)"):
             with m.Elif(~True):
                 pass
 

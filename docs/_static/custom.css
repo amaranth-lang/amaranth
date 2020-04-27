@@ -1,0 +1,5 @@
+/* Some of our section titles are looong */
+.wy-menu-vertical { width: 340px; }
+
+/* Many of our diagnostics are even longer */
+.rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre { white-space: pre-wrap; }

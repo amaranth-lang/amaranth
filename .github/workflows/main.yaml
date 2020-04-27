@@ -1,0 +1,28 @@
+on: push
+name: CI
+jobs:
+  build:
+    if: github.event_name == 'push' && github.event.ref == 'refs/heads/doc'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade setuptools setuptools_scm wheel
+          pip install -r docs/requirements.txt
+          pip install -e .
+      - name: Build documentation
+        run: |
+          sphinx-build docs docs/_build
+      - name: Publish documentation
+        uses: JamesIves/github-pages-deploy-action@releases/v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/_build
+          TARGET_FOLDER: latest/

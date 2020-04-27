@@ -159,7 +159,7 @@ class ValueTestCase(FHDLTestCase):
 
     def test_bool(self):
         with self.assertRaises(TypeError,
-                msg="Attempted to convert nMigen value to boolean"):
+                msg="Attempted to convert nMigen value to Python boolean"):
             if Const(0):
                 pass
 
@@ -466,11 +466,11 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(v1.shape(), unsigned(11))
 
     def test_shl_wrong(self):
-        with self.assertRaises(NotImplementedError,
-                msg="Shift by a signed value is not supported"):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be unsigned"):
             1 << Const(0, signed(6))
-        with self.assertRaises(NotImplementedError,
-                msg="Shift by a signed value is not supported"):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be unsigned"):
             Const(1, unsigned(4)) << -1
 
     def test_shr(self):
@@ -479,11 +479,11 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(v1.shape(), unsigned(4))
 
     def test_shr_wrong(self):
-        with self.assertRaises(NotImplementedError,
-                msg="Shift by a signed value is not supported"):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be unsigned"):
             1 << Const(0, signed(6))
-        with self.assertRaises(NotImplementedError,
-                msg="Shift by a signed value is not supported"):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be unsigned"):
             Const(1, unsigned(4)) << -1
 
     def test_lt(self):

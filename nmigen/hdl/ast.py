@@ -135,7 +135,7 @@ class Value(metaclass=ABCMeta):
         self.src_loc = tracer.get_src_loc(1 + src_loc_at)
 
     def __bool__(self):
-        raise TypeError("Attempted to convert nMigen value to boolean")
+        raise TypeError("Attempted to convert nMigen value to Python boolean")
 
     def __invert__(self):
         return Operator("~", [self])
@@ -184,7 +184,7 @@ class Value(metaclass=ABCMeta):
             # Neither Python nor HDLs implement shifts by negative values; prohibit any shifts
             # by a signed value to make sure the shift amount can always be interpreted as
             # an unsigned value.
-            raise NotImplementedError("Shift by a signed value is not supported")
+            raise TypeError("Shift amount must be unsigned")
     def __lshift__(self, other):
         other = Value.cast(other)
         other.__check_shamt()
