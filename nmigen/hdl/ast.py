@@ -549,7 +549,7 @@ class Const(Value):
         return Shape(self.width, self.signed)
 
     def _rhs_signals(self):
-        return ValueSet()
+        return SignalSet()
 
     def _as_const(self):
         return self.value
@@ -573,7 +573,7 @@ class AnyValue(Value, DUID):
         return Shape(self.width, self.signed)
 
     def _rhs_signals(self):
-        return ValueSet()
+        return SignalSet()
 
 
 @final
@@ -786,10 +786,10 @@ class Cat(Value):
         return Shape(sum(len(part) for part in self.parts))
 
     def _lhs_signals(self):
-        return union((part._lhs_signals() for part in self.parts), start=ValueSet())
+        return union((part._lhs_signals() for part in self.parts), start=SignalSet())
 
     def _rhs_signals(self):
-        return union((part._rhs_signals() for part in self.parts), start=ValueSet())
+        return union((part._rhs_signals() for part in self.parts), start=SignalSet())
 
     def _as_const(self):
         value = 0
@@ -954,10 +954,10 @@ class Signal(Value, DUID):
         return Shape(self.width, self.signed)
 
     def _lhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def _rhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def __repr__(self):
         return "(sig {})".format(self.name)
@@ -988,7 +988,7 @@ class ClockSignal(Value):
         return Shape(1)
 
     def _lhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def _rhs_signals(self):
         raise NotImplementedError("ClockSignal must be lowered to a concrete signal") # :nocov:
@@ -1025,7 +1025,7 @@ class ResetSignal(Value):
         return Shape(1)
 
     def _lhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def _rhs_signals(self):
         raise NotImplementedError("ResetSignal must be lowered to a concrete signal") # :nocov:
@@ -1146,11 +1146,13 @@ class ArrayProxy(Value):
         return Shape(width, signed)
 
     def _lhs_signals(self):
-        signals = union((elem._lhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        signals = union((elem._lhs_signals() for elem in self._iter_as_values()),
+                        start=SignalSet())
         return signals
 
     def _rhs_signals(self):
-        signals = union((elem._rhs_signals() for elem in self._iter_as_values()), start=ValueSet())
+        signals = union((elem._rhs_signals() for elem in self._iter_as_values()),
+                        start=SignalSet())
         return self.index._rhs_signals() | signals
 
     def __repr__(self):
@@ -1231,7 +1233,7 @@ class Sample(Value):
         return self.value.shape()
 
     def _rhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def __repr__(self):
         return "(sample {!r} @ {}[{}])".format(
@@ -1267,7 +1269,7 @@ class Initial(Value):
         return Shape(1)
 
     def _rhs_signals(self):
-        return ValueSet((self,))
+        return SignalSet((self,))
 
     def __repr__(self):
         return "(initial)"
@@ -1330,7 +1332,7 @@ class Property(Statement, MustUse):
             self._en.src_loc = self.src_loc
 
     def _lhs_signals(self):
-        return ValueSet((self._en, self._check))
+        return SignalSet((self._en, self._check))
 
     def _rhs_signals(self):
         return self.test._rhs_signals()
@@ -1398,12 +1400,12 @@ class Switch(Statement):
 
     def _lhs_signals(self):
         signals = union((s._lhs_signals() for ss in self.cases.values() for s in ss),
-                        start=ValueSet())
+                        start=SignalSet())
         return signals
 
     def _rhs_signals(self):
         signals = union((s._rhs_signals() for ss in self.cases.values() for s in ss),
-                        start=ValueSet())
+                        start=SignalSet())
         return self.test._rhs_signals() | signals
 
     def __repr__(self):
