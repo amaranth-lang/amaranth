@@ -14,6 +14,27 @@ class ImplementationLimit(Exception):
     pass
 
 
+_escape_map = str.maketrans({
+    "\"": "\\\"",
+    "\\": "\\\\",
+    "\t": "\\t",
+    "\r": "\\r",
+    "\n": "\\n",
+})
+
+
+def const(value):
+    if isinstance(value, str):
+        return "\"{}\"".format(value.translate(_escape_map))
+    elif isinstance(value, int):
+        return "{:d}".format(value)
+    elif isinstance(value, ast.Const):
+        value_twos_compl = value.value & ((1 << value.width) - 1)
+        return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
+    else:
+        assert False, "Invalid constant {!r}".format(value)
+
+
 class _Namer:
     def __init__(self):
         super().__init__()
@@ -58,21 +79,9 @@ class _ProxiedBuilder:
 
 
 class _AttrBuilder:
-    _escape_map = str.maketrans({
-        "\"": "\\\"",
-        "\\": "\\\\",
-        "\t": "\\t",
-        "\r": "\\r",
-        "\n": "\\n",
-    })
-
     def _attribute(self, name, value, *, indent=0):
-        if isinstance(value, str):
-            self._append("{}attribute \\{} \"{}\"\n",
-                         "  " * indent, name, value.translate(self._escape_map))
-        else:
-            self._append("{}attribute \\{} {}\n",
-                         "  " * indent, name, int(value))
+        self._append("{}attribute \\{} {}\n",
+                     "  " * indent, name, const(value))
 
     def _attributes(self, attrs, *, src=None, **kwargs):
         for name, value in attrs.items():
@@ -137,20 +146,12 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
         name = self._make_name(name, local=False)
         self._append("  cell {} {}\n", kind, name)
         for param, value in params.items():
-            if isinstance(value, str):
-                self._append("    parameter \\{} \"{}\"\n",
-                             param, value.translate(self._escape_map))
-            elif isinstance(value, int):
-                self._append("    parameter \\{} {}'{:b}\n",
-                             param, bits_for(value), value)
-            elif isinstance(value, float):
+            if isinstance(value, float):
                 self._append("    parameter real \\{} \"{!r}\"\n",
                              param, value)
-            elif isinstance(value, ast.Const):
-                self._append("    parameter \\{} {}'{:b}\n",
-                             param, len(value), value.value)
             else:
-                assert False, "Bad parameter {!r}".format(value)
+                self._append("    parameter \\{} {}\n",
+                             param, const(value))
         for port, wire in ports.items():
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
@@ -433,11 +434,7 @@ class _RHSValueCompiler(_ValueCompiler):
         return super().on_value(self.s.expand(value))
 
     def on_Const(self, value):
-        if isinstance(value.value, str):
-            return "{}'{}".format(value.width, value.value)
-        else:
-            value_twos_compl = value.value & ((1 << value.width) - 1)
-            return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
+        return const(value)
 
     def on_AnyConst(self, value):
         if value in self.s.anys:
