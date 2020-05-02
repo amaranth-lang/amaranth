@@ -368,6 +368,17 @@ class TemplatedPlatform(Platform):
         def hierarchy(signal, separator):
             return separator.join(name_map[signal][1:])
 
+        def ascii_escape(string):
+            def escape_one(match):
+                if match.group(1) is None:
+                    return match.group(2)
+                else:
+                    return "_{:02x}_".format(ord(match.group(1)[0]))
+            return "".join(escape_one(m) for m in re.finditer(r"([^A-Za-z0-9_])|(.)", string))
+
+        def tcl_escape(string):
+            return "{" + re.sub(r"([{}\\])", r"\\\1", string) + "}"
+
         def verbose(arg):
             if "NMIGEN_verbose" in os.environ:
                 return arg
@@ -387,6 +398,8 @@ class TemplatedPlatform(Platform):
                     trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined)
                 compiled.environment.filters["options"] = options
                 compiled.environment.filters["hierarchy"] = hierarchy
+                compiled.environment.filters["ascii_escape"] = ascii_escape
+                compiled.environment.filters["tcl_escape"] = tcl_escape
             except jinja2.TemplateSyntaxError as e:
                 e.args = ("{} (at {}:{})".format(e.message, origin, e.lineno),)
                 raise

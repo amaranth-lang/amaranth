@@ -85,22 +85,22 @@ class IntelPlatform(TemplatedPlatform):
             {% endif %}
 
             {% for file in platform.iter_extra_files(".v") -%}
-                set_global_assignment -name VERILOG_FILE "{{file}}"
+                set_global_assignment -name VERILOG_FILE {{file|tcl_escape}}
             {% endfor %}
             {% for file in platform.iter_extra_files(".sv") -%}
-                set_global_assignment -name SYSTEMVERILOG_FILE "{{file}}"
+                set_global_assignment -name SYSTEMVERILOG_FILE {{file|tcl_escape}}
             {% endfor %}
             {% for file in platform.iter_extra_files(".vhd", ".vhdl") -%}
-                set_global_assignment -name VHDL_FILE "{{file}}"
+                set_global_assignment -name VHDL_FILE {{file|tcl_escape}}
             {% endfor %}
             set_global_assignment -name VERILOG_FILE {{name}}.v
             set_global_assignment -name TOP_LEVEL_ENTITY {{name}}
 
             set_global_assignment -name DEVICE {{platform.device}}{{platform.package}}{{platform.speed}}{{platform.suffix}}
-            {% for port_name, pin_name, extras in platform.iter_port_constraints_bits() -%}
-                set_location_assignment -to "{{port_name}}" PIN_{{pin_name}}
-                {% for key, value in extras.items() -%}
-                    set_instance_assignment -to "{{port_name}}" -name {{key}} "{{value}}"
+            {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
+                set_location_assignment -to {{port_name|tcl_escape}} PIN_{{pin_name}}
+                {% for key, value in attrs.items() -%}
+                    set_instance_assignment -to {{port_name|tcl_escape}} -name {{key}} {{value|tcl_escape}}
                 {% endfor %}
             {% endfor %}
 
@@ -109,9 +109,9 @@ class IntelPlatform(TemplatedPlatform):
         "{{name}}.sdc": r"""
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                    create_clock -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_escape}}]
                 {% else -%}
-                    create_clock -name {{net_signal.name}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("|")}}]
+                    create_clock -name {{net_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("|")|tcl_escape}}]
                 {% endif %}
             {% endfor %}
         """,
