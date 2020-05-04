@@ -37,7 +37,7 @@ def get_var_name(depth=2, default=_raise_exception):
         elif opc == "STORE_DEREF":
             name_index = int(code.co_code[index + 1])
             return code.co_cellvars[name_index]
-        elif opc in ("LOAD_GLOBAL", "LOAD_ATTR", "LOAD_FAST", "LOAD_DEREF",
+        elif opc in ("LOAD_GLOBAL", "LOAD_NAME", "LOAD_ATTR", "LOAD_FAST", "LOAD_DEREF",
                      "DUP_TOP", "BUILD_LIST"):
             index += 2
         else:
