@@ -25,6 +25,7 @@ class LatticeMachXO2Platform(TemplatedPlatform):
     Build products:
         * ``{{name}}_impl/{{name}}_impl.htm``: consolidated log.
         * ``{{name}}.jed``: JEDEC fuse file.
+        * ``{{name}}.bit``: binary bitstream.
         * ``{{name}}.svf``: JTAG programming vector.
     """
 
@@ -77,6 +78,7 @@ class LatticeMachXO2Platform(TemplatedPlatform):
             prj_run Translate -impl impl -forceAll
             prj_run Map -impl impl -forceAll
             prj_run PAR -impl impl -forceAll
+            prj_run Export -impl impl -forceAll -task Bitgen
             prj_run Export -impl impl -forceAll -task Jedecgen
             {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
         """,
@@ -109,6 +111,11 @@ class LatticeMachXO2Platform(TemplatedPlatform):
         r"""
         {{invoke_tool("pnmainc")}}
             {{name}}.tcl
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -bit
+            -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.bit
         """,
         r"""
         {{invoke_tool("ddtcmd")}}
