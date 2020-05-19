@@ -23,11 +23,28 @@ _escape_map = str.maketrans({
 })
 
 
+def signed(value):
+    if isinstance(value, str):
+        return False
+    elif isinstance(value, int):
+        return value < 0
+    elif isinstance(value, ast.Const):
+        return value.signed
+    else:
+        assert False, "Invalid constant {!r}".format(value)
+
+
 def const(value):
     if isinstance(value, str):
         return "\"{}\"".format(value.translate(_escape_map))
     elif isinstance(value, int):
-        return "{:d}".format(value)
+        if value in range(0, 2**31-1):
+            return "{:d}".format(value)
+        else:
+            # This code path is only used for Instances, where Verilog-like behavior is desirable.
+            # Verilog ensures that integers with unspecified width are 32 bits wide or more.
+            width = max(32, bits_for(value))
+            return const(ast.Const(value, width))
     elif isinstance(value, ast.Const):
         value_twos_compl = value.value & ((1 << value.width) - 1)
         return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
@@ -149,6 +166,9 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
             if isinstance(value, float):
                 self._append("    parameter real \\{} \"{!r}\"\n",
                              param, value)
+            elif signed(value):
+                self._append("    parameter signed \\{} {}\n",
+                             param, const(value))
             else:
                 self._append("    parameter \\{} {}\n",
                              param, const(value))
