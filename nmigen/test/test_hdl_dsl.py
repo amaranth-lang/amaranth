@@ -712,7 +712,7 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.domains.foo = ClockDomain()
         self.assertEqual(len(m._domains), 1)
-        self.assertEqual(m._domains[0].name, "foo")
+        self.assertEqual(m._domains["foo"].name, "foo")
 
     def test_domain_add_wrong(self):
         m = Module()
@@ -728,6 +728,13 @@ class DSLTestCase(FHDLTestCase):
         with self.assertRaises(NameError,
                 msg="Clock domain name 'bar' must match name in `m.domains.foo += ...` syntax"):
             m.domains.foo = ClockDomain("bar")
+
+    def test_domain_add_wrong_duplicate(self):
+        m = Module()
+        m.domains += ClockDomain("foo")
+        with self.assertRaises(NameError,
+                msg="Clock domain named 'foo' already exists"):
+            m.domains += ClockDomain("foo")
 
     def test_lower(self):
         m1 = Module()

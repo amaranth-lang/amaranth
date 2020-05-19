@@ -174,9 +174,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._ctrl_stack   = []
 
         self._driving      = SignalDict()
-        self._named_submodules   = {}
-        self._anon_submodules = []
-        self._domains      = []
+        self._named_submodules = {}
+        self._anon_submodules  = []
+        self._domains      = {}
         self._generated    = {}
 
     def _check_context(self, construct, context):
@@ -523,7 +523,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             raise AttributeError("No submodule named '{}' exists".format(name))
 
     def _add_domain(self, cd):
-        self._domains.append(cd)
+        if cd.name in self._domains:
+            raise NameError("Clock domain named '{}' already exists".format(cd.name))
+        self._domains[cd.name] = cd
 
     def _flush(self):
         while self._ctrl_stack:
@@ -541,6 +543,6 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         fragment.add_statements(statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
-        fragment.add_domains(self._domains)
+        fragment.add_domains(self._domains.values())
         fragment.generated.update(self._generated)
         return fragment
