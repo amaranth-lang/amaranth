@@ -424,7 +424,7 @@ class Value(metaclass=ABCMeta):
             return Cat(*matches).any()
 
     def rotate_left(self, offset):
-        """Rotate left by constant modulo 2**len(self).
+        """Rotate left by constant amount.
 
         Parameters
         ----------
@@ -434,7 +434,7 @@ class Value(metaclass=ABCMeta):
         Returns
         -------
         Value, out
-            The input rotated left by offset if offset is positive, else the input rotated right by -offset.
+            If the offset is positive, the input rotated left. Otherwise, the input rotated right.
         """
         if not isinstance(offset, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(offset))
@@ -442,7 +442,7 @@ class Value(metaclass=ABCMeta):
         return Cat(self[-offset:], self[:-offset]) # meow :3
 
     def rotate_right(self, offset):
-        """Rotate right by constant modulo 2**len(self).
+        """Rotate right by constant amount.
 
         Parameters
         ----------
@@ -452,7 +452,7 @@ class Value(metaclass=ABCMeta):
         Returns
         -------
         Value, out
-            The input rotated right by offset if offset is positive, else the input rotated left by -offset.
+            If the offset is positive, the input rotated right. Otherwise, the input rotated right.
         """
         if not isinstance(offset, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(offset))
