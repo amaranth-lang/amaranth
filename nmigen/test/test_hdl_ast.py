@@ -205,11 +205,73 @@ class ValueTestCase(FHDLTestCase):
                 msg="Cannot index value with 'str'"):
             Const(31)["str"]
 
+    def test_shift_left(self):
+        self.assertRepr(Const(256, unsigned(9)).shift_left(0),
+                        "(cat (const 0'd0) (const 9'd256))")
+
+        self.assertRepr(Const(256, unsigned(9)).shift_left(1),
+                        "(cat (const 1'd0) (const 9'd256))")
+        self.assertRepr(Const(256, unsigned(9)).shift_left(5),
+                        "(cat (const 5'd0) (const 9'd256))")
+        self.assertRepr(Const(256, signed(9)).shift_left(1),
+                        "(s (cat (const 1'd0) (const 9'sd-256)))")
+        self.assertRepr(Const(256, signed(9)).shift_left(5),
+                        "(s (cat (const 5'd0) (const 9'sd-256)))")
+
+        self.assertRepr(Const(256, unsigned(9)).shift_left(-1),
+                        "(slice (const 9'd256) 1:9)")
+        self.assertRepr(Const(256, unsigned(9)).shift_left(-5),
+                        "(slice (const 9'd256) 5:9)")
+        self.assertRepr(Const(256, signed(9)).shift_left(-1),
+                        "(s (slice (const 9'sd-256) 1:9))")
+        self.assertRepr(Const(256, signed(9)).shift_left(-5),
+                        "(s (slice (const 9'sd-256) 5:9))")
+        self.assertRepr(Const(256, signed(9)).shift_left(-15),
+                        "(s (slice (const 9'sd-256) 9:9))")
+
+    def test_shift_left_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be an integer, not 'str'"):
+            Const(31).shift_left("str")
+
+    def test_shift_right(self):
+        self.assertRepr(Const(256, unsigned(9)).shift_right(0),
+                        "(slice (const 9'd256) 0:9)")
+
+        self.assertRepr(Const(256, unsigned(9)).shift_right(-1),
+                        "(cat (const 1'd0) (const 9'd256))")
+        self.assertRepr(Const(256, unsigned(9)).shift_right(-5),
+                        "(cat (const 5'd0) (const 9'd256))")
+        self.assertRepr(Const(256, signed(9)).shift_right(-1),
+                        "(s (cat (const 1'd0) (const 9'sd-256)))")
+        self.assertRepr(Const(256, signed(9)).shift_right(-5),
+                        "(s (cat (const 5'd0) (const 9'sd-256)))")
+
+        self.assertRepr(Const(256, unsigned(9)).shift_right(1),
+                        "(slice (const 9'd256) 1:9)")
+        self.assertRepr(Const(256, unsigned(9)).shift_right(5),
+                        "(slice (const 9'd256) 5:9)")
+        self.assertRepr(Const(256, signed(9)).shift_right(1),
+                        "(s (slice (const 9'sd-256) 1:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(5),
+                        "(s (slice (const 9'sd-256) 5:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(15),
+                        "(s (slice (const 9'sd-256) 9:9))")
+
+    def test_shift_right_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Shift amount must be an integer, not 'str'"):
+            Const(31).shift_left("str")
+
     def test_rotate_left(self):
-        self.assertRepr(Value.cast(256).rotate_left(1), "(cat (slice (const 9'd256) 8:9) (slice (const 9'd256) 0:8))")
-        self.assertRepr(Value.cast(256).rotate_left(7), "(cat (slice (const 9'd256) 2:9) (slice (const 9'd256) 0:2))")
-        self.assertRepr(Value.cast(256).rotate_left(-1), "(cat (slice (const 9'd256) 1:9) (slice (const 9'd256) 0:1))")
-        self.assertRepr(Value.cast(256).rotate_left(-7), "(cat (slice (const 9'd256) 7:9) (slice (const 9'd256) 0:7))")
+        self.assertRepr(Const(256).rotate_left(1),
+                        "(cat (slice (const 9'd256) 8:9) (slice (const 9'd256) 0:8))")
+        self.assertRepr(Const(256).rotate_left(7),
+                        "(cat (slice (const 9'd256) 2:9) (slice (const 9'd256) 0:2))")
+        self.assertRepr(Const(256).rotate_left(-1),
+                        "(cat (slice (const 9'd256) 1:9) (slice (const 9'd256) 0:1))")
+        self.assertRepr(Const(256).rotate_left(-7),
+                        "(cat (slice (const 9'd256) 7:9) (slice (const 9'd256) 0:7))")
 
     def test_rotate_left_wrong(self):
         with self.assertRaises(TypeError,
@@ -217,15 +279,20 @@ class ValueTestCase(FHDLTestCase):
             Const(31).rotate_left("str")
 
     def test_rotate_right(self):
-        self.assertRepr(Value.cast(256).rotate_right(1), "(cat (slice (const 9'd256) 1:9) (slice (const 9'd256) 0:1))")
-        self.assertRepr(Value.cast(256).rotate_right(7), "(cat (slice (const 9'd256) 7:9) (slice (const 9'd256) 0:7))")
-        self.assertRepr(Value.cast(256).rotate_right(-1), "(cat (slice (const 9'd256) 8:9) (slice (const 9'd256) 0:8))")
-        self.assertRepr(Value.cast(256).rotate_right(-7), "(cat (slice (const 9'd256) 2:9) (slice (const 9'd256) 0:2))")
+        self.assertRepr(Const(256).rotate_right(1),
+                        "(cat (slice (const 9'd256) 1:9) (slice (const 9'd256) 0:1))")
+        self.assertRepr(Const(256).rotate_right(7),
+                        "(cat (slice (const 9'd256) 7:9) (slice (const 9'd256) 0:7))")
+        self.assertRepr(Const(256).rotate_right(-1),
+                        "(cat (slice (const 9'd256) 8:9) (slice (const 9'd256) 0:8))")
+        self.assertRepr(Const(256).rotate_right(-7),
+                        "(cat (slice (const 9'd256) 2:9) (slice (const 9'd256) 0:2))")
 
     def test_rotate_right_wrong(self):
         with self.assertRaises(TypeError,
                 msg="Rotate amount must be an integer, not 'str'"):
             Const(31).rotate_right("str")
+
 
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):

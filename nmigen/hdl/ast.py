@@ -423,41 +423,85 @@ class Value(metaclass=ABCMeta):
         else:
             return Cat(*matches).any()
 
-    def rotate_left(self, offset):
+    def shift_left(self, amount):
+        """Shift left by constant amount.
+
+        Parameters
+        ----------
+        amount : int
+            Amount to shift by.
+
+        Returns
+        -------
+        Value, out
+            If the amount is positive, the input shifted left. Otherwise, the input shifted right.
+        """
+        if not isinstance(amount, int):
+            raise TypeError("Shift amount must be an integer, not {!r}".format(amount))
+        if amount < 0:
+            return self.shift_right(-amount)
+        if self.shape().signed:
+            return Cat(Const(0, amount), self).as_signed()
+        else:
+            return Cat(Const(0, amount), self) # unsigned
+
+    def shift_right(self, amount):
+        """Shift right by constant amount.
+
+        Parameters
+        ----------
+        amount : int
+            Amount to shift by.
+
+        Returns
+        -------
+        Value, out
+            If the amount is positive, the input shifted right. Otherwise, the input shifted left.
+        """
+        if not isinstance(amount, int):
+            raise TypeError("Shift amount must be an integer, not {!r}".format(amount))
+        if amount < 0:
+            return self.shift_left(-amount)
+        if self.shape().signed:
+            return self[amount:].as_signed()
+        else:
+            return self[amount:] # unsigned
+
+    def rotate_left(self, amount):
         """Rotate left by constant amount.
 
         Parameters
         ----------
-        offset : int
+        amount : int
             Amount to rotate by.
 
         Returns
         -------
         Value, out
-            If the offset is positive, the input rotated left. Otherwise, the input rotated right.
+            If the amount is positive, the input rotated left. Otherwise, the input rotated right.
         """
-        if not isinstance(offset, int):
-            raise TypeError("Rotate amount must be an integer, not {!r}".format(offset))
-        offset %= len(self)
-        return Cat(self[-offset:], self[:-offset]) # meow :3
+        if not isinstance(amount, int):
+            raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
+        amount %= len(self)
+        return Cat(self[-amount:], self[:-amount]) # meow :3
 
-    def rotate_right(self, offset):
+    def rotate_right(self, amount):
         """Rotate right by constant amount.
 
         Parameters
         ----------
-        offset : int
+        amount : int
             Amount to rotate by.
 
         Returns
         -------
         Value, out
-            If the offset is positive, the input rotated right. Otherwise, the input rotated right.
+            If the amount is positive, the input rotated right. Otherwise, the input rotated right.
         """
-        if not isinstance(offset, int):
-            raise TypeError("Rotate amount must be an integer, not {!r}".format(offset))
-        offset %= len(self)
-        return Cat(self[offset:], self[:offset])
+        if not isinstance(amount, int):
+            raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
+        amount %= len(self)
+        return Cat(self[amount:], self[:amount])
 
     def eq(self, value):
         """Assignment.

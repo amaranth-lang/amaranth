@@ -301,6 +301,18 @@ class SimulatorUnitTestCase(FHDLTestCase):
         for i in range(10):
             self.assertStatement(stmt, [C(i)], C(0))
 
+    def test_shift_left(self):
+        stmt1 = lambda y, a: y.eq(a.shift_left(1))
+        self.assertStatement(stmt1, [C(0b10100010, 8)], C(   0b101000100, 9))
+        stmt2 = lambda y, a: y.eq(a.shift_left(4))
+        self.assertStatement(stmt2, [C(0b10100010, 8)], C(0b101000100000, 12))
+
+    def test_shift_right(self):
+        stmt1 = lambda y, a: y.eq(a.shift_right(1))
+        self.assertStatement(stmt1, [C(0b10100010, 8)], C(0b1010001, 7))
+        stmt2 = lambda y, a: y.eq(a.shift_right(4))
+        self.assertStatement(stmt2, [C(0b10100010, 8)], C(   0b1010, 4))
+
     def test_rotate_left(self):
         stmt = lambda y, a: y.eq(a.rotate_left(1))
         self.assertStatement(stmt, [C(0b1)], C(0b1))
