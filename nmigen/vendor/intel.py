@@ -146,8 +146,6 @@ class IntelPlatform(TemplatedPlatform):
 
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
-        # Make sure the net constrained in the SDC file is kept through synthesis; it is redundant
-        # after Quartus flattens the hierarchy and will be eliminated if not explicitly kept.
         clock.attrs["keep"] = 1
 
     # The altiobuf_* and altddio_* primitives are explained in the following Intel documents:
