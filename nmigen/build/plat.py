@@ -388,6 +388,9 @@ class TemplatedPlatform(Platform):
         def tcl_escape(string):
             return "{" + re.sub(r"([{}\\])", r"\\\1", string) + "}"
 
+        def tcl_quote(string):
+            return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
+
         def verbose(arg):
             if "NMIGEN_verbose" in os.environ:
                 return arg
@@ -409,6 +412,7 @@ class TemplatedPlatform(Platform):
                 compiled.environment.filters["hierarchy"] = hierarchy
                 compiled.environment.filters["ascii_escape"] = ascii_escape
                 compiled.environment.filters["tcl_escape"] = tcl_escape
+                compiled.environment.filters["tcl_quote"] = tcl_quote
             except jinja2.TemplateSyntaxError as e:
                 e.args = ("{} (at {}:{})".format(e.message, origin, e.lineno),)
                 raise
