@@ -3,31 +3,17 @@ import re
 import subprocess
 import itertools
 
-from .._toolchain import *
+from .._yosys import *
 from . import rtlil
 
 
 __all__ = ["YosysError", "convert", "convert_fragment"]
 
 
-class YosysError(Exception):
-    pass
-
-
-def _yosys_version():
-    yosys_path = require_tool("yosys")
-    version = subprocess.check_output([yosys_path, "-V"], encoding="utf-8")
-    # If Yosys is built with Verific, then Verific license information is printed first.
-    # See below for details.
-    m = re.search(r"^Yosys ([\d.]+)(?:\+(\d+))?", version, flags=re.M)
-    tag, offset = m[1], m[2] or 0
-    return tuple(map(int, tag.split("."))), offset
-
-
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
-    version, offset = _yosys_version()
-    if version < (0, 9):
-        raise YosysError("Yosys {}.{} is not supported".format(*version))
+    # this version requirement needs to be synchronized with the one in setup.py!
+    yosys = find_yosys(lambda ver: ver >= (0, 9))
+    yosys_version = yosys.version()
 
     attr_map = []
     if strip_internal_attrs:
@@ -37,7 +23,7 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
         attr_map.append("-remove nmigen.hierarchy")
         attr_map.append("-remove nmigen.decoding")
 
-    script = """
+    return yosys.run(["-q", "-"], """
 # Convert nMigen's RTLIL to readable Verilog.
 read_ilang <<rtlil
 {}
@@ -53,28 +39,11 @@ attrmap {attr_map}
 attrmap -modattr {attr_map}
 write_verilog -norename {write_verilog_opts}
 """.format(rtlil_text,
-        prune="# " if version == (0, 9) and offset == 0 else "",
+        # Yosys 0.9 release has buggy proc_prune.
+        prune="# " if yosys_version < (0, 9, 231) else "",
         attr_map=" ".join(attr_map),
         write_verilog_opts=" ".join(write_verilog_opts),
-    )
-
-    popen = subprocess.Popen([require_tool("yosys"), "-q", "-"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding="utf-8")
-    verilog_text, error = popen.communicate(script)
-    if popen.returncode:
-        raise YosysError(error.strip())
-    else:
-        # If Yosys is built with an evaluation version of Verific, then Verific license information 
-        # is printed first. It consists of empty lines and lines starting with `--`, which are not
-        # valid at the start of a Verilog file, and thus may be reliably removed.
-        verilog_text = "\n".join(itertools.dropwhile(
-            lambda x: x == "" or x.startswith("--"),
-            verilog_text.splitlines()
-        ))
-        return verilog_text
+    ))
 
 
 def convert_fragment(*args, strip_internal_attrs=False, **kwargs):
