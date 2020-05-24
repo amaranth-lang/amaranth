@@ -330,7 +330,7 @@ class Value(metaclass=ABCMeta):
 
         Parameters
         ----------
-        offset : Value, in
+        offset : Value, int
             Index of first selected bit.
         width : int
             Number of selected bits.
@@ -353,7 +353,7 @@ class Value(metaclass=ABCMeta):
 
         Parameters
         ----------
-        offset : Value, in
+        offset : Value, int
             Index of first selected word.
         width : int
             Number of selected bits.
