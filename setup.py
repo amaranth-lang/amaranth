@@ -29,11 +29,11 @@ setup(
         "pyvcd~=0.2.0", # for nmigen.pysim
         "Jinja2~=2.11", # for nmigen.build
     ],
-    extras_require = {
+    extras_require={
         # this version requirement needs to be synchronized with the one in nmigen.back.verilog!
         "builtin-yosys": ["nmigen-yosys>=0.9.*"],
     },
-    packages=find_packages(),
+    packages=find_packages(exclude=["*.test*"]),
     entry_points={
         "console_scripts": [
             "nmigen-rpc = nmigen.rpc:main",
