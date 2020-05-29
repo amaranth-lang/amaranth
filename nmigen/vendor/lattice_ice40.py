@@ -620,8 +620,8 @@ class LatticeICE40Platform(TemplatedPlatform):
         self._get_io_buffer(m, pin, n_port, attrs, o_invert=not invert, invert_lut=True)
         return m
 
-    # Tristate and bidirectional buffers are not supported on iCE40 because it requires external
-    # termination, which is incompatible for input and output differential I/Os.
+    # Tristate bidirectional buffers are not supported on iCE40 because it requires external
+    # termination, which is different for differential pins configured as inputs and outputs.
 
     # CDC primitives are not currently specialized for iCE40. It is not known if iCECube2 supports
     # the necessary attributes; nextpnr-ice40 does not.
