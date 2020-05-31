@@ -12,6 +12,11 @@ class UnsignedEnum(Enum):
 
 
 class LayoutTestCase(FHDLTestCase):
+    def assertFieldEqual(self, field, expected):
+        (shape, dir) = field
+        shape = Shape.cast(shape)
+        self.assertEqual((shape, dir), expected)
+
     def test_fields(self):
         layout = Layout.cast([
             ("cyc",  1),
@@ -24,28 +29,28 @@ class LayoutTestCase(FHDLTestCase):
             ])
         ])
 
-        self.assertEqual(layout["cyc"], ((1, False), DIR_NONE))
-        self.assertEqual(layout["data"], ((32, True), DIR_NONE))
-        self.assertEqual(layout["stb"], ((1, False), DIR_FANOUT))
-        self.assertEqual(layout["ack"], ((1, False), DIR_FANIN))
+        self.assertFieldEqual(layout["cyc"], ((1, False), DIR_NONE))
+        self.assertFieldEqual(layout["data"], ((32, True), DIR_NONE))
+        self.assertFieldEqual(layout["stb"], ((1, False), DIR_FANOUT))
+        self.assertFieldEqual(layout["ack"], ((1, False), DIR_FANIN))
         sublayout = layout["info"][0]
         self.assertEqual(layout["info"][1], DIR_NONE)
-        self.assertEqual(sublayout["a"], ((1, False), DIR_NONE))
-        self.assertEqual(sublayout["b"], ((1, False), DIR_NONE))
+        self.assertFieldEqual(sublayout["a"], ((1, False), DIR_NONE))
+        self.assertFieldEqual(sublayout["b"], ((1, False), DIR_NONE))
 
     def test_enum_field(self):
         layout = Layout.cast([
             ("enum", UnsignedEnum),
             ("enum_dir", UnsignedEnum, DIR_FANOUT),
         ])
-        self.assertEqual(layout["enum"], ((2, False), DIR_NONE))
-        self.assertEqual(layout["enum_dir"], ((2, False), DIR_FANOUT))
+        self.assertFieldEqual(layout["enum"], ((2, False), DIR_NONE))
+        self.assertFieldEqual(layout["enum_dir"], ((2, False), DIR_FANOUT))
 
     def test_range_field(self):
         layout = Layout.cast([
             ("range", range(0, 7)),
         ])
-        self.assertEqual(layout["range"], ((3, False), DIR_NONE))
+        self.assertFieldEqual(layout["range"], ((3, False), DIR_NONE))
 
     def test_slice_tuple(self):
         layout = Layout.cast([
@@ -60,9 +65,9 @@ class LayoutTestCase(FHDLTestCase):
         self.assertEqual(layout["a", "c"], expect)
 
     def test_repr(self):
-        self.assertEqual(repr(Layout([("a", 1), ("b", signed(2))])),
+        self.assertEqual(repr(Layout([("a", unsigned(1)), ("b", signed(2))])),
                          "Layout([('a', unsigned(1)), ('b', signed(2))])")
-        self.assertEqual(repr(Layout([("a", 1), ("b", [("c", signed(3))])])),
+        self.assertEqual(repr(Layout([("a", unsigned(1)), ("b", [("c", signed(3))])])),
                          "Layout([('a', unsigned(1)), "
                             "('b', Layout([('c', signed(3))]))])")
 
@@ -200,6 +205,10 @@ class RecordTestCase(FHDLTestCase):
         self.assertEqual(r2.layout, Layout([("a", 1), ("c", 3)]))
         self.assertIs(r2.a, r1.a)
         self.assertIs(r2.c, r1.c)
+
+    def test_enum_decoder(self):
+        r1 = Record([("a", UnsignedEnum)])
+        self.assertEqual(r1.a.decoder(UnsignedEnum.FOO), "FOO/1")
 
 
 class ConnectTestCase(FHDLTestCase):

@@ -47,7 +47,8 @@ class Layout:
                                 .format(field))
             if not isinstance(shape, Layout):
                 try:
-                    shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
+                    # Check provided shape by calling Shape.cast and checking for exception
+                    Shape.cast(shape, src_loc_at=1 + src_loc_at)
                 except Exception as error:
                     raise TypeError("Field {!r} has invalid shape: should be castable to Shape "
                                     "or a list of fields of a nested record"
@@ -134,7 +135,7 @@ class Record(UserValue):
                 if isinstance(field_shape, Layout):
                     assert isinstance(field, Record) and field_shape == field.layout
                 else:
-                    assert isinstance(field, Signal) and field_shape == field.shape()
+                    assert isinstance(field, Signal) and Shape.cast(field_shape) == field.shape()
                 self.fields[field_name] = field
             else:
                 if isinstance(field_shape, Layout):
