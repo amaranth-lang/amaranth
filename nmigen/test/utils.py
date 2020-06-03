@@ -56,6 +56,7 @@ class FHDLTestCase(unittest.TestCase):
     def assertFormal(self, spec, mode="bmc", depth=1):
         caller, *_ = traceback.extract_stack(limit=2)
         spec_root, _ = os.path.splitext(caller.filename)
+        spec_root = os.path.abspath(spec_root)
         spec_dir = os.path.dirname(spec_root)
         spec_name = "{}_{}".format(
             os.path.basename(spec_root).replace("test_", "spec_"),
