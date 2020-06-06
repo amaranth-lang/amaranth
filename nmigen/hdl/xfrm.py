@@ -453,7 +453,8 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
     def on_ResetSignal(self, value):
         if value.domain in self.domain_map:
-            return ResetSignal(self.domain_map[value.domain])
+            return ResetSignal(self.domain_map[value.domain],
+                               allow_reset_less=value.allow_reset_less)
         return value
 
     def map_domains(self, fragment, new_fragment):
