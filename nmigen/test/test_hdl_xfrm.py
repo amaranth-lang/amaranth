@@ -74,6 +74,24 @@ class DomainRenamerTestCase(FHDLTestCase):
             "pix": cd_pix,
         })
 
+    def test_rename_cd_preserves_allow_reset_less(self):
+        cd_pix  = ClockDomain(reset_less=True)
+
+        f = Fragment()
+        f.add_domains(cd_pix)
+        f.add_statements(
+            self.s1.eq(ResetSignal(allow_reset_less=True)),
+        )
+
+        f = DomainRenamer("pix")(f)
+        f = DomainLowerer()(f)
+        self.assertRepr(f.statements, """
+        (
+            (eq (sig s1) (const 1'd0))
+        )
+        """)
+
+
     def test_rename_cd_subfragment(self):
         cd_sync = ClockDomain()
         cd_pix  = ClockDomain()
