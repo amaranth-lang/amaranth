@@ -1,8 +1,3 @@
-import os
-import re
-import subprocess
-import itertools
-
 from .._yosys import *
 from . import rtlil
 
