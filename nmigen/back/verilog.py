@@ -38,7 +38,11 @@ write_verilog -norename {write_verilog_opts}
         prune="# " if yosys_version < (0, 9, 231) else "",
         attr_map=" ".join(attr_map),
         write_verilog_opts=" ".join(write_verilog_opts),
-    ))
+    ),
+    # At the moment, Yosys always shows a warning indicating that not all processes can be
+    # translated to Verilog. We carefully emit only the processes that *can* be translated, and
+    # squash this warning. Once Yosys' write_verilog pass is fixed, we should remove this.
+    ignore_warnings=True)
 
 
 def convert_fragment(*args, strip_internal_attrs=False, **kwargs):

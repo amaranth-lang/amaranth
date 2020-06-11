@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import subprocess
+import warnings
 try:
     from importlib import metadata as importlib_metadata # py3.8+ stdlib
 except ImportError:
@@ -17,6 +18,10 @@ __all__ = ["YosysError", "YosysBinary", "find_yosys"]
 
 
 class YosysError(Exception):
+    pass
+
+
+class YosysWarning(Warning):
     pass
 
 
@@ -72,6 +77,16 @@ class YosysBinary:
         """
         raise NotImplementedError
 
+    @classmethod
+    def _process_result(cls, returncode, stdout, stderr, ignore_warnings, src_loc_at):
+        if returncode:
+            raise YosysError(stderr.strip())
+        if not ignore_warnings:
+            for match in re.finditer(r"(?ms:^Warning: (.+)\n$)", stderr):
+                message = match.group(1).replace("\n", " ")
+                warnings.warn(message, YosysWarning, stacklevel=3 + src_loc_at)
+        return stdout
+
 
 class _BuiltinYosys(YosysBinary):
     YOSYS_PACKAGE = "nmigen_yosys"
@@ -93,15 +108,12 @@ class _BuiltinYosys(YosysBinary):
         return (int(match[1]), int(match[2]), int(match[3] or 0))
 
     @classmethod
-    def run(cls, args, stdin=""):
+    def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):
         popen = subprocess.Popen([sys.executable, "-m", cls.YOSYS_PACKAGE, *args],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             encoding="utf-8")
         stdout, stderr = popen.communicate(stdin)
-        if popen.returncode:
-            raise YosysError(stderr.strip())
-        else:
-            return stdout
+        return cls._process_result(popen.returncode, stdout, stderr, ignore_warnings, src_loc_at)
 
 
 class _SystemYosys(YosysBinary):
@@ -118,7 +130,7 @@ class _SystemYosys(YosysBinary):
         return (int(match[1]), int(match[2]), int(match[3] or 0))
 
     @classmethod
-    def run(cls, args, stdin=""):
+    def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):
         popen = subprocess.Popen([require_tool(cls.YOSYS_BINARY), *args],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             encoding="utf-8")
@@ -129,10 +141,7 @@ class _SystemYosys(YosysBinary):
         #
         # This is not ideal, but Verific license conditions rule out any other solution.
         stdout = re.sub(r"\A(-- .+\n|\n)*", "", stdout)
-        if popen.returncode:
-            raise YosysError(stderr.strip())
-        else:
-            return stdout
+        return cls._process_result(popen.returncode, stdout, stderr, ignore_warnings, src_loc_at)
 
 
 def find_yosys(requirement):
