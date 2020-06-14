@@ -3,6 +3,7 @@ import sys
 import re
 import subprocess
 import warnings
+import pathlib
 try:
     from importlib import metadata as importlib_metadata # py3.8+ stdlib
 except ImportError:
@@ -10,6 +11,14 @@ except ImportError:
         import importlib_metadata # py3.7- shim
     except ImportError:
         importlib_metadata = None # not installed
+try:
+    from importlib import resources as importlib_resources
+    try:
+        importlib_resources.files # py3.9+ stdlib
+    except AttributeError:
+        import importlib_resources # py3.8- shim
+except ImportError:
+    import importlib_resources # py3.6- shim
 
 from ._toolchain import has_tool, require_tool
 
@@ -50,6 +59,17 @@ class YosysBinary:
             Minor version.
         distance : int
             Distance to last tag per ``git describe``. May not be exact for system Yosys.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def data_dir(cls):
+        """Get Yosys data directory.
+
+        Returns
+        -------
+        data_dir : pathlib.Path
+            Yosys data directory (also known as "datdir").
         """
         raise NotImplementedError
 
@@ -108,6 +128,10 @@ class _BuiltinYosys(YosysBinary):
         return (int(match[1]), int(match[2]), int(match[3] or 0))
 
     @classmethod
+    def data_dir(cls):
+        return importlib_resources.files(cls.YOSYS_PACKAGE) / "share"
+
+    @classmethod
     def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):
         popen = subprocess.Popen([sys.executable, "-m", cls.YOSYS_PACKAGE, *args],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -128,6 +152,16 @@ class _SystemYosys(YosysBinary):
         version = cls.run(["-V"])
         match = re.match(r"^Yosys (\d+)\.(\d+)(?:\+(\d+))?", version)
         return (int(match[1]), int(match[2]), int(match[3] or 0))
+
+    @classmethod
+    def data_dir(cls):
+        popen = subprocess.Popen([require_tool(cls.YOSYS_BINARY) + "-config", "--datdir"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            encoding="utf-8")
+        stdout, stderr = popen.communicate()
+        if popen.returncode:
+            raise YosysError(stderr.strip())
+        return pathlib.Path(stdout.strip())
 
     @classmethod
     def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):

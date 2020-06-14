@@ -25,7 +25,8 @@ setup(
     python_requires="~=3.6",
     setup_requires=["setuptools", "setuptools_scm"],
     install_requires=[
-        "importlib_metadata; python_version<'3.8'", # for nmigen._yosys
+        "importlib_metadata; python_version<'3.8'",  # for nmigen._yosys
+        "importlib_resources; python_version<'3.9'", # for nmigen._yosys
         "pyvcd~=0.2.0", # for nmigen.pysim
         "Jinja2~=2.11", # for nmigen.build
     ],
