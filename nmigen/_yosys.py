@@ -181,5 +181,5 @@ def find_yosys(requirement):
             raise YosysError("Could not find an acceptable Yosys binary. Searched: {}"
                              .format(", ".join(clauses)))
         else:
-            raise YosysError("Could not find an acceptable Yosys binary. The `nmigen_yosys` PyPI "
+            raise YosysError("Could not find an acceptable Yosys binary. The `nmigen-yosys` PyPI "
                              "package, if available for this platform, can be used as fallback")
