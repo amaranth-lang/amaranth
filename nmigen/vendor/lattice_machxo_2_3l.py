@@ -6,6 +6,7 @@ from ..build import *
 
 __all__ = ["LatticeMachXO2Platform", "LatticeMachXO3LPlatform"]
 
+
 # MachXO2 and MachXO3L primitives are the same. Handle both using
 # one class and expose user-aliases for convenience.
 class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
@@ -395,6 +396,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         return m
 
     # CDC primitives are not currently specialized for MachXO2/MachXO3L.
+
 
 LatticeMachXO2Platform = LatticeMachXO2Or3LPlatform
 LatticeMachXO3LPlatform = LatticeMachXO2Or3LPlatform
