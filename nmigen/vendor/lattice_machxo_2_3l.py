@@ -4,10 +4,11 @@ from ..hdl import *
 from ..build import *
 
 
-__all__ = ["LatticeMachXO2Platform"]
+__all__ = ["LatticeMachXO2Platform", "LatticeMachXO3lPlatform"]
 
-
-class LatticeMachXO2Platform(TemplatedPlatform):
+# MachXO2 and MachXO3l primitives are the same. Handle both using
+# one class and expose user-aliases for convenience.
+class LatticeMachXO2Or3lPlatform(TemplatedPlatform):
     """
     Required tools:
         * ``pnmainc``
@@ -131,7 +132,7 @@ class LatticeMachXO2Platform(TemplatedPlatform):
     ]
 
     def create_missing_domain(self, name):
-        # Lattice MachXO2 devices have two global set/reset signals: PUR, which is driven at
+        # Lattice MachXO2/MachXO3l devices have two global set/reset signals: PUR, which is driven at
         # startup by the configuration logic and unconditionally resets every storage element,
         # and GSR, which is driven by user logic and each storage element may be configured as
         # affected or unaffected by GSR. PUR is purely asynchronous, so even though it is
@@ -148,8 +149,8 @@ class LatticeMachXO2Platform(TemplatedPlatform):
             gsr0 = Signal()
             gsr1 = Signal()
             m = Module()
-            # There is no end-of-startup signal on MachXO2, but PUR is released after IOB enable,
-            # so a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
+            # There is no end-of-startup signal on MachXO2/MachXO3l, but PUR is released after IOB
+            # enable, so a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
             m.submodules += [
                 Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=~rst_i, o_Q=gsr0),
                 Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=gsr0,   o_Q=gsr1),
@@ -393,4 +394,7 @@ class LatticeMachXO2Platform(TemplatedPlatform):
             )
         return m
 
-    # CDC primitives are not currently specialized for MachXO2.
+    # CDC primitives are not currently specialized for MachXO2/MachXO3l.
+
+LatticeMachXO2Platform = LatticeMachXO2Or3lPlatform
+LatticeMachXO3lPlatform = LatticeMachXO2Or3lPlatform
