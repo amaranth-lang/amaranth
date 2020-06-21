@@ -43,7 +43,7 @@ nMigen can be used to target any FPGA or ASIC process that accepts behavioral Ve
 
   * Lattice iCE40 (toolchains: **Yosys+nextpnr**, LSE-iCECube2, Synplify-iCECube2);
   * Lattice MachXO2 (toolchains: Diamond);
-  * Lattice MachXO3l (toolchains: Diamond);
+  * Lattice MachXO3L (toolchains: Diamond);
   * Lattice ECP5 (toolchains: **Yosys+nextpnr**, Diamond);
   * Xilinx Spartan 3A (toolchains: ISE);
   * Xilinx Spartan 6 (toolchains: ISE);
