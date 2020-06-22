@@ -43,7 +43,7 @@ class LatticeECP5Platform(TemplatedPlatform):
     -----------------
 
     Required tools:
-        * ``pnmainc``
+        * ``diamondc``
         * ``ddtcmd``
 
     The environment is populated by running the script specified in the environment variable
@@ -177,7 +177,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     _diamond_required_tools = [
         "yosys",
-        "pnmainc",
+        "diamondc",
         "ddtcmd"
     ]
     _diamond_file_templates = {
@@ -245,7 +245,7 @@ class LatticeECP5Platform(TemplatedPlatform):
     _diamond_command_templates = [
         # These don't have any usable command-line option overrides.
         r"""
-        {{invoke_tool("pnmainc")}}
+        {{invoke_tool("diamondc")}}
             {{name}}.tcl
         """,
         r"""
