@@ -53,7 +53,7 @@ class YosysBinary:
 
         Returns
         -------
-        ``None`` if version number could not be determined, or a 3-tuple if it could.
+        ``None`` if version number could not be determined, or a 3-tuple ``(major, minor, distance)`` if it could.
 
         major : int
             Major version.
