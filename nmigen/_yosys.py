@@ -53,6 +53,8 @@ class YosysBinary:
 
         Returns
         -------
+        ``None`` if version number could not be determined, or a 3-tuple if it could.
+
         major : int
             Major version.
         minor : int
@@ -151,7 +153,10 @@ class _SystemYosys(YosysBinary):
     def version(cls):
         version = cls.run(["-V"])
         match = re.match(r"^Yosys (\d+)\.(\d+)(?:\+(\d+))?", version)
-        return (int(match[1]), int(match[2]), int(match[3] or 0))
+        if match:
+            return (int(match[1]), int(match[2]), int(match[3] or 0))
+        else:
+            return None
 
     @classmethod
     def data_dir(cls):
@@ -208,8 +213,10 @@ def find_yosys(requirement):
                              "an unrecognized clause {!r}"
                              .format(clause))
     for proxy in proxies:
-        if proxy.available() and requirement(proxy.version()):
-            return proxy
+        if proxy.available():
+            version = proxy.version()
+            if version and requirement(version):
+                return proxy
     else:
         if "NMIGEN_USE_YOSYS" in os.environ:
             raise YosysError("Could not find an acceptable Yosys binary. Searched: {}"
