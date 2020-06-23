@@ -215,7 +215,7 @@ def find_yosys(requirement):
     for proxy in proxies:
         if proxy.available():
             version = proxy.version()
-            if version and requirement(version):
+            if version is not None and requirement(version):
                 return proxy
     else:
         if "NMIGEN_USE_YOSYS" in os.environ:
