@@ -195,12 +195,13 @@ class ResetSynchronizerTestCase(FHDLTestCase):
 
 # TODO: test with distinct clocks
 class PulseSynchronizerTestCase(FHDLTestCase):
-    def test_paramcheck(self):
-        with self.assertRaises(TypeError):
-            ps = PulseSynchronizer("w", "r", sync_stages=0)
-        with self.assertRaises(TypeError):
-            ps = PulseSynchronizer("w", "r", sync_stages="abc")
-        ps = PulseSynchronizer("w", "r", sync_stages = 1)
+    def test_stages_wrong(self):
+        with self.assertRaises(TypeError,
+                msg="Synchronization stage count must be a positive integer, not 0"):
+            PulseSynchronizer("w", "r", stages=0)
+        with self.assertRaises(ValueError,
+                msg="Synchronization stage count may not safely be less than 2"):
+            PulseSynchronizer("w", "r", stages=1)
 
     def test_smoke(self):
         m = Module()

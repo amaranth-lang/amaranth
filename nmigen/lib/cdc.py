@@ -220,41 +220,41 @@ class PulseSynchronizer(Elaboratable):
     """A one-clock pulse on the input produces a one-clock pulse on the output.
 
     If the output clock is faster than the input clock, then the input may be safely asserted at
-    100% duty cycle. Otherwise, if the clock ratio is n : 1, the input may be asserted at most once
-    in every n input clocks, else pulses may be dropped.
-    Other than this there is no constraint on the ratio of input and output clock frequency.
+    100% duty cycle. Otherwise, if the clock ratio is `n`:1, the input may be asserted at most once
+    in every `n` input clocks, else pulses may be dropped. Other than this there is no constraint
+    on the ratio of input and output clock frequency.
 
     Parameters
     ----------
     i_domain : str
         Name of input clock domain.
-    o-domain : str
+    o_domain : str
         Name of output clock domain.
-    sync_stages : int
-        Number of synchronisation flops between the two clock domains. 2 is the default, and
-        minimum safe value. High-frequency designs may choose to increase this.
+    stages : int, >=2
+        Number of synchronization stages between input and output. The lowest safe number is 2,
+        with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
     """
-    def __init__(self, i_domain, o_domain, sync_stages=2):
-        if not isinstance(sync_stages, int) or sync_stages < 1:
-            raise TypeError("sync_stages must be a positive integer, not '{!r}'".format(sync_stages))
+    def __init__(self, i_domain, o_domain, *, stages=2):
+        _check_stages(stages)
 
         self.i = Signal()
         self.o = Signal()
-        self.i_domain = i_domain
-        self.o_domain = o_domain
-        self.sync_stages = sync_stages
+
+        self._i_domain = i_domain
+        self._o_domain = o_domain
+        self._stages = stages
 
     def elaborate(self, platform):
         m = Module()
 
-        itoggle = Signal()
-        otoggle = Signal()
+        i_toggle = Signal()
+        o_toggle = Signal()
+        r_toggle = Signal()
         ff_sync = m.submodules.ff_sync = \
-            FFSynchronizer(itoggle, otoggle, o_domain=self.o_domain, stages=self.sync_stages)
-        otoggle_prev = Signal()
+            FFSynchronizer(i_toggle, o_toggle, o_domain=self._o_domain, stages=self._stages)
 
-        m.d[self.i_domain] += itoggle.eq(itoggle ^ self.i)
-        m.d[self.o_domain] += otoggle_prev.eq(otoggle)
-        m.d.comb += self.o.eq(otoggle ^ otoggle_prev)
+        m.d[self._i_domain] += i_toggle.eq(i_toggle ^ self.i)
+        m.d[self._o_domain] += r_toggle.eq(o_toggle)
+        m.d.comb += self.o.eq(o_toggle ^ r_toggle)
 
         return m
