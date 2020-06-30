@@ -1,8 +1,8 @@
-import pkg_resources
 try:
-    __version__ = pkg_resources.get_distribution(__name__).version
-except pkg_resources.DistributionNotFound:
-    pass
+    from importlib import metadata as importlib_metadata # py3.8+ stdlib
+except ImportError:
+    import importlib_metadata # py3.7- shim
+__version__ = importlib_metadata.version(__package__)
 
 
 from .hdl import *
