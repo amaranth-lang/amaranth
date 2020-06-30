@@ -113,7 +113,7 @@ Any changes made to the ``nmigen`` directory will immediately affect any code th
    $ git pull --ff-only origin master
    $ pip3 install --editable .
 
-It is important to run the `pip3 install --editable .` each time the development snapshot is updated in case package dependencies have been added or changed.
+It is important to run the ``pip3 install --editable .`` each time the development snapshot is updated in case package dependencies have been added or changed.
 
 
 Installing board definitions
