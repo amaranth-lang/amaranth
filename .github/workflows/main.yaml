@@ -2,7 +2,7 @@ on: push
 name: CI
 jobs:
   build:
-    if: github.event_name == 'push' && github.event.ref == 'refs/heads/doc'
+    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Check out source code
