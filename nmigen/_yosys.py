@@ -12,13 +12,16 @@ except ImportError:
     except ImportError:
         importlib_metadata = None # not installed
 try:
-    from importlib import resources as importlib_resources
     try:
-        importlib_resources.files # py3.9+ stdlib
-    except AttributeError:
-        import importlib_resources # py3.8- shim
+        from importlib import resources as importlib_resources
+        try:
+            importlib_resources.files # py3.9+ stdlib
+        except AttributeError:
+            import importlib_resources # py3.8- shim
+    except ImportError:
+        import importlib_resources # py3.6- shim
 except ImportError:
-    import importlib_resources # py3.6- shim
+    importlib_resources = None
 
 from ._toolchain import has_tool, require_tool
 
@@ -115,7 +118,7 @@ class _BuiltinYosys(YosysBinary):
 
     @classmethod
     def available(cls):
-        if importlib_metadata is None:
+        if importlib_metadata is None or importlib_resources is None:
             return False
         try:
             importlib_metadata.version(cls.YOSYS_PACKAGE)
