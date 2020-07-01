@@ -1,5 +1,5 @@
-The nMigen core manual
-######################
+Core language
+#############
 
 .. warning::
 
@@ -12,13 +12,3 @@ The nMigen core manual
    install
    start
    lang
-
-Index
-=====
-
-* :ref:`genindex`
-
-Search
-======
-
-* :ref:`search`

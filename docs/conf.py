@@ -19,6 +19,8 @@ extensions = [
 with open(".gitignore") as f:
     exclude_patterns = [line.strip() for line in f.readlines()]
 
+master_doc = "cover"
+
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 todo_include_todos = True
