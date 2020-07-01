@@ -1,3 +1,4 @@
+Copyright (C) 2019-2020 whitequark
 Copyright (C) 2011-2019 M-Labs Limited
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -19,10 +20,3 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-Other authors retain ownership of their contributions. If a submission can
-reasonably be considered independently copyrightable, it's yours and we
-encourage you to claim it with appropriate copyright notices. This submission
-then falls under the "otherwise noted" category. All submissions are strongly
-encouraged to use the two-clause BSD license reproduced above.
