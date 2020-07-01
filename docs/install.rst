@@ -181,7 +181,7 @@ Editable development snapshot
 
 .. |develop:first-time| replace:: To install an editable development snapshot of nMigen for the first time, run:
 .. |develop:update| replace:: Any changes made to the ``nmigen`` directory will immediately affect any code that uses nMigen. To update the snapshot, run:
-.. |develop:reinstall| replace:: It is important to run the ``pip3 install --editable .[builtin-yosys]`` command each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
+.. |develop:reinstall| replace:: each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
 
 .. content-tabs::
 
@@ -204,7 +204,7 @@ Editable development snapshot
          > git pull --ff-only origin master
          > pip install --editable .[builtin-yosys]
 
-      |develop:reinstall|
+      Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
 
    .. tab-container:: macos
       :title: macOS
@@ -225,7 +225,7 @@ Editable development snapshot
          $ git pull --ff-only origin master
          $ pip install --user --editable '.[builtin-yosys]'
 
-      |develop:reinstall|
+      Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
 
    .. tab-container:: linux
       :title: Linux
@@ -248,7 +248,7 @@ Editable development snapshot
          $ git pull --ff-only origin master
          $ pip3 install --user --editable '.[builtin-yosys]'
 
-      |develop:reinstall|
+      Run the ``pip3 install --editable .[builtin-yosys]`` command |develop:reinstall|
 
 
 Installing board definitions
