@@ -18,13 +18,13 @@ The development of nMigen has been supported by [SymbioticEDA][] and [LambdaConc
 [symbioticeda]: https://www.symbioticeda.com/
 [lambdaconcept]: http://lambdaconcept.com/
 
-### Installation
-
-See [documentation](https://nmigen.info/nmigen/latest/install.html).
-
 ### Introduction
 
-See [documentation](https://nmigen.info/nmigen/latest/start.html).
+See the [Introduction](https://nmigen.info/nmigen/latest/intro.html) section of the documentation.
+
+### Installation
+
+See the [Installation](https://nmigen.info/nmigen/latest/install.html) section of the documentation.
 
 ### Supported devices
 
