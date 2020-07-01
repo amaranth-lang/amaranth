@@ -12,6 +12,7 @@ extensions = [
 	"sphinx.ext.intersphinx",
 	"sphinx.ext.doctest",
     "sphinx.ext.todo",
+    "sphinxcontrib.contentui",
     "sphinx_rtd_theme",
 ]
 

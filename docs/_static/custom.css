@@ -3,3 +3,12 @@
 
 /* Many of our diagnostics are even longer */
 .rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre { white-space: pre-wrap; }
+
+/* Override what contentui does to body style */
+.wy-nav-content { max-width: 800px !important; }
+
+/* Make rubrics work like h3 */
+.rst-content p.rubric {
+  font-size: 125%;
+  font-family: Roboto Slab,ff-tisa-web-pro,Georgia,Arial,sans-serif;
+}
