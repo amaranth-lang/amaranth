@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from setuptools_scm.git import parse as parse_git
 
 
 def scm_version():
@@ -12,6 +13,14 @@ def scm_version():
         "version_scheme": "guess-next-dev",
         "local_scheme": local_scheme
     }
+
+
+def doc_version():
+    git = parse_git(".")
+    if git.exact:
+        return git.format_with("{tag}")
+    else:
+        return "latest"
 
 
 setup(
@@ -41,7 +50,7 @@ setup(
         ]
     },
     project_urls={
-        "Documentation": "https://nmigen.info/nmigen/",
+        "Documentation": "https://nmigen.info/nmigen/{}".format(doc_version()),
         "Source Code": "https://github.com/nmigen/nmigen",
         "Bug Tracker": "https://github.com/nmigen/nmigen/issues",
     },
