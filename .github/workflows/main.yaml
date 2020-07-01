@@ -1,8 +1,7 @@
 on: push
 name: CI
 jobs:
-  build:
-    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+  document:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source code
@@ -20,6 +19,7 @@ jobs:
         run: |
           sphinx-build docs docs/_build
       - name: Publish documentation
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
