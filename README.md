@@ -10,8 +10,6 @@ To address those issues, we have developed the *nMigen FHDL*, a library that rep
 
 Other nMigen libraries are built on FHDL and provide various tools and logic cores. nMigen also contains a simulator that allows test benches to be written in Python.
 
-See the [doc/](doc/) folder for more technical information.
-
 nMigen is based on [Migen][], a hardware description language developed by [M-Labs][]. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
 The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept][] and [M-Labs][].
@@ -24,18 +22,11 @@ The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept
 
 ### Installation
 
-nMigen requires Python 3.6 (or newer), [Yosys][] 0.9 (or newer), as well as a device-specific toolchain.
-
-First, install Yosys, either using your system package manager, or [from source][yosyssrc]. Then, install nMigen and pinouts for many common FPGA developer boards:
-
-    pip install git+https://github.com/nmigen/nmigen.git
-    pip install git+https://github.com/nmigen/nmigen-boards.git
-
-[yosyssrc]: https://github.com/yosysHQ/yosys/#setup
+See [documentation](https://nmigen.info/nmigen/latest/install.html).
 
 ### Introduction
 
-TBD
+See [documentation](https://nmigen.info/nmigen/latest/start.html).
 
 ### Supported devices
 
