@@ -1,5 +1,5 @@
-Core language
-#############
+Toolchain
+#########
 
 .. warning::
 

@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath("."))
 
 import nmigen
 
-project = "nMigen core"
+project = "nMigen toolchain"
 version = nmigen.__version__
 release = version.split("+")[0]
 copyright = "2020, nMigen developers"
