@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from setuptools_scm.git import parse as parse_git
 
 
 def scm_version():
@@ -16,6 +15,11 @@ def scm_version():
 
 
 def doc_version():
+    try:
+        from setuptools_scm.git import parse as parse_git
+    except ImportError:
+        return ""
+
     git = parse_git(".")
     if git.exact:
         return git.format_with("{tag}")
