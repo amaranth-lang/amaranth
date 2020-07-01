@@ -185,7 +185,7 @@ Development snapshot
    .. tab-container:: linux
       :title: Linux
 
-      If you have :ref:`previously <install-deps>` installed Yosys manually, omit ``[builtin-yosys]`` from the following commands.
+      If you **did** install Yosys manually in a :ref:`previous step <install-deps>`, omit ``[builtin-yosys]`` from the following commands.
 
       |snapshot:first-time|
 
