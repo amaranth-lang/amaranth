@@ -131,21 +131,64 @@ Latest release
          $ pip3 install --user --upgrade nmigen
 
 
-.. _install-develop:
+.. _install-snapshot:
 
 Development snapshot
 --------------------
 
-.. |snapshot:first-time| replace:: To install a development snapshot of nMigen for the first time, run:
-.. |snapshot:update| replace:: Any changes made to the ``nmigen`` directory will immediately affect any code that uses nMigen. To update the snapshot, run:
-.. |snapshot:reinstall| replace:: It is important to run the ``pip3 install --editable .[builtin-yosys]`` each time the development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
+.. |snapshot:install| replace:: To install the latest development snapshot of nMigen, run:
 
 .. content-tabs::
 
    .. tab-container:: windows
       :title: Windows
 
-      |snapshot:first-time|
+      |snapshot:install|
+
+      .. code-block:: doscon
+
+         > pip install git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+
+   .. tab-container:: macos
+      :title: macOS
+
+      |snapshot:install|
+
+      .. code-block:: console
+
+         $ pip install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+
+   .. tab-container:: linux
+      :title: Linux
+
+      If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of nMigen, run:
+
+      .. code-block:: console
+
+         $ pip3 install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+
+      If you **did** install Yosys manually in the previous step, run:
+
+      .. code-block:: console
+
+         $ pip3 install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen
+
+
+.. _install-develop:
+
+Editable development snapshot
+-----------------------------
+
+.. |develop:first-time| replace:: To install an editable development snapshot of nMigen for the first time, run:
+.. |develop:update| replace:: Any changes made to the ``nmigen`` directory will immediately affect any code that uses nMigen. To update the snapshot, run:
+.. |develop:reinstall| replace:: It is important to run the ``pip3 install --editable .[builtin-yosys]`` command each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
+
+.. content-tabs::
+
+   .. tab-container:: windows
+      :title: Windows
+
+      |develop:first-time|
 
       .. code-block:: doscon
 
@@ -153,7 +196,7 @@ Development snapshot
          > cd nmigen
          > pip install --editable .[builtin-yosys]
 
-      |snapshot:update|
+      |develop:update|
 
       .. code-block:: doscon
 
@@ -161,12 +204,12 @@ Development snapshot
          > git pull --ff-only origin master
          > pip install --editable .[builtin-yosys]
 
-      |snapshot:reinstall|
+      |develop:reinstall|
 
    .. tab-container:: macos
       :title: macOS
 
-      |snapshot:first-time|
+      |develop:first-time|
 
       .. code-block:: console
 
@@ -174,7 +217,7 @@ Development snapshot
          $ cd nmigen
          $ pip install --user --editable .[builtin-yosys]
 
-      |snapshot:update|
+      |develop:update|
 
       .. code-block:: console
 
@@ -182,14 +225,14 @@ Development snapshot
          $ git pull --ff-only origin master
          $ pip install --user --editable .[builtin-yosys]
 
-      |snapshot:reinstall|
+      |develop:reinstall|
 
    .. tab-container:: linux
       :title: Linux
 
-      If you **did** install Yosys manually in a :ref:`previous step <install-deps>`, omit ``[builtin-yosys]`` from the following commands.
+      If you **did** install Yosys manually in the :ref:`previous step <install-deps>`, omit ``[builtin-yosys]`` from the following commands.
 
-      |snapshot:first-time|
+      |develop:first-time|
 
       .. code-block:: console
 
@@ -197,7 +240,7 @@ Development snapshot
          $ cd nmigen
          $ pip3 install --user --editable .[builtin-yosys]
 
-      |snapshot:update|
+      |develop:update|
 
       .. code-block:: console
 
@@ -205,7 +248,7 @@ Development snapshot
          $ git pull --ff-only origin master
          $ pip3 install --user --editable .[builtin-yosys]
 
-      |snapshot:reinstall|
+      |develop:reinstall|
 
 
 Installing board definitions
