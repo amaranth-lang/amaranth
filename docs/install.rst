@@ -33,9 +33,9 @@ Installing prerequisites
 
       `Install Python <python:using-on-windows>`_, either from Windows Store or using the full installer. If using the full installer, make sure to install a 64-bit version of Python.
 
-      .. todo::
+      `Download GTKWave`_, either win32 or win64 binaries. GTKWave does not need to be installed; it can be unpacked to any convenient location and run from there.
 
-         What about GTKWave?
+      .. _Download GTKWave: https://sourceforge.net/projects/gtkwave/files/
 
    .. tab-container:: macos
       :title: macOS
