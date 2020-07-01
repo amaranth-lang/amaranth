@@ -10,15 +10,13 @@ To address those issues, we have developed the *nMigen FHDL*, a library that rep
 
 Other nMigen libraries are built on FHDL and provide various tools and logic cores. nMigen also contains a simulator that allows test benches to be written in Python.
 
-nMigen is based on [Migen][], a hardware description language developed by [M-Labs][]. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
+nMigen is based on Migen, a similar Python-based hardware description language. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept][] and [M-Labs][].
+The development of nMigen has been supported by [SymbioticEDA][] and [LambdaConcept][].
 
-[migen]: https://m-labs.hk/migen
 [yosys]: http://www.clifford.at/yosys/
 [symbioticeda]: https://www.symbioticeda.com/
 [lambdaconcept]: http://lambdaconcept.com/
-[m-labs]: http://m-labs.hk
 
 ### Installation
 
@@ -44,9 +42,9 @@ nMigen can be used to target any FPGA or ASIC process that accepts behavioral Ve
 
 FOSS toolchains are listed in **bold**.
 
-### Migration from [Migen][]
+### Migration from Migen
 
-If you are already familiar with [Migen][], the good news is that nMigen provides a comprehensive Migen compatibility layer! An existing Migen design can be synthesized and simulated with nMigen in three steps:
+If you are already familiar with Migen, the good news is that nMigen provides a comprehensive Migen compatibility layer! An existing Migen design can be synthesized and simulated with nMigen in three steps:
 
   1. Replace all `from migen import <...>` statements with `from nmigen.compat import <...>`.
   2. Replace every explicit mention of the default `sys` clock domain with the new default `sync` clock domain. E.g. `ClockSignal("sys")` is changed to `ClockSignal("sync")`.
@@ -62,15 +60,4 @@ nMigen has a dedicated IRC channel, [#nmigen at freenode.net](https://webchat.fr
 
 ### License
 
-nMigen is released under the very permissive two-clause BSD license. Under the terms of this license, you are authorized to use nMigen for closed-source proprietary designs.
-
-Even though we do not require you to do so, these things are awesome, so please do them if possible:
-  * tell us that you are using nMigen
-  * cite nMigen in publications related to research it has helped
-  * send us feedback and suggestions for improvements
-  * send us bug reports when something goes wrong
-  * send us the modifications and improvements you have done to nMigen as pull requests on GitHub
-
-See LICENSE file for full copyright and license info.
-
-  "Electricity! It's like magic!"
+nMigen is released under the very permissive [two-clause BSD license](LICENSE.txt). Under the terms of this license, you are authorized to use nMigen for closed-source proprietary designs.
