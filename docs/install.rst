@@ -113,7 +113,7 @@ Latest release
 
       .. code-block:: console
 
-         $ pip install --user --upgrade nmigen[builtin-yosys]
+         $ pip install --user --upgrade 'nmigen[builtin-yosys]'
 
    .. tab-container:: linux
       :title: Linux
@@ -122,7 +122,7 @@ Latest release
 
       .. code-block:: console
 
-         $ pip3 install --user --upgrade nmigen[builtin-yosys]
+         $ pip3 install --user --upgrade 'nmigen[builtin-yosys]'
 
       If you **did** install Yosys manually in the previous step, run:
 
@@ -156,7 +156,7 @@ Development snapshot
 
       .. code-block:: console
 
-         $ pip install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+         $ pip install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]'
 
    .. tab-container:: linux
       :title: Linux
@@ -165,13 +165,13 @@ Development snapshot
 
       .. code-block:: console
 
-         $ pip3 install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+         $ pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]'
 
       If you **did** install Yosys manually in the previous step, run:
 
       .. code-block:: console
 
-         $ pip3 install --user git+https://github.com/nmigen/nmigen.git#egg=nmigen
+         $ pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
 
 
 .. _install-develop:
@@ -215,7 +215,7 @@ Editable development snapshot
 
          $ git clone https://github.com/nmigen/nmigen
          $ cd nmigen
-         $ pip install --user --editable .[builtin-yosys]
+         $ pip install --user --editable '.[builtin-yosys]'
 
       |develop:update|
 
@@ -223,7 +223,7 @@ Editable development snapshot
 
          $ cd nmigen
          $ git pull --ff-only origin master
-         $ pip install --user --editable .[builtin-yosys]
+         $ pip install --user --editable '.[builtin-yosys]'
 
       |develop:reinstall|
 
@@ -238,7 +238,7 @@ Editable development snapshot
 
          $ git clone https://github.com/nmigen/nmigen
          $ cd nmigen
-         $ pip3 install --user --editable .[builtin-yosys]
+         $ pip3 install --user --editable '.[builtin-yosys]'
 
       |develop:update|
 
@@ -246,7 +246,7 @@ Editable development snapshot
 
          $ cd nmigen
          $ git pull --ff-only origin master
-         $ pip3 install --user --editable .[builtin-yosys]
+         $ pip3 install --user --editable '.[builtin-yosys]'
 
       |develop:reinstall|
 
