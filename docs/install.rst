@@ -113,7 +113,7 @@ Latest release
 
       .. code-block:: console
 
-         $ pip install --upgrade nmigen[builtin-yosys]
+         $ pip install --user --upgrade nmigen[builtin-yosys]
 
    .. tab-container:: linux
       :title: Linux
@@ -122,13 +122,13 @@ Latest release
 
       .. code-block:: console
 
-         $ pip3 install --upgrade nmigen[builtin-yosys]
+         $ pip3 install --user --upgrade nmigen[builtin-yosys]
 
       If you **did** install Yosys manually in the previous step, run:
 
       .. code-block:: console
 
-         $ pip3 install --upgrade nmigen
+         $ pip3 install --user --upgrade nmigen
 
 
 .. _install-develop:
@@ -172,7 +172,7 @@ Development snapshot
 
          $ git clone https://github.com/nmigen/nmigen
          $ cd nmigen
-         $ pip install --editable .[builtin-yosys]
+         $ pip install --user --editable .[builtin-yosys]
 
       |snapshot:update|
 
@@ -180,7 +180,7 @@ Development snapshot
 
          $ cd nmigen
          $ git pull --ff-only origin master
-         $ pip install --editable .[builtin-yosys]
+         $ pip install --user --editable .[builtin-yosys]
 
       |snapshot:reinstall|
 
@@ -195,7 +195,7 @@ Development snapshot
 
          $ git clone https://github.com/nmigen/nmigen
          $ cd nmigen
-         $ pip3 install --editable .[builtin-yosys]
+         $ pip3 install --user --editable .[builtin-yosys]
 
       |snapshot:update|
 
@@ -203,7 +203,7 @@ Development snapshot
 
          $ cd nmigen
          $ git pull --ff-only origin master
-         $ pip3 install --editable .[builtin-yosys]
+         $ pip3 install --user --editable .[builtin-yosys]
 
       |snapshot:reinstall|
 
