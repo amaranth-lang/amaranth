@@ -26,6 +26,8 @@ Synthesizing, placing and routing an nMigen design for an FPGA requires the FPGA
 Installing prerequisites
 ========================
 
+.. |builtin-yosys-architectures| replace:: x86_64 and AArch64
+
 .. content-tabs::
 
    .. tab-container:: windows
@@ -59,7 +61,7 @@ Installing prerequisites
 
          $ sudo apt-get install python3-pip gtkwave
 
-      On architectures other than x86_64 and AArch64, install Yosys by running:
+      On architectures other than |builtin-yosys-architectures|, install Yosys by running:
 
       .. code-block:: console
 
@@ -71,7 +73,7 @@ Installing prerequisites
 
       Install Python and GTKWave from the package repository of your distribution.
 
-      On architectures other than x86_64 and AArch64, install Yosys from the package repository of your distribution.
+      On architectures other than |builtin-yosys-architectures|, install Yosys from the package repository of your distribution.
 
       If Yosys 0.9 (or newer) is not available, `build Yosys from source`_.
 
