@@ -1,4 +1,4 @@
-from .._yosys import *
+from .._toolchain.yosys import *
 from . import rtlil
 
 

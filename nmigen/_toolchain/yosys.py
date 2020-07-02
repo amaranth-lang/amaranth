@@ -23,7 +23,7 @@ try:
 except ImportError:
     importlib_resources = None
 
-from ._toolchain import has_tool, require_tool
+from . import has_tool, require_tool
 
 
 __all__ = ["YosysError", "YosysBinary", "find_yosys"]
