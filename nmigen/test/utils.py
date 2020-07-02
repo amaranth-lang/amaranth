@@ -37,14 +37,6 @@ class FHDLTestCase(unittest.TestCase):
             self.assertEqual(str(cm.exception), msg)
 
     @contextmanager
-    def assertRaisesRegex(self, exception, regex=None):
-        with super().assertRaises(exception) as cm:
-            yield
-        if regex is not None:
-            # unittest.assertRaisesRegex also seems broken...
-            self.assertRegex(str(cm.exception), regex)
-
-    @contextmanager
     def assertWarns(self, category, msg=None):
         with warnings.catch_warnings(record=True) as warns:
             yield

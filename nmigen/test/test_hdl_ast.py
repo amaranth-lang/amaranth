@@ -764,13 +764,13 @@ class ArrayTestCase(FHDLTestCase):
         v1 = a[s1]
         v2 = a[s2]
         with self.assertRaisesRegex(ValueError,
-                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+                r"^Array can no longer be mutated after it was indexed with a value at "):
             a[1] = 2
         with self.assertRaisesRegex(ValueError,
-                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+                r"^Array can no longer be mutated after it was indexed with a value at "):
             del a[1]
         with self.assertRaisesRegex(ValueError,
-                regex=r"^Array can no longer be mutated after it was indexed with a value at "):
+                r"^Array can no longer be mutated after it was indexed with a value at "):
             a.insert(1, 2)
 
     def test_repr(self):

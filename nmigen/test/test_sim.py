@@ -582,7 +582,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 nonlocal survived
                 with self.assertRaisesRegex(TypeError,
-                        regex=r"Received unsupported command 1 from process .+?"):
+                        r"Received unsupported command 1 from process .+?"):
                     yield 1
                 yield Settle()
                 survived = True
@@ -774,7 +774,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sim.add_clock(1e-6)
         sim.run_until(1e-5)
         with self.assertRaisesRegex(ValueError,
-                regex=r"^Cannot start writing waveforms after advancing simulation time$"):
+                r"^Cannot start writing waveforms after advancing simulation time$"):
             with sim.write_vcd(open(os.path.devnull, "wt")):
                 pass
 
@@ -785,7 +785,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sim = Simulator(m)
         sim.add_clock(1e-6)
         with self.assertRaisesRegex(ValueError,
-                regex=r"^Already writing waveforms to .+$"):
+                r"^Already writing waveforms to .+$"):
             with sim.write_vcd(open(os.path.devnull, "wt")):
                 with sim.write_vcd(open(os.path.devnull, "wt")):
                     pass
