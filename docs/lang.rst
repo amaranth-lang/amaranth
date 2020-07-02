@@ -484,26 +484,27 @@ Operation             Description                                Notes
 ``a << b``            left shift by variable amount              [#opB2]_
 ``a.rotate_left(i)``  left rotate by constant amount             [#opB3]_
 ``a.rotate_right(i)`` right rotate by constant amount            [#opB3]_
+``a.shift_left(i)``   left shift by constant amount              [#opB3]_
+``a.shift_right(i)``  right shift by constant amount             [#opB3]_
 ===================== ========================================== ======
 
 .. _IMPLY: https://en.wikipedia.org/wiki/IMPLY_gate
 .. [#opB1] Logical and arithmetic right shift of an unsigned value are equivalent. Logical right shift of a signed value can be expressed by :ref:`converting it to unsigned <lang-convops>` first.
 .. [#opB2] Shift amount must be unsigned; integer shifts in Python require the amount to be positive.
-.. [#opB3] Rotate amount can be negative, in which case the direction is reversed.
-.. TODO: add constshifts https://github.com/nmigen/nmigen/issues/378
+.. [#opB3] Shift and rotate amounts can be negative, in which case the direction is reversed.
 
 .. _lang-hugeshift:
 
 .. note::
 
-   Because nMigen ensures that the width of a left shift expression is wide enough to represent any possible result, left shift by a wide amount produces exponentially wider intermediate values, stressing the synthesis tools:
+   Because nMigen ensures that the width of a variable left shift expression is wide enough to represent any possible result, variable left shift by a wide amount produces exponentially wider intermediate values, stressing the synthesis tools:
 
    .. doctest::
 
       >>> (1 << C(0, 32)).shape()
       unsigned(4294967296)
 
-   Although nMigen will detect and reject expressions wide enough to break other tools, it is a good practice to explicitly limit the width of a non-constant shift amount in a left shift.
+   Although nMigen will detect and reject expressions wide enough to break other tools, it is a good practice to explicitly limit the width of a shift amount in a variable left shift.
 
 
 .. _lang-reduceops:
