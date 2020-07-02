@@ -53,10 +53,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     speed   = abstractproperty()
     grade   = None
 
-    required_tools = [
-        "yosys",
-        "vivado"
-    ]
+    required_tools = ["vivado"]
     file_templates = {
         **TemplatedPlatform.build_script_templates,
         "build_{{name}}.sh": r"""

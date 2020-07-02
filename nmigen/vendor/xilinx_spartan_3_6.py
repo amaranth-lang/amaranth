@@ -59,7 +59,6 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
     speed   = abstractproperty()
 
     required_tools = [
-        "yosys",
         "xst",
         "ngdbuild",
         "map",

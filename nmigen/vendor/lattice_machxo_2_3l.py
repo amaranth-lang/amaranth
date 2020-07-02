@@ -39,7 +39,6 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
     grade   = "C" # [C]ommercial, [I]ndustrial
 
     required_tools = [
-        "yosys",
         "pnmainc",
         "ddtcmd"
     ]
