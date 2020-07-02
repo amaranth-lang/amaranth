@@ -39,16 +39,21 @@ class Tristate(Elaboratable):
         self.i = i if i is not None else None
 
     def elaborate(self, platform):
-        if hasattr(platform, "get_input_output"):
-            pin = Pin(len(self.target), dir="oe" if self.i is None else "io")
+        if self.i is None:
+            pin = Pin(len(self.target), dir="oe")
             pin.o = self.o
             pin.oe = self.oe
-            if self.i is not None:
-                pin.i = self.i
+            return platform.get_tristate(pin, self.target, attrs={}, invert=None)
+        else:
+            pin = Pin(len(self.target), dir="io")
+            pin.o = self.o
+            pin.oe = self.oe
+            pin.i = self.i
             return platform.get_input_output(pin, self.target, attrs={}, invert=None)
 
         m = Module()
-        m.d.comb += self.i.eq(self.target)
+        if self.i is not None:
+            m.d.comb += self.i.eq(self.target)
         m.submodules += Instance("$tribuf",
             p_WIDTH=len(self.target),
             i_EN=self.oe,
