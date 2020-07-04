@@ -11,4 +11,5 @@ Language & toolchain
    intro
    install
    start
+   tutorial
    lang

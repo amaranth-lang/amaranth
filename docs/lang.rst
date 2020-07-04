@@ -5,7 +5,7 @@ Language guide
 
    This guide is a work in progress and is seriously incomplete!
 
-This guide introduces the nMigen language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require experience with any hardware description language.
+This guide introduces the nMigen language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language.
 
 .. TODO: link to a good synchronous logic tutorial and a Python tutorial?
 
