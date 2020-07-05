@@ -28,9 +28,9 @@ Installing prerequisites
 
 .. |builtin-yosys-architectures| replace:: x86_64 and AArch64
 
-.. content-tabs::
+.. platform-picker::
 
-   .. tab-container:: windows
+   .. platform-choice:: windows
       :title: Windows
 
       :ref:`Install Python <python:using-on-windows>`, either from Windows Store or using the full installer. If using the full installer, make sure to install a 64-bit version of Python.
@@ -39,7 +39,7 @@ Installing prerequisites
 
       .. _Download GTKWave: https://sourceforge.net/projects/gtkwave/files/
 
-   .. tab-container:: macos
+   .. platform-choice:: macos
       :title: macOS
 
       Install Homebrew_. Then, install Python and GTKWave by running:
@@ -50,10 +50,9 @@ Installing prerequisites
 
       .. _Homebrew: https://brew.sh
 
-   .. tab-container:: linux
-      :title: Linux
-
-      .. rubric:: Debian-based distributions
+   .. platform-choice:: debian
+      :altname: linux
+      :title: Debian
 
       Install Python and GTKWave by running:
 
@@ -69,7 +68,8 @@ Installing prerequisites
 
       If Yosys 0.9 (or newer) is not available, `build Yosys from source`_.
 
-      .. rubric:: Other distributions
+   .. platform-choice:: linux
+      :title: Other Linux
 
       Install Python and GTKWave from the package repository of your distribution.
 
@@ -95,9 +95,9 @@ Latest release
 
 .. |release:install| replace:: To install the latest release of nMigen, run:
 
-.. content-tabs::
+.. platform-picker::
 
-   .. tab-container:: windows
+   .. platform-choice:: windows
       :title: Windows
 
       |release:install|
@@ -106,7 +106,7 @@ Latest release
 
          > pip install --upgrade nmigen[builtin-yosys]
 
-   .. tab-container:: macos
+   .. platform-choice:: macos
       :title: macOS
 
       |release:install|
@@ -115,7 +115,7 @@ Latest release
 
          $ pip install --user --upgrade 'nmigen[builtin-yosys]'
 
-   .. tab-container:: linux
+   .. platform-choice:: linux
       :title: Linux
 
       If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of nMigen, run:
@@ -138,9 +138,9 @@ Development snapshot
 
 .. |snapshot:install| replace:: To install the latest development snapshot of nMigen, run:
 
-.. content-tabs::
+.. platform-picker::
 
-   .. tab-container:: windows
+   .. platform-choice:: windows
       :title: Windows
 
       |snapshot:install|
@@ -149,7 +149,7 @@ Development snapshot
 
          > pip install git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
 
-   .. tab-container:: macos
+   .. platform-choice:: macos
       :title: macOS
 
       |snapshot:install|
@@ -158,7 +158,7 @@ Development snapshot
 
          $ pip install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]'
 
-   .. tab-container:: linux
+   .. platform-choice:: linux
       :title: Linux
 
       If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of nMigen, run:
@@ -183,9 +183,9 @@ Editable development snapshot
 .. |develop:update| replace:: Any changes made to the ``nmigen`` directory will immediately affect any code that uses nMigen. To update the snapshot, run:
 .. |develop:reinstall| replace:: each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
 
-.. content-tabs::
+.. platform-picker::
 
-   .. tab-container:: windows
+   .. platform-choice:: windows
       :title: Windows
 
       |develop:first-time|
@@ -206,7 +206,7 @@ Editable development snapshot
 
       Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
 
-   .. tab-container:: macos
+   .. platform-choice:: macos
       :title: macOS
 
       |develop:first-time|
@@ -227,7 +227,7 @@ Editable development snapshot
 
       Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
 
-   .. tab-container:: linux
+   .. platform-choice:: linux
       :title: Linux
 
       If you **did** install Yosys manually in the :ref:`previous step <install-deps>`, omit ``[builtin-yosys]`` from the following commands.
