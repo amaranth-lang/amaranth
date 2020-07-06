@@ -547,9 +547,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_add_process_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
-            with self.assertWarns(DeprecationWarning,
-                    msg="instead of generators, use generator functions as processes; "
-                        "this allows the simulator to be repeatedly reset"):
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a process <.+?> because it is not a generator function$"):
                 def process():
                     yield Delay()
                 sim.add_process(process())

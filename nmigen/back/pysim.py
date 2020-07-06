@@ -915,28 +915,17 @@ class _WaveformContextManager:
 
 
 class Simulator:
-    def __init__(self, fragment, **kwargs):
+    def __init__(self, fragment):
         self._state = _SimulatorState()
         self._signal_names = SignalDict()
         self._fragment = Fragment.get(fragment, platform=None).prepare()
         self._processes = _FragmentCompiler(self._state, self._signal_names)(self._fragment)
-        if kwargs: # :nocov:
-            # TODO(nmigen-0.3): remove
-            self._state.start_waveform(_VCDWaveformWriter(self._signal_names, **kwargs))
         self._clocked = set()
 
     def _check_process(self, process):
         if not (inspect.isgeneratorfunction(process) or inspect.iscoroutinefunction(process)):
-            if inspect.isgenerator(process) or inspect.iscoroutine(process):
-                warnings.warn("instead of generators, use generator functions as processes; "
-                              "this allows the simulator to be repeatedly reset",
-                              DeprecationWarning, stacklevel=3)
-                def wrapper():
-                    yield from process
-                return wrapper
-            else:
-                raise TypeError("Cannot add a process {!r} because it is not a generator function"
-                                .format(process))
+            raise TypeError("Cannot add a process {!r} because it is not a generator function"
+                            .format(process))
         return process
 
     def _add_coroutine_process(self, process, *, default_cmd):
@@ -1107,13 +1096,3 @@ class Simulator:
         waveform_writer = _VCDWaveformWriter(self._signal_names,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
         return _WaveformContextManager(self._state, waveform_writer)
-
-    # TODO(nmigen-0.3): remove
-    @deprecated("instead of `with Simulator(fragment, ...) as sim:`, use "
-                "`sim = Simulator(fragment); with sim.write_vcd(...):`")
-    def __enter__(self): # :nocov:
-        return self
-
-    # TODO(nmigen-0.3): remove
-    def __exit__(self, *args): # :nocov:
-        self._state.finish_waveform()
