@@ -389,12 +389,32 @@ class LatticeECP5Platform(TemplatedPlatform):
                     o_Q0=q0[bit], o_Q1=q1[bit]
                 )
 
+        def get_iddrx2(sclk, eclk, d, q0, q1, q2, q3):
+            for bit in range(len(d)):
+                m.submodules += Instance("IDDRX2F",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_D=d[bit],
+                    o_Q0=q0[bit], o_Q1=q1[bit], o_Q2=q2[bit], o_Q3=q3[bit]
+                )
+
         def get_oddr(sclk, d0, d1, q):
             for bit in range(len(q)):
                 m.submodules += Instance("ODDRX1F",
                     i_SCLK=sclk,
                     i_RST=Const(0),
                     i_D0=d0[bit], i_D1=d1[bit],
+                    o_Q=q[bit]
+                )
+
+        def get_oddrx2(sclk, eclk, d0, d1, d2, d3, q):
+            for bit in range(len(q)):
+                m.submodules += Instance("ODDRX2F",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_D0=d0[bit], i_D1=d1[bit], i_D2=d2[bit], i_D3=d3[bit],
                     o_Q=q[bit]
                 )
 
@@ -420,12 +440,22 @@ class LatticeECP5Platform(TemplatedPlatform):
             elif pin.xdr == 2:
                 pin_i0 = get_ineg(pin.i0, i_invert)
                 pin_i1 = get_ineg(pin.i1, i_invert)
+            elif pin.xdr == 4:
+                pin_i0 = get_ineg(pin.i0, i_invert)
+                pin_i1 = get_ineg(pin.i1, i_invert)
+                pin_i2 = get_ineg(pin.i2, i_invert)
+                pin_i3 = get_ineg(pin.i3, i_invert)
         if "o" in pin.dir:
             if pin.xdr < 2:
                 pin_o  = get_oneg(pin.o,  o_invert)
             elif pin.xdr == 2:
                 pin_o0 = get_oneg(pin.o0, o_invert)
                 pin_o1 = get_oneg(pin.o1, o_invert)
+            elif pin.xdr == 4:
+                pin_o0 = get_oneg(pin.o0, o_invert)
+                pin_o1 = get_oneg(pin.o1, o_invert)
+                pin_o2 = get_oneg(pin.o2, o_invert)
+                pin_o3 = get_oneg(pin.o3, o_invert)
 
         i = o = t = None
         if "i" in pin.dir:
@@ -460,6 +490,13 @@ class LatticeECP5Platform(TemplatedPlatform):
                 # It is not clear what is the recommended set of primitives for this task.
                 # Similarly, nextpnr will not pack anything as a tristate register in a DDR PIO.
                 get_oreg(pin.o_clk, ~pin.oe, t)
+        elif pin.xdr == 4:
+            if "i" in pin.dir:
+                get_iddrx2(pin.i_clk, pin.i_fclk, i, pin_i0, pin_i1, pin_i2, pin_i3)
+            if "o" in pin.dir:
+                get_oddrx2(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, o)
+            if pin.dir in ("oe", "io"):
+                get_oreg(pin.o_clk, ~pin.oe, t)
         else:
             assert False
 
@@ -467,7 +504,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_input(self, pin, port, attrs, invert):
         self._check_feature("single-ended input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(len(port)):
@@ -479,7 +516,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(port)):
@@ -491,7 +528,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_tristate(self, pin, port, attrs, invert):
         self._check_feature("single-ended tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(port)):
@@ -504,7 +541,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_input_output(self, pin, port, attrs, invert):
         self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(len(port)):
@@ -518,7 +555,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_diff_input(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(len(p_port)):
@@ -530,7 +567,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_diff_output(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(p_port)):
@@ -542,7 +579,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(p_port)):
@@ -555,7 +592,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
         self._check_feature("differential input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
+                            valid_xdrs=(0, 1, 2, 4), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(len(p_port)):

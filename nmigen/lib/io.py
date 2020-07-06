@@ -26,6 +26,8 @@ def pin_layout(width, dir, xdr=0):
     if dir in ("i", "io"):
         if xdr > 0:
             fields.append(("i_clk", 1))
+        if xdr > 2:
+            fields.append(("i_fclk", 1))
         if xdr in (0, 1):
             fields.append(("i", width))
         else:
@@ -34,6 +36,8 @@ def pin_layout(width, dir, xdr=0):
     if dir in ("o", "oe", "io"):
         if xdr > 0:
             fields.append(("o_clk", 1))
+        if xdr > 2:
+            fields.append(("o_fclk", 1))
         if xdr in (0, 1):
             fields.append(("o", width))
         else:
@@ -78,6 +82,9 @@ class Pin(Record):
     ----------
     i_clk:
         I/O buffer input clock. Synchronizes `i*`. Present if ``xdr`` is nonzero.
+    i_fclk:
+        I/O buffer input fast clock. Synchronizes `i*` on higer gearbox ratios. Present if ``xdr``
+        is greater than 2.
     i : Signal, out
         I/O buffer input, without gearing. Present if ``dir="i"`` or ``dir="io"``, and ``xdr`` is
         equal to 0 or 1.
@@ -86,6 +93,9 @@ class Pin(Record):
         greater than 1.
     o_clk:
         I/O buffer output clock. Synchronizes `o*`, including `oe`. Present if ``xdr`` is nonzero.
+    o_fclk:
+        I/O buffer output fast clock. Synchronizes `o*` on higher gearbox ratios. Present if
+        ``xdr`` is greater than 2.
     o : Signal, in
         I/O buffer output, without gearing. Present if ``dir="o"`` or ``dir="io"``, and ``xdr`` is
         equal to 0 or 1.
