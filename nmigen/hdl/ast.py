@@ -32,7 +32,23 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class Shape(typing.NamedTuple):
+class ShapeIter:
+    def __init__(self, width, signed):
+        self.width = width
+        self.signed = signed
+        self._i = 0
+
+    def __next__(self):
+        if self._i == 0:
+            self._i += 1
+            return self.width
+        elif self._i == 1:
+            self._i += 1
+            return self.signed
+        else:
+            raise StopIteration
+
+class Shape:
     """Bit width and signedness of a value.
 
     A ``Shape`` can be constructed using:
@@ -55,8 +71,15 @@ class Shape(typing.NamedTuple):
     signed : bool
         If ``False``, the value is unsigned. If ``True``, the value is signed two's complement.
     """
-    width:  int  = 1
-    signed: bool = False
+    def __init__(self, width=1, signed=False):
+        if not isinstance(width, int) or width < 0:
+            raise TypeError("Width must be a non-negative integer, not {!r}"
+                            .format(width))
+        self.width = width
+        self.signed = signed
+    
+    def __iter__(self):
+        return ShapeIter(self.width, self.signed)
 
     @staticmethod
     def cast(obj, *, src_loc_at=0):
@@ -95,13 +118,11 @@ class Shape(typing.NamedTuple):
         else:
             return "unsigned({})".format(self.width)
 
-
-# TODO: use dataclasses instead of this hack
-def _Shape___init__(self, width=1, signed=False):
-    if not isinstance(width, int) or width < 0:
-        raise TypeError("Width must be a non-negative integer, not {!r}"
-                        .format(width))
-Shape.__init__ = _Shape___init__
+    def __eq__(self, other):
+        if not isinstance(other, Shape):
+            raise TypeError("Shapes may only be compared with other Shapes, not {!r}"
+                    .format(other))
+        return self.width == other.width and self.signed == other.signed
 
 
 def unsigned(width):

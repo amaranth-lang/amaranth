@@ -11,7 +11,11 @@ class PinLayoutTestCase(FHDLTestCase):
         for name, (shape, dir) in layout.items():
             casted_layout[name] = (Shape.cast(shape), dir)
 
-        self.assertEqual(casted_layout, expected)
+        casted_expected = {}
+        for name, (shape, dir) in expected.items():
+            casted_expected[name] = (Shape.cast(shape), dir)
+
+        self.assertEqual(casted_layout, casted_expected)
 
 
 class PinLayoutCombTestCase(PinLayoutTestCase):
