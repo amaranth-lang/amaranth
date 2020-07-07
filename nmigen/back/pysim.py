@@ -175,10 +175,6 @@ class _Process:
     def run(self):
         raise NotImplementedError # :nocov:
 
-    @property
-    def name(self):
-        raise NotImplementedError # :nocov:
-
 
 class _SignalState:
     __slots__ = ("signal", "curr", "next", "waiters", "pending")
@@ -652,12 +648,11 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 
 
 class _CompiledProcess(_Process):
-    __slots__ = ("state", "comb", "name", "run")
+    __slots__ = ("state", "comb", "run")
 
-    def __init__(self, state, *, comb, name):
+    def __init__(self, state, *, comb):
         self.state = state
         self.comb = comb
-        self.name = name
         self.run = None # set by _FragmentCompiler
         self.reset()
 
@@ -683,8 +678,7 @@ class _FragmentCompiler:
 
         for domain_name, domain_signals in fragment.drivers.items():
             domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
-            domain_process = _CompiledProcess(self.state, comb=domain_name is None,
-                name=".".join((*hierarchy, "<{}>".format(domain_name or "comb"))))
+            domain_process = _CompiledProcess(self.state, comb=domain_name is None)
 
             emitter = _Emitter()
             emitter.append(f"def run():")
@@ -778,8 +772,7 @@ class _CoroutineProcess(_Process):
         }
         self.waits_on = set()
 
-    @property
-    def name(self):
+    def src_loc(self):
         coroutine = self.coroutine
         while coroutine.gi_yieldfrom is not None:
             coroutine = coroutine.gi_yieldfrom
@@ -831,7 +824,7 @@ class _CoroutineProcess(_Process):
                     else:
                         raise NameError("Received command {!r} that refers to a nonexistent "
                                         "domain {!r} from process {!r}"
-                                        .format(command, command.domain, self.name))
+                                        .format(command, command.domain, self.src_loc()))
                     self.get_in_signal(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
                         self.get_in_signal(domain.rst, trigger=1)
@@ -858,11 +851,11 @@ class _CoroutineProcess(_Process):
                     raise TypeError("Received default command from process {!r} that was added "
                                     "with add_process(); did you mean to add this process with "
                                     "add_sync_process() instead?"
-                                    .format(self.name))
+                                    .format(self.src_loc()))
 
                 else:
                     raise TypeError("Received unsupported command {!r} from process {!r}"
-                                    .format(command, self.name))
+                                    .format(command, self.src_loc()))
 
             except StopIteration:
                 self.passive = True
