@@ -77,7 +77,7 @@ class Shape:
                             .format(width))
         self.width = width
         self.signed = signed
-    
+
     def __iter__(self):
         return ShapeIter(self.width, self.signed)
 
@@ -119,8 +119,17 @@ class Shape:
             return "unsigned({})".format(self.width)
 
     def __eq__(self, other):
+        if isinstance(other, tuple) and len(other) == 2:
+            width, signed = other
+            if isinstance(width, int) and isinstance(signed, bool):
+                return self.width == width and self.signed == signed
+            else:
+                raise TypeError("Shapes may be compared with other Shapes and (int, bool) tuples, "
+                        "not {!r}"
+                        .format(other))
         if not isinstance(other, Shape):
-            raise TypeError("Shapes may only be compared with other Shapes, not {!r}"
+            raise TypeError("Shapes may be compared with other Shapes and (int, bool) tuples, "
+                    "not {!r}"
                     .format(other))
         return self.width == other.width and self.signed == other.signed
 

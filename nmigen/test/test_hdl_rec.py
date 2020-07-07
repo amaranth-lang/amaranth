@@ -15,8 +15,7 @@ class LayoutTestCase(FHDLTestCase):
     def assertFieldEqual(self, field, expected):
         (shape, dir) = field
         shape = Shape.cast(shape)
-        self.assertEqual(shape, Shape.cast(expected[0]))
-        self.assertEqual(dir, expected[1])
+        self.assertEqual((shape, dir), expected)
 
     def test_fields(self):
         layout = Layout.cast([
