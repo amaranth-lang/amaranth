@@ -32,22 +32,6 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class ShapeIter:
-    def __init__(self, width, signed):
-        self.width = width
-        self.signed = signed
-        self._i = 0
-
-    def __next__(self):
-        if self._i == 0:
-            self._i += 1
-            return self.width
-        elif self._i == 1:
-            self._i += 1
-            return self.signed
-        else:
-            raise StopIteration
-
 class Shape:
     """Bit width and signedness of a value.
 
@@ -79,7 +63,7 @@ class Shape:
         self.signed = signed
 
     def __iter__(self):
-        return ShapeIter(self.width, self.signed)
+        return iter((self.width, self.signed))
 
     @staticmethod
     def cast(obj, *, src_loc_at=0):
