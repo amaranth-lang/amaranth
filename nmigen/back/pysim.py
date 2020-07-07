@@ -876,25 +876,6 @@ class _CoroutineProcess(_Process):
                 self.coroutine.throw(exn)
 
 
-class _WaveformContextManager:
-    def __init__(self, simulator, waveform_writer):
-        self._simulator = simulator
-        self._waveform_writer = waveform_writer
-
-    def __enter__(self):
-        try:
-            if self._simulator._state.timestamp != 0.0:
-                raise ValueError("Cannot start writing waveforms after advancing simulation time")
-            self._simulator._waveform_writers.append(self._waveform_writer)
-        except:
-            self._waveform_writer.close(0)
-            raise
-
-    def __exit__(self, *args):
-        self._waveform_writer.close(self._simulator._state.timestamp)
-        self._simulator._waveform_writers.remove(self._waveform_writer)
-
-
 class Simulator:
     def __init__(self, fragment):
         self._state = _SimulatorState()
@@ -1061,6 +1042,7 @@ class Simulator:
         while (self.advance() or run_passive) and self._state.timestamp < deadline:
             pass
 
+    @contextmanager
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=()):
         """Write waveforms to a Value Change Dump file, optionally populating a GTKWave save file.
 
@@ -1080,6 +1062,11 @@ class Simulator:
         traces : iterable of Signal
             Signals to display traces for.
         """
+        if self._state.timestamp != 0.0:
+            raise ValueError("Cannot start writing waveforms after advancing simulation time")
         waveform_writer = _VCDWaveformWriter(self._signal_names,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
-        return _WaveformContextManager(self, waveform_writer)
+        self._waveform_writers.append(waveform_writer)
+        yield
+        waveform_writer.close(self._state.timestamp)
+        self._waveform_writers.remove(waveform_writer)
