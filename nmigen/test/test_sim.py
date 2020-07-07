@@ -777,18 +777,6 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             with sim.write_vcd(open(os.path.devnull, "wt")):
                 pass
 
-    def test_vcd_wrong_twice(self):
-        s = Signal()
-        m = Module()
-        m.d.sync += s.eq(s)
-        sim = Simulator(m)
-        sim.add_clock(1e-6)
-        with self.assertRaisesRegex(ValueError,
-                r"^Already writing waveforms to .+$"):
-            with sim.write_vcd(open(os.path.devnull, "wt")):
-                with sim.write_vcd(open(os.path.devnull, "wt")):
-                    pass
-
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):

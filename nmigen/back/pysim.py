@@ -222,8 +222,6 @@ class _SimulatorState:
         self.timestamp = 0.0
         self.deadlines = dict()
 
-        self.waveform_writer = None
-
     def reset(self):
         for signal, index in self.signals.items():
             self.slots[index].curr = self.slots[index].next = signal.reset
@@ -258,9 +256,6 @@ class _SimulatorState:
             if signal_state.commit():
                 if signal_state.wakeup():
                     converged = False
-                if self.waveform_writer is not None:
-                    self.waveform_writer.update(self.timestamp,
-                        signal_state.signal, signal_state.curr)
         self.pending.clear()
         return converged
 
@@ -882,27 +877,22 @@ class _CoroutineProcess(_Process):
 
 
 class _WaveformContextManager:
-    def __init__(self, state, waveform_writer):
-        self._state = state
+    def __init__(self, simulator, waveform_writer):
+        self._simulator = simulator
         self._waveform_writer = waveform_writer
 
     def __enter__(self):
         try:
-            if self._state.timestamp != 0.0:
+            if self._simulator._state.timestamp != 0.0:
                 raise ValueError("Cannot start writing waveforms after advancing simulation time")
-            if self._state.waveform_writer is not None:
-                raise ValueError("Already writing waveforms to {!r}"
-                                 .format(self._state.waveform_writer))
-            self._state.waveform_writer = self._waveform_writer
+            self._simulator._waveform_writers.append(self._waveform_writer)
         except:
             self._waveform_writer.close(0)
             raise
 
     def __exit__(self, *args):
-        if self._state.waveform_writer is None:
-            return
-        self._state.waveform_writer.close(self._state.timestamp)
-        self._state.waveform_writer = None
+        self._waveform_writer.close(self._simulator._state.timestamp)
+        self._simulator._waveform_writers.remove(self._waveform_writer)
 
 
 class Simulator:
@@ -912,6 +902,7 @@ class Simulator:
         self._fragment = Fragment.get(fragment, platform=None).prepare()
         self._processes = _FragmentCompiler(self._state, self._signal_names)(self._fragment)
         self._clocked = set()
+        self._waveform_writers = []
 
     def _check_process(self, process):
         if not (inspect.isgeneratorfunction(process) or inspect.iscoroutinefunction(process)):
@@ -1021,6 +1012,11 @@ class Simulator:
                     process.runnable = False
                     process.run()
 
+            for waveform_writer in self._waveform_writers:
+                for signal_state in self._state.pending:
+                    waveform_writer.update(self._state.timestamp,
+                        signal_state.signal, signal_state.curr)
+
             # 2. commit: apply every queued signal change, waking up any waiting processes
             converged = self._state.commit()
 
@@ -1086,4 +1082,4 @@ class Simulator:
         """
         waveform_writer = _VCDWaveformWriter(self._signal_names,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
-        return _WaveformContextManager(self._state, waveform_writer)
+        return _WaveformContextManager(self, waveform_writer)
