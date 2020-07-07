@@ -41,6 +41,11 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_compare_wrong(self):
         with self.assertRaises(TypeError,
+                msg="Shapes may be compared with other Shapes and (int, bool) tuples, not 'hi'"):
+            Shape(1, True) == 'hi'
+
+    def test_compare_tuple_wrong(self):
+        with self.assertRaises(TypeError,
                 msg="Shapes may be compared with other Shapes and (int, bool) tuples, not (2, 3)"):
             Shape(1, True) == (2, 3)
 
