@@ -187,10 +187,7 @@ class _SignalState:
         self.signal = signal
         self.pending = pending
         self.waiters = dict()
-        self.reset()
-
-    def reset(self):
-        self.curr = self.next = self.signal.reset
+        self.curr = self.next = signal.reset
 
     def set(self, value):
         if self.next == value:
