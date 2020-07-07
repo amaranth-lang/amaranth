@@ -291,20 +291,6 @@ class _SimulatorState:
 
         return True
 
-    def start_waveform(self, waveform_writer):
-        if self.timestamp != 0.0:
-            raise ValueError("Cannot start writing waveforms after advancing simulation time")
-        if self.waveform_writer is not None:
-            raise ValueError("Already writing waveforms to {!r}"
-                             .format(self.waveform_writer))
-        self.waveform_writer = waveform_writer
-
-    def finish_waveform(self):
-        if self.waveform_writer is None:
-            return
-        self.waveform_writer.close(self.timestamp)
-        self.waveform_writer = None
-
 
 class _Emitter:
     def __init__(self):
@@ -902,13 +888,21 @@ class _WaveformContextManager:
 
     def __enter__(self):
         try:
-            self._state.start_waveform(self._waveform_writer)
+            if self._state.timestamp != 0.0:
+                raise ValueError("Cannot start writing waveforms after advancing simulation time")
+            if self._state.waveform_writer is not None:
+                raise ValueError("Already writing waveforms to {!r}"
+                                 .format(self._state.waveform_writer))
+            self._state.waveform_writer = self._waveform_writer
         except:
             self._waveform_writer.close(0)
             raise
 
     def __exit__(self, *args):
-        self._state.finish_waveform()
+        if self._state.waveform_writer is None:
+            return
+        self._state.waveform_writer.close(self._state.timestamp)
+        self._state.waveform_writer = None
 
 
 class Simulator:
