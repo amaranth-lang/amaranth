@@ -253,16 +253,16 @@ class _SimulatorState:
         return self.slots[self.get_signal(signal)]
 
     def commit(self):
-        awoken_any = False
+        converged = True
         for signal_state in self.pending:
             if signal_state.commit():
                 if signal_state.wakeup():
-                    awoken_any = True
+                    converged = False
                 if self.waveform_writer is not None:
                     self.waveform_writer.update(self.timestamp,
                         signal_state.signal, signal_state.curr)
         self.pending.clear()
-        return awoken_any
+        return converged
 
     def advance(self):
         nearest_processes = set()
@@ -1006,31 +1006,31 @@ class Simulator:
         for process in self._processes:
             process.reset()
 
-    def _delta(self):
-        """Perform a delta cycle.
-
-        Performs the two phases of a delta cycle:
-            1. run and suspend every non-waiting process once, queueing signal changes;
-            2. commit every queued signal change, waking up any waiting process.
-        """
-        for process in self._processes:
-            if process.runnable:
-                process.runnable = False
-                process.run()
-
-        return self._state.commit()
-
-    def _settle(self):
-        """Settle the simulation.
+    def _real_step(self):
+        """Step the simulation.
 
         Run every process and commit changes until a fixed point is reached. If there is
         an unstable combinatorial loop, this function will never return.
         """
-        while self._delta():
-            pass
+        # Performs the two phases of a delta cycle in a loop:
+        converged = False
+        while not converged:
+            # 1. eval: run and suspend every non-waiting process once, queueing signal changes
+            for process in self._processes:
+                if process.runnable:
+                    process.runnable = False
+                    process.run()
 
+            # 2. commit: apply every queued signal change, waking up any waiting processes
+            converged = self._state.commit()
+
+    # TODO(nmigen-0.4): replace with _real_step
+    @deprecated("instead of `sim.step()`, use `sim.advance()`")
     def step(self):
-        """Step the simulation.
+        return self.advance()
+
+    def advance(self):
+        """Advance the simulation.
 
         Run every process and commit changes until a fixed point is reached, then advance time
         to the closest deadline (if any). If there is an unstable combinatorial loop,
@@ -1038,7 +1038,7 @@ class Simulator:
 
         Returns ``True`` if there are any active processes, ``False`` otherwise.
         """
-        self._settle()
+        self._real_step()
         self._state.advance()
         return any(not process.passive for process in self._processes)
 
@@ -1049,7 +1049,7 @@ class Simulator:
         and may change their status using the ``yield Passive()`` and ``yield Active()`` commands.
         Processes compiled from HDL and added with :meth:`add_clock` are always passive.
         """
-        while self.step():
+        while self.advance():
             pass
 
     def run_until(self, deadline, *, run_passive=False):
@@ -1062,7 +1062,7 @@ class Simulator:
         If the simulation stops advancing, this function will never return.
         """
         assert self._state.timestamp <= deadline
-        while (self.step() or run_passive) and self._state.timestamp < deadline:
+        while (self.advance() or run_passive) and self._state.timestamp < deadline:
             pass
 
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=()):
