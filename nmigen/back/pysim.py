@@ -203,9 +203,7 @@ class _SignalState:
         if self.curr == self.next:
             return False
         self.curr = self.next
-        return True
 
-    def wakeup(self):
         awoken_any = False
         for process, trigger in self.waiters.items():
             if trigger is None or trigger == self.curr:
@@ -254,8 +252,7 @@ class _SimulatorState:
         converged = True
         for signal_state in self.pending:
             if signal_state.commit():
-                if signal_state.wakeup():
-                    converged = False
+                converged = False
         self.pending.clear()
         return converged
 
