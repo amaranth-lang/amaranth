@@ -463,9 +463,9 @@ class _RHSValueCompiler(_ValueCompiler):
             return f"0"
 
     @classmethod
-    def compile(cls, state, value, *, mode, inputs=None):
+    def compile(cls, state, value, *, mode):
         emitter = _Emitter()
-        compiler = cls(state, emitter, mode=mode, inputs=inputs)
+        compiler = cls(state, emitter, mode=mode)
         emitter.append(f"result = {compiler(value)}")
         return emitter.flush()
 
@@ -553,13 +553,6 @@ class _LHSValueCompiler(_ValueCompiler):
                 self.emitter.append(f"pass")
         return gen
 
-    @classmethod
-    def compile(cls, state, stmt, *, inputs=None, outputs=None):
-        emitter = _Emitter()
-        compiler = cls(state, emitter, inputs=inputs, outputs=outputs)
-        compiler(stmt)
-        return emitter.flush()
-
 
 class _StatementCompiler(StatementVisitor, _Compiler):
     def __init__(self, state, emitter, *, inputs=None, outputs=None):
@@ -609,12 +602,12 @@ class _StatementCompiler(StatementVisitor, _Compiler):
         raise NotImplementedError # :nocov:
 
     @classmethod
-    def compile(cls, state, stmt, *, inputs=None, outputs=None):
+    def compile(cls, state, stmt):
         output_indexes = [state.get_signal(signal) for signal in stmt._lhs_signals()]
         emitter = _Emitter()
         for signal_index in output_indexes:
             emitter.append(f"next_{signal_index} = slots[{signal_index}].next")
-        compiler = cls(state, emitter, inputs=inputs, outputs=outputs)
+        compiler = cls(state, emitter)
         compiler(stmt)
         for signal_index in output_indexes:
             emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
