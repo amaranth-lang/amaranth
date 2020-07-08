@@ -221,6 +221,7 @@ class _SimulatorState:
         self.pending  = set()
 
     def reset(self):
+        self.timeline.reset()
         for signal, index in self.signals.items():
             self.slots[index].curr = self.slots[index].next = signal.reset
         self.pending.clear()
