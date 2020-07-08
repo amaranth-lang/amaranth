@@ -191,10 +191,6 @@ class _SignalState:
         self.next = value
         self.pending.add(self)
 
-    def wait(self, task, *, trigger=None):
-        assert task not in self.waiters
-        self.waiters[task] = trigger
-
     def commit(self):
         if self.curr == self.next:
             return False
@@ -233,16 +229,16 @@ class _SimulatorState:
             self.signals[signal] = index
             return index
 
-    def get_in_signal(self, signal, *, trigger=None):
+    def add_trigger(self, process, signal, *, trigger=None):
         index = self.get_signal(signal)
-        self.slots[index].waiters[self] = trigger
-        return index
+        assert (process not in self.slots[index].waiters or
+                self.slots[index].waiters[process] == trigger)
+        self.slots[index].waiters[process] = trigger
 
-    def get_out_signal(self, signal):
-        return self.get_signal(signal)
-
-    def for_signal(self, signal):
-        return self.slots[self.get_signal(signal)]
+    def remove_trigger(self, process, signal):
+        index = self.get_signal(signal)
+        assert process in self.slots[index].waiters
+        del self.slots[index].waiters[process]
 
     def commit(self):
         converged = True
@@ -521,7 +517,7 @@ class _LHSValueCompiler(_ValueCompiler):
                 value_sign = f"sign({arg} & {value_mask}, {-1 << (len(value) - 1)})"
             else: # unsigned
                 value_sign = f"{arg} & {value_mask}"
-            self.emitter.append(f"next_{self.state.get_out_signal(value)} = {value_sign}")
+            self.emitter.append(f"next_{self.state.get_signal(value)} = {value_sign}")
         return gen
 
     def on_Operator(self, value):
@@ -693,7 +689,7 @@ class _FragmentCompiler:
                 _StatementCompiler(domain_process.state, emitter, inputs=inputs)(domain_stmts)
 
                 for input in inputs:
-                    self.state.for_signal(input).wait(domain_process)
+                    self.state.add_trigger(domain_process, input)
 
             else:
                 domain = fragment.domains[domain_name]
@@ -702,10 +698,10 @@ class _FragmentCompiler:
                     add_signal_name(domain.rst)
 
                 clk_trigger = 1 if domain.clk_edge == "pos" else 0
-                self.state.for_signal(domain.clk).wait(domain_process, trigger=clk_trigger)
+                self.state.add_trigger(domain_process, domain.clk, trigger=clk_trigger)
                 if domain.rst is not None and domain.async_reset:
                     rst_trigger = 1
-                    self.state.for_signal(domain.rst).wait(domain_process, trigger=rst_trigger)
+                    self.state.add_trigger(domain_process, domain.rst, trigger=rst_trigger)
 
                 gen_asserts = []
                 clk_index = domain_process.state.get_signal(domain.clk)
@@ -782,20 +778,13 @@ class _CoroutineProcess(_Process):
             frame = coroutine.cr_frame
         return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
 
-    def get_in_signal(self, signal, *, trigger=None):
-        signal_state = self.state.for_signal(signal)
-        assert self not in signal_state.waiters
-        signal_state.waiters[self] = trigger
-        self.waits_on.add(signal_state)
-        return signal_state
-
     def run(self):
         if self.coroutine is None:
             return
 
         if self.waits_on:
-            for signal_state in self.waits_on:
-                del signal_state.waiters[self]
+            for signal in self.waits_on:
+                self.state.remove_trigger(self, signal)
             self.waits_on.clear()
 
         response = None
@@ -825,9 +814,10 @@ class _CoroutineProcess(_Process):
                         raise NameError("Received command {!r} that refers to a nonexistent "
                                         "domain {!r} from process {!r}"
                                         .format(command, command.domain, self.src_loc()))
-                    self.get_in_signal(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
+                    self.state.add_trigger(self, domain.clk,
+                                           trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
-                        self.get_in_signal(domain.rst, trigger=1)
+                        self.state.add_trigger(self, domain.rst, trigger=1)
                     return
 
                 elif type(command) is Settle:
