@@ -12,18 +12,7 @@ __all__ = ["PyRTLProcess"]
 
 
 class PyRTLProcess(Process):
-    __slots__ = ("state", "comb", "run")
-
-    def __init__(self, state, *, comb):
-        self.state = state
-        self.comb = comb
-        self.run = None # set by _FragmentCompiler
-
-        self.reset()
-
-    def reset(self):
-        self.runnable = self.comb
-        self.passive = True
+    pass
 
 
 class _PythonEmitter:
@@ -395,7 +384,7 @@ class _FragmentCompiler:
 
         for domain_name, domain_signals in fragment.drivers.items():
             domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
-            domain_process = PyRTLProcess(self.state, comb=domain_name is None)
+            domain_process = PyRTLProcess(is_comb=domain_name is None)
 
             emitter = _PythonEmitter()
             emitter.append(f"def run():")
@@ -403,11 +392,11 @@ class _FragmentCompiler:
 
             if domain_name is None:
                 for signal in domain_signals:
-                    signal_index = domain_process.state.get_signal(signal)
+                    signal_index = self.state.get_signal(signal)
                     emitter.append(f"next_{signal_index} = {signal.reset}")
 
                 inputs = SignalSet()
-                _StatementCompiler(domain_process.state, emitter, inputs=inputs)(domain_stmts)
+                _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)
 
                 for input in inputs:
                     self.state.add_trigger(domain_process, input)
@@ -420,22 +409,14 @@ class _FragmentCompiler:
                     rst_trigger = 1
                     self.state.add_trigger(domain_process, domain.rst, trigger=rst_trigger)
 
-                gen_asserts = []
-                clk_index = domain_process.state.get_signal(domain.clk)
-                gen_asserts.append(f"slots[{clk_index}].curr == {clk_trigger}")
-                if domain.rst is not None and domain.async_reset:
-                    rst_index = domain_process.state.get_signal(domain.rst)
-                    gen_asserts.append(f"slots[{rst_index}].curr == {rst_trigger}")
-                emitter.append(f"assert {' or '.join(gen_asserts)}")
-
                 for signal in domain_signals:
-                    signal_index = domain_process.state.get_signal(signal)
+                    signal_index = self.state.get_signal(signal)
                     emitter.append(f"next_{signal_index} = slots[{signal_index}].next")
 
-                _StatementCompiler(domain_process.state, emitter)(domain_stmts)
+                _StatementCompiler(self.state, emitter)(domain_stmts)
 
             for signal in domain_signals:
-                signal_index = domain_process.state.get_signal(signal)
+                signal_index = self.state.get_signal(signal)
                 emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
 
             # There shouldn't be any exceptions raised by the generated code, but if there are
@@ -449,7 +430,7 @@ class _FragmentCompiler:
             else:
                 filename = "<string>"
 
-            exec_locals = {"slots": domain_process.state.slots, **_ValueCompiler.helpers}
+            exec_locals = {"slots": self.state.slots, **_ValueCompiler.helpers}
             exec(compile(code, filename, "exec"), exec_locals)
             domain_process.run = exec_locals["run"]
 

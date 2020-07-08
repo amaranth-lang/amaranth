@@ -2,8 +2,14 @@ __all__ = ["Process", "Timeline"]
 
 
 class Process:
+    def __init__(self, *, is_comb):
+        self.is_comb  = is_comb
+
+        self.reset()
+
     def reset(self):
-        raise NotImplementedError
+        self.runnable = self.is_comb
+        self.passive  = True
 
     def run(self):
         raise NotImplementedError

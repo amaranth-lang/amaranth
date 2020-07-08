@@ -232,7 +232,6 @@ class _SimulatorState:
 class Simulator:
     def __init__(self, fragment):
         self._state = _SimulatorState()
-        self._signal_names = SignalDict()
         self._fragment = Fragment.get(fragment, platform=None).prepare()
         self._processes = _FragmentCompiler(self._state)(self._fragment)
         self._clocked = set()
