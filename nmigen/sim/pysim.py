@@ -111,23 +111,25 @@ class _VCDWaveformWriter(_WaveformWriter):
                             var_name_suffix = var_name
                         else:
                             var_name_suffix = "{}${}".format(var_name, suffix)
-                        vcd_var = self.vcd_writer.register_var(
-                            scope=var_scope, name=var_name_suffix,
-                            var_type=var_type, size=var_size, init=var_init)
+                        if signal not in self.vcd_vars:
+                            vcd_var = self.vcd_writer.register_var(
+                                scope=var_scope, name=var_name_suffix,
+                                var_type=var_type, size=var_size, init=var_init)
+                            self.vcd_vars[signal] = vcd_var
+                        else:
+                            self.vcd_writer.register_alias(
+                                scope=var_scope, name=var_name_suffix,
+                                var=self.vcd_vars[signal])
                         break
                     except KeyError:
                         suffix = (suffix or 0) + 1
-
-                if signal not in self.vcd_vars:
-                    self.vcd_vars[signal] = set()
-                self.vcd_vars[signal].add(vcd_var)
 
                 if signal not in self.gtkw_names:
                     self.gtkw_names[signal] = (*var_scope, var_name_suffix)
 
     def update(self, timestamp, signal, value):
-        vcd_vars = self.vcd_vars.get(signal)
-        if vcd_vars is None:
+        vcd_var = self.vcd_vars.get(signal)
+        if vcd_var is None:
             return
 
         vcd_timestamp = self.timestamp_to_vcd(timestamp)
@@ -135,8 +137,7 @@ class _VCDWaveformWriter(_WaveformWriter):
             var_value = self.decode_to_vcd(signal, value)
         else:
             var_value = value
-        for vcd_var in vcd_vars:
-            self.vcd_writer.change(vcd_var, vcd_timestamp, var_value)
+        self.vcd_writer.change(vcd_var, vcd_timestamp, var_value)
 
     def close(self, timestamp):
         if self.vcd_writer is not None:
