@@ -110,7 +110,7 @@ class AsyncFFSynchronizer(Elaboratable):
     o : Signal(1), out
         Synchronously released output signal.
     domain : str
-        Name of clock domain to reset.
+        Name of clock domain to synchronize to.
     stages : int, >=2
         Number of synchronization stages between input and output. The lowest safe number is 2,
         with higher numbers reducing MTBF further, at the cost of increased deassertion latency.
