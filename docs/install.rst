@@ -68,6 +68,16 @@ Installing prerequisites
 
       If Yosys 0.9 (or newer) is not available, `build Yosys from source`_.
 
+   .. platform-choice:: arch
+      :altname: linux
+      :title: Arch Linux
+
+      Install Python, pip, GTKWave and Yosys by running:
+
+      .. code-block:: console
+
+         $ sudo pacman -S python python-pip gtkwave yosys
+
    .. platform-choice:: linux
       :title: Other Linux
 
@@ -129,6 +139,16 @@ Latest release
       .. code-block:: console
 
          $ pip3 install --user --upgrade nmigen
+
+   .. platform-choice:: arch
+      :altname: linux
+      :title: Arch Linux
+
+      |release:install|
+
+      .. code-block:: console
+
+         $ sudo pacman -S python-nmigen
 
 
 .. _install-snapshot:
