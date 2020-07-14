@@ -306,6 +306,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
+        for case in switch_data['cases']:
+            if not case:
+                warnings.warn("Defining a case after the default one, it will be ignored")
+                continue
         for pattern in patterns:
             if not isinstance(pattern, (int, str, Enum)):
                 raise SyntaxError("Case pattern must be an integer, a string, or an enumeration, "
