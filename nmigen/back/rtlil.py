@@ -558,7 +558,7 @@ class _RHSValueCompiler(_ValueCompiler):
             self.s.rtlil.cell("$mux", ports={
                 "\\A": divmod_res,
                 "\\B": self(ast.Const(0, ast.Shape(res_bits, res_sign))),
-                "\\S": self(lhs == 0),
+                "\\S": self(rhs == 0),
                 "\\Y": res,
             }, params={
                 "WIDTH": res_bits
