@@ -4,6 +4,37 @@ on:
     types: [opened, reopened, synchronize]
 name: CI
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7', '3.8', pypy3]
+    steps:
+    - name: Check out source code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo add-apt-repository ppa:sri-csl/formal-methods
+        sudo apt-get update
+        sudo apt-get install yices2
+        pip install setuptools setuptools_scm wheel coverage codecov yowasp-yosys nmigen-yosys
+        pip install -e .
+    - name: Preserve wasmtime cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/wasmtime
+        key: ${{ runner.os }}-wasmtime
+    - name: Run tests
+      run: |
+        export NMIGEN_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
+        python -m unittest discover
+        codecov
   document:
     runs-on: ubuntu-latest
     steps:
