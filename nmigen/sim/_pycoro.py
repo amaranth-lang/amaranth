@@ -1,7 +1,7 @@
 import inspect
 
 from ..hdl import *
-from ..hdl.ast import Statement
+from ..hdl.ast import Statement, SignalSet
 from ._cmds import *
 from ._core import Process
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
@@ -28,7 +28,7 @@ class PyCoroProcess(Process):
             "result": None,
             **_ValueCompiler.helpers
         }
-        self.waits_on = set()
+        self.waits_on = SignalSet()
 
     def src_loc(self):
         coroutine = self.coroutine
@@ -40,14 +40,20 @@ class PyCoroProcess(Process):
             frame = coroutine.cr_frame
         return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
 
+    def add_trigger(self, signal, trigger=None):
+        self.state.add_trigger(self, signal, trigger=trigger)
+        self.waits_on.add(signal)
+
+    def clear_triggers(self):
+        for signal in self.waits_on:
+            self.state.remove_trigger(self, signal)
+        self.waits_on.clear()
+
     def run(self):
         if self.coroutine is None:
             return
 
-        if self.waits_on:
-            for signal in self.waits_on:
-                self.state.remove_trigger(self, signal)
-            self.waits_on.clear()
+        self.clear_triggers()
 
         response = None
         while True:
@@ -76,10 +82,9 @@ class PyCoroProcess(Process):
                         raise NameError("Received command {!r} that refers to a nonexistent "
                                         "domain {!r} from process {!r}"
                                         .format(command, command.domain, self.src_loc()))
-                    self.state.add_trigger(self, domain.clk,
-                                           trigger=1 if domain.clk_edge == "pos" else 0)
+                    self.add_trigger(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
-                        self.state.add_trigger(self, domain.rst, trigger=1)
+                        self.add_trigger(domain.rst, trigger=1)
                     return
 
                 elif type(command) is Settle:
