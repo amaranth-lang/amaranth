@@ -132,10 +132,10 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
 
     def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src=""):
         # Very large wires are unlikely to work. Verilog 1364-2005 requires the limit on vectors
-        # to be at least 2**16 bits, and Yosys 0.9 breaks on wires of more than 2**32 bits, so
-        # those numbers are our hard bounds. Use 2**24 as the arbitrary boundary beyond which
-        # downstream bugs are more likely than not.
-        if width > 2 ** 24:
+        # to be at least 2**16 bits, and Yosys 0.9 cannot read RTLIL with wires larger than 2**32
+        # bits. In practice, wires larger than 2**16 bits, although accepted, cause performance
+        # problems without an immediately visible cause, so conservatively limit wire size.
+        if width > 2 ** 16:
             raise ImplementationLimit("Wire created at {} is {} bits wide, which is unlikely to "
                                       "synthesize correctly"
                                       .format(src or "unknown location", width))
