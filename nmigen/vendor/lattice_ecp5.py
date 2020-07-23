@@ -349,7 +349,7 @@ class LatticeECP5Platform(TemplatedPlatform):
     _differential_io_types = [
         "BLVDS25", "BLVDS25E", "HSUL12D", "LVCMOS18D", "LVCMOS25D", "LVCMOS33D",
         "LVDS", "LVDS25E", "LVPECL33", "LVPECL33E", "LVTTL33D", "MLVDS", "MLVDS25E",
-        "SLVS", "SSTL135D_II", "SSTL15D_II", "SSTL18D_II", "SUBLVDS",
+        "SLVS", "SSTL135D_I", "SSTL135D_II", "SSTL15D_II", "SSTL18D_II", "SUBLVDS",
     ]
 
     def should_skip_port_component(self, port, attrs, component):
