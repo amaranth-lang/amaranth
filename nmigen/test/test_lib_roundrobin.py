@@ -26,6 +26,12 @@ class RoundRobinSimulationTestCase(unittest.TestCase):
         dut = RoundRobin(width=1)
         sim = Simulator(dut)
         def process():
+            yield dut.requests.eq(0)
+            yield Delay(1e-8)
+            self.assertEqual((yield dut.grant), 0)
+
+            yield dut.requests.eq(1)
+            yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
         sim.add_process(process)
         with sim.write_vcd("test.vcd"):
