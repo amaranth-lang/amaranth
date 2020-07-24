@@ -1025,6 +1025,41 @@ class UserValueTestCase(FHDLTestCase):
         self.assertEqual(uv.lower_count, 1)
 
 
+class MockValueCastableChanges(ValueCastable):
+    def __init__(self, width=0):
+        self.width = width
+
+    @memoized
+    def as_value(self):
+        return Signal(self.width)
+
+
+class MockValueCastableNotDecorated(ValueCastable):
+    def __init__(self):
+        pass
+
+    def as_value(self):
+        return Signal()
+
+
+class ValueCastableTestCase(FHDLTestCase):
+    def test_not_decorated(self):
+        with self.assertRaises(TypeError,
+                "Classes deriving from `ValueCastable` must decorate the `as_value` "
+                "method with the `memoized` decorator"):
+            vc = MockValueCastableNotDecorated()
+
+    def test_memoized(self):
+        vc = MockValueCastableChanges(1)
+        sig1 = vc.as_value()
+        vc.width = 2
+        sig2 = vc.as_value()
+        self.assertIs(sig1, sig2)
+        vc.width = 3
+        sig3 = Value.cast(vc)
+        self.assertIs(sig1, sig3)
+
+
 class SampleTestCase(FHDLTestCase):
     def test_const(self):
         s = Sample(1, 1, "sync")
