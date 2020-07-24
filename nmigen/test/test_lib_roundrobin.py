@@ -1,28 +1,11 @@
+import unittest
 from .utils import *
 from ..hdl import *
 from ..asserts import *
 from ..sim.pysim import *
 from ..lib.roundrobin import *
 
-class RoundRobinIndividualSpec(Elaboratable):
-    def __init__(self, n):
-        self.n = n
-
-    def elaborate(self, platform):
-        m = Module()
-
-        m.submodules.dut = dut = RoundRobin(self.n)
-
-        for i in range(self.n):
-            m.d.sync += Assert((Past(dut.requests) == (1 << i)).implies(dut.grant == i))
-
-        return m
-
-class RoundRobinTestCase(FHDLTestCase):
-    def test_individual(self):
-        self.assertFormal(RoundRobinIndividualSpec(1))
-        self.assertFormal(RoundRobinIndividualSpec(10))
-
+class RoundRobinSimulationTestCase(unittest.TestCase):
     def test_transitions(self):
         m = Module()
         m.submodules.dut = dut = RoundRobin(3)
