@@ -1,9 +1,19 @@
+# nmigen: UnusedElaboratable=no
 import unittest
 from .utils import *
 from ..hdl import *
 from ..asserts import *
 from ..sim.pysim import *
 from ..lib.roundrobin import *
+
+
+class RoundRobinTestCase(unittest.TestCase):
+    def test_wrong_width(self):
+        with self.assertRaisesRegex(ValueError, r"Width must be a positive integer, not 'foo'"):
+            dut = RoundRobin(width="foo")
+        with self.assertRaisesRegex(ValueError, r"Width must be a positive integer, not -1"):
+            dut = RoundRobin(width=-1)
+
 
 class RoundRobinSimulationTestCase(unittest.TestCase):
     def test_transitions(self):
