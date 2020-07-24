@@ -8,6 +8,12 @@ from ..lib.roundrobin import *
 
 
 class RoundRobinTestCase(unittest.TestCase):
+    def test_width(self):
+        dut = RoundRobin(width=32)
+        self.assertEqual(dut.width, 32)
+        self.assertEqual(len(dut.requests), 32)
+        self.assertEqual(len(dut.grant), 5)
+
     def test_wrong_width(self):
         with self.assertRaisesRegex(ValueError, r"Width must be a positive integer, not 'foo'"):
             dut = RoundRobin(width="foo")
@@ -16,47 +22,54 @@ class RoundRobinTestCase(unittest.TestCase):
 
 
 class RoundRobinSimulationTestCase(unittest.TestCase):
-    def test_transitions(self):
-        m = Module()
-        m.submodules.dut = dut = RoundRobin(width=3)
+    def test_width_one(self):
+        dut = RoundRobin(width=1)
+        sim = Simulator(dut)
+        def process():
+            self.assertEqual((yield dut.grant), 0)
+        sim.add_process(process)
+        with sim.write_vcd("test.vcd"):
+            sim.run()
 
-        sim = Simulator(m)
+    def test_transitions(self):
+        dut = RoundRobin(width=3)
+        sim = Simulator(dut)
         def process():
             yield dut.requests.eq(0b111)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 1)
 
             yield dut.requests.eq(0b110)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
 
             yield dut.requests.eq(0b010)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 1)
 
             yield dut.requests.eq(0b011)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
 
             yield dut.requests.eq(0b001)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
 
             yield dut.requests.eq(0b101)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
 
             yield dut.requests.eq(0b100)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
 
             yield dut.requests.eq(0b000)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
 
             yield dut.requests.eq(0b001)
-            yield Tick(); yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
-        sim.add_process(process)
+        sim.add_sync_process(process)
         sim.add_clock(1e-6)
         with sim.write_vcd("test.vcd"):
             sim.run()
