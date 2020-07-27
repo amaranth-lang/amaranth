@@ -21,8 +21,6 @@ class RoundRobin(Elaboratable):
         Set of requests.
     grant : Signal(range(width)), out
         Number of the granted request.
-    en : Signal, in
-        Enable signal. Optional.
     """
     def __init__(self, *, width):
         if not isinstance(width, int) or width < 0:
@@ -32,7 +30,6 @@ class RoundRobin(Elaboratable):
 
         self.requests = Signal(width)
         self.grant    = Signal(range(width))
-        self.en       = Signal(reset=1)
 
     def elaborate(self, platform):
         m = Module()
@@ -47,4 +44,4 @@ class RoundRobin(Elaboratable):
                         with m.If(self.requests[succ]):
                             m.d.sync += self.grant.eq(succ)
 
-        return EnableInserter(self.en)(m)
+        return m
