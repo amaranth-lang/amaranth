@@ -205,7 +205,7 @@ class SubsignalTestCase(FHDLTestCase):
     def test_wrong_diffpairs(self):
         with self.assertRaisesRegex(TypeError,
                 (r"^Pins and DiffPairs are incompatible with other location or subsignal "
-                    r"constraints, but \(pins io A1\) appears after \(diffpairs io \(p A0\) \(n B0\)\)%$")):
+                    r"constraints, but \(pins io A1\) appears after \(diffpairs io \(p A0\) \(n B0\)\)$")):
             s = Subsignal("a", DiffPairs("A0", "B0"), Pins("A1"))
 
     def test_wrong_subsignals(self):
