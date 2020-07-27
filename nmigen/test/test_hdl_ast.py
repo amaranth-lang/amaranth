@@ -169,7 +169,7 @@ class ValueTestCase(FHDLTestCase):
 
     def test_bool(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Attempted to convert nMigen value to boolean$"):
+                r"^Attempted to convert nMigen value to Python boolean$"):
             if Const(0):
                 pass
 
@@ -643,7 +643,7 @@ class SliceTestCase(FHDLTestCase):
                 r"^Cannot start slice 10 bits into 8-bit value$"):
             Slice(c, 10, 12)
         with self.assertRaisesRegex(IndexError,
-                r"^Cannot start slice 12 bits into 8-bit value$"):
+                r"^Cannot stop slice 12 bits into 8-bit value$"):
             Slice(c, 0, 12)
         with self.assertRaisesRegex(IndexError,
                 r"^Slice start 4 must be less than slice stop 2$"):

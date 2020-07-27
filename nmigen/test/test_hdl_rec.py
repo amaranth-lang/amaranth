@@ -145,7 +145,7 @@ class RecordTestCase(FHDLTestCase):
         with self.assertRaisesRegex(AttributeError,
                 r"^Record 'r' does not have a field 'en'\. Did you mean one of: stb, ack\?$"):
             r["en"]
-         with self.assertRaisesRegex(AttributeError,
+        with self.assertRaisesRegex(AttributeError,
                 r"^Record 'r' does not have a field 'en'\. Did you mean one of: stb, ack\?$"):
             r.en
 
