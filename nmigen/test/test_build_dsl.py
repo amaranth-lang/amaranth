@@ -46,19 +46,19 @@ class PinsTestCase(FHDLTestCase):
         self.assertEqual(p.map_names(mapping, p), ["A1"])
 
     def test_wrong_names(self):
-        with self.assertRaises(TypeError,
-                msg="Names must be a whitespace-separated string, not ['A0', 'A1', 'A2']"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Names must be a whitespace-separated string, not \['A0', 'A1', 'A2'\]$"):
             p = Pins(["A0", "A1", "A2"])
 
     def test_wrong_dir(self):
-        with self.assertRaises(TypeError,
-                msg="Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not 'wrong'"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not 'wrong'$"):
             p = Pins("A0 A1", dir="wrong")
 
     def test_wrong_conn(self):
-        with self.assertRaises(TypeError,
-                msg="Connector must be None or a pair of string (connector name) and "
-                    "integer/string (connector number), not ('foo', None)"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Connector must be None or a pair of string \(connector name\) and "
+                    r"integer\/string \(connector number\), not \('foo', None\)$")):
             p = Pins("A0 A1", conn=("foo", None))
 
     def test_wrong_map_names(self):
@@ -66,14 +66,14 @@ class PinsTestCase(FHDLTestCase):
         mapping = {
             "pmod_0:0": "A0",
         }
-        with self.assertRaises(NameError,
-                msg="Resource (pins io pmod_0:0 pmod_0:1 pmod_0:2) refers to nonexistent "
-                    "connector pin pmod_0:1"):
+        with self.assertRaisesRegex(NameError,
+                (r"^Resource \(pins io pmod_0:0 pmod_0:1 pmod_0:2\) refers to nonexistent "
+                    r"connector pin pmod_0:1$")):
             p.map_names(mapping, p)
 
     def test_wrong_assert_width(self):
-        with self.assertRaises(AssertionError,
-                msg="3 names are specified (0 1 2), but 4 names are expected"):
+        with self.assertRaisesRegex(AssertionError,
+                r"^3 names are specified \(0 1 2\), but 4 names are expected$"):
             Pins("0 1 2", assert_width=4)
 
 
@@ -108,14 +108,14 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.n.dir, "o")
 
     def test_wrong_width(self):
-        with self.assertRaises(TypeError,
-                msg="Positive and negative pins must have the same width, but (pins io A0) "
-                    "and (pins io B0 B1) do not"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Positive and negative pins must have the same width, but \(pins io A0\) "
+                    r"and \(pins io B0 B1\) do not$")):
             dp = DiffPairs("A0", "B0 B1")
 
     def test_wrong_assert_width(self):
-        with self.assertRaises(AssertionError,
-                msg="3 names are specified (0 1 2), but 4 names are expected"):
+        with self.assertRaisesRegex(AssertionError,
+                r"^3 names are specified \(0 1 2\), but 4 names are expected$"):
             DiffPairs("0 1 2", "3 4 5", assert_width=4)
 
 
@@ -137,8 +137,8 @@ class AttrsTestCase(FHDLTestCase):
         self.assertEqual(repr(a), "(attrs FOO={!r})".format(fn))
 
     def test_wrong_value(self):
-        with self.assertRaises(TypeError,
-                msg="Value of attribute FOO must be None, int, str, or callable, not 1.0"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Value of attribute FOO must be None, int, str, or callable, not 1\.0$"):
             a = Attrs(FOO=1.0)
 
 
@@ -187,42 +187,42 @@ class SubsignalTestCase(FHDLTestCase):
         self.assertEqual(s.clock.frequency, 1e6)
 
     def test_wrong_empty_io(self):
-        with self.assertRaises(ValueError, msg="Missing I/O constraints"):
+        with self.assertRaisesRegex(ValueError, r"^Missing I\/O constraints$"):
             s = Subsignal("a")
 
     def test_wrong_io(self):
-        with self.assertRaises(TypeError,
-                msg="Constraint must be one of Pins, DiffPairs, Subsignal, Attrs, or Clock, "
-                    "not 'wrong'"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Constraint must be one of Pins, DiffPairs, Subsignal, Attrs, or Clock, "
+                    r"not 'wrong'$")):
             s = Subsignal("a", "wrong")
 
     def test_wrong_pins(self):
-        with self.assertRaises(TypeError,
-                msg="Pins and DiffPairs are incompatible with other location or subsignal "
-                    "constraints, but (pins io A1) appears after (pins io A0)"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Pins and DiffPairs are incompatible with other location or subsignal "
+                    r"constraints, but \(pins io A1\) appears after \(pins io A0\)$")):
             s = Subsignal("a", Pins("A0"), Pins("A1"))
 
     def test_wrong_diffpairs(self):
-        with self.assertRaises(TypeError,
-                msg="Pins and DiffPairs are incompatible with other location or subsignal "
-                    "constraints, but (pins io A1) appears after (diffpairs io (p A0) (n B0))"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Pins and DiffPairs are incompatible with other location or subsignal "
+                    r"constraints, but \(pins io A1\) appears after \(diffpairs io \(p A0\) \(n B0\)\)%$")):
             s = Subsignal("a", DiffPairs("A0", "B0"), Pins("A1"))
 
     def test_wrong_subsignals(self):
-        with self.assertRaises(TypeError,
-                msg="Pins and DiffPairs are incompatible with other location or subsignal "
-                    "constraints, but (pins io B0) appears after (subsignal b (pins io A0))"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Pins and DiffPairs are incompatible with other location or subsignal "
+                    r"constraints, but \(pins io B0\) appears after \(subsignal b \(pins io A0\)\)$")):
             s = Subsignal("a", Subsignal("b", Pins("A0")), Pins("B0"))
 
     def test_wrong_clock(self):
-        with self.assertRaises(TypeError,
-                msg="Clock constraint can only be applied to Pins or DiffPairs, not "
-                    "(subsignal b (pins io A0))"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Clock constraint can only be applied to Pins or DiffPairs, not "
+                    r"\(subsignal b \(pins io A0\)\)$")):
             s = Subsignal("a", Subsignal("b", Pins("A0")), Clock(1e6))
 
     def test_wrong_clock_many(self):
-        with self.assertRaises(ValueError,
-                msg="Clock constraint can be applied only once"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Clock constraint can be applied only once$"):
             s = Subsignal("a", Pins("A0"), Clock(1e6), Clock(1e7))
 
 
@@ -309,20 +309,20 @@ class ConnectorTestCase(FHDLTestCase):
         self.assertEqual(c.number, "A")
 
     def test_conn_wrong_name(self):
-        with self.assertRaises(TypeError,
-                msg="Connector must be None or a pair of string (connector name) and "
-                    "integer/string (connector number), not ('foo', None)"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Connector must be None or a pair of string \(connector name\) and "
+                    r"integer\/string \(connector number\), not \('foo', None\)$")):
             Connector("ext", "A", "0 1 2", conn=("foo", None))
 
     def test_wrong_io(self):
-        with self.assertRaises(TypeError,
-                msg="Connector I/Os must be a dictionary or a string, not []"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Connector I\/Os must be a dictionary or a string, not \[\]$"):
             Connector("pmod", 0, [])
 
     def test_wrong_dict_key_value(self):
-        with self.assertRaises(TypeError,
-                msg="Connector pin name must be a string, not 0"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Connector pin name must be a string, not 0$"):
             Connector("pmod", 0, {0: "A"})
-        with self.assertRaises(TypeError,
-                msg="Platform pin name must be a string, not 0"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Platform pin name must be a string, not 0$"):
             Connector("pmod", 0, {"A": 0})

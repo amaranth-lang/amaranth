@@ -9,11 +9,11 @@ from ..lib.fifo import *
 
 class FIFOTestCase(FHDLTestCase):
     def test_depth_wrong(self):
-        with self.assertRaises(TypeError,
-                msg="FIFO width must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^FIFO width must be a non-negative integer, not -1$"):
             FIFOInterface(width=-1, depth=8, fwft=True)
-        with self.assertRaises(TypeError,
-                msg="FIFO depth must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^FIFO depth must be a non-negative integer, not -1$"):
             FIFOInterface(width=8, depth=-1, fwft=True)
 
     def test_sync_depth(self):
@@ -37,9 +37,9 @@ class FIFOTestCase(FHDLTestCase):
         self.assertEqual(AsyncFIFO(width=8, depth=17).depth, 32)
 
     def test_async_depth_wrong(self):
-        with self.assertRaises(ValueError,
-                msg="AsyncFIFO only supports depths that are powers of 2; "
-                    "requested exact depth 15 is not"):
+        with self.assertRaisesRegex(ValueError,
+                (r"^AsyncFIFO only supports depths that are powers of 2; "
+                    r"requested exact depth 15 is not$")):
             AsyncFIFO(width=8, depth=15, exact_depth=True)
 
     def test_async_buffered_depth(self):
@@ -54,9 +54,9 @@ class FIFOTestCase(FHDLTestCase):
         self.assertEqual(AsyncFIFOBuffered(width=8, depth=18).depth, 33)
 
     def test_async_buffered_depth_wrong(self):
-        with self.assertRaises(ValueError,
-                msg="AsyncFIFOBuffered only supports depths that are one higher than powers of 2; "
-                    "requested exact depth 16 is not"):
+        with self.assertRaisesRegex(ValueError,
+                (r"^AsyncFIFOBuffered only supports depths that are one higher than powers of 2; "
+                    r"requested exact depth 16 is not$")):
             AsyncFIFOBuffered(width=8, depth=16, exact_depth=True)
 
 class FIFOModel(Elaboratable, FIFOInterface):

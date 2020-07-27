@@ -20,9 +20,9 @@ class DSLTestCase(FHDLTestCase):
         self.w1 = Signal(4)
 
     def test_cant_inherit(self):
-        with self.assertRaises(SyntaxError,
-                msg="Instead of inheriting from `Module`, inherit from `Elaboratable` and "
-                    "return a `Module` from the `elaborate(self, platform)` method"):
+        with self.assertRaisesRegex(SyntaxError,
+                (r"^Instead of inheriting from `Module`, inherit from `Elaboratable` and "
+                    r"return a `Module` from the `elaborate\(self, platform\)` method$")):
             class ORGate(Module):
                 pass
 
@@ -69,47 +69,47 @@ class DSLTestCase(FHDLTestCase):
 
     def test_d_conflict(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Driver-driver conflict: trying to drive (sig c1) from d.sync, but it "
-                    "is already driven from d.comb"):
+        with self.assertRaisesRegex(SyntaxError,
+                (r"^Driver-driver conflict: trying to drive \(sig c1\) from d\.sync, but it "
+                    r"is already driven from d\.comb$")):
             m.d.comb += self.c1.eq(1)
             m.d.sync += self.c1.eq(1)
 
     def test_d_wrong(self):
         m = Module()
-        with self.assertRaises(AttributeError,
-                msg="Cannot assign 'd.pix' attribute; did you mean 'd.pix +='?"):
+        with self.assertRaisesRegex(AttributeError,
+                r"^Cannot assign 'd\.pix' attribute; did you mean 'd.pix \+='\?$"):
             m.d.pix = None
 
     def test_d_asgn_wrong(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Only assignments and property checks may be appended to d.sync"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Only assignments and property checks may be appended to d\.sync$"):
             m.d.sync += Switch(self.s1, {})
 
     def test_comb_wrong(self):
         m = Module()
-        with self.assertRaises(AttributeError,
-                msg="'Module' object has no attribute 'comb'; did you mean 'd.comb'?"):
+        with self.assertRaisesRegex(AttributeError,
+                r"^'Module' object has no attribute 'comb'; did you mean 'd\.comb'\?$"):
             m.comb += self.c1.eq(1)
 
     def test_sync_wrong(self):
         m = Module()
-        with self.assertRaises(AttributeError,
-                msg="'Module' object has no attribute 'sync'; did you mean 'd.sync'?"):
+        with self.assertRaisesRegex(AttributeError,
+                r"^'Module' object has no attribute 'sync'; did you mean 'd\.sync'\?$"):
             m.sync += self.c1.eq(1)
 
     def test_attr_wrong(self):
         m = Module()
-        with self.assertRaises(AttributeError,
-                msg="'Module' object has no attribute 'nonexistentattr'"):
+        with self.assertRaisesRegex(AttributeError,
+                r"^'Module' object has no attribute 'nonexistentattr'$"):
             m.nonexistentattr
 
     def test_d_suspicious(self):
         m = Module()
-        with self.assertWarns(SyntaxWarning,
-                msg="Using '<module>.d.submodules' would add statements to clock domain "
-                    "'submodules'; did you mean <module>.submodules instead?"):
+        with self.assertWarnsRegex(SyntaxWarning,
+                (r"^Using '<module>\.d\.submodules' would add statements to clock domain "
+                    r"'submodules'; did you mean <module>\.submodules instead\?$")):
             m.d.submodules += []
 
     def test_clock_signal(self):
@@ -260,15 +260,15 @@ class DSLTestCase(FHDLTestCase):
 
     def test_Elif_wrong(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Elif without preceding If"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Elif without preceding If$"):
             with m.Elif(self.s2):
                 pass
 
     def test_Else_wrong(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Else without preceding If/Elif"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Else without preceding If\/Elif$"):
             with m.Else():
                 pass
 
@@ -287,11 +287,11 @@ class DSLTestCase(FHDLTestCase):
 
     def test_If_signed_suspicious(self):
         m = Module()
-        with self.assertWarns(SyntaxWarning,
-                msg="Signed values in If/Elif conditions usually result from inverting Python "
-                    "booleans with ~, which leads to unexpected results. Replace `~flag` with "
-                    "`not flag`. (If this is a false positive, silence this warning with "
-                    "`m.If(x)` → `m.If(x.bool())`.)"):
+        with self.assertWarnsRegex(SyntaxWarning,
+                (r"^Signed values in If\/Elif conditions usually result from inverting Python "
+                    r"booleans with ~, which leads to unexpected results\. Replace `~flag` with "
+                    r"`not flag`\. \(If this is a false positive, silence this warning with "
+                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$")):
             with m.If(~True):
                 pass
 
@@ -299,28 +299,28 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.If(0):
             pass
-        with self.assertWarns(SyntaxWarning,
-                msg="Signed values in If/Elif conditions usually result from inverting Python "
-                    "booleans with ~, which leads to unexpected results. Replace `~flag` with "
-                    "`not flag`. (If this is a false positive, silence this warning with "
-                    "`m.If(x)` → `m.If(x.bool())`.)"):
+        with self.assertWarnsRegex(SyntaxWarning,
+                (r"^Signed values in If\/Elif conditions usually result from inverting Python "
+                    r"booleans with ~, which leads to unexpected results\. Replace `~flag` with "
+                    r"`not flag`\. \(If this is a false positive, silence this warning with "
+                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$")):
             with m.Elif(~True):
                 pass
 
     def test_if_If_Elif_Else(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="`if m.If(...):` does not work; use `with m.If(...)`"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^`if m\.If\(\.\.\.\):` does not work; use `with m\.If\(\.\.\.\)`$"):
             if m.If(0):
                 pass
         with m.If(0):
             pass
-        with self.assertRaises(SyntaxError,
-                msg="`if m.Elif(...):` does not work; use `with m.Elif(...)`"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^`if m\.Elif\(\.\.\.\):` does not work; use `with m\.Elif\(\.\.\.\)`$"):
             if m.Elif(0):
                 pass
-        with self.assertRaises(SyntaxError,
-                msg="`if m.Else(...):` does not work; use `with m.Else(...)`"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^`if m\.Else\(\.\.\.\):` does not work; use `with m\.Else\(\.\.\.\)`$"):
             if m.Else():
                 pass
 
@@ -414,18 +414,18 @@ class DSLTestCase(FHDLTestCase):
             RED = 0b10101010
         m = Module()
         with m.Switch(self.w1):
-            with self.assertRaises(SyntaxError,
-                    msg="Case pattern '--' must have the same width as switch value (which is 4)"):
+            with self.assertRaisesRegex(SyntaxError,
+                    r"^Case pattern '--' must have the same width as switch value \(which is 4\)$"):
                 with m.Case("--"):
                     pass
-            with self.assertWarns(SyntaxWarning,
-                    msg="Case pattern '10110' is wider than switch value (which has width 4); "
-                        "comparison will never be true"):
+            with self.assertWarnsRegex(SyntaxWarning,
+                    (r"^Case pattern '10110' is wider than switch value \(which has width 4\); "
+                        r"comparison will never be true$")):
                 with m.Case(0b10110):
                     pass
-            with self.assertWarns(SyntaxWarning,
-                    msg="Case pattern '10101010' (Color.RED) is wider than switch value "
-                        "(which has width 4); comparison will never be true"):
+            with self.assertWarnsRegex(SyntaxWarning,
+                    (r"^Case pattern '10101010' \(Color\.RED\) is wider than switch value "
+                        r"\(which has width 4\); comparison will never be true$")):
                 with m.Case(Color.RED):
                     pass
         self.assertRepr(m._statements, """
@@ -437,33 +437,33 @@ class DSLTestCase(FHDLTestCase):
     def test_Case_bits_wrong(self):
         m = Module()
         with m.Switch(self.w1):
-            with self.assertRaises(SyntaxError,
-                    msg="Case pattern 'abc' must consist of 0, 1, and - (don't care) bits, "
-                        "and may include whitespace"):
+            with self.assertRaisesRegex(SyntaxError,
+                    (r"^Case pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
+                        r"and may include whitespace$")):
                 with m.Case("abc"):
                     pass
 
     def test_Case_pattern_wrong(self):
         m = Module()
         with m.Switch(self.w1):
-            with self.assertRaises(SyntaxError,
-                    msg="Case pattern must be an integer, a string, or an enumeration, not 1.0"):
+            with self.assertRaisesRegex(SyntaxError,
+                    r"^Case pattern must be an integer, a string, or an enumeration, not 1\.0$"):
                 with m.Case(1.0):
                     pass
 
     def test_Case_outside_Switch_wrong(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Case is not permitted outside of Switch"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Case is not permitted outside of Switch$"):
             with m.Case():
                 pass
 
     def test_If_inside_Switch_wrong(self):
         m = Module()
         with m.Switch(self.s1):
-            with self.assertRaises(SyntaxError,
-                    msg="If is not permitted directly inside of Switch; "
-                        "it is permitted inside of Switch Case"):
+            with self.assertRaisesRegex(SyntaxError,
+                    (r"^If is not permitted directly inside of Switch; "
+                        r"it is permitted inside of Switch Case$")):
                 with m.If(self.s2):
                     pass
 
@@ -577,15 +577,15 @@ class DSLTestCase(FHDLTestCase):
 
     def test_FSM_wrong_domain(self):
         m = Module()
-        with self.assertRaises(ValueError,
-                msg="FSM may not be driven by the 'comb' domain"):
+        with self.assertRaisesRegex(ValueError,
+                r"^FSM may not be driven by the 'comb' domain$"):
             with m.FSM(domain="comb"):
                 pass
 
     def test_FSM_wrong_undefined(self):
         m = Module()
-        with self.assertRaises(NameError,
-                msg="FSM state 'FOO' is referenced but not defined"):
+        with self.assertRaisesRegex(NameError,
+                r"^FSM state 'FOO' is referenced but not defined$"):
             with m.FSM() as fsm:
                 fsm.ongoing("FOO")
 
@@ -594,21 +594,21 @@ class DSLTestCase(FHDLTestCase):
         with m.FSM():
             with m.State("FOO"):
                 pass
-            with self.assertRaises(NameError,
-                    msg="FSM state 'FOO' is already defined"):
+            with self.assertRaisesRegex(NameError,
+                    r"^FSM state 'FOO' is already defined$"):
                 with m.State("FOO"):
                     pass
 
     def test_FSM_wrong_next(self):
         m = Module()
-        with self.assertRaises(SyntaxError,
-                msg="Only assignment to `m.next` is permitted"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Only assignment to `m\.next` is permitted$"):
             m.next
-        with self.assertRaises(SyntaxError,
-                msg="`m.next = <...>` is only permitted inside an FSM state"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^`m\.next = <\.\.\.>` is only permitted inside an FSM state$"):
             m.next = "FOO"
-        with self.assertRaises(SyntaxError,
-                msg="`m.next = <...>` is only permitted inside an FSM state"):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^`m\.next = <\.\.\.>` is only permitted inside an FSM state$"):
             with m.FSM():
                 m.next = "FOO"
 
@@ -617,9 +617,9 @@ class DSLTestCase(FHDLTestCase):
         with m.FSM():
             with m.State("FOO"):
                 pass
-            with self.assertRaises(SyntaxError,
-                    msg="If is not permitted directly inside of FSM; "
-                        "it is permitted inside of FSM State"):
+            with self.assertRaisesRegex(SyntaxError,
+                    (r"^If is not permitted directly inside of FSM; "
+                        r"it is permitted inside of FSM State$")):
                 with m.If(self.s2):
                     pass
 
@@ -668,18 +668,18 @@ class DSLTestCase(FHDLTestCase):
 
     def test_submodule_wrong(self):
         m = Module()
-        with self.assertRaises(TypeError,
-                msg="Trying to add 1, which does not implement .elaborate(), as a submodule"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Trying to add 1, which does not implement \.elaborate\(\), as a submodule$"):
             m.submodules.foo = 1
-        with self.assertRaises(TypeError,
-                msg="Trying to add 1, which does not implement .elaborate(), as a submodule"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Trying to add 1, which does not implement \.elaborate\(\), as a submodule$"):
             m.submodules += 1
 
     def test_submodule_named_conflict(self):
         m1 = Module()
         m2 = Module()
         m1.submodules.foo = m2
-        with self.assertRaises(NameError, msg="Submodule named 'foo' already exists"):
+        with self.assertRaisesRegex(NameError, r"^Submodule named 'foo' already exists$"):
             m1.submodules.foo = m2
 
     def test_submodule_get(self):
@@ -698,9 +698,9 @@ class DSLTestCase(FHDLTestCase):
 
     def test_submodule_get_unset(self):
         m1 = Module()
-        with self.assertRaises(AttributeError, msg="No submodule named 'foo' exists"):
+        with self.assertRaisesRegex(AttributeError, r"^No submodule named 'foo' exists$"):
             m2 = m1.submodules.foo
-        with self.assertRaises(AttributeError, msg="No submodule named 'foo' exists"):
+        with self.assertRaisesRegex(AttributeError, r"^No submodule named 'foo' exists$"):
             m2 = m1.submodules["foo"]
 
     def test_domain_named_implicit(self):
@@ -716,24 +716,24 @@ class DSLTestCase(FHDLTestCase):
 
     def test_domain_add_wrong(self):
         m = Module()
-        with self.assertRaises(TypeError,
-                msg="Only clock domains may be added to `m.domains`, not 1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Only clock domains may be added to `m\.domains`, not 1$"):
             m.domains.foo = 1
-        with self.assertRaises(TypeError,
-                msg="Only clock domains may be added to `m.domains`, not 1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Only clock domains may be added to `m\.domains`, not 1$"):
             m.domains += 1
 
     def test_domain_add_wrong_name(self):
         m = Module()
-        with self.assertRaises(NameError,
-                msg="Clock domain name 'bar' must match name in `m.domains.foo += ...` syntax"):
+        with self.assertRaisesRegex(NameError,
+                r"^Clock domain name 'bar' must match name in `m\.domains\.foo \+= \.\.\.` syntax$"):
             m.domains.foo = ClockDomain("bar")
 
     def test_domain_add_wrong_duplicate(self):
         m = Module()
         m.domains += ClockDomain("foo")
-        with self.assertRaises(NameError,
-                msg="Clock domain named 'foo' already exists"):
+        with self.assertRaisesRegex(NameError,
+                r"^Clock domain named 'foo' already exists$"):
             m.domains += ClockDomain("foo")
 
     def test_lower(self):
