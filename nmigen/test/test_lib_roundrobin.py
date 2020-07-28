@@ -15,9 +15,9 @@ class RoundRobinTestCase(unittest.TestCase):
         self.assertEqual(len(dut.grant), 5)
 
     def test_wrong_width(self):
-        with self.assertRaisesRegex(ValueError, r"Width must be a positive integer, not 'foo'"):
+        with self.assertRaisesRegex(ValueError, r"Width must be a non-negative integer, not 'foo'"):
             dut = RoundRobin(width="foo")
-        with self.assertRaisesRegex(ValueError, r"Width must be a positive integer, not -1"):
+        with self.assertRaisesRegex(ValueError, r"Width must be a non-negative integer, not -1"):
             dut = RoundRobin(width=-1)
 
 
