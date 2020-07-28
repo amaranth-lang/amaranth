@@ -19,7 +19,7 @@ class CompatRoundRobin(CompatModule):
                           DeprecationWarning, stacklevel=1)
             self.ce = Signal()
         else:
-            warnings.warn("instead of `migen.genlib.scheduler.RoundRobin`, "
+            warnings.warn("instead of `migen.genlib.roundrobin.RoundRobin`, "
                           "use `nmigen.lib.scheduler.RoundRobin`; note that RoundRobin does not "
                           "require a policy anymore",
                           DeprecationWarning, stacklevel=1)
