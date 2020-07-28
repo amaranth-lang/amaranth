@@ -12,14 +12,14 @@ class CompatRoundRobin(CompatModule):
         self.grant = Signal(max=max(2, n))
         self.switch_policy = switch_policy
         if self.switch_policy == SP_CE:
-            warnings.warn("instead of `migen.genlib.scheduler.RoundRobin`, "
+            warnings.warn("instead of `migen.genlib.roundrobin.RoundRobin`, "
                           "use `nmigen.lib.scheduler.RoundRobin`; note that RoundRobin does not "
                           "require a policy anymore but to get the same behavior as SP_CE you"
                           "should use an EnableInserter",
                           DeprecationWarning, stacklevel=1)
             self.ce = Signal()
         else:
-            warnings.warn("instead of `migen.genlib.scheduler.RoundRobin`, "
+            warnings.warn("instead of `migen.genlib.roundrobin.RoundRobin`, "
                           "use `nmigen.lib.scheduler.RoundRobin`; note that RoundRobin does not "
                           "require a policy anymore",
                           DeprecationWarning, stacklevel=1)
