@@ -110,13 +110,13 @@ class DomainRenamerTestCase(FHDLTestCase):
         })
 
     def test_rename_wrong_to_comb(self):
-        with self.assertRaises(ValueError,
-                msg="Domain 'sync' may not be renamed to 'comb'"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Domain 'sync' may not be renamed to 'comb'$"):
             DomainRenamer("comb")
 
     def test_rename_wrong_from_comb(self):
-        with self.assertRaises(ValueError,
-                msg="Domain 'comb' may not be renamed"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Domain 'comb' may not be renamed$"):
             DomainRenamer({"comb": "sync"})
 
 
@@ -189,8 +189,8 @@ class DomainLowererTestCase(FHDLTestCase):
             self.s.eq(ClockSignal("xxx"))
         )
 
-        with self.assertRaises(DomainError,
-                msg="Signal (clk xxx) refers to nonexistent domain 'xxx'"):
+        with self.assertRaisesRegex(DomainError,
+                r"^Signal \(clk xxx\) refers to nonexistent domain 'xxx'$"):
             DomainLowerer()(f)
 
     def test_lower_wrong_reset_less_domain(self):
@@ -201,8 +201,8 @@ class DomainLowererTestCase(FHDLTestCase):
             self.s.eq(ResetSignal("sync"))
         )
 
-        with self.assertRaises(DomainError,
-                msg="Signal (rst sync) refers to reset of reset-less domain 'sync'"):
+        with self.assertRaisesRegex(DomainError,
+                r"^Signal \(rst sync\) refers to reset of reset-less domain 'sync'$"):
             DomainLowerer()(f)
 
 

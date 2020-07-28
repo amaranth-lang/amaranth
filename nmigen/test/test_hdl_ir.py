@@ -16,14 +16,14 @@ class BadElaboratable(Elaboratable):
 
 class FragmentGetTestCase(FHDLTestCase):
     def test_get_wrong(self):
-        with self.assertRaises(AttributeError,
-                msg="Object None cannot be elaborated"):
+        with self.assertRaisesRegex(AttributeError,
+                r"^Object None cannot be elaborated$"):
             Fragment.get(None, platform=None)
 
-        with self.assertWarns(UserWarning,
-                msg=".elaborate() returned None; missing return statement?"):
-            with self.assertRaises(AttributeError,
-                    msg="Object None cannot be elaborated"):
+        with self.assertWarnsRegex(UserWarning,
+                r"^\.elaborate\(\) returned None; missing return statement\?$"):
+            with self.assertRaisesRegex(AttributeError,
+                    r"^Object None cannot be elaborated$"):
                 Fragment.get(BadElaboratable(), platform=None)
 
 
@@ -41,11 +41,11 @@ class FragmentGeneratedTestCase(FHDLTestCase):
         f2 = Fragment()
         f1.add_subfragment(f2, "f2")
 
-        with self.assertRaises(NameError,
-                msg="No subfragment at index #1"):
+        with self.assertRaisesRegex(NameError,
+                r"^No subfragment at index #1$"):
             f1.find_subfragment(1)
-        with self.assertRaises(NameError,
-                msg="No subfragment with name 'fx'"):
+        with self.assertRaisesRegex(NameError,
+                r"^No subfragment with name 'fx'$"):
             f1.find_subfragment("fx")
 
     def test_find_generated(self):
@@ -300,18 +300,18 @@ class FragmentPortsTestCase(FHDLTestCase):
 
     def test_port_wrong(self):
         f = Fragment()
-        with self.assertRaises(TypeError,
-                msg="Only signals may be added as ports, not (const 1'd1)"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Only signals may be added as ports, not \(const 1'd1\)$"):
             f.prepare(ports=(Const(1),))
 
     def test_port_not_iterable(self):
         f = Fragment()
-        with self.assertRaises(TypeError,
-                msg="`ports` must be either a list or a tuple, not 1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^`ports` must be either a list or a tuple, not 1$"):
             f.prepare(ports=1)
-        with self.assertRaises(TypeError,
-                msg="`ports` must be either a list or a tuple, not (const 1'd1)" +
-                " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^`ports` must be either a list or a tuple, not \(const 1'd1\)"
+                    r" \(did you mean `ports=\(<signal>,\)`, rather than `ports=<signal>`\?\)$")):
             f.prepare(ports=Const(1))
 
 class FragmentDomainsTestCase(FHDLTestCase):
@@ -380,10 +380,10 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f.add_subfragment(fa, "a")
         f.add_subfragment(fb)
 
-        with self.assertRaises(DomainError,
-                msg="Domain 'sync' is defined by subfragments 'a', <unnamed #1> of fragment "
-                    "'top'; it is necessary to either rename subfragment domains explicitly, "
-                    "or give names to subfragments"):
+        with self.assertRaisesRegex(DomainError,
+                (r"^Domain 'sync' is defined by subfragments 'a', <unnamed #1> of fragment "
+                    r"'top'; it is necessary to either rename subfragment domains explicitly, "
+                    r"or give names to subfragments$")):
             f._propagate_domains_up()
 
     def test_domain_conflict_name(self):
@@ -398,10 +398,10 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f.add_subfragment(fa, "x")
         f.add_subfragment(fb, "x")
 
-        with self.assertRaises(DomainError,
-                msg="Domain 'sync' is defined by subfragments #0, #1 of fragment 'top', some "
-                    "of which have identical names; it is necessary to either rename subfragment "
-                    "domains explicitly, or give distinct names to subfragments"):
+        with self.assertRaisesRegex(DomainError,
+                (r"^Domain 'sync' is defined by subfragments #0, #1 of fragment 'top', some "
+                    r"of which have identical names; it is necessary to either rename subfragment "
+                    r"domains explicitly, or give distinct names to subfragments$")):
             f._propagate_domains_up()
 
     def test_domain_conflict_rename_drivers(self):
@@ -481,8 +481,8 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f1 = Fragment()
         f1.add_driver(s1, "sync")
 
-        with self.assertRaises(DomainError,
-                msg="Domain 'sync' is used but not defined"):
+        with self.assertRaisesRegex(DomainError,
+                r"^Domain 'sync' is used but not defined$"):
             f1._propagate_domains(missing_domain=lambda name: None)
 
     def test_propagate_create_missing(self):
@@ -542,9 +542,9 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f2 = Fragment()
         f2.add_domains(ClockDomain("foo"))
 
-        with self.assertRaises(DomainError,
-                msg="Fragment returned by missing domain callback does not define requested "
-                    "domain 'sync' (defines 'foo')."):
+        with self.assertRaisesRegex(DomainError,
+                (r"^Fragment returned by missing domain callback does not define requested "
+                    r"domain 'sync' \(defines 'foo'\)\.$")):
             f1._propagate_domains(missing_domain=lambda name: f2)
 
 
@@ -597,16 +597,16 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
     def test_conflict_self_sub_error(self):
         self.setUp_self_sub()
 
-        with self.assertRaises(DriverConflict,
-                msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>"):
+        with self.assertRaisesRegex(DriverConflict,
+               r"^Signal '\(sig s1\)' is driven from multiple fragments: top, top.<unnamed #1>$"):
             self.f1._resolve_hierarchy_conflicts(mode="error")
 
     def test_conflict_self_sub_warning(self):
         self.setUp_self_sub()
 
-        with self.assertWarns(DriverConflict,
-                msg="Signal '(sig s1)' is driven from multiple fragments: top, top.<unnamed #1>; "
-                    "hierarchy will be flattened"):
+        with self.assertWarnsRegex(DriverConflict,
+                (r"^Signal '\(sig s1\)' is driven from multiple fragments: top, top.<unnamed #1>; "
+                    r"hierarchy will be flattened$")):
             self.f1._resolve_hierarchy_conflicts(mode="warn")
 
     def setUp_sub_sub(self):
@@ -691,17 +691,17 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
     def test_conflict_memory_error(self):
         self.setUp_memory()
 
-        with self.assertRaises(DriverConflict,
-                msg="Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
-                    "top.<unnamed #1>"):
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Memory 'm' is accessed from multiple fragments: top\.<unnamed #0>, "
+                    r"top\.<unnamed #1>$"):
             self.f1._resolve_hierarchy_conflicts(mode="error")
 
     def test_conflict_memory_warning(self):
         self.setUp_memory()
 
-        with self.assertWarns(DriverConflict,
-                msg="Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
-                    "top.<unnamed #1>; hierarchy will be flattened"):
+        with self.assertWarnsRegex(DriverConflict,
+                (r"^Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
+                    r"top.<unnamed #1>; hierarchy will be flattened$")):
             self.f1._resolve_hierarchy_conflicts(mode="warn")
 
     def test_explicit_flatten(self):
@@ -783,16 +783,16 @@ class InstanceTestCase(FHDLTestCase):
 
     def test_wrong_construct_arg(self):
         s = Signal()
-        with self.assertRaises(NameError,
-                msg="Instance argument ('', 's1', (sig s)) should be a tuple "
-                    "(kind, name, value) where kind is one of \"p\", \"i\", \"o\", or \"io\""):
+        with self.assertRaisesRegex(NameError,
+                (r"^Instance argument \('', 's1', \(sig s\)\) should be a tuple "
+                    r"\(kind, name, value\) where kind is one of \"p\", \"i\", \"o\", or \"io\"$")):
             Instance("foo", ("", "s1", s))
 
     def test_wrong_construct_kwarg(self):
         s = Signal()
-        with self.assertRaises(NameError,
-                msg="Instance keyword argument x_s1=(sig s) does not start with one of "
-                    "\"p_\", \"i_\", \"o_\", or \"io_\""):
+        with self.assertRaisesRegex(NameError,
+                (r"^Instance keyword argument x_s1=\(sig s\) does not start with one of "
+                    r"\"p_\", \"i_\", \"o_\", or \"io_\"$")):
             Instance("foo", x_s1=s)
 
     def setUp_cpu(self):

@@ -208,43 +208,43 @@ class ResourceManagerTestCase(FHDLTestCase):
         ])
 
     def test_wrong_resources(self):
-        with self.assertRaises(TypeError, msg="Object 'wrong' is not a Resource"):
+        with self.assertRaisesRegex(TypeError, r"^Object 'wrong' is not a Resource$"):
             self.cm.add_resources(['wrong'])
 
     def test_wrong_resources_duplicate(self):
-        with self.assertRaises(NameError,
-                msg="Trying to add (resource user_led 0 (pins o A1)), but "
-                    "(resource user_led 0 (pins o A0)) has the same name and number"):
+        with self.assertRaisesRegex(NameError,
+                (r"^Trying to add \(resource user_led 0 \(pins o A1\)\), but "
+                    r"\(resource user_led 0 \(pins o A0\)\) has the same name and number$")):
             self.cm.add_resources([Resource("user_led", 0, Pins("A1", dir="o"))])
 
     def test_wrong_connectors(self):
-        with self.assertRaises(TypeError, msg="Object 'wrong' is not a Connector"):
+        with self.assertRaisesRegex(TypeError, r"^Object 'wrong' is not a Connector$"):
             self.cm.add_connectors(['wrong'])
 
     def test_wrong_connectors_duplicate(self):
-        with self.assertRaises(NameError,
-                msg="Trying to add (connector pmod 0 1=>1 2=>2), but "
-                    "(connector pmod 0 1=>B0 2=>B1 3=>B2 4=>B3) has the same name and number"):
+        with self.assertRaisesRegex(NameError,
+                (r"^Trying to add \(connector pmod 0 1=>1 2=>2\), but "
+                    r"\(connector pmod 0 1=>B0 2=>B1 3=>B2 4=>B3\) has the same name and number$")):
             self.cm.add_connectors([Connector("pmod", 0, "1 2")])
 
     def test_wrong_lookup(self):
-        with self.assertRaises(ResourceError,
-                msg="Resource user_led#1 does not exist"):
+        with self.assertRaisesRegex(ResourceError,
+                r"^Resource user_led#1 does not exist$"):
             r = self.cm.lookup("user_led", 1)
 
     def test_wrong_clock_signal(self):
-        with self.assertRaises(TypeError,
-                msg="Object None is not a Signal"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Object None is not a Signal$"):
             self.cm.add_clock_constraint(None, 10e6)
 
     def test_wrong_clock_frequency(self):
-        with self.assertRaises(TypeError,
-                msg="Frequency must be a number, not None"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Frequency must be a number, not None$"):
             self.cm.add_clock_constraint(Signal(), None)
 
     def test_wrong_request_duplicate(self):
-        with self.assertRaises(ResourceError,
-                msg="Resource user_led#0 has already been requested"):
+        with self.assertRaisesRegex(ResourceError,
+                r"^Resource user_led#0 has already been requested$"):
             self.cm.request("user_led", 0)
             self.cm.request("user_led", 0)
 
@@ -253,46 +253,46 @@ class ResourceManagerTestCase(FHDLTestCase):
             Resource("clk20", 0, Pins("H1", dir="i")),
         ])
         self.cm.request("clk100", 0)
-        with self.assertRaises(ResourceError,
-                msg="Resource component clk20_0 uses physical pin H1, but it is already "
-                    "used by resource component clk100_0 that was requested earlier"):
+        with self.assertRaisesRegex(ResourceError,
+                (r"^Resource component clk20_0 uses physical pin H1, but it is already "
+                    r"used by resource component clk100_0 that was requested earlier$")):
             self.cm.request("clk20", 0)
 
     def test_wrong_request_with_dir(self):
-        with self.assertRaises(TypeError,
-                msg="Direction must be one of \"i\", \"o\", \"oe\", \"io\", or \"-\", "
-                    "not 'wrong'"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Direction must be one of \"i\", \"o\", \"oe\", \"io\", or \"-\", "
+                    r"not 'wrong'$")):
             user_led = self.cm.request("user_led", 0, dir="wrong")
 
     def test_wrong_request_with_dir_io(self):
-        with self.assertRaises(ValueError,
-                msg="Direction of (pins o A0) cannot be changed from \"o\" to \"i\"; direction "
-                    "can be changed from \"io\" to \"i\", \"o\", or \"oe\", or from anything "
-                    "to \"-\""):
+        with self.assertRaisesRegex(ValueError,
+                (r"^Direction of \(pins o A0\) cannot be changed from \"o\" to \"i\"; direction "
+                    r"can be changed from \"io\" to \"i\", \"o\", or \"oe\", or from anything "
+                    r"to \"-\"$")):
             user_led = self.cm.request("user_led", 0, dir="i")
 
     def test_wrong_request_with_dir_dict(self):
-        with self.assertRaises(TypeError,
-                msg="Directions must be a dict, not 'i', because (resource i2c 0 (subsignal scl "
-                    "(pins o N10)) (subsignal sda (pins io N11))) "
-                    "has subsignals"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Directions must be a dict, not 'i', because \(resource i2c 0 \(subsignal scl "
+                    r"\(pins o N10\)\) \(subsignal sda \(pins io N11\)\)\) "
+                    r"has subsignals$")):
             i2c = self.cm.request("i2c", 0, dir="i")
 
     def test_wrong_request_with_wrong_xdr(self):
-        with self.assertRaises(ValueError,
-                msg="Data rate of (pins o A0) must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Data rate of \(pins o A0\) must be a non-negative integer, not -1$"):
             user_led = self.cm.request("user_led", 0, xdr=-1)
 
     def test_wrong_request_with_xdr_dict(self):
-        with self.assertRaises(TypeError,
-                msg="Data rate must be a dict, not 2, because (resource i2c 0 (subsignal scl "
-                    "(pins o N10)) (subsignal sda (pins io N11))) "
-                    "has subsignals"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Data rate must be a dict, not 2, because \(resource i2c 0 \(subsignal scl "
+                    r"\(pins o N10\)\) \(subsignal sda \(pins io N11\)\)\) "
+                    r"has subsignals$"):
             i2c = self.cm.request("i2c", 0, xdr=2)
 
     def test_wrong_clock_constraint_twice(self):
         clk100 = self.cm.request("clk100")
-        with self.assertRaises(ValueError,
-                msg="Cannot add clock constraint on (sig clk100_0__i), which is already "
-                    "constrained to 100000000.0 Hz"):
+        with self.assertRaisesRegex(ValueError,
+                (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
+                    r"constrained to 100000000\.0 Hz$")):
             self.cm.add_clock_constraint(clk100.i, 1e6)

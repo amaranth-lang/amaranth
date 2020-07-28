@@ -20,11 +20,11 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.depth, 4)
 
     def test_geometry_wrong(self):
-        with self.assertRaises(TypeError,
-                msg="Memory width must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Memory width must be a non-negative integer, not -1$"):
             m = Memory(width=-1, depth=4)
-        with self.assertRaises(TypeError,
-                msg="Memory depth must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Memory depth must be a non-negative integer, not -1$"):
             m = Memory(width=8, depth=-1)
 
     def test_init(self):
@@ -32,14 +32,14 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.init, [0, 1, 2, 3])
 
     def test_init_wrong_count(self):
-        with self.assertRaises(ValueError,
-                msg="Memory initialization value count exceed memory depth (8 > 4)"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Memory initialization value count exceed memory depth \(8 > 4\)$"):
             m = Memory(width=8, depth=4, init=range(8))
 
     def test_init_wrong_type(self):
-        with self.assertRaises(TypeError,
-                msg="Memory initialization value at address 1: "
-                    "'str' object cannot be interpreted as an integer"):
+        with self.assertRaisesRegex(TypeError,
+                (r"^Memory initialization value at address 1: "
+                    r"'str' object cannot be interpreted as an integer$")):
             m = Memory(width=8, depth=4, init=[1, "0"])
 
     def test_attrs(self):
@@ -82,8 +82,8 @@ class MemoryTestCase(FHDLTestCase):
 
     def test_read_port_wrong(self):
         mem = Memory(width=8, depth=4)
-        with self.assertRaises(ValueError,
-                msg="Read port cannot be simultaneously asynchronous and non-transparent"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Read port cannot be simultaneously asynchronous and non-transparent$"):
             mem.read_port(domain="comb", transparent=False)
 
     def test_write_port(self):
@@ -108,14 +108,14 @@ class MemoryTestCase(FHDLTestCase):
 
     def test_write_port_granularity_wrong(self):
         mem = Memory(width=8, depth=4)
-        with self.assertRaises(TypeError,
-                msg="Write port granularity must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Write port granularity must be a non-negative integer, not -1$"):
             mem.write_port(granularity=-1)
-        with self.assertRaises(ValueError,
-                msg="Write port granularity must not be greater than memory width (10 > 8)"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Write port granularity must not be greater than memory width \(10 > 8\)$"):
             mem.write_port(granularity=10)
-        with self.assertRaises(ValueError,
-                msg="Write port granularity must divide memory width evenly"):
+        with self.assertRaisesRegex(ValueError,
+                r"^Write port granularity must divide memory width evenly$"):
             mem.write_port(granularity=3)
 
 

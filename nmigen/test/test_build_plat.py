@@ -36,17 +36,17 @@ class PlatformTestCase(FHDLTestCase):
             self.assertEqual(self.platform.extra_files["x.txt"], f.read())
 
     def test_add_file_wrong_filename(self):
-        with self.assertRaises(TypeError,
-                msg="File name must be a string, not 1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^File name must be a string, not 1$"):
             self.platform.add_file(1, "")
 
     def test_add_file_wrong_contents(self):
-        with self.assertRaises(TypeError,
-                msg="File contents must be str, bytes, or a file-like object, not 1"):
+        with self.assertRaisesRegex(TypeError,
+                r"^File contents must be str, bytes, or a file-like object, not 1$"):
             self.platform.add_file("foo", 1)
 
     def test_add_file_wrong_duplicate(self):
         self.platform.add_file("foo", "")
-        with self.assertRaises(ValueError,
-                msg="File 'foo' already exists"):
+        with self.assertRaisesRegex(ValueError,
+                r"^File 'foo' already exists$"):
             self.platform.add_file("foo", "bar")

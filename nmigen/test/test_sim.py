@@ -541,8 +541,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
-            with self.assertRaises(TypeError,
-                    msg="Cannot add a process 1 because it is not a generator function"):
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a process 1 because it is not a generator function$"):
                 sim.add_process(1)
 
     def test_add_process_wrong_generator(self):
@@ -559,15 +559,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         m.d.sync += s.eq(0)
         with self.assertSimulation(m) as sim:
             sim.add_clock(1)
-            with self.assertRaises(ValueError,
-                    msg="Domain 'sync' already has a clock driving it"):
+            with self.assertRaisesRegex(ValueError,
+                    r"^Domain 'sync' already has a clock driving it$"):
                 sim.add_clock(1)
 
     def test_add_clock_wrong_missing(self):
         m = Module()
         with self.assertSimulation(m) as sim:
-            with self.assertRaises(ValueError,
-                    msg="Domain 'sync' is not present in simulation"):
+            with self.assertRaisesRegex(ValueError,
+                    r"^Domain 'sync' is not present in simulation$"):
                 sim.add_clock(1)
 
     def test_add_clock_if_exists(self):
