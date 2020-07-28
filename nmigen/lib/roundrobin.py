@@ -1,4 +1,6 @@
 from .. import *
+from functools import reduce
+from operator import or_
 
 
 __all__ = ["RoundRobin"]
@@ -21,6 +23,8 @@ class RoundRobin(Elaboratable):
         Set of requests.
     grant : Signal(range(width)), out
         Number of the granted request.
+    valid : Signal(), out
+        Indicate if grant is valid.
     """
     def __init__(self, *, width):
         if not isinstance(width, int) or width < 0:
@@ -30,6 +34,7 @@ class RoundRobin(Elaboratable):
 
         self.requests = Signal(width)
         self.grant    = Signal(range(width))
+        self.valid    = Signal()
 
     def elaborate(self, platform):
         m = Module()
@@ -43,5 +48,7 @@ class RoundRobin(Elaboratable):
                     for succ in reversed(range(i + 1, self.width)):
                         with m.If(self.requests[succ]):
                             m.d.sync += self.grant.eq(succ)
+
+        m.d.sync += self.valid.eq(reduce(or_, self.requests))
 
         return m

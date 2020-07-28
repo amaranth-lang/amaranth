@@ -27,13 +27,16 @@ class RoundRobinSimulationTestCase(unittest.TestCase):
         sim = Simulator(dut)
         def process():
             yield dut.requests.eq(0)
-            yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
+            self.assertFalse((yield dut.valid))
 
             yield dut.requests.eq(1)
-            yield Delay(1e-8)
+            yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
-        sim.add_process(process)
+            self.assertTrue((yield dut.valid))
+        sim.add_sync_process(process)
+        sim.add_clock(1e-6)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -44,37 +47,46 @@ class RoundRobinSimulationTestCase(unittest.TestCase):
             yield dut.requests.eq(0b111)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 1)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b110)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b010)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 1)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b011)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b001)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b101)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b100)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 2)
+            self.assertTrue((yield dut.valid))
 
             yield dut.requests.eq(0b000)
             yield; yield Delay(1e-8)
+            self.assertFalse((yield dut.valid))
 
             yield dut.requests.eq(0b001)
             yield; yield Delay(1e-8)
             self.assertEqual((yield dut.grant), 0)
+            self.assertTrue((yield dut.valid))
         sim.add_sync_process(process)
         sim.add_clock(1e-6)
         with sim.write_vcd("test.vcd"):
