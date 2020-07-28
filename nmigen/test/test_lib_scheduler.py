@@ -4,7 +4,7 @@ from .utils import *
 from ..hdl import *
 from ..asserts import *
 from ..sim.pysim import *
-from ..lib.roundrobin import *
+from ..lib.scheduler import *
 
 
 class RoundRobinTestCase(unittest.TestCase):
