@@ -24,7 +24,7 @@ class RoundRobin(Elaboratable):
     """
     def __init__(self, *, width):
         if not isinstance(width, int) or width < 0:
-            raise ValueError("Width must be a positive integer, not {!r}"
+            raise ValueError("Width must be a non-negative integer, not {!r}"
                              .format(width))
         self.width    = width
 
