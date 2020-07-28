@@ -8,22 +8,22 @@ from ..lib.scheduler import *
 
 
 class RoundRobinTestCase(unittest.TestCase):
-    def test_width(self):
-        dut = RoundRobin(width=32)
-        self.assertEqual(dut.width, 32)
+    def test_count(self):
+        dut = RoundRobin(count=32)
+        self.assertEqual(dut.count, 32)
         self.assertEqual(len(dut.requests), 32)
         self.assertEqual(len(dut.grant), 5)
 
-    def test_wrong_width(self):
-        with self.assertRaisesRegex(ValueError, r"Width must be a non-negative integer, not 'foo'"):
-            dut = RoundRobin(width="foo")
-        with self.assertRaisesRegex(ValueError, r"Width must be a non-negative integer, not -1"):
-            dut = RoundRobin(width=-1)
+    def test_wrong_count(self):
+        with self.assertRaisesRegex(ValueError, r"Count must be a non-negative integer, not 'foo'"):
+            dut = RoundRobin(count="foo")
+        with self.assertRaisesRegex(ValueError, r"Count must be a non-negative integer, not -1"):
+            dut = RoundRobin(count=-1)
 
 
 class RoundRobinSimulationTestCase(unittest.TestCase):
-    def test_width_one(self):
-        dut = RoundRobin(width=1)
+    def test_count_one(self):
+        dut = RoundRobin(count=1)
         sim = Simulator(dut)
         def process():
             yield dut.requests.eq(0)
@@ -41,7 +41,7 @@ class RoundRobinSimulationTestCase(unittest.TestCase):
             sim.run()
 
     def test_transitions(self):
-        dut = RoundRobin(width=3)
+        dut = RoundRobin(count=3)
         sim = Simulator(dut)
         def process():
             yield dut.requests.eq(0b111)
