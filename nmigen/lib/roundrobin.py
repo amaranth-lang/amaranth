@@ -20,9 +20,10 @@ class RoundRobin(Elaboratable):
     requests : Signal(width), in
         Set of requests.
     grant : Signal(range(width)), out
-        Number of the granted request.
+        Number of the granted request. Indeterminate if `valid` is deasserted.
     valid : Signal(), out
-        Indicate if grant is valid.
+        Asserted if grant corresponds to an active request. Deasserted
+        otherwise, i.e. if no requests are active.
     """
     def __init__(self, *, width):
         if not isinstance(width, int) or width < 0:
