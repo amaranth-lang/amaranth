@@ -6,17 +6,23 @@ __all__ = ["RoundRobin", "SP_WITHDRAW", "SP_CE"]
 
 (SP_WITHDRAW, SP_CE) = range(2)
 
-@deprecated("instead of `migen.genlib.roundrobin.RoundRobin`, "
-            "use `nmigen.lib.roundrobin.RoundRobin`; note that RoundRobin does not "
-            "require a policy anymore, and that the `ce` attribute has been renamed"
-            "to `en`")
 class CompatRoundRobin(CompatModule):
     def __init__(self, n, switch_policy=SP_WITHDRAW):
         self.request = Signal(n)
         self.grant = Signal(max=max(2, n))
         self.switch_policy = switch_policy
         if self.switch_policy == SP_CE:
+            warnings.warn("instead of `migen.genlib.roundrobin.RoundRobin`, "
+                          "use `nmigen.lib.roundrobin.RoundRobin`; note that RoundRobin does not "
+                          "require a policy anymore but to get the same behavior as SP_CE you"
+                          "should use an EnableInserter",
+                          DeprecationWarning, stacklevel=1)
             self.ce = Signal()
+        else:
+            warnings.warn("instead of `migen.genlib.roundrobin.RoundRobin`, "
+                          "use `nmigen.lib.roundrobin.RoundRobin`; note that RoundRobin does not "
+                          "require a policy anymore",
+                          DeprecationWarning, stacklevel=1)
 
         ###
 
