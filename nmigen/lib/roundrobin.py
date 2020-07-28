@@ -1,6 +1,4 @@
 from .. import *
-from functools import reduce
-from operator import or_
 
 
 __all__ = ["RoundRobin"]
@@ -49,6 +47,6 @@ class RoundRobin(Elaboratable):
                         with m.If(self.requests[succ]):
                             m.d.sync += self.grant.eq(succ)
 
-        m.d.sync += self.valid.eq(reduce(or_, self.requests))
+        m.d.sync += self.valid.eq(self.requests.any())
 
         return m
