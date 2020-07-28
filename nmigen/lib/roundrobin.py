@@ -8,7 +8,13 @@ class RoundRobin(Elaboratable):
     """Round-robin scheduler.
 
     For a given set of requests, the round-robin scheduler will
-    grant one request.
+    grant one request. Once it grants a request, if any other
+    requests are active, it grants the next active request with
+    a greater number, restarting from zero once it reaches the
+    highest one.
+
+    Use :class:`EnableInserter` to control when the scheduler
+    is updated.
 
     Parameters
     ----------
@@ -20,7 +26,8 @@ class RoundRobin(Elaboratable):
     requests : Signal(width), in
         Set of requests.
     grant : Signal(range(width)), out
-        Number of the granted request. Indeterminate if `valid` is deasserted.
+        Number of the granted request. Does not change if there are no
+        active requests.
     valid : Signal(), out
         Asserted if grant corresponds to an active request. Deasserted
         otherwise, i.e. if no requests are active.
