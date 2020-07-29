@@ -145,7 +145,7 @@ class ReadPort(Elaboratable):
             # value of the data output is forcibly set to the 0th initial value, if any--note that
             # many FPGAs do not guarantee this behavior!
             if len(self.memory.init) > 0:
-                self.data.reset = self.memory.init[0]
+                self.data.reset = operator.index(self.memory.init[0])
             latch_addr = Signal.like(self.addr)
             f.add_statements(
                 latch_addr.eq(self.addr),
