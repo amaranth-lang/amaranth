@@ -12,6 +12,7 @@ import hashlib
 __all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts"]
 
 
+
 class BuildPlan:
     def __init__(self, script):
         """A build plan.
@@ -98,6 +99,62 @@ class BuildPlan:
 
         finally:
             os.chdir(cwd)
+
+    def execute_remote_ssh(self, root, hostname, *, connect_args = {}):
+        """
+        Execute build plan using the remote SSH strategy. Files from the build
+        plan are transferred via SFTP to the directory ``root`` on the remote
+        server ``hostname``. The ``paramiko`` SSH client will then run ``{script}.sh``.
+
+        ``hostname`` corresponds to the first (required) input argument of ``paramiko``'s
+        ``SSHClient.connect``, and ``connect_args`` is a dictionary that holds
+        all other input arguments to ``SSHClient.connect``
+        (`documentation <http://docs.paramiko.org/en/stable/api/client.html#paramiko.client.SSHClient.connect>`_).
+
+        This method will raise ``ImportError`` if `paramiko <https://www.paramiko.org>`_ is not installed.
+
+        Returns :class:`RemoteSshBuildProducts`.
+        """
+        from paramiko import SSHClient
+
+        with SSHClient() as client:
+            client.load_system_host_keys()
+            client.connect(hostname, **connect_args)
+            with client.open_sftp() as sftp:
+                try:
+                    sftp.mkdir(root)
+                except IOError as e:
+                    pass # mkdir fails if directory exists. This is fine.
+
+                sftp.chdir(root)
+                for filename, content in self.files.items():
+                    filename = os.path.normpath(filename)
+                    # Just to make sure we don't accidentally overwrite anything outside of build root.
+                    assert not filename.startswith("..")
+
+                    dirname = os.path.dirname(filename)
+                    if dirname:
+                        try:
+                            sftp.mkdir(dirname, exist_ok=True)
+                        except IOError as e:
+                            pass
+
+                    mode = "wt" if isinstance(content, str) else "wb"
+                    with sftp.file(filename, mode) as f:
+                        f.write(content)
+
+            cmd = "cd {} && bash -l {}.sh".format(root, self.script)
+            stdin, stdout, stderr = client.exec_command(cmd)
+
+            buf = stdout.read(1024)
+            while buf:
+                print(buf.decode("utf-8"), end="")
+                buf = stdout.read(1024)
+
+            buf_err = stderr.read(1024)
+            while buf_err:
+                print(buf_err.decode("utf-8"), end="")
+                buf_err = stderr.read(1024)
 
     def execute(self):
         """
