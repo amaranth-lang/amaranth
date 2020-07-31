@@ -299,7 +299,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(len(port)):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IB",
-                i_I=port[bit],
+                i_I=port.io[bit],
                 o_O=i[bit]
             )
         return m
@@ -312,7 +312,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         for bit in range(len(port)):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OB",
                 i_I=o[bit],
-                o_O=port[bit]
+                o_O=port.io[bit]
             )
         return m
 
@@ -325,7 +325,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
-                o_O=port[bit]
+                o_O=port.io[bit]
             )
         return m
 
@@ -339,58 +339,58 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
-                io_B=port[bit]
+                io_B=port.io[bit]
             )
         return m
 
-    def get_diff_input(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input(self, pin, port, attrs, invert):
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IB",
-                i_I=p_port[bit],
+                i_I=port.p[bit],
                 o_O=i[bit]
             )
         return m
 
-    def get_diff_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_output(self, pin, port, attrs, invert):
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OB",
                 i_I=o[bit],
-                o_O=p_port[bit],
+                o_O=port.p[bit],
             )
         return m
 
-    def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_tristate(self, pin, port, attrs, invert):
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
-                o_O=p_port[bit],
+                o_O=port.p[bit],
             )
         return m
 
-    def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input_output(self, pin, port, attrs, invert):
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("BB",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
-                io_B=p_port[bit],
+                io_B=port.p[bit],
             )
         return m
 
