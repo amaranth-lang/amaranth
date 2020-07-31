@@ -9,7 +9,7 @@ import zipfile
 import hashlib
 
 
-__all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts"]
+__all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts", "RemoteSshBuildProducts"]
 
 
 
@@ -111,8 +111,6 @@ class BuildPlan:
         all other input arguments to ``SSHClient.connect``
         (`documentation <http://docs.paramiko.org/en/stable/api/client.html#paramiko.client.SSHClient.connect>`_).
 
-        This method will raise ``ImportError`` if `paramiko <https://www.paramiko.org>`_ is not installed.
-
         Returns :class:`RemoteSshBuildProducts`.
         """
         from paramiko import SSHClient
@@ -120,6 +118,7 @@ class BuildPlan:
         with SSHClient() as client:
             client.load_system_host_keys()
             client.connect(hostname, **connect_args)
+
             with client.open_sftp() as sftp:
                 try:
                     sftp.mkdir(root)
@@ -146,6 +145,7 @@ class BuildPlan:
             cmd = "cd {} && bash -l {}.sh".format(root, self.script)
             stdin, stdout, stderr = client.exec_command(cmd)
 
+            # Show the output from the server while products are built.
             buf = stdout.read(1024)
             while buf:
                 print(buf.decode("utf-8"), end="")
@@ -153,8 +153,10 @@ class BuildPlan:
 
             buf_err = stderr.read(1024)
             while buf_err:
-                print(buf_err.decode("utf-8"), end="")
+                print(buf_err.decode("utf-8"), file=sys.stderr, end="")
                 buf_err = stderr.read(1024)
+
+        return RemoteSshBuildProducts(root, hostname, connect_args)
 
     def execute(self):
         """
@@ -219,3 +221,25 @@ class LocalBuildProducts(BuildProducts):
         super().get(filename, mode)
         with open(os.path.join(self.__root, filename), "r" + mode) as f:
             return f.read()
+
+
+class RemoteSshBuildProducts(BuildProducts):
+    def __init__(self, root, hostname, connect_args):
+        self.__root = root
+        self.__hostname = hostname
+        self.__connect_args = connect_args
+
+    def get(self, filename, mode="b"):
+        super().get(filename, mode)
+
+        from paramiko import SSHClient
+
+        with SSHClient() as client:
+            client.load_system_host_keys()
+            client.connect(self.__hostname, **self.__connect_args)
+
+            with client.open_sftp() as sftp:
+                sftp.chdir(self.__root)
+
+                with sftp.file(filename, "r" + mode) as f:
+                    return f.read()
