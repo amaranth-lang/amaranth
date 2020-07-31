@@ -318,9 +318,9 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
-        for bit in range(len(port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUF",
-                i_I=port[bit],
+                i_I=port.io[bit],
                 o_O=i[bit]
             )
         return m
@@ -330,10 +330,10 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUF",
                 i_I=o[bit],
-                o_O=port[bit]
+                o_O=port.io[bit]
             )
         return m
 
@@ -342,11 +342,11 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFT",
                 i_T=t,
                 i_I=o[bit],
-                o_O=port[bit]
+                o_O=port.io[bit]
             )
         return m
 
@@ -355,63 +355,63 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
-        for bit in range(len(port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUF",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
-                io_IO=port[bit]
+                io_IO=port.io[bit]
             )
         return m
 
-    def get_diff_input(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input(self, pin, port, attrs, invert):
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUFDS",
-                i_I=p_port[bit], i_IB=n_port[bit],
+                i_I=port.p[bit], i_IB=port.n[bit],
                 o_O=i[bit]
             )
         return m
 
-    def get_diff_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_output(self, pin, port, attrs, invert):
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFDS",
                 i_I=o[bit],
-                o_O=p_port[bit], o_OB=n_port[bit]
+                o_O=port.p[bit], o_OB=port.n[bit]
             )
         return m
 
-    def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_tristate(self, pin, port, attrs, invert):
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFTDS",
                 i_T=t,
                 i_I=o[bit],
-                o_O=p_port[bit], o_OB=n_port[bit]
+                o_O=port.p[bit], o_OB=port.n[bit]
             )
         return m
 
-    def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input_output(self, pin, port, attrs, invert):
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
-        for bit in range(len(p_port)):
+        for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUFDS",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
-                io_IO=p_port[bit], io_IOB=n_port[bit]
+                io_IO=port.p[bit], io_IOB=port.n[bit]
             )
         return m
 

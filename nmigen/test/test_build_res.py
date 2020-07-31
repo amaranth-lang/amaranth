@@ -85,10 +85,14 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(ports[1].name, "i2c_0__sda__io")
         self.assertEqual(ports[1].width, 1)
 
-        self.assertEqual(list(self.cm.iter_single_ended_pins()), [
-            (i2c.scl, scl, {}, False),
-            (i2c.sda, sda, {}, False),
-        ])
+        scl_info, sda_info = self.cm.iter_single_ended_pins()
+        self.assertIs(scl_info[0], i2c.scl)
+        self.assertIs(scl_info[1].io, scl)
+        self.assertEqual(scl_info[2], {})
+        self.assertEqual(scl_info[3], False)
+        self.assertIs(sda_info[0], i2c.sda)
+        self.assertIs(sda_info[1].io, sda)
+
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("i2c_0__scl__io", ["N10"], {}),
             ("i2c_0__sda__io", ["N11"], {})
@@ -108,9 +112,13 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(n.name, "clk100_0__n")
         self.assertEqual(n.width, clk100.width)
 
-        self.assertEqual(list(self.cm.iter_differential_pins()), [
-            (clk100, p, n, {}, False),
-        ])
+        clk100_info, = self.cm.iter_differential_pins()
+        self.assertIs(clk100_info[0], clk100)
+        self.assertIs(clk100_info[1].p, p)
+        self.assertIs(clk100_info[1].n, n)
+        self.assertEqual(clk100_info[2], {})
+        self.assertEqual(clk100_info[3], False)
+
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("clk100_0__p", ["H1"], {}),
             ("clk100_0__n", ["H2"], {}),
@@ -123,15 +131,22 @@ class ResourceManagerTestCase(FHDLTestCase):
         ]
         self.cm.add_resources(new_resources)
 
-        sig_cs = self.cm.request("cs")
-        sig_clk = self.cm.request("clk")
-        port_cs, port_clk_p, port_clk_n = self.cm.iter_ports()
-        self.assertEqual(list(self.cm.iter_single_ended_pins()), [
-            (sig_cs, port_cs, {}, True),
-        ])
-        self.assertEqual(list(self.cm.iter_differential_pins()), [
-            (sig_clk, port_clk_p, port_clk_n, {}, True),
-        ])
+        cs = self.cm.request("cs")
+        clk = self.cm.request("clk")
+        cs_io, clk_p, clk_n = self.cm.iter_ports()
+
+        cs_info, = self.cm.iter_single_ended_pins()
+        self.assertIs(cs_info[0], cs)
+        self.assertIs(cs_info[1].io, cs_io)
+        self.assertEqual(cs_info[2], {})
+        self.assertEqual(cs_info[3], True)
+
+        clk_info, = self.cm.iter_differential_pins()
+        self.assertIs(clk_info[0], clk)
+        self.assertIs(clk_info[1].p, clk_p)
+        self.assertIs(clk_info[1].n, clk_n)
+        self.assertEqual(clk_info[2], {})
+        self.assertEqual(clk_info[3], True)
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")

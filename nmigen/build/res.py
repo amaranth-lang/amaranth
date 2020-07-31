@@ -128,9 +128,15 @@ class ResourceManager:
                     phys_names = phys.names
                     port = Record([("io", len(phys))], name=name)
                 if isinstance(phys, DiffPairs):
-                    phys_names = phys.p.names + phys.n.names
-                    port = Record([("p", len(phys)),
-                                   ("n", len(phys))], name=name)
+                    phys_names = []
+                    record_fields = []
+                    if not self.should_skip_port_component(None, attrs, "p"):
+                        phys_names += phys.p.names
+                        record_fields.append(("p", len(phys)))
+                    if not self.should_skip_port_component(None, attrs, "n"):
+                        phys_names += phys.n.names
+                        record_fields.append(("n", len(phys)))
+                    port = Record(record_fields, name=name)
                 if dir == "-":
                     pin = None
                 else:
@@ -166,14 +172,14 @@ class ResourceManager:
             if pin is None:
                 continue
             if isinstance(res.ios[0], Pins):
-                yield pin, port.io, attrs, res.ios[0].invert
+                yield pin, port, attrs, res.ios[0].invert
 
     def iter_differential_pins(self):
         for res, pin, port, attrs in self._ports:
             if pin is None:
                 continue
             if isinstance(res.ios[0], DiffPairs):
-                yield pin, port.p, port.n, attrs, res.ios[0].invert
+                yield pin, port, attrs, res.ios[0].invert
 
     def should_skip_port_component(self, port, attrs, component):
         return False

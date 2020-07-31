@@ -148,16 +148,15 @@ class Platform(ResourceManager, metaclass=ABCMeta):
             if pin.dir == "io":
                 add_pin_fragment(pin, self.get_input_output(pin, port, attrs, invert))
 
-        for pin, p_port, n_port, attrs, invert in self.iter_differential_pins():
+        for pin, port, attrs, invert in self.iter_differential_pins():
             if pin.dir == "i":
-                add_pin_fragment(pin, self.get_diff_input(pin, p_port, n_port, attrs, invert))
+                add_pin_fragment(pin, self.get_diff_input(pin, port, attrs, invert))
             if pin.dir == "o":
-                add_pin_fragment(pin, self.get_diff_output(pin, p_port, n_port, attrs, invert))
+                add_pin_fragment(pin, self.get_diff_output(pin, port, attrs, invert))
             if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_diff_tristate(pin, p_port, n_port, attrs, invert))
+                add_pin_fragment(pin, self.get_diff_tristate(pin, port, attrs, invert))
             if pin.dir == "io":
-                add_pin_fragment(pin,
-                    self.get_diff_input_output(pin, p_port, n_port, attrs, invert))
+                add_pin_fragment(pin, self.get_diff_input_output(pin, port, attrs, invert))
 
         fragment._propagate_ports(ports=self.iter_ports(), all_undef_as_ports=False)
         return self.toolchain_prepare(fragment, name, **kwargs)
@@ -239,19 +238,19 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         m.d.comb += pin.i.eq(self._invert_if(invert, port))
         return m
 
-    def get_diff_input(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input(self, pin, port, attrs, invert):
         self._check_feature("differential input", pin, attrs,
                             valid_xdrs=(), valid_attrs=None)
 
-    def get_diff_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_output(self, pin, port, attrs, invert):
         self._check_feature("differential output", pin, attrs,
                             valid_xdrs=(), valid_attrs=None)
 
-    def get_diff_tristate(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_tristate(self, pin, port, attrs, invert):
         self._check_feature("differential tristate", pin, attrs,
                             valid_xdrs=(), valid_attrs=None)
 
-    def get_diff_input_output(self, pin, p_port, n_port, attrs, invert):
+    def get_diff_input_output(self, pin, port, attrs, invert):
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(), valid_attrs=None)
 
