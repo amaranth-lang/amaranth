@@ -46,7 +46,7 @@ setup(
     extras_require={
         # this version requirement needs to be synchronized with the one in nmigen.back.verilog!
         "builtin-yosys": ["nmigen-yosys>=0.9.*"],
-        "remote-build": ["paramiko>=2.7.*"],
+        "remote-build": ["paramiko~=2.7"],
     },
     packages=find_packages(exclude=["*.test*"]),
     entry_points={

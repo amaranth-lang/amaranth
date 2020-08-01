@@ -7,9 +7,10 @@ import subprocess
 import tempfile
 import zipfile
 import hashlib
+import pathlib
 
 
-__all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts", "RemoteSshBuildProducts"]
+__all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts", "RemoteSSHBuildProducts"]
 
 
 
@@ -100,63 +101,82 @@ class BuildPlan:
         finally:
             os.chdir(cwd)
 
-    def execute_remote_ssh(self, root, hostname, *, connect_args = {}):
+    def execute_remote_ssh(self, *, connect_to = {}, root, run_script=True):
         """
         Execute build plan using the remote SSH strategy. Files from the build
-        plan are transferred via SFTP to the directory ``root`` on the remote
-        server ``hostname``. The ``paramiko`` SSH client will then run ``{script}.sh``.
+        plan are transferred via SFTP to the directory ``root`` on a  remote
+        server. If ``run_script`` is ``True``, the ``paramiko`` SSH client will
+        then run ``{script}.sh``. ``root`` can either be an absolute or
+        relative (to the login directory) path.
 
-        ``hostname`` corresponds to the first (required) input argument of ``paramiko``'s
-        ``SSHClient.connect``, and ``connect_args`` is a dictionary that holds
-        all other input arguments to ``SSHClient.connect``
+        ``connect_to`` is a dictionary that holds all input arguments to
+        ``paramiko``'s ``SSHClient.connect``
         (`documentation <http://docs.paramiko.org/en/stable/api/client.html#paramiko.client.SSHClient.connect>`_).
+        At a minimum, the ``hostname`` input argument must be supplied in this
+        dictionary as the remote server.
 
-        Returns :class:`RemoteSshBuildProducts`.
+        Returns :class:`RemoteSSHBuildProducts`.
         """
         from paramiko import SSHClient
 
         with SSHClient() as client:
             client.load_system_host_keys()
-            client.connect(hostname, **connect_args)
+            client.connect(**connect_to)
 
             with client.open_sftp() as sftp:
-                try:
-                    sftp.mkdir(root)
-                except IOError as e:
-                    pass # mkdir fails if directory exists. This is fine.
+                def mkdir_exist_ok(path):
+                    try:
+                        sftp.mkdir(str(path))
+                    except IOError as e:
+                        # mkdir fails if directory exists. This is fine in nmigen.build.
+                        # Reraise errors containing e.errno info.
+                        if e.errno:
+                            raise e
+
+                def mkdirs(path):
+                    # Iteratively create parent directories of a file by iterating over all
+                    # parents except for the root ("."). Slicing the parents results in
+                    # TypeError, so skip over the root ("."); this also handles files
+                    # already in the root directory.
+                    for parent in reversed(path.parents):
+                        if parent == pathlib.PurePosixPath("."):
+                            continue
+                        else:
+                            mkdir_exist_ok(parent)
+
+                mkdir_exist_ok(root)
 
                 sftp.chdir(root)
                 for filename, content in self.files.items():
-                    filename = os.path.normpath(filename)
+                    filename = pathlib.PurePosixPath(filename)
                     # Just to make sure we don't accidentally overwrite anything outside of build root.
-                    assert not filename.startswith("..")
+                    assert not filename.parts[0] == ".."
 
-                    dirname = os.path.dirname(filename)
-                    if dirname:
-                        try:
-                            sftp.mkdir(dirname, exist_ok=True)
-                        except IOError as e:
-                            pass
+                    mkdirs(filename)
 
                     mode = "wt" if isinstance(content, str) else "wb"
-                    with sftp.file(filename, mode) as f:
-                        f.write(content)
+                    with sftp.file(str(filename), mode) as f:
+                        # "b/t" modifier ignored in SFTP.
+                        if mode == "wt":
+                            f.write(content.encode("utf-8"))
+                        else:
+                            f.write(content)
 
-            cmd = "cd {} && bash -l {}.sh".format(root, self.script)
-            stdin, stdout, stderr = client.exec_command(cmd)
+            if run_script:
+                transport = client.get_transport()
+                channel = transport.open_session()
+                channel.set_combine_stderr(True)
 
-            # Show the output from the server while products are built.
-            buf = stdout.read(1024)
-            while buf:
-                print(buf.decode("utf-8"), end="")
-                buf = stdout.read(1024)
+                cmd = "if [ -f ~/.profile ]; then . ~/.profile; fi && cd {} && sh {}.sh".format(root, self.script)
+                channel.exec_command(cmd)
 
-            buf_err = stderr.read(1024)
-            while buf_err:
-                print(buf_err.decode("utf-8"), file=sys.stderr, end="")
-                buf_err = stderr.read(1024)
+                # Show the output from the server while products are built.
+                buf = channel.recv(1024)
+                while buf:
+                    print(buf.decode("utf-8"), end="")
+                    buf = channel.recv(1024)
 
-        return RemoteSshBuildProducts(root, hostname, connect_args)
+        return RemoteSSHBuildProducts(connect_to, root)
 
     def execute(self):
         """
@@ -223,11 +243,10 @@ class LocalBuildProducts(BuildProducts):
             return f.read()
 
 
-class RemoteSshBuildProducts(BuildProducts):
-    def __init__(self, root, hostname, connect_args):
+class RemoteSSHBuildProducts(BuildProducts):
+    def __init__(self, connect_to, root):
+        self.__connect_to = connect_to
         self.__root = root
-        self.__hostname = hostname
-        self.__connect_args = connect_args
 
     def get(self, filename, mode="b"):
         super().get(filename, mode)
@@ -236,10 +255,14 @@ class RemoteSshBuildProducts(BuildProducts):
 
         with SSHClient() as client:
             client.load_system_host_keys()
-            client.connect(self.__hostname, **self.__connect_args)
+            client.connect(**self.__connect_to)
 
             with client.open_sftp() as sftp:
                 sftp.chdir(self.__root)
 
                 with sftp.file(filename, "r" + mode) as f:
-                    return f.read()
+                    # "b/t" modifier ignored in SFTP.
+                    if mode == "t":
+                        return f.read().decode("utf-8")
+                    else:
+                        return f.read()
