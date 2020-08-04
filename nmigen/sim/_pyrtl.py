@@ -354,7 +354,11 @@ class _StatementCompiler(StatementVisitor, _Compiler):
                 self(stmts)
 
     def on_Assert(self, stmt):
-        raise NotImplementedError # :nocov:
+        gen_test = self.emitter.def_var("test",
+            f"{self.rhs(stmt.test)} & {(1 << len(stmt.test)) - 1}")
+        self.emitter.append(f"if not {gen_test}:")
+        with self.emitter.indent():
+            self.emitter.append(f"raise AssertionError(\"Assertion failed at {stmt.src_loc[0]}:{stmt.src_loc[1]}\")")
 
     def on_Assume(self, stmt):
         raise NotImplementedError # :nocov:
