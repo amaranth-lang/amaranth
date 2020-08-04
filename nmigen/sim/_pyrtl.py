@@ -360,8 +360,7 @@ class _StatementCompiler(StatementVisitor, _Compiler):
         with self.emitter.indent():
             self.emitter.append(f"raise AssertionError(\"Assertion failed at {stmt.src_loc[0]}:{stmt.src_loc[1]}\")")
 
-    def on_Assume(self, stmt):
-        raise NotImplementedError # :nocov:
+    on_Assume = on_Assert
 
     def on_Cover(self, stmt):
         raise NotImplementedError # :nocov:
