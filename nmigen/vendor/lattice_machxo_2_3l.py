@@ -28,7 +28,9 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         * ``{{name}}_impl/{{name}}_impl.htm``: consolidated log.
         * ``{{name}}.jed``: JEDEC fuse file.
         * ``{{name}}.bit``: binary bitstream.
-        * ``{{name}}.svf``: JTAG programming vector.
+        * ``{{name}}.svf``: JTAG programming vector for FLASH programming.
+        * ``{{name}}_flash.svf``: JTAG programming vector for FLASH programming.
+        * ``{{name}}_sram.svf``: JTAG programming vector for SRAM programming.
     """
 
     toolchain = "Diamond"
@@ -127,7 +129,20 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         r"""
         {{invoke_tool("ddtcmd")}}
             -oft -svfsingle -revd -op "FLASH Erase,Program,Verify"
-            -if {{name}}_impl/{{name}}_impl.jed -of {{name}}.svf
+            -if {{name}}_impl/{{name}}_impl.jed -of {{name}}_flash.svf
+        """,
+        # TODO(nmigen-0.4): remove
+        r"""
+        {% if syntax == "bat" -%}
+        copy {{name}}_flash.svf {{name}}.svf
+        {% else -%}
+        cp {{name}}_flash.svf {{name}}.svf
+        {% endif %}
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -svfsingle -revd -op "SRAM Fast Program"
+            -if {{name}}_impl/{{name}}_impl.bit -of {{name}}_sram.svf
         """,
     ]
 
