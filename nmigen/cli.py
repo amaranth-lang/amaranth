@@ -1,7 +1,7 @@
 import argparse
 
 from .hdl.ir import Fragment
-from .back import rtlil, cxxrtl, verilog, json, firrtl, pysim
+from .back import rtlil, cxxrtl, verilog, dot, json, firrtl, pysim
 
 
 __all__ = ["main"]
@@ -16,9 +16,9 @@ def main_parser(parser=None):
     p_generate = p_action.add_parser("generate",
         help="generate RTLIL or Verilog from the design")
     p_generate.add_argument("-t", "--type", dest="generate_type",
-        metavar="LANGUAGE", choices=["il", "cc", "v", "json", "fir"],
+        metavar="LANGUAGE", choices=["il", "cc", "v", "dot", "json", "fir"],
         default=None,
-        help="generate LANGUAGE (il for RTLIL, v for Verilog, fir for FIRRTL, json; default: %(default)s)")
+        help="generate LANGUAGE (il for RTLIL, v for Verilog, fir for FIRRTL, dot, json; default: %(default)s)")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
@@ -52,6 +52,8 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
                 generate_type = "cc"
             if args.generate_file.name.endswith(".v"):
                 generate_type = "v"
+            if args.generate_file.name.endswith(".dot"):
+                generate_type = "dot"
             if args.generate_file.name.endswith(".json"):
                 generate_type = "json"
             if args.generate_file.name.endswith(".fir"):
@@ -64,6 +66,8 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
             output = cxxrtl.convert(fragment, name=name, ports=ports)
         if generate_type == "v":
             output = verilog.convert(fragment, name=name, ports=ports)
+        if generate_type == "dot":
+            output = dot.convert(fragment, name=name, ports=ports)
         if generate_type == "json":
             output = json.convert(fragment, name=name, ports=ports)
         if generate_type == "fir":
