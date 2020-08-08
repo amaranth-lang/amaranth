@@ -1,3 +1,5 @@
+import subprocess
+import textwrap
 from abc import abstractproperty
 
 from ..hdl import *
@@ -438,3 +440,18 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         ]
 
         return m
+
+    def toolchain_program(self, product, name):
+        # Generic vivado FPGA programmig script.
+        # Assumes one board with the right FPGA is connected
+        with product.extract("{}.bit".format(name)) as bitstream_filename:
+            cmd = textwrap.dedent("""
+                open_hw_manager
+                connect_hw_server
+                open_hw_target
+                current_hw_device [lindex [get_hw_devices] 0]
+                set_property PROGRAM.FILE {{{}}} [current_hw_device]
+                program_hw_devices
+                close_hw_manager
+            """).format(bitstream_filename).encode("utf-8")
+            subprocess.run(["vivado", "-nolog", "-nojournal", "-mode", "tcl"], input=cmd, check=True)
