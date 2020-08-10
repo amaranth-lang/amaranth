@@ -200,7 +200,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             {{emit_debug_verilog()}}
         """,
         "{{name}}.tcl": r"""
-            prj_project new -name {{name}} -impl impl -impl_dir top_impl \
+            prj_project new -name {{name}} -impl impl -impl_dir {{name}}_impl \
                 -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}} \
                 -lpf {{name}}.lpf \
                 -synthesis synplify
