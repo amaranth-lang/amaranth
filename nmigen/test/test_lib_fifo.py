@@ -70,6 +70,8 @@ class FIFOModel(Elaboratable, FIFOInterface):
         self.w_domain = w_domain
 
         self.level = Signal(range(self.depth + 1))
+        self.r_level = Signal(range(self.depth + 1))
+        self.w_level = Signal(range(self.depth + 1))
 
     def elaborate(self, platform):
         m = Module()
@@ -104,6 +106,10 @@ class FIFOModel(Elaboratable, FIFOInterface):
                 + (self.w_rdy & self.w_en)
                 - (self.r_rdy & self.r_en))
 
+        m.d.comb += [
+            self.r_level.eq(self.level),
+            self.w_level.eq(self.level),
+        ]
         m.d.comb += Assert(ResetSignal(self.r_domain) == ResetSignal(self.w_domain))
 
         return m
@@ -135,8 +141,8 @@ class FIFOModelEquivalenceSpec(Elaboratable):
 
         m.d.comb += Assert(dut.r_rdy.implies(gold.r_rdy))
         m.d.comb += Assert(dut.w_rdy.implies(gold.w_rdy))
-        if hasattr(dut, "level"):
-            m.d.comb += Assert(dut.level == gold.level)
+        m.d.comb += Assert(dut.r_level == gold.r_level)
+        m.d.comb += Assert(dut.w_level == gold.w_level)
 
         if dut.fwft:
             m.d.comb += Assert(dut.r_rdy
