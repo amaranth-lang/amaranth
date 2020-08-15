@@ -625,10 +625,10 @@ Operation               Description                                      Notes
 ``len(a)``              bit length; value width                          [#opS1]_
 ``a[i:j:k]``            bit slicing by constant subscripts               [#opS2]_
 ``iter(a)``             bit iteration
-``a.bit_select(b, i)``  overlapping part select with variable offset
-``a.word_select(b, i)`` non-overlapping part select with variable offset
+``a.bit_select(b, w)``  overlapping part select with variable offset
+``a.word_select(b, w)`` non-overlapping part select with variable offset
 ``Cat(a, b)``           concatenation                                    [#opS3]_
-``Repl(a, i)``          replication
+``Repl(a, n)``          replication
 ======================= ================================================ ======
 
 .. [#opS1] Words "length" and "width" have the same meaning when talking about nMigen values. Conventionally, "width" is used.
@@ -641,9 +641,9 @@ For the operators introduced by nMigen, the following table explains them in ter
 nMigen operation        Equivalent Python code
 ======================= ======================
 ``Cat(a, b)``           ``a + b``
-``Repl(a, i)``          ``a * i``
-``a.bit_select(b, i)``  ``a[b:b+i]``
-``a.word_select(b, i)`` ``a[b*i:b*i+i]``
+``Repl(a, n)``          ``a * n``
+``a.bit_select(b, w)``  ``a[b:b+w]``
+``a.word_select(b, w)`` ``a[b*w:b*w+w]``
 ======================= ======================
 
 .. warning::
