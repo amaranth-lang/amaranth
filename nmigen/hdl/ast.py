@@ -1199,7 +1199,7 @@ class ArrayProxy(Value):
     def shape(self):
         width, signed = 0, False
         for elem_width, elem_signed in (elem.shape() for elem in self._iter_as_values()):
-            width  = max(width, elem_width + elem_signed)
+            width  = max(width, elem_width)
             signed = max(signed, elem_signed)
         return Shape(width, signed)
 
