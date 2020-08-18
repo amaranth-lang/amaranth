@@ -282,6 +282,7 @@ class FIFOFormalCase(FHDLTestCase):
         self.check_async_fifo(AsyncFIFOBuffered(width=8, depth=4))
 
 
+# we need this testcase because we cant do model equivalence checking on the async fifos (at the moment)
 class AsyncFIFOSimCase(FHDLTestCase):
     def test_async_fifo_r_level_latency(self):
         fifo = AsyncFIFO(width=32, depth=10, r_domain="sync", w_domain="sync")
@@ -331,6 +332,18 @@ class AsyncFIFOSimCase(FHDLTestCase):
         with simulator.write_vcd("test.vcd"):
             simulator.run()
 
+    def test_async_fifo_level(self):
+        fifo = AsyncFIFO(width=32, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_level(fifo, fill_in=5, expected_level=5)
+
     def test_async_fifo_level_full(self):
         fifo = AsyncFIFO(width=32, depth=8, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=10, expected_level=8)
+
+    def test_async_buffered_fifo_level(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
+        self.check_async_fifo_level(fifo, fill_in=5, expected_level=5)
+
+    def test_async_buffered_fifo_level_full(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
+        self.check_async_fifo_level(fifo, fill_in=10, expected_level=9)
