@@ -506,10 +506,15 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
             fifo.w_data.eq(self.w_data),
             self.w_rdy.eq(fifo.w_rdy),
             fifo.w_en.eq(self.w_en),
-            self.w_level.eq(fifo.w_level),
         ]
 
-        m.d[self._r_domain] += self.r_level.eq(fifo.r_level + self.r_rdy - self.r_en)
+        r_consume_buffered = Signal()
+        m.d.comb += r_consume_buffered.eq(self.r_rdy - self.r_en)
+        m.d[self._r_domain] += self.r_level.eq(fifo.r_level + r_consume_buffered)
+
+        w_consume_buffered = Signal()
+        m.submodules.consume_buffered_cdc = AsyncFFSynchronizer(r_consume_buffered, w_consume_buffered, o_domain=self._w_domain)
+        m.d.comb += self.w_level.eq(fifo.w_level + w_consume_buffered)
 
         with m.If(self.r_en | ~self.r_rdy):
             m.d[self._r_domain] += [
