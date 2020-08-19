@@ -66,6 +66,11 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0b01, unsigned(2)), C(0b0001, signed(4))], C(1))
         self.assertStatement(stmt, [C(0b11, unsigned(2)), C(0b1111, signed(4))], C(1))
 
+    def test_to_signed(self):
+        stmt = lambda y, a, b: y.eq(a.to_signed() == b)
+        self.assertStatement(stmt, [C(0b01, unsigned(2)), C(0b0001, signed(4))], C(1))
+        self.assertStatement(stmt, [C(0b11, unsigned(2)), C(0b0011, signed(4))], C(1))
+
     def test_any(self):
         stmt = lambda y, a: y.eq(a.any())
         self.assertStatement(stmt, [C(0b00, 2)], C(0))

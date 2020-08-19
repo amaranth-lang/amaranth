@@ -286,6 +286,19 @@ class Value(metaclass=ABCMeta):
         """
         return Operator("s", [self])
 
+    def to_signed(self):
+        """Conversion to signed, preserving the original value.
+
+        Returns
+        -------
+        Value, out
+            This ``Value`` converted to a signed integer.
+        """
+        if self.shape().signed:
+            return self
+        else:
+            return Cat(self, Const(0)).as_signed()
+
     def bool(self):
         """Conversion to boolean.
 

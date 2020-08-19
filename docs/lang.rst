@@ -664,6 +664,8 @@ Conversion operators
 
 The ``.as_signed()`` and ``.as_unsigned()`` conversion operators reinterpret the bits of a value with the requested signedness. This is useful when the same value is sometimes treated as signed and sometimes as unsigned, or when a signed value is constructed using slices or concatenations. For example, ``(pc + imm[:7].as_signed()).as_unsigned()`` sign-extends the 7 least significant bits of ``imm`` to the width of ``pc``, performs the addition, and produces an unsigned result.
 
+The ``.to_signed()`` conversion operator converts the value to signed, extending it by one bit, to preserve it's numerical value.
+
 .. TODO: more general shape conversion? https://github.com/nmigen/nmigen/issues/381
 
 
