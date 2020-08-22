@@ -2,7 +2,7 @@ import functools
 import inspect
 from collections.abc import Iterable
 from ...hdl.cd import ClockDomain
-from ...back.pysim import *
+from ...sim.pysim import *
 from ...hdl.ir import Fragment
 
 

@@ -3,7 +3,7 @@
 from .utils import *
 from ..hdl import *
 from ..asserts import *
-from ..back.pysim import *
+from ..sim.pysim import *
 from ..lib.fifo import *
 
 

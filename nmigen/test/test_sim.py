@@ -9,7 +9,7 @@ from ..hdl.mem import *
 from ..hdl.rec import *
 from ..hdl.dsl import  *
 from ..hdl.ir import *
-from ..back.pysim import *
+from ..sim.pysim import *
 
 
 class SimulatorUnitTestCase(FHDLTestCase):
