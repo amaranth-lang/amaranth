@@ -14,11 +14,10 @@ def main_parser(parser=None):
     p_action = parser.add_subparsers(dest="action")
 
     p_generate = p_action.add_parser("generate",
-        help="generate RTLIL or Verilog from the design")
+        help="generate RTLIL, Verilog or CXXRTL from the design")
     p_generate.add_argument("-t", "--type", dest="generate_type",
         metavar="LANGUAGE", choices=["il", "cc", "v"],
-        default=None,
-        help="generate LANGUAGE (il for RTLIL, v for Verilog; default: %(default)s)")
+        help="generate LANGUAGE (il for RTLIL, v for Verilog, cc for CXXRTL; default: file extension of FILE, if given)")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
@@ -53,7 +52,7 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
             if args.generate_file.name.endswith(".v"):
                 generate_type = "v"
         if generate_type is None:
-            parser.error("specify file type explicitly with -t")
+            parser.error("Unable to auto-detect language, specify explicitly with -t/--type")
         if generate_type == "il":
             output = rtlil.convert(fragment, name=name, ports=ports)
         if generate_type == "cc":
