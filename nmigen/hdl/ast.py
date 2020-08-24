@@ -1197,11 +1197,20 @@ class ArrayProxy(Value):
         return (Value.cast(elem) for elem in self.elems)
 
     def shape(self):
-        width, signed = 0, False
-        for elem_width, elem_signed in (elem.shape() for elem in self._iter_as_values()):
-            width  = max(width, elem_width + elem_signed)
-            signed = max(signed, elem_signed)
-        return Shape(width, signed)
+        shapes = [elem.shape() for elem in self._iter_as_values()]
+        widths, signs = zip(*shapes)
+        any_signed = max(signs)
+        any_unsigned = not min(signs)
+        # a mix of signed and unsigned numbers?
+        mixed_sign = any_signed and any_unsigned
+        if not mixed_sign:
+            width  = max(widths)
+            return Shape(width, any_signed)
+        else:
+            # in the mixed case, unsigned need an extra bit
+            # otherwise the MSB would turn them negative
+            width = max(s.width + (not s.signed) for s in shapes)
+            return Shape(width, True)
 
     def _lhs_signals(self):
         signals = union((elem._lhs_signals() for elem in self._iter_as_values()),

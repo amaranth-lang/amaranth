@@ -806,7 +806,27 @@ class ArrayProxyTestCase(FHDLTestCase):
         s = Signal(range(len(a)))
         v = a[s]
         self.assertEqual(v.p.shape(), unsigned(4))
-        self.assertEqual(v.n.shape(), signed(6))
+        self.assertEqual(v.n.shape(), signed(5))
+
+    def test_attr_shape_signed(self):
+        # 1 bits signed
+        a = Array([-1, -1])
+        v = a[Const(0)]
+        self.assertEqual(v.shape(), signed(1))
+        # 1 bit unsigned
+        a = Array([1, 1])
+        v = a[Const(0)]
+        self.assertEqual(v.shape(), unsigned(1))
+        # needs 2 bits to represent signed(1)
+        a = Array([1, -1])
+        v = a[Const(0)]
+        self.assertEqual(v.shape(), signed(2))
+
+        # needs 2 bits to represent signed(-2) and signed(1)
+        a = Array([1, -2])
+        v = a[Const(0)]
+        self.assertEqual(v.shape(), signed(2))
+
 
     def test_repr(self):
         a = Array([1, 2, 3])
