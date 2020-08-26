@@ -1197,11 +1197,27 @@ class ArrayProxy(Value):
         return (Value.cast(elem) for elem in self.elems)
 
     def shape(self):
-        width, signed = 0, False
+        unsigned_width = signed_width = 0
+        has_unsigned = has_signed = False
         for elem_width, elem_signed in (elem.shape() for elem in self._iter_as_values()):
-            width  = max(width, elem_width + elem_signed)
-            signed = max(signed, elem_signed)
-        return Shape(width, signed)
+            if elem_signed:
+                has_signed = True
+                signed_width = max(signed_width, elem_width)
+            else:
+                has_unsigned = True
+                unsigned_width = max(unsigned_width, elem_width)
+        # The shape of the proxy must be such that it preserves the mathematical value of the array
+        # elements. I.e., shape-wise, an array proxy must be identical to an equivalent mux tree.
+        # To ensure this holds, if the array contains both signed and unsigned values, make sure
+        # that every unsigned value is zero-extended by at least one bit.
+        if has_signed and has_unsigned and unsigned_width >= signed_width:
+            # Array contains both signed and unsigned values, and at least one of the unsigned
+            # values won't be zero-extended otherwise.
+            return signed(unsigned_width + 1)
+        else:
+            # Array contains values of the same signedness, or else all of the unsigned values
+            # are zero-extended.
+            return Shape(max(unsigned_width, signed_width), has_signed)
 
     def _lhs_signals(self):
         signals = union((elem._lhs_signals() for elem in self._iter_as_values()),
