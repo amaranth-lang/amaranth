@@ -116,7 +116,7 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "~":
                 return f"(~{self(arg)})"
             if value.operator == "-":
-                return f"(-{self(arg)})"
+                return f"(-{sign(arg)})"
             if value.operator == "b":
                 return f"bool({mask(arg)})"
             if value.operator == "r|":

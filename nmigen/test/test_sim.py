@@ -365,6 +365,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0b1000000)], C(0b0000010))
         self.assertStatement(stmt, [C(0b1000001)], C(0b0000110))
 
+
 class SimulatorIntegrationTestCase(FHDLTestCase):
     @contextmanager
     def assertSimulation(self, module, deadline=None):
@@ -788,3 +789,10 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         dut = Module()
         dut.d.comb += Signal().eq(Repl(Const(1), 0))
         Simulator(dut).run()
+
+    def test_bug_473(self):
+        sim = Simulator(Module())
+        def process():
+            self.assertEqual((yield -(Const(0b11, 2).as_signed())), 1)
+        sim.add_process(process)
+        sim.run()
