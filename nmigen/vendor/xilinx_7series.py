@@ -473,7 +473,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_tristate(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_tristate(pin, port, attrs, invert)
 
         self._check_feature("single-ended tristate", pin, attrs,
@@ -489,7 +489,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_input_output(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_input_output(pin, port, attrs, invert)
 
         self._check_feature("single-ended input/output", pin, attrs,
@@ -506,7 +506,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_input(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_diff_input(pin, port, attrs, invert)
 
         self._check_feature("differential input", pin, attrs,
@@ -521,7 +521,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_output(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_diff_output(pin, port, attrs, invert)
 
         self._check_feature("differential output", pin, attrs,
@@ -536,7 +536,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_tristate(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_diff_tristate(pin, port, attrs, invert)
 
         self._check_feature("differential tristate", pin, attrs,
@@ -552,7 +552,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
         return m
 
     def get_diff_input_output(self, pin, port, attrs, invert):
-        if toolchain == "Symbiflow":
+        if self.toolchain == "Symbiflow":
             return super().get_diff_input_output(pin, port, attrs, invert)
 
         self._check_feature("differential input/output", pin, attrs,
