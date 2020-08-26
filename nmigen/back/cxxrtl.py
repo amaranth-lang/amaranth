@@ -18,8 +18,7 @@ def _convert_rtlil_text(rtlil_text, black_boxes, *, src_loc_at=0):
                 raise TypeError("CXXRTL black box source code must be a string, not {!r}"
                                 .format(box_source))
 
-     # FIXME: update this requirement once Yosys updates its node version
-    yosys = find_yosys(lambda ver: ver >= (0, 9))
+    yosys = find_yosys(lambda ver: ver >= (0, 9, 3468))
 
     script = []
     if black_boxes is not None:
