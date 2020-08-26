@@ -831,6 +831,11 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         verilog_trigger = None
         verilog_trigger_sync_emitted = False
 
+        # If the fragment is completely empty, add a dummy wire to it, or Yosys will interpret
+        # it as a black box by default (when read as Verilog).
+        if not fragment.ports and not fragment.statements and not fragment.subfragments:
+            module.wire(1, name="$empty_module_filler")
+
         # Register all signals driven in the current fragment. This must be done first, as it
         # affects further codegen; e.g. whether \sig$next signals will be generated and used.
         for domain, signal in fragment.iter_drivers():
@@ -855,9 +860,6 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # name) names.
         memories = OrderedDict()
         for subfragment, sub_name in fragment.subfragments:
-            if not subfragment.ports:
-                continue
-
             if sub_name is None:
                 sub_name = module.anonymous()
 
