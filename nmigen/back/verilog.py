@@ -13,8 +13,9 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
     script = []
     script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
 
-    if yosys_version >= (0, 9, 231):
-        # Yosys 0.9 release has buggy proc_prune.
+    if yosys_version >= (0, 9, 3468):
+        # Yosys >=0.9+3468 (since commit f3d7e9a1) emits Verilog without a possible sim/synth
+        # mismatch, making $verilog_initial_trigger unnecessary.
         script.append("delete w:$verilog_initial_trigger")
         script.append("proc_prune")
     script.append("proc_init")
