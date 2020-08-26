@@ -168,12 +168,10 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
             ready = Signal()
             m.submodules += Instance("STARTUPE3", o_EOS=ready)
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
-            # Actually use BUFGCTRL configured as BUFGCE, since using BUFGCE causes sim/synth
-            # mismatches with Vivado 2019.2, and the suggested workaround (SIM_DEVICE parameter)
-            # breaks Vivado 2017.4.
-            m.submodules += Instance("BUFGCTRL",
-                i_I0=clk_i,   i_S0=C(1, 1), i_CE0=ready,   i_IGNORE0=C(0, 1),
-                i_I1=C(1, 1), i_S1=C(0, 1), i_CE1=C(0, 1), i_IGNORE1=C(1, 1),
+            m.submodules += Instance("BUFGCE",
+                p_SIM_DEVICE="ULTRASCALE",
+                i_CE=ready,
+                i_I=clk_i,
                 o_O=ClockSignal("sync")
             )
             if self.default_rst is not None:
