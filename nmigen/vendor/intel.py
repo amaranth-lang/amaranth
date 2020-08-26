@@ -402,7 +402,7 @@ class IntelPlatform(TemplatedPlatform):
         if async_ff_sync._edge == "pos":
             m.submodules += Instance("altera_std_synchronizer",
                 p_depth=async_ff_sync._stages,
-                i_clk=ClockSignal(async_ff_sync._domain),
+                i_clk=ClockSignal(async_ff_sync._o_domain),
                 i_reset_n=~async_ff_sync.i,
                 i_din=Const(1),
                 o_dout=sync_output,
@@ -410,7 +410,7 @@ class IntelPlatform(TemplatedPlatform):
         else:
             m.submodules += Instance("altera_std_synchronizer",
                 p_depth=async_ff_sync._stages,
-                i_clk=ClockSignal(async_ff_sync._domain),
+                i_clk=ClockSignal(async_ff_sync._o_domain),
                 i_reset_n=async_ff_sync.i,
                 i_din=Const(1),
                 o_dout=sync_output,

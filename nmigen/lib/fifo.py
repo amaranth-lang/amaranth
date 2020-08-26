@@ -413,10 +413,10 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         # full discussion.
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
-        
+
         # Async-set-sync-release synchronizer avoids CDC hazards
         rst_cdc = m.submodules.rst_cdc = \
-            AsyncFFSynchronizer(w_rst, r_rst, domain=self._r_domain)
+            AsyncFFSynchronizer(w_rst, r_rst, o_domain=self._r_domain)
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.

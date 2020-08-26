@@ -109,7 +109,7 @@ class AsyncFFSynchronizer(Elaboratable):
         Asynchronous input signal, to be synchronized.
     o : Signal(1), out
         Synchronously released output signal.
-    domain : str
+    o_domain : str
         Name of clock domain to synchronize to.
     stages : int, >=2
         Number of synchronization stages between input and output. The lowest safe number is 2,
@@ -125,13 +125,13 @@ class AsyncFFSynchronizer(Elaboratable):
     Define the ``get_async_ff_sync`` platform method to override the implementation of
     :class:`AsyncFFSynchronizer`, e.g. to instantiate library cells directly.
     """
-    def __init__(self, i, o, *, domain="sync", stages=2, async_edge="pos", max_input_delay=None):
+    def __init__(self, i, o, *, o_domain="sync", stages=2, async_edge="pos", max_input_delay=None):
         _check_stages(stages)
 
         self.i = i
         self.o = o
 
-        self._domain = domain
+        self._o_domain = o_domain
         self._stages = stages
 
         if async_edge not in ("pos", "neg"):
@@ -164,7 +164,7 @@ class AsyncFFSynchronizer(Elaboratable):
             m.d.comb += ResetSignal("async_ff").eq(~self.i)
 
         m.d.comb += [
-            ClockSignal("async_ff").eq(ClockSignal(self._domain)),
+            ClockSignal("async_ff").eq(ClockSignal(self._o_domain)),
             self.o.eq(flops[-1])
         ]
 
@@ -212,7 +212,7 @@ class ResetSynchronizer(Elaboratable):
         self._max_input_delay = max_input_delay
 
     def elaborate(self, platform):
-        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), domain=self._domain,
+        return AsyncFFSynchronizer(self.arst, ResetSignal(self._domain), o_domain=self._domain,
                 stages=self._stages, max_input_delay=self._max_input_delay)
 
 

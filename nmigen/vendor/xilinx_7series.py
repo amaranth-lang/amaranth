@@ -613,7 +613,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             m.d.comb += ResetSignal("async_ff").eq(~async_ff_sync.i)
 
         m.d.comb += [
-            ClockSignal("async_ff").eq(ClockSignal(async_ff_sync._domain)),
+            ClockSignal("async_ff").eq(ClockSignal(async_ff_sync._o_domain)),
             async_ff_sync.o.eq(flops[-1])
         ]
 
