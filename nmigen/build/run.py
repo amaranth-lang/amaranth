@@ -76,9 +76,10 @@ class BuildPlan:
             os.chdir(root)
 
             for filename, content in self.files.items():
-                filename = os.path.normpath(filename)
-                # Just to make sure we don't accidentally overwrite anything outside of build root.
-                assert not filename.startswith("..")
+                filename = pathlib.Path(filename)
+                # Forbid parent directory components completely to avoid the possibility
+                # of writing outside the build root.
+                assert ".." not in filename.parts
                 dirname = os.path.dirname(filename)
                 if dirname:
                     os.makedirs(dirname, exist_ok=True)
@@ -149,9 +150,6 @@ class BuildPlan:
                 sftp.chdir(root)
                 for filename, content in self.files.items():
                     filename = pathlib.PurePosixPath(filename)
-                    # Forbid parent directory components completely to avoid the possibility
-                    # of writing outside the build root. We can't use normpath to remove ".."
-                    # because we may be running on Windows, but the remote is a *nix machine.
                     assert ".." not in filename.parts
 
                     mkdirs(filename)
