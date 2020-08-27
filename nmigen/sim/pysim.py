@@ -11,6 +11,7 @@ from ._cmds import *
 from ._core import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
+from ._pyclock import PyClockProcess
 
 
 __all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
@@ -299,27 +300,12 @@ class Simulator:
             raise ValueError("Domain {!r} already has a clock driving it"
                              .format(domain.name))
 
-        half_period = period / 2
         if phase is None:
             # By default, delay the first edge by half period. This causes any synchronous activity
             # to happen at a non-zero time, distinguishing it from the reset values in the waveform
             # viewer.
-            phase = half_period
-        def clk_process():
-            yield Passive()
-            yield Delay(phase)
-            # Behave correctly if the process is added after the clock signal is manipulated, or if
-            # its reset state is high.
-            initial = (yield domain.clk)
-            steps = (
-                domain.clk.eq(~initial),
-                Delay(half_period),
-                domain.clk.eq(initial),
-                Delay(half_period),
-            )
-            while True:
-                yield from iter(steps)
-        self._add_coroutine_process(clk_process, default_cmd=None)
+            phase = period / 2
+        self._processes.add(PyClockProcess(self._state, domain.clk, phase=phase, period=period))
         self._clocked.add(domain)
 
     def reset(self):
