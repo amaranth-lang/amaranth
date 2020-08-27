@@ -1,4 +1,5 @@
-from ..hdl.cd import *
+from nmigen.hdl.cd import *
+
 from .utils import *
 
 

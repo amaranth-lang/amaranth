@@ -5,13 +5,12 @@ import subprocess
 import textwrap
 import traceback
 import unittest
-import warnings
 from contextlib import contextmanager
 
-from ..hdl.ast import *
-from ..hdl.ir import *
-from ..back import rtlil
-from .._toolchain import require_tool
+from nmigen.hdl.ast import *
+from nmigen.hdl.ir import *
+from nmigen.back import rtlil
+from nmigen._toolchain import require_tool
 
 
 __all__ = ["FHDLTestCase"]

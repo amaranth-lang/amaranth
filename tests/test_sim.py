@@ -1,15 +1,16 @@
 import os
 from contextlib import contextmanager
 
+from nmigen._utils import flatten, union
+from nmigen.hdl.ast import *
+from nmigen.hdl.cd import  *
+from nmigen.hdl.mem import *
+from nmigen.hdl.rec import *
+from nmigen.hdl.dsl import  *
+from nmigen.hdl.ir import *
+from nmigen.back.pysim import *
+
 from .utils import *
-from .._utils import flatten, union
-from ..hdl.ast import *
-from ..hdl.cd import  *
-from ..hdl.mem import *
-from ..hdl.rec import *
-from ..hdl.dsl import  *
-from ..hdl.ir import *
-from ..back.pysim import *
 
 
 class SimulatorUnitTestCase(FHDLTestCase):

@@ -1,5 +1,6 @@
-from .. import *
-from ..build.plat import *
+from nmigen import *
+from nmigen.build.plat import *
+
 from .utils import *
 
 

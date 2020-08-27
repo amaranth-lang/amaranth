@@ -1,5 +1,7 @@
 import unittest
-from ... import Signal, Module, Elaboratable
+
+from nmigen import Signal, Module, Elaboratable
+
 from .support import SimCase
 
 

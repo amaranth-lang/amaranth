@@ -1,6 +1,7 @@
 import unittest
 
-from ...compat import *
+from nmigen.compat import *
+
 from .support import SimCase
 
 

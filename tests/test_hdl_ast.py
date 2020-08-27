@@ -1,7 +1,8 @@
 import warnings
 from enum import Enum
 
-from ..hdl.ast import *
+from nmigen.hdl.ast import *
+
 from .utils import *
 
 

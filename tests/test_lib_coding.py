@@ -1,8 +1,9 @@
+from nmigen.hdl import *
+from nmigen.asserts import *
+from nmigen.back.pysim import *
+from nmigen.lib.coding import *
+
 from .utils import *
-from ..hdl import *
-from ..asserts import *
-from ..back.pysim import *
-from ..lib.coding import *
 
 
 class EncoderTestCase(FHDLTestCase):

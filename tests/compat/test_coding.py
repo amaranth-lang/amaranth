@@ -2,8 +2,8 @@
 
 import unittest
 
-from ...compat import *
-from ...compat.genlib.coding import *
+from nmigen.compat import *
+from nmigen.compat.genlib.coding import *
 
 from .support import SimCase
 

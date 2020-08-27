@@ -1,10 +1,11 @@
 # nmigen: UnusedElaboratable=no
 
+from nmigen.hdl import *
+from nmigen.asserts import *
+from nmigen.back.pysim import *
+from nmigen.lib.fifo import *
+
 from .utils import *
-from ..hdl import *
-from ..asserts import *
-from ..back.pysim import *
-from ..lib.fifo import *
 
 
 class FIFOTestCase(FHDLTestCase):

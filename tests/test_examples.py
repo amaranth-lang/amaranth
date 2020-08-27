@@ -6,7 +6,7 @@ from .utils import *
 
 
 def example_test(name):
-    path = (Path(__file__).parent / ".." / ".." / "examples" / name).resolve()
+    path = (Path(__file__).parent / ".." / "examples" / name).resolve()
     def test_function(self):
         subprocess.check_call([sys.executable, str(path), "generate", "-t", "v"],
                               stdout=subprocess.DEVNULL)
@@ -28,7 +28,6 @@ class ExamplesTestCase(FHDLTestCase):
     test_por        = example_test("basic/por.py")
 
     def test_uart(self):
-        path = (Path(__file__).parent / ".." / ".." / "examples" / "basic" / "uart.py").resolve()
-        def test_function(self):
-            subprocess.check_call([sys.executable, str(path), "generate"],
-                                  stdout=subprocess.DEVNULL)
+        path = (Path(__file__).parent / ".." / "examples" / "basic" / "uart.py").resolve()
+        subprocess.check_call([sys.executable, str(path), "generate"],
+                              stdout=subprocess.DEVNULL)

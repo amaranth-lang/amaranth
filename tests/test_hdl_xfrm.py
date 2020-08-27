@@ -1,10 +1,11 @@
 # nmigen: UnusedElaboratable=no
 
-from ..hdl.ast import *
-from ..hdl.cd import *
-from ..hdl.ir import *
-from ..hdl.xfrm import *
-from ..hdl.mem import *
+from nmigen.hdl.ast import *
+from nmigen.hdl.cd import *
+from nmigen.hdl.ir import *
+from nmigen.hdl.xfrm import *
+from nmigen.hdl.mem import *
+
 from .utils import *
 
 

@@ -1,8 +1,8 @@
 import unittest
 from itertools import count
 
-from ...compat import *
-from ...compat.genlib.fsm import FSM
+from nmigen.compat import *
+from nmigen.compat.genlib.fsm import FSM
 
 from .support import SimCase
 

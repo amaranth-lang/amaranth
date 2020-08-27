@@ -1,8 +1,9 @@
+from nmigen.hdl import *
+from nmigen.hdl.rec import *
+from nmigen.back.pysim import *
+from nmigen.lib.io import *
+
 from .utils import *
-from ..hdl import *
-from ..hdl.rec import *
-from ..back.pysim import *
-from ..lib.io import *
 
 
 class PinLayoutTestCase(FHDLTestCase):

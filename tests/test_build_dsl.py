@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
-from ..build.dsl import *
+from nmigen.build.dsl import *
+
 from .utils import *
 
 

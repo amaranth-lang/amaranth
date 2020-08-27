@@ -1,7 +1,8 @@
 from enum import Enum
 
-from ..hdl.ast import *
-from ..hdl.rec import *
+from nmigen.hdl.ast import *
+from nmigen.hdl.rec import *
+
 from .utils import *
 
 

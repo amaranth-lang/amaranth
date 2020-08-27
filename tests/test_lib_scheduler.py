@@ -1,10 +1,13 @@
 # nmigen: UnusedElaboratable=no
+
 import unittest
+
+from nmigen.hdl import *
+from nmigen.asserts import *
+from nmigen.sim.pysim import *
+from nmigen.lib.scheduler import *
+
 from .utils import *
-from ..hdl import *
-from ..asserts import *
-from ..sim.pysim import *
-from ..lib.scheduler import *
 
 
 class RoundRobinTestCase(unittest.TestCase):

@@ -1,5 +1,6 @@
-from ..hdl.ir import Fragment
-from ..compat import *
+from nmigen.hdl.ir import Fragment
+from nmigen.compat import *
+
 from .utils import *
 
 

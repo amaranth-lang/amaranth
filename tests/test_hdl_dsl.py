@@ -3,9 +3,10 @@
 from collections import OrderedDict
 from enum import Enum
 
-from ..hdl.ast import *
-from ..hdl.cd import *
-from ..hdl.dsl import *
+from nmigen.hdl.ast import *
+from nmigen.hdl.cd import *
+from nmigen.hdl.dsl import *
+
 from .utils import *
 
 

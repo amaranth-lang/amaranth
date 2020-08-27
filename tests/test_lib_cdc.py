@@ -1,9 +1,10 @@
 # nmigen: UnusedElaboratable=no
 
+from nmigen.hdl import *
+from nmigen.back.pysim import *
+from nmigen.lib.cdc import *
+
 from .utils import *
-from ..hdl import *
-from ..back.pysim import *
-from ..lib.cdc import *
 
 
 class FFSynchronizerTestCase(FHDLTestCase):

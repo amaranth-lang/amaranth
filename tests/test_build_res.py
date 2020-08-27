@@ -1,10 +1,11 @@
 # nmigen: UnusedElaboratable=no
 
-from .. import *
-from ..hdl.rec import *
-from ..lib.io import *
-from ..build.dsl import *
-from ..build.res import *
+from nmigen import *
+from nmigen.hdl.rec import *
+from nmigen.lib.io import *
+from nmigen.build.dsl import *
+from nmigen.build.res import *
+
 from .utils import *
 
 
