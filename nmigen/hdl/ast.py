@@ -254,7 +254,7 @@ class Value(metaclass=ABCMeta):
         n = len(self)
         if isinstance(key, int):
             if key not in range(-n, n):
-                raise IndexError("Cannot index {} bits into {}-bit value".format(key, n))
+                raise IndexError(f"Index {key} is out of bounds for a {n}-bit value")
             if key < 0:
                 key += n
             return Slice(self, key, key + 1)

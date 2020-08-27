@@ -187,7 +187,7 @@ class ValueTestCase(FHDLTestCase):
         self.assertEqual(s2.start, 3)
         self.assertEqual(s2.stop, 4)
         with self.assertRaisesRegex(IndexError,
-                r"^Cannot index 5 bits into 4-bit value$"):
+                r"^Index 5 is out of bounds for a 4-bit value$"):
             Const(10)[5]
 
     def test_getitem_slice(self):
