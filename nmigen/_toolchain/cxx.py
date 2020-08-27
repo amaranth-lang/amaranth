@@ -23,12 +23,17 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
         cc = sysconfig.get_config_var("CC")
         cxx = sysconfig.get_config_var("CXX")
         cflags = sysconfig.get_config_var("CCSHARED")
-        ld_ldflags = sysconfig.get_config_var("LDCXXSHARED")
+        ld_flags = sysconfig.get_config_var("LDSHARED")
+        ld_cxxflags = sysconfig.get_config_var("LDCXXSHARED")
+        if ld_cxxflags is None:
+            # PyPy doesn't have LDCXXSHARED. Glue it together from CXX and LDSHARED and hope that
+            # the result actually works; not many good options here.
+            ld_cxxflags = " ".join([cxx.split()[0], *ld_flags.split()[1:]])
         cc_driver.set_executables(
             compiler=f"{cc} {cflags}",
             compiler_so=f"{cc} {cflags}",
             compiler_cxx=f"{cxx} {cflags}",
-            linker_so=ld_ldflags,
+            linker_so=ld_cxxflags,
         )
 
         for include_dir in include_dirs:
