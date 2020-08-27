@@ -32,7 +32,9 @@ class PyCoroProcess(Process):
 
     def src_loc(self):
         coroutine = self.coroutine
-        while coroutine.gi_yieldfrom is not None:
+        if coroutine is None:
+            return None
+        while coroutine.gi_yieldfrom is not None and inspect.isgenerator(coroutine.gi_yieldfrom):
             coroutine = coroutine.gi_yieldfrom
         if inspect.isgenerator(coroutine):
             frame = coroutine.gi_frame
