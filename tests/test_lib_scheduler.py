@@ -4,7 +4,7 @@ import unittest
 
 from nmigen.hdl import *
 from nmigen.asserts import *
-from nmigen.sim.pysim import *
+from nmigen.sim import *
 from nmigen.lib.scheduler import *
 
 from .utils import *

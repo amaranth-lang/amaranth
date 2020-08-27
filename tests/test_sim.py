@@ -8,7 +8,7 @@ from nmigen.hdl.mem import *
 from nmigen.hdl.rec import *
 from nmigen.hdl.dsl import  *
 from nmigen.hdl.ir import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from .utils import *
 

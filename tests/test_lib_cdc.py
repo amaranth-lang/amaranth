@@ -1,7 +1,7 @@
 # nmigen: UnusedElaboratable=no
 
 from nmigen.hdl import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.lib.cdc import *
 
 from .utils import *

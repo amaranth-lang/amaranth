@@ -5,14 +5,23 @@ from contextlib import contextmanager
 from ..hdl import *
 from ..hdl.ast import SignalSet
 from ..hdl.xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
-from ._core import *
+from ._base import BaseProcess
 
 
 __all__ = ["PyRTLProcess"]
 
 
-class PyRTLProcess(Process):
-    pass
+class PyRTLProcess(BaseProcess):
+    __slots__ = ("is_comb", "runnable", "passive", "run")
+
+    def __init__(self, *, is_comb):
+        self.is_comb  = is_comb
+
+        self.reset()
+
+    def reset(self):
+        self.runnable = self.is_comb
+        self.passive  = True
 
 
 class _PythonEmitter:

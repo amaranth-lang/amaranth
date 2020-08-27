@@ -1,20 +1,17 @@
 from contextlib import contextmanager
 import itertools
-import inspect
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
-from .._utils import deprecated
 from ..hdl import *
 from ..hdl.ast import SignalDict
-from ._cmds import *
-from ._core import *
+from ._base import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
 from ._pyclock import PyClockProcess
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+__all__ = ["PySimEngine"]
 
 
 class _NameExtractor:
@@ -49,15 +46,7 @@ class _NameExtractor:
         return self.names
 
 
-class _WaveformWriter:
-    def update(self, timestamp, signal, value):
-        raise NotImplementedError # :nocov:
-
-    def close(self, timestamp):
-        raise NotImplementedError # :nocov:
-
-
-class _VCDWaveformWriter(_WaveformWriter):
+class _VCDWriter:
     @staticmethod
     def timestamp_to_vcd(timestamp):
         return timestamp * (10 ** 10) # 1/(100 ps)
@@ -162,7 +151,55 @@ class _VCDWaveformWriter(_WaveformWriter):
             self.gtkw_file.close()
 
 
-class _SignalState:
+class _Timeline:
+    def __init__(self):
+        self.now = 0.0
+        self.deadlines = dict()
+
+    def reset(self):
+        self.now = 0.0
+        self.deadlines.clear()
+
+    def at(self, run_at, process):
+        assert process not in self.deadlines
+        self.deadlines[process] = run_at
+
+    def delay(self, delay_by, process):
+        if delay_by is None:
+            run_at = self.now
+        else:
+            run_at = self.now + delay_by
+        self.at(run_at, process)
+
+    def advance(self):
+        nearest_processes = set()
+        nearest_deadline = None
+        for process, deadline in self.deadlines.items():
+            if deadline is None:
+                if nearest_deadline is not None:
+                    nearest_processes.clear()
+                nearest_processes.add(process)
+                nearest_deadline = self.now
+                break
+            elif nearest_deadline is None or deadline <= nearest_deadline:
+                assert deadline >= self.now
+                if nearest_deadline is not None and deadline < nearest_deadline:
+                    nearest_processes.clear()
+                nearest_processes.add(process)
+                nearest_deadline = deadline
+
+        if not nearest_processes:
+            return False
+
+        for process in nearest_processes:
+            process.runnable = True
+            del self.deadlines[process]
+        self.now = nearest_deadline
+
+        return True
+
+
+class _PySignalState(BaseSignalState):
     __slots__ = ("signal", "curr", "next", "waiters", "pending")
 
     def __init__(self, signal, pending):
@@ -189,9 +226,9 @@ class _SignalState:
         return awoken_any
 
 
-class _SimulatorState:
+class _PySimulation(BaseSimulation):
     def __init__(self):
-        self.timeline = Timeline()
+        self.timeline = _Timeline()
         self.signals  = SignalDict()
         self.slots    = []
         self.pending  = set()
@@ -207,7 +244,7 @@ class _SimulatorState:
             return self.signals[signal]
         except KeyError:
             index = len(self.slots)
-            self.slots.append(_SignalState(signal, self.pending))
+            self.slots.append(_PySignalState(signal, self.pending))
             self.signals[signal] = index
             return index
 
@@ -222,6 +259,9 @@ class _SimulatorState:
         assert process in self.slots[index].waiters
         del self.slots[index].waiters[process]
 
+    def wait_interval(self, process, interval):
+        self.timeline.delay(interval, process)
+
     def commit(self):
         converged = True
         for signal_state in self.pending:
@@ -231,98 +271,29 @@ class _SimulatorState:
         return converged
 
 
-class Simulator:
+class PySimEngine(BaseEngine):
     def __init__(self, fragment):
-        self._state = _SimulatorState()
-        self._fragment = Fragment.get(fragment, platform=None).prepare()
+        self._state = _PySimulation()
+        self._timeline = self._state.timeline
+
+        self._fragment = fragment
         self._processes = _FragmentCompiler(self._state)(self._fragment)
-        self._clocked = set()
-        self._waveform_writers = []
+        self._vcd_writers = []
 
-    def _check_process(self, process):
-        if not (inspect.isgeneratorfunction(process) or inspect.iscoroutinefunction(process)):
-            raise TypeError("Cannot add a process {!r} because it is not a generator function"
-                            .format(process))
-        return process
-
-    def _add_coroutine_process(self, process, *, default_cmd):
+    def add_coroutine_process(self, process, *, default_cmd):
         self._processes.add(PyCoroProcess(self._state, self._fragment.domains, process,
                                           default_cmd=default_cmd))
 
-    def add_process(self, process):
-        process = self._check_process(process)
-        def wrapper():
-            # Only start a bench process after comb settling, so that the reset values are correct.
-            yield Settle()
-            yield from process()
-        self._add_coroutine_process(wrapper, default_cmd=None)
-
-    def add_sync_process(self, process, *, domain="sync"):
-        process = self._check_process(process)
-        def wrapper():
-            # Only start a sync process after the first clock edge (or reset edge, if the domain
-            # uses an asynchronous reset). This matches the behavior of synchronous FFs.
-            yield Tick(domain)
-            yield from process()
-        return self._add_coroutine_process(wrapper, default_cmd=Tick(domain))
-
-    def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
-        """Add a clock process.
-
-        Adds a process that drives the clock signal of ``domain`` at a 50% duty cycle.
-
-        Arguments
-        ---------
-        period : float
-            Clock period. The process will toggle the ``domain`` clock signal every ``period / 2``
-            seconds.
-        phase : None or float
-            Clock phase. The process will wait ``phase`` seconds before the first clock transition.
-            If not specified, defaults to ``period / 2``.
-        domain : str or ClockDomain
-            Driven clock domain. If specified as a string, the domain with that name is looked up
-            in the root fragment of the simulation.
-        if_exists : bool
-            If ``False`` (the default), raise an error if the driven domain is specified as
-            a string and the root fragment does not have such a domain. If ``True``, do nothing
-            in this case.
-        """
-        if isinstance(domain, ClockDomain):
-            pass
-        elif domain in self._fragment.domains:
-            domain = self._fragment.domains[domain]
-        elif if_exists:
-            return
-        else:
-            raise ValueError("Domain {!r} is not present in simulation"
-                             .format(domain))
-        if domain in self._clocked:
-            raise ValueError("Domain {!r} already has a clock driving it"
-                             .format(domain.name))
-
-        if phase is None:
-            # By default, delay the first edge by half period. This causes any synchronous activity
-            # to happen at a non-zero time, distinguishing it from the reset values in the waveform
-            # viewer.
-            phase = period / 2
-        self._processes.add(PyClockProcess(self._state, domain.clk, phase=phase, period=period))
-        self._clocked.add(domain)
+    def add_clock_process(self, clock, *, phase, period):
+        self._processes.add(PyClockProcess(self._state, clock,
+                                           phase=phase, period=period))
 
     def reset(self):
-        """Reset the simulation.
-
-        Assign the reset value to every signal in the simulation, and restart every user process.
-        """
         self._state.reset()
         for process in self._processes:
             process.reset()
 
-    def _real_step(self):
-        """Step the simulation.
-
-        Run every process and commit changes until a fixed point is reached. If there is
-        an unstable combinatorial loop, this function will never return.
-        """
+    def _step(self):
         # Performs the two phases of a delta cycle in a loop:
         converged = False
         while not converged:
@@ -332,86 +303,30 @@ class Simulator:
                     process.runnable = False
                     process.run()
 
-            for waveform_writer in self._waveform_writers:
+            for vcd_writer in self._vcd_writers:
                 for signal_state in self._state.pending:
-                    waveform_writer.update(self._state.timeline.now,
+                    vcd_writer.update(self._timeline.now,
                         signal_state.signal, signal_state.next)
 
             # 2. commit: apply every queued signal change, waking up any waiting processes
             converged = self._state.commit()
 
-    # TODO(nmigen-0.4): replace with _real_step
-    @deprecated("instead of `sim.step()`, use `sim.advance()`")
-    def step(self):
-        return self.advance()
-
     def advance(self):
-        """Advance the simulation.
-
-        Run every process and commit changes until a fixed point is reached, then advance time
-        to the closest deadline (if any). If there is an unstable combinatorial loop,
-        this function will never return.
-
-        Returns ``True`` if there are any active processes, ``False`` otherwise.
-        """
-        self._real_step()
-        self._state.timeline.advance()
+        self._step()
+        self._timeline.advance()
         return any(not process.passive for process in self._processes)
 
-    def run(self):
-        """Run the simulation while any processes are active.
-
-        Processes added with :meth:`add_process` and :meth:`add_sync_process` are initially active,
-        and may change their status using the ``yield Passive()`` and ``yield Active()`` commands.
-        Processes compiled from HDL and added with :meth:`add_clock` are always passive.
-        """
-        while self.advance():
-            pass
-
-    def run_until(self, deadline, *, run_passive=False):
-        """Run the simulation until it advances to ``deadline``.
-
-        If ``run_passive`` is ``False``, the simulation also stops when there are no active
-        processes, similar to :meth:`run`. Otherwise, the simulation will stop only after it
-        advances to or past ``deadline``.
-
-        If the simulation stops advancing, this function will never return.
-        """
-        assert self._state.timeline.now <= deadline
-        while (self.advance() or run_passive) and self._state.timeline.now < deadline:
-            pass
+    @property
+    def now(self):
+        return self._timeline.now
 
     @contextmanager
-    def write_vcd(self, vcd_file, gtkw_file=None, *, traces=()):
-        """Write waveforms to a Value Change Dump file, optionally populating a GTKWave save file.
-
-        This method returns a context manager. It can be used as: ::
-
-            sim = Simulator(frag)
-            sim.add_clock(1e-6)
-            with sim.write_vcd("dump.vcd", "dump.gtkw"):
-                sim.run_until(1e-3)
-
-        Arguments
-        ---------
-        vcd_file : str or file-like object
-            Verilog Value Change Dump file or filename.
-        gtkw_file : str or file-like object
-            GTKWave save file or filename.
-        traces : iterable of Signal
-            Signals to display traces for.
-        """
-        if self._state.timeline.now != 0.0:
-            for file in (vcd_file, gtkw_file):
-                if hasattr(file, "close"):
-                    file.close()
-            raise ValueError("Cannot start writing waveforms after advancing simulation time")
-
-        waveform_writer = _VCDWaveformWriter(self._fragment,
+    def write_vcd(self, *, vcd_file, gtkw_file, traces):
+        vcd_writer = _VCDWriter(self._fragment,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
         try:
-            self._waveform_writers.append(waveform_writer)
+            self._vcd_writers.append(vcd_writer)
             yield
         finally:
-            waveform_writer.close(self._state.timeline.now)
-            self._waveform_writers.remove(waveform_writer)
+            vcd_writer.close(self._timeline.now)
+            self._vcd_writers.remove(vcd_writer)

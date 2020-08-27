@@ -2,15 +2,15 @@ import inspect
 
 from ..hdl import *
 from ..hdl.ast import Statement, SignalSet
-from ._cmds import *
-from ._core import Process
+from .core import Tick, Settle, Delay, Passive, Active
+from ._base import BaseProcess
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
 
 
 __all__ = ["PyCoroProcess"]
 
 
-class PyCoroProcess(Process):
+class PyCoroProcess(BaseProcess):
     def __init__(self, state, domains, constructor, *, default_cmd=None):
         self.state = state
         self.domains = domains
@@ -22,6 +22,7 @@ class PyCoroProcess(Process):
     def reset(self):
         self.runnable = True
         self.passive = False
+
         self.coroutine = self.constructor()
         self.exec_locals = {
             "slots": self.state.slots,
@@ -90,11 +91,11 @@ class PyCoroProcess(Process):
                     return
 
                 elif type(command) is Settle:
-                    self.state.timeline.delay(None, self)
+                    self.state.wait_interval(self, None)
                     return
 
                 elif type(command) is Delay:
-                    self.state.timeline.delay(command.interval, self)
+                    self.state.wait_interval(self, command.interval)
                     return
 
                 elif type(command) is Passive:

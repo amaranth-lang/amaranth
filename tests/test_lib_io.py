@@ -1,6 +1,6 @@
 from nmigen.hdl import *
 from nmigen.hdl.rec import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.lib.io import *
 
 from .utils import *

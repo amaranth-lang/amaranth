@@ -1,12 +1,12 @@
 import inspect
 
-from ._core import Process
+from ._base import BaseProcess
 
 
 __all__ = ["PyClockProcess"]
 
 
-class PyClockProcess(Process):
+class PyClockProcess(BaseProcess):
     def __init__(self, state, signal, *, phase, period):
         assert len(signal) == 1
 
@@ -20,16 +20,17 @@ class PyClockProcess(Process):
     def reset(self):
         self.runnable = True
         self.passive = True
+
         self.initial = True
 
     def run(self):
+        self.runnable = False
+
         if self.initial:
             self.initial = False
-            self.state.timeline.delay(self.phase, self)
+            self.state.wait_interval(self, self.phase)
 
         else:
             clk_state = self.state.slots[self.slot]
             clk_state.set(not clk_state.curr)
-            self.state.timeline.delay(self.period / 2, self)
-
-        self.runnable = False
+            self.state.wait_interval(self, self.period / 2)

@@ -1,5 +1,6 @@
 from nmigen import *
-from nmigen.back import rtlil, verilog, pysim
+from nmigen.sim import *
+from nmigen.back import rtlil, verilog
 
 
 class Counter(Elaboratable):
@@ -19,7 +20,7 @@ ctr = Counter(width=16)
 
 print(verilog.convert(ctr, ports=[ctr.o, ctr.en]))
 
-sim = pysim.Simulator(ctr)
+sim = Simulator(ctr)
 sim.add_clock(1e-6)
 def ce_proc():
     yield; yield; yield

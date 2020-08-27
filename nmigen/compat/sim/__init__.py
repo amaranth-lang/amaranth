@@ -2,8 +2,8 @@ import functools
 import inspect
 from collections.abc import Iterable
 from ...hdl.cd import ClockDomain
-from ...back.pysim import *
 from ...hdl.ir import Fragment
+from ...sim import *
 
 
 __all__ = ["run_simulation", "passive"]
