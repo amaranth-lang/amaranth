@@ -16,7 +16,12 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         * ``ddtcmd``
 
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_ENV_Diamond``, if present.
+    ``NMIGEN_ENV_Diamond``, if present. On Linux, diamond_env as provided by Diamond
+    itself is a good candidate. On Windows, the following script (named ``diamond_env.bat``,
+    for instance) is known to work::
+
+        @echo off
+        set PATH=C:\\lscc\\diamond\\%DIAMOND_VERSION%\\bin\\nt64;%PATH%
 
     Available overrides:
         * ``script_project``: inserts commands before ``prj_project save`` in Tcl script.
