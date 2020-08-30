@@ -1029,7 +1029,7 @@ class MockValueCastableChanges(ValueCastable):
     def __init__(self, width=0):
         self.width = width
 
-    @memoized
+    @ValueCastable.lowermethod
     def as_value(self):
         return Signal(self.width)
 
@@ -1044,9 +1044,9 @@ class MockValueCastableNotDecorated(ValueCastable):
 
 class ValueCastableTestCase(FHDLTestCase):
     def test_not_decorated(self):
-        with self.assertRaises(TypeError,
-                "Classes deriving from `ValueCastable` must decorate the `as_value` "
-                "method with the `memoized` decorator"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Classes deriving from `ValueCastable` must decorate the `as_value` "
+                "method with the `ValueCastable.lowermethod` decorator$"):
             vc = MockValueCastableNotDecorated()
 
     def test_memoized(self):

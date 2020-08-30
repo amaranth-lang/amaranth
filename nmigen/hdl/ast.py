@@ -18,7 +18,7 @@ __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
-    "UserValue", "ValueCastable", "memoized",
+    "UserValue", "ValueCastable",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
@@ -1284,31 +1284,11 @@ class UserValue(Value):
         return self._lazy_lower()._rhs_signals()
 
 
-def memoized(func):
-    """Decorator to memoize class methods.
-
-    Ensures the decorated method is called only once, with subsequent method calls returning the
-    object returned by the first first method call.
-
-    This decorator is required to decorate the ``as_value`` method of ``ValueCastable`` subclasses.
-    This is to ensure that nMigen's view of representation of all values stays internally
-    consistent.
-    """
-    @functools.wraps(func)
-    def wrapper_memoized(self, *args, **kwargs):
-        lowered_to = getattr(self, "__lowered_to", None)
-        if not hasattr(self, "__lowered_to"):
-            self.__lowered_to = func(self, *args, **kwargs)
-        return self.__lowered_to
-    wrapper_memoized.__memoized__ = True
-    return wrapper_memoized
-
-
 class ValueCastable:
     """Base class for classes which can be cast to Values.
 
-    A ``ValueCastable`` can be cast to ``Value``, meaning its recise representation does not have 
-    to be immediately known. This is useful in certain metaprogramming scenarios. Instead of 
+    A ``ValueCastable`` can be cast to ``Value``, meaning its recise representation does not have
+    to be immediately known. This is useful in certain metaprogramming scenarios. Instead of
     providing fixed semantics upfront, it is kept abstract for as long as possible, only being
     cast to a concrete nMigen value when required.
 
@@ -1321,15 +1301,34 @@ class ValueCastable:
     """
     def __new__(cls, *args, src_loc_at=0, **kwargs):
         self = super().__new__(cls)
-        if not hasattr(self, "as_value") or not hasattr(self.as_value, "__memoized__"):
+        if not hasattr(self, "as_value") or not hasattr(self.as_value, "_ValueCastable__memoized"):
             raise TypeError("Classes deriving from `ValueCastable` must decorate the `as_value` "
-                            "method with the `memoized` decorator")
+                            "method with the `ValueCastable.lowermethod` decorator")
         return self
 
     @abstractmethod
     def as_value(self):
         """Conversion to a concrete representation."""
         pass # :nocov:
+
+    @staticmethod
+    def lowermethod(func):
+        """Decorator to memoize lowering methods.
+
+        Ensures the decorated method is called only once, with subsequent method calls returning the
+        object returned by the first first method call.
+
+        This decorator is required to decorate the ``as_value`` method of ``ValueCastable`` subclasses.
+        This is to ensure that nMigen's view of representation of all values stays internally
+        consistent.
+        """
+        @functools.wraps(func)
+        def wrapper_memoized(self, *args, **kwargs):
+            if not hasattr(self, "_ValueCastable__lowered_to"):
+                self.__lowered_to = func(self, *args, **kwargs)
+            return self.__lowered_to
+        wrapper_memoized.__memoized = True
+        return wrapper_memoized
 
 
 @final
