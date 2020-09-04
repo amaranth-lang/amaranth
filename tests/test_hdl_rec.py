@@ -135,8 +135,8 @@ class RecordTestCase(FHDLTestCase):
             ("stb",  1),
         ])
 
-        self.assertEqual(repr(r[0]),   "(slice (rec r data stb) 0:1)")
-        self.assertEqual(repr(r[0:3]), "(slice (rec r data stb) 0:3)")
+        self.assertEqual(repr(r[0]),   "(slice (cat (sig r__data) (sig r__stb)) 0:1)")
+        self.assertEqual(repr(r[0:3]), "(slice (cat (sig r__data) (sig r__stb)) 0:3)")
 
     def test_wrong_field(self):
         r = Record([

@@ -86,7 +86,7 @@ class Layout:
 
 
 # Unlike most Values, Record *can* be subclassed.
-class Record(UserValue):
+class Record(ValueCastable):
     @staticmethod
     def like(other, *, name=None, name_suffix=None, src_loc_at=0):
         if name is not None:
@@ -114,8 +114,6 @@ class Record(UserValue):
         return Record(other.layout, name=new_name, fields=fields, src_loc_at=1)
 
     def __init__(self, layout, *, name=None, fields=None, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
-
         if name is None:
             name = tracer.get_var_name(depth=2 + src_loc_at, default=None)
 
@@ -146,7 +144,15 @@ class Record(UserValue):
                                                      src_loc_at=1 + src_loc_at)
 
     def __getattr__(self, name):
-        return self[name]
+        # must check `getattr` before `self` - we need to hit Value methods before fields
+        try:
+            # it seems we lose the implicit `self` argument at some point, so curry manually
+            res = getattr(Value, name)
+            if callable(res):
+                return lambda *args, **kwargs: res(self, *args, **kwargs)
+            return res
+        except AttributeError:
+            return self[name]
 
     def __getitem__(self, item):
         if isinstance(item, str):
@@ -166,10 +172,22 @@ class Record(UserValue):
                 if field_name in item
             })
         else:
-            return super().__getitem__(item)
+            try:
+                return Value.__getitem__(self, item)
+            except KeyError:
+                if self.name is None:
+                    reference = "Unnamed record"
+                else:
+                    reference = "Record '{}'".format(self.name)
+                raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
+                                     .format(reference, item, ", ".join(self.fields))) from None
 
-    def lower(self):
+    @ValueCastable.lowermethod
+    def as_value(self):
         return Cat(self.fields.values())
+
+    def __len__(self):
+        return len(Cat(self.fields.values()))
 
     def _lhs_signals(self):
         return union((f._lhs_signals() for f in self.fields.values()), start=SignalSet())
