@@ -1301,15 +1301,13 @@ class ValueCastable:
     """
     def __new__(cls, *args, src_loc_at=0, **kwargs):
         self = super().__new__(cls)
-        if not hasattr(self, "as_value") or not hasattr(self.as_value, "_ValueCastable__memoized"):
+        if not hasattr(self, "as_value"):
+            raise TypeError("Classes deriving from `ValueCastable` must override the `as_value` method")
+
+        if not hasattr(self.as_value, "_ValueCastable__memoized"):
             raise TypeError("Classes deriving from `ValueCastable` must decorate the `as_value` "
                             "method with the `ValueCastable.lowermethod` decorator")
         return self
-
-    @abstractmethod
-    def as_value(self):
-        """Conversion to a concrete representation."""
-        pass # :nocov:
 
     @staticmethod
     def lowermethod(func):
