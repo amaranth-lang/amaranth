@@ -1294,7 +1294,7 @@ class ValueCastable:
 
     Note that it is necessary to ensure that nMigen's view of representation of all values stays 
     internally consistent. The class deriving from ``ValueCastable`` must decorate the ``as_value``
-    method with the ``memoized`` decorator, which ensures that all calls to ``as_value``return the
+    method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value``return the
     same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable, it is
     up to the user to ensure that it is not mutated in a way that changes its representation after
     the first call to ``as_value``.
