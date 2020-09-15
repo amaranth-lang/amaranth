@@ -81,9 +81,35 @@ class Memory:
                             .format(addr, e)) from None
 
     def read_port(self, *, src_loc_at=0, **kwargs):
+        """Get a read port.
+
+        See :class:`ReadPort` for details.
+
+        Arguments
+        ---------
+        domain : str
+        transparent : bool
+
+        Returns
+        -------
+        An instance of :class:`ReadPort` associated with this memory.
+        """
         return ReadPort(self, src_loc_at=1 + src_loc_at, **kwargs)
 
     def write_port(self, *, src_loc_at=0, **kwargs):
+        """Get a write port.
+
+        See :class:`WritePort` for details.
+
+        Arguments
+        ---------
+        domain : str
+        granularity : int
+
+        Returns
+        -------
+        An instance of :class:`WritePort` associated with this memory.
+        """
         return WritePort(self, src_loc_at=1 + src_loc_at, **kwargs)
 
     def __getitem__(self, index):
@@ -92,6 +118,38 @@ class Memory:
 
 
 class ReadPort(Elaboratable):
+    """A memory read port.
+
+    Parameters
+    ----------
+    memory : :class:`Memory`
+        Memory associated with the port.
+    domain : str
+        Clock domain. Defaults to ``"sync"``. If set to ``"comb"``, the port is asynchronous.
+        Otherwise, the read data becomes available on the next clock cycle.
+    transparent : bool
+        Port transparency. If set (default), a read at an address that is also being written to in
+        the same clock cycle will output the new value. Otherwise, the old value will be output
+        first. This behavior only applies to ports in the same domain.
+
+    Attributes
+    ----------
+    memory : :class:`Memory`
+    domain : str
+    transparent : bool
+    addr : Signal(range(memory.depth)), in
+        Read address.
+    data : Signal(memory.width), out
+        Read data.
+    en : Signal or Const, in
+        Read enable. If asserted, ``data`` is updated with the word stored at ``addr``. Note that
+        transparent ports cannot assign ``en`` (which is hardwired to 1 instead), as doing so is
+        currently not supported by Yosys.
+
+    Exceptions
+    ----------
+    Raises :exn:`ValueError` if the read port is simultaneously asynchronous and non-transparent.
+    """
     def __init__(self, memory, *, domain="sync", transparent=True, src_loc_at=0):
         if domain == "comb" and not transparent:
             raise ValueError("Read port cannot be simultaneously asynchronous and non-transparent")
@@ -160,6 +218,36 @@ class ReadPort(Elaboratable):
 
 
 class WritePort(Elaboratable):
+    """A memory write port.
+
+    Parameters
+    ----------
+    memory : :class:`Memory`
+        Memory associated with the port.
+    domain : str
+        Clock domain. Defaults to ``"sync"``. Writes have a latency of 1 clock cycle.
+    granularity : int
+        Port granularity. Defaults to ``memory.width``. Write data is split evenly in
+        ``memory.width // granularity`` chunks, which can be updated independently.
+
+    Attributes
+    ----------
+    memory : :class:`Memory`
+    domain : str
+    granularity : int
+    addr : Signal(range(memory.depth)), in
+        Write address.
+    data : Signal(memory.width), in
+        Write data.
+    en : Signal(memory.width // granularity), in
+        Write enable. Each bit selects a non-overlapping chunk of ``granularity`` bits on the
+        ``data`` signal, which is written to memory at ``addr``. Unselected chunks are ignored.
+
+    Exceptions
+    ----------
+    Raises :exn:`ValueError` if the write port granularity is greater than memory width, or does not
+    divide memory width evenly.
+    """
     def __init__(self, memory, *, domain="sync", granularity=None, src_loc_at=0):
         if granularity is None:
             granularity = memory.width
