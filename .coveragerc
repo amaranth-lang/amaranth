@@ -4,7 +4,6 @@ include =
   nmigen/*
 omit =
   nmigen/test/*
-  */__init__.py
 
 [report]
 exclude_lines =

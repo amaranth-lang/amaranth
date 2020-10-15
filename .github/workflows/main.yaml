@@ -33,7 +33,7 @@ jobs:
     - name: Run tests
       run: |
         export NMIGEN_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
-        python -m unittest discover
+        python -m coverage run -m unittest
         codecov
   document:
     runs-on: ubuntu-latest
