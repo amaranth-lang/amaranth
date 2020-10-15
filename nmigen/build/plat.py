@@ -177,7 +177,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                                   .format(type(self).__name__))
 
     def _check_feature(self, feature, pin, attrs, valid_xdrs, valid_attrs):
-        if not valid_xdrs:
+        if len(valid_xdrs) == 0:
             raise NotImplementedError("Platform '{}' does not support {}"
                                       .format(type(self).__name__, feature))
         elif pin.xdr not in valid_xdrs:
