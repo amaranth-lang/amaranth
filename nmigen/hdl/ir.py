@@ -574,7 +574,7 @@ class Instance(Fragment):
                 self.named_ports[name] = (Value.cast(value), kind)
             else:
                 raise NameError("Instance argument {!r} should be a tuple (kind, name, value) "
-                                "where kind is one of \"p\", \"i\", \"o\", or \"io\""
+                                "where kind is one of \"a\", \"p\", \"i\", \"o\", or \"io\""
                                 .format((kind, name, value)))
 
         for kw, arg in kwargs.items():
@@ -590,5 +590,5 @@ class Instance(Fragment):
                 self.named_ports[kw[3:]] = (Value.cast(arg), "io")
             else:
                 raise NameError("Instance keyword argument {}={!r} does not start with one of "
-                                "\"p_\", \"i_\", \"o_\", or \"io_\""
+                                "\"a_\", \"p_\", \"i_\", \"o_\", or \"io_\""
                                 .format(kw, arg))
