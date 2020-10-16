@@ -786,14 +786,14 @@ class InstanceTestCase(FHDLTestCase):
         s = Signal()
         with self.assertRaisesRegex(NameError,
                 (r"^Instance argument \('', 's1', \(sig s\)\) should be a tuple "
-                    r"\(kind, name, value\) where kind is one of \"p\", \"i\", \"o\", or \"io\"$")):
+                    r"\(kind, name, value\) where kind is one of \"a\", \"p\", \"i\", \"o\", or \"io\"$")):
             Instance("foo", ("", "s1", s))
 
     def test_wrong_construct_kwarg(self):
         s = Signal()
         with self.assertRaisesRegex(NameError,
                 (r"^Instance keyword argument x_s1=\(sig s\) does not start with one of "
-                    r"\"p_\", \"i_\", \"o_\", or \"io_\"$")):
+                    r"\"a_\", \"p_\", \"i_\", \"o_\", or \"io_\"$")):
             Instance("foo", x_s1=s)
 
     def setUp_cpu(self):
