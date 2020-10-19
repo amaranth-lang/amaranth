@@ -118,7 +118,7 @@ class QuicklogicPlatform(TemplatedPlatform):
 
     # Common logic
 
-    def __init__(self, *):
+    def __init__(self):
         super().__init__()
 
     def add_clock_constraint(self, clock, frequency):
