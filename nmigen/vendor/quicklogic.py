@@ -13,14 +13,14 @@ class QuicklogicPlatform(TemplatedPlatform):
     Symbiflow toolchain
     -------------------
     Required tools:
-        * ``synth``
-        * ``pack``
-        * ``place``
-        * ``route``
-        * ``write_fasm``
-        * ``write_bitstream``
+        * ``symbiflow_synth``
+        * ``symbiflow_pack``
+        * ``symbiflow_place``
+        * ``symbiflow_route``
+        * ``symbiflow_write_fasm``
+        * ``symbiflow_write_bitstream``
     The environment is populated by running the script specified in the environment variable
-    ``NMIGEN_ENV_Quicklogic``, if present.
+    ``NMIGEN_ENV_QLSymbiflow``, if present.
     Available overrides:
         * ``add_constraints``: inserts commands in XDC file.
     """
@@ -28,13 +28,18 @@ class QuicklogicPlatform(TemplatedPlatform):
     device  = abstractproperty()
     part    = abstractproperty()
 
+    # Since the QuickLogic version of SymbiFlow toolchain is not upstreamed yet
+    # we should distinguish the QuickLogic version from mainline one.
+    # QuickLogic toolchain: https://github.com/QuickLogic-Corp/quicklogic-fpga-toolchain/releases
+    toolchain = "QLSymbiflow"
+
     required_tools = [
-        "synth",
-        "pack",
-        "place",
-        "route",
-        "write_fasm",
-        "write_bitstream"
+        "symbiflow_synth",
+        "symbiflow_pack",
+        "symbiflow_place",
+        "symbiflow_route",
+        "symbiflow_write_fasm",
+        "symbiflow_write_bitstream"
     ]
     file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -72,7 +77,7 @@ class QuicklogicPlatform(TemplatedPlatform):
     }
     command_templates = [
         r"""
-        {{invoke_tool("synth")}}
+        {{invoke_tool("symbiflow_synth")}}
             -t {{name}}
             -v {% for file in platform.iter_extra_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
             -d {{platform.device}}
@@ -81,13 +86,13 @@ class QuicklogicPlatform(TemplatedPlatform):
             -x {{name}}.xdc
         """,
         r"""
-        {{invoke_tool("pack")}}
+        {{invoke_tool("symbiflow_pack")}}
             -e {{name}}.eblif
             -d {{platform.device}}
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("place")}}
+        {{invoke_tool("symbiflow_place")}}
             -e {{name}}.eblif
             -d {{platform.device}}
             -p {{name}}.pcf
@@ -96,19 +101,19 @@ class QuicklogicPlatform(TemplatedPlatform):
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("route")}}
+        {{invoke_tool("symbiflow_route")}}
             -e {{name}}.eblif
             -d {{platform.device}}
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("write_fasm")}}
+        {{invoke_tool("symbiflow_write_fasm")}}
             -e {{name}}.eblif
             -d {{platform.device}}
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("write_bitstream")}}
+        {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
             -d {{platform.device}}
             -P {{platform.part}}
