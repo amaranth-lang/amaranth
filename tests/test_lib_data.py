@@ -870,7 +870,7 @@ class RFCExamplesTestCase(TestCase):
     def simulate(m):
         def wrapper(fn):
             sim = Simulator(m)
-            sim.add_process(fn)
+            sim.add_testbench(fn)
             sim.run()
         return wrapper
 

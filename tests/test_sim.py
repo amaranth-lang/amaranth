@@ -35,9 +35,8 @@ class SimulatorUnitTestCase(FHDLTestCase):
         def process():
             for isig, input in zip(isigs, inputs):
                 yield isig.eq(input)
-            yield Settle()
             self.assertEqual((yield osig), output.value)
-        sim.add_process(process)
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd", "test.gtkw", traces=[*isigs, osig]):
             sim.run()
 
@@ -436,28 +435,29 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_counter_process(self):
         self.setUp_counter()
-        with self.assertSimulation(self.m) as sim:
-            def process():
-                self.assertEqual((yield self.count), 4)
-                yield Delay(1e-6)
-                self.assertEqual((yield self.count), 4)
-                yield self.sync.clk.eq(1)
-                self.assertEqual((yield self.count), 4)
-                yield Settle()
-                self.assertEqual((yield self.count), 5)
-                yield Delay(1e-6)
-                self.assertEqual((yield self.count), 5)
-                yield self.sync.clk.eq(0)
-                self.assertEqual((yield self.count), 5)
-                yield Settle()
-                self.assertEqual((yield self.count), 5)
-                for _ in range(3):
+        with _ignore_deprecated():
+            with self.assertSimulation(self.m) as sim:
+                def process():
+                    self.assertEqual((yield self.count), 4)
                     yield Delay(1e-6)
+                    self.assertEqual((yield self.count), 4)
                     yield self.sync.clk.eq(1)
+                    self.assertEqual((yield self.count), 4)
+                    yield Settle()
+                    self.assertEqual((yield self.count), 5)
                     yield Delay(1e-6)
+                    self.assertEqual((yield self.count), 5)
                     yield self.sync.clk.eq(0)
-                self.assertEqual((yield self.count), 0)
-            sim.add_process(process)
+                    self.assertEqual((yield self.count), 5)
+                    yield Settle()
+                    self.assertEqual((yield self.count), 5)
+                    for _ in range(3):
+                        yield Delay(1e-6)
+                        yield self.sync.clk.eq(1)
+                        yield Delay(1e-6)
+                        yield self.sync.clk.eq(0)
+                    self.assertEqual((yield self.count), 0)
+                sim.add_process(process)
 
     def test_counter_clock_and_sync_process(self):
         self.setUp_counter()
@@ -611,10 +611,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 yield self.i.eq(0b10101010)
                 yield self.i[:4].eq(-1)
-                yield Settle()
                 self.assertEqual((yield self.i[:4]), 0b1111)
                 self.assertEqual((yield self.i), 0b10101111)
-            sim.add_process(process)
+            sim.add_testbench(process)
 
     def test_run_until(self):
         m = Module()
@@ -626,7 +625,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 for _ in range(101):
                     yield Delay(1e-6)
                 self.fail()
-            sim.add_process(process)
+            sim.add_testbench(process)
 
     def test_run_until_fail(self):
         m = Module()
@@ -639,13 +638,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                         for _ in range(99):
                             yield Delay(1e-6)
                         self.fail()
-                    sim.add_process(process)
+                    sim.add_testbench(process)
 
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
                     r"^Cannot add a process 1 because it is not a generator function$"):
-                sim.add_process(1)
+                sim.add_sync_process(1)
 
     def test_add_process_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
@@ -653,7 +652,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                     r"^Cannot add a process <.+?> because it is not a generator function$"):
                 def process():
                     yield Delay()
-                sim.add_process(process())
+                sim.add_sync_process(process())
 
     def test_add_clock_wrong_twice(self):
         m = Module()
@@ -679,14 +678,47 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_command_wrong(self):
         survived = False
-        with self.assertSimulation(Module()) as sim:
+        with _ignore_deprecated():
+            with self.assertSimulation(Module()) as sim:
+                def process():
+                    nonlocal survived
+                    with self.assertRaisesRegex(TypeError,
+                            r"Received unsupported command 1 from process .+?"):
+                        yield 1
+                    survived = True
+                sim.add_process(process)
+        self.assertTrue(survived)
+
+    def test_sync_command_deprecated(self):
+        survived = False
+        m = Module()
+        dummy = Signal()
+        m.d.sync += dummy.eq(1)
+        with self.assertSimulation(m) as sim:
+            def process():
+                nonlocal survived
+                with self.assertWarnsRegex(DeprecationWarning,
+                        r"Using `Delay` is deprecated within `add_sync_process`"):
+                    yield Delay(1e-8)
+                survived = True
+            sim.add_sync_process(process)
+            sim.add_clock(1e-6)
+        self.assertTrue(survived)
+
+    def test_sync_command_wrong(self):
+        survived = False
+        m = Module()
+        dummy = Signal()
+        m.d.sync += dummy.eq(1)
+        with self.assertSimulation(m) as sim:
             def process():
                 nonlocal survived
                 with self.assertRaisesRegex(TypeError,
                         r"Received unsupported command 1 from process .+?"):
                     yield 1
                 survived = True
-            sim.add_process(process)
+            sim.add_sync_process(process)
+            sim.add_clock(1e-6)
         self.assertTrue(survived)
 
     def test_value_castable(self):
@@ -701,13 +733,19 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         a = Array([1,2,3])
         a[MyValue()]
 
+    def test_bench_command_wrong(self):
         survived = False
         with self.assertSimulation(Module()) as sim:
             def process():
                 nonlocal survived
-                yield MyValue()
+                with self.assertWarnsRegex(DeprecationWarning,
+                        r"The `Settle` command is deprecated"):
+                    settle = Settle()
+                with self.assertRaisesRegex(TypeError,
+                        r"Command \(settle\) is not allowed in testbenches"):
+                    yield settle
                 survived = True
-            sim.add_process(process)
+            sim.add_testbench(process)
         self.assertTrue(survived)
 
     def setUp_memory(self, rd_synchronous=True, rd_transparent=True, wr_granularity=None):
@@ -755,23 +793,23 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 yield self.wrport.data.eq(0x50)
                 yield self.wrport.en.eq(0b00)
-                yield
+                yield Tick()
                 yield self.wrport.en.eq(0)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield self.wrport.en.eq(0b10)
-                yield
+                yield Tick()
                 yield self.wrport.en.eq(0)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x5a)
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(0b01)
-                yield
+                yield Tick()
                 yield self.wrport.en.eq(0)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x53)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_read_before_write(self):
         self.setUp_memory(rd_transparent=False)
@@ -779,52 +817,46 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(1)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0xaa)
-                yield
-                self.assertEqual((yield self.rdport.data), 0xaa)
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_write_through(self):
         self.setUp_memory(rd_transparent=True)
         with self.assertSimulation(self.m) as sim:
             def process():
+                yield Tick()
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(1)
-                yield
                 self.assertEqual((yield self.rdport.data), 0xaa)
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x33)
-                yield
+                yield Tick()
                 yield self.rdport.addr.eq(1)
-                yield Settle()
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_async_read_write(self):
         self.setUp_memory(rd_synchronous=False)
         with self.assertSimulation(self.m) as sim:
             def process():
                 yield self.rdport.addr.eq(0)
-                yield Settle()
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield self.rdport.addr.eq(1)
-                yield Settle()
                 self.assertEqual((yield self.rdport.data), 0x55)
                 yield self.rdport.addr.eq(0)
                 yield self.wrport.addr.eq(0)
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(1)
-                yield Tick("sync")
                 self.assertEqual((yield self.rdport.data), 0xaa)
-                yield Settle()
+                yield Tick("sync")
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
-            sim.add_process(process)
+            sim.add_testbench(process)
 
     def test_memory_read_only(self):
         self.m = Module()
@@ -841,6 +873,49 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
 
+    def test_comb_bench_process(self):
+        m = Module()
+        a = Signal(reset=1)
+        b = Signal()
+        m.d.comb += b.eq(a)
+        with self.assertSimulation(m) as sim:
+            def process():
+                self.assertEqual((yield a), 1)
+                self.assertEqual((yield b), 1)
+                yield a.eq(0)
+                self.assertEqual((yield a), 0)
+                self.assertEqual((yield b), 0)
+            sim.add_testbench(process)
+
+    def test_sync_bench_process(self):
+        m = Module()
+        a = Signal(reset=1)
+        b = Signal()
+        m.d.sync += b.eq(a)
+        t = Signal()
+        m.d.sync += t.eq(~t)
+        with self.assertSimulation(m) as sim:
+            def process():
+                self.assertEqual((yield a), 1)
+                self.assertEqual((yield b), 0)
+                self.assertEqual((yield t), 0)
+                yield Tick()
+                self.assertEqual((yield a), 1)
+                self.assertEqual((yield b), 1)
+                self.assertEqual((yield t), 1)
+                yield Tick()
+                self.assertEqual((yield a), 1)
+                self.assertEqual((yield b), 1)
+                self.assertEqual((yield t), 0)
+                yield a.eq(0)
+                self.assertEqual((yield a), 0)
+                self.assertEqual((yield b), 1)
+                yield Tick()
+                self.assertEqual((yield a), 0)
+                self.assertEqual((yield b), 0)
+            sim.add_clock(1e-6)
+            sim.add_testbench(process)
+
     def test_memory_transparency_simple(self):
         m = Module()
         init = [0x11, 0x22, 0x33, 0x44]
@@ -850,41 +925,35 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(m) as sim:
             def process():
                 yield rdport.addr.eq(0)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x11)
                 yield rdport.addr.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22)
                 yield wrport.addr.eq(0)
                 yield wrport.data.eq(0x44444444)
                 yield wrport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22)
                 yield wrport.addr.eq(1)
                 yield wrport.data.eq(0x55)
                 yield wrport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x55)
                 yield wrport.addr.eq(1)
                 yield wrport.data.eq(0x66)
                 yield wrport.en.eq(1)
                 yield rdport.en.eq(0)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x55)
                 yield wrport.addr.eq(2)
                 yield wrport.data.eq(0x77)
                 yield wrport.en.eq(1)
                 yield rdport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x66)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_transparency_multibit(self):
         m = Module()
@@ -895,41 +964,35 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(m) as sim:
             def process():
                 yield rdport.addr.eq(0)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x11111111)
                 yield rdport.addr.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22222222)
                 yield wrport.addr.eq(0)
                 yield wrport.data.eq(0x44444444)
                 yield wrport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22222222)
                 yield wrport.addr.eq(1)
                 yield wrport.data.eq(0x55555555)
                 yield wrport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22222255)
                 yield wrport.addr.eq(1)
                 yield wrport.data.eq(0x66666666)
                 yield wrport.en.eq(2)
                 yield rdport.en.eq(0)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22222255)
                 yield wrport.addr.eq(1)
                 yield wrport.data.eq(0x77777777)
                 yield wrport.en.eq(4)
                 yield rdport.en.eq(1)
-                yield
-                yield Settle()
+                yield Tick()
                 self.assertEqual((yield rdport.data), 0x22776655)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_vcd_wrong_nonzero_time(self):
         s = Signal()
@@ -977,7 +1040,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim = Simulator(Module())
         def process():
             self.assertEqual((yield -(Const(0b11, 2).as_signed())), 1)
-        sim.add_process(process)
+        sim.add_testbench(process)
         sim.run()
 
     def test_bug_595(self):
@@ -1018,5 +1081,5 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             self.assertEqual((yield C(0b0000, 4) | ~C(1, 1)), 0b0000)
             self.assertEqual((yield C(0b1111, 4) & ~C(1, 1)), 0b0000)
             self.assertEqual((yield C(0b1111, 4) ^ ~C(1, 1)), 0b1111)
-        sim.add_process(process)
+        sim.add_testbench(process)
         sim.run()

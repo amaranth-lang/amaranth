@@ -15,6 +15,12 @@ class Command:
 
 
 class Settle(Command):
+    @deprecated("The `Settle` command is deprecated per RFC 27. Use `add_testbench` to write "
+                "testbenches; in them, an equivalent of `yield Settle()` is performed "
+                "automatically.")
+    def __init__(self):
+        pass
+
     def __repr__(self):
         return "(settle)"
 
@@ -74,11 +80,12 @@ class Simulator:
                             .format(process))
         return process
 
+    @deprecated("The `add_process` method is deprecated per RFC 27. Use `add_testbench` instead.")
     def add_process(self, process):
         process = self._check_process(process)
         def wrapper():
             # Only start a bench process after comb settling, so that the reset values are correct.
-            yield Settle()
+            yield object.__new__(Settle)
             yield from process()
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
@@ -87,9 +94,73 @@ class Simulator:
         def wrapper():
             # Only start a sync process after the first clock edge (or reset edge, if the domain
             # uses an asynchronous reset). This matches the behavior of synchronous FFs.
+            generator = process()
+            result = None
+            exception = None
             yield Tick(domain)
-            yield from process()
+            while True:
+                try:
+                    if exception is None:
+                        command = generator.send(result)
+                    else:
+                        command = generator.throw(exception)
+                except StopIteration:
+                    break
+                try:
+                    if isinstance(command, (Settle, Delay, Tick)):
+                        frame = generator.gi_frame
+                        module_globals = frame.f_globals
+                        if '__name__' in module_globals:
+                            module = module_globals['__name__']
+                        else:
+                            module = "<string>"
+                        # If the warning action is "error", this call will throw the warning, and
+                        # the try block will redirect it into the generator.
+                        warnings.warn_explicit(
+                            f"Using `{command.__class__.__name__}` is deprecated within "
+                            f"`add_sync_process` per RFC 27; use `add_testbench` instead.",
+                            DeprecationWarning,
+                            filename=frame.f_code.co_filename,
+                            lineno=frame.f_lineno,
+                            module=module,
+                            registry=module_globals.setdefault("__warningregistry__", {}),
+                            module_globals=module_globals,
+                        )
+                    result = yield command
+                    exception = None
+                except Exception as e:
+                    result = None
+                    exception = e
         self._engine.add_coroutine_process(wrapper, default_cmd=Tick(domain))
+
+    def add_testbench(self, process):
+        process = self._check_process(process)
+        def wrapper():
+            generator = process()
+            # Only start a bench process after power-on reset finishes. Use object.__new__ to
+            # avoid deprecation warning.
+            yield object.__new__(Settle)
+            result = None
+            exception = None
+            while True:
+                try:
+                    if exception is None:
+                        command = generator.send(result)
+                    else:
+                        command = generator.throw(exception)
+                except StopIteration:
+                    break
+                if command is None or isinstance(command, Settle):
+                    exception = TypeError(f"Command {command!r} is not allowed in testbenches")
+                else:
+                    try:
+                        result = yield command
+                        exception = None
+                        yield object.__new__(Settle)
+                    except Exception as e:
+                        result = None
+                        exception = e
+        self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
     def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
         """Add a clock process.
