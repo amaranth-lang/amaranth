@@ -26,13 +26,13 @@ class FFSynchronizerTestCase(FHDLTestCase):
         def process():
             self.assertEqual((yield o), 0)
             yield i.eq(1)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 0)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 0)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 1)
-        sim.add_process(process)
+        sim.add_sync_process(process)
         sim.run()
 
     def test_reset_value(self):
@@ -45,13 +45,13 @@ class FFSynchronizerTestCase(FHDLTestCase):
         def process():
             self.assertEqual((yield o), 1)
             yield i.eq(0)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 1)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 1)
-            yield Tick()
+            yield
             self.assertEqual((yield o), 0)
-        sim.add_process(process)
+        sim.add_sync_process(process)
         sim.run()
 
 
@@ -90,28 +90,27 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
             # initial reset
             self.assertEqual((yield i), 0)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield i.eq(1)
-            yield Delay(1e-8)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
             yield i.eq(0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -128,28 +127,27 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
             # initial reset
             self.assertEqual((yield i), 1)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield i.eq(0)
-            yield Delay(1e-8)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
             yield i.eq(1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -176,28 +174,28 @@ class ResetSynchronizerTestCase(FHDLTestCase):
         def process():
             # initial reset
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield arst.eq(1)
             yield Delay(1e-8)
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
             yield arst.eq(0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -223,17 +221,17 @@ class PulseSynchronizerTestCase(FHDLTestCase):
             yield ps.i.eq(0)
             # TODO: think about reset
             for n in range(5):
-                yield Tick()
+                yield
             # Make sure no pulses are generated in quiescent state
             for n in range(3):
-                yield Tick()
+                yield
                 self.assertEqual((yield ps.o), 0)
             # Check conservation of pulses
             accum = 0
             for n in range(10):
                 yield ps.i.eq(1 if n < 4 else 0)
-                yield Tick()
+                yield
                 accum += yield ps.o
             self.assertEqual(accum, 4)
-        sim.add_process(process)
+        sim.add_sync_process(process)
         sim.run()

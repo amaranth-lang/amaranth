@@ -29,16 +29,21 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
 * Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
 * Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
+* Update uses of ``Simulator.add_process`` to ``Simulator.add_testbench``
+* Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
+* Convert uses of ``yield Tick()`` within remaining ``Simulator.add_sync_process`` to plain ``yield``
 
 
 Implemented RFCs
 ----------------
 
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
+.. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 
 * `RFC 17`_: Remove ``log2_int``
+* `RFC 27`_: Testbench processes for the simulator
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 
@@ -69,6 +74,14 @@ Standard library changes
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
+
+
+Toolchain changes
+-----------------
+
+* Added: ``Simulator.add_testbench``. (`RFC 27`_)
+* Deprecated: ``Settle`` simulation command. (`RFC 27`_)
+* Deprecated: ``Simulator.add_process``. (`RFC 27`_)
 
 
 Platform integration changes
