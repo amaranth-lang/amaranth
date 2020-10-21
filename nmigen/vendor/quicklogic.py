@@ -129,3 +129,27 @@ class QuicklogicPlatform(TemplatedPlatform):
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "TRUE"
+
+    def create_missing_domain(self, name):
+        if name == "sync" and self.default_clk is not None:
+            m = Module()
+            if self.default_clk == "sys_clk0":
+                clk_i = Signal()
+                sys_clk0 = Signal()
+                m.submodules += Instance("qlal4s3b_cell_macro",
+                                         o_Sys_Clk0=sys_clk0)
+                m.submodules += Instance("gclkbuff",
+                                         o_A=sys_clk0,
+                                         o_Z=clk_i)
+            else:
+                clk_i = self.request(self.default_clk).i
+
+            if self.default_rst is not None:
+                rst_i = self.request(self.default_rst).i
+            else:
+                rst_i = Const(0)
+
+            m.domains += ClockDomain("sync")
+            m.d.comb += ClockSignal("sync").eq(clk_i)
+            m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
+            return m
