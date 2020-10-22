@@ -90,7 +90,7 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertIs(scl_info[0], i2c.scl)
         self.assertIs(scl_info[1].io, scl)
         self.assertEqual(scl_info[2], {})
-        self.assertEqual(scl_info[3], False)
+        self.assertEqual(scl_info[3], (False,))
         self.assertIs(sda_info[0], i2c.sda)
         self.assertIs(sda_info[1].io, sda)
 
@@ -118,7 +118,7 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertIs(clk100_info[1].p, p)
         self.assertIs(clk100_info[1].n, n)
         self.assertEqual(clk100_info[2], {})
-        self.assertEqual(clk100_info[3], False)
+        self.assertEqual(clk100_info[3], (False,))
 
         self.assertEqual(list(self.cm.iter_port_constraints()), [
             ("clk100_0__p", ["H1"], {}),
@@ -140,14 +140,38 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertIs(cs_info[0], cs)
         self.assertIs(cs_info[1].io, cs_io)
         self.assertEqual(cs_info[2], {})
-        self.assertEqual(cs_info[3], True)
+        self.assertEqual(cs_info[3], (True,))
 
         clk_info, = self.cm.iter_differential_pins()
         self.assertIs(clk_info[0], clk)
         self.assertIs(clk_info[1].p, clk_p)
         self.assertIs(clk_info[1].n, clk_n)
         self.assertEqual(clk_info[2], {})
-        self.assertEqual(clk_info[3], True)
+        self.assertEqual(clk_info[3], (True,))
+
+    def test_request_individually_inverted(self):
+        new_resources = [
+            Resource("cs", 0, Pins("~X0")),
+            Resource("clk", 0, DiffPairs("~Y0", "~Y1")),
+        ]
+        self.cm.add_resources(new_resources)
+
+        cs = self.cm.request("cs")
+        clk = self.cm.request("clk")
+        cs_io, clk_p, clk_n = self.cm.iter_ports()
+
+        cs_info, = self.cm.iter_single_ended_pins()
+        self.assertIs(cs_info[0], cs)
+        self.assertIs(cs_info[1].io, cs_io)
+        self.assertEqual(cs_info[2], {})
+        self.assertEqual(cs_info[3], (True,))
+
+        clk_info, = self.cm.iter_differential_pins()
+        self.assertIs(clk_info[0], clk)
+        self.assertIs(clk_info[1].p, clk_p)
+        self.assertIs(clk_info[1].n, clk_n)
+        self.assertEqual(clk_info[2], {})
+        self.assertEqual(clk_info[3], (True,))
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")
