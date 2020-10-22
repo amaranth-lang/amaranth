@@ -249,7 +249,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         cond = self._check_signed_cond(cond)
         src_loc = tracer.get_src_loc(src_loc_at=1)
         if_data = self._get_ctrl("If")
-        if if_data is None:
+        if if_data is None or len(if_data["tests"]) == 0:
             raise SyntaxError("Elif without preceding If")
         try:
             _outer_case, self._statements = self._statements, []
