@@ -11,6 +11,8 @@ class Pins:
             raise TypeError("Names must be a whitespace-separated string, not {!r}"
                             .format(names))
         names = names.split()
+        self.individual_inverts = tuple(name.startswith("~") for name in names)
+        names = [name[1:] if invert else name for name, invert in zip(names, self.individual_inverts)]
 
         if conn is not None:
             conn_name, conn_number = conn
@@ -38,6 +40,9 @@ class Pins:
     def __iter__(self):
         return iter(self.names)
 
+    def get_inverts(self):
+        return tuple(invert ^ self.invert for invert in self.individual_inverts)
+
     def map_names(self, mapping, resource):
         mapped_names = []
         for name in self.names:
@@ -49,9 +54,12 @@ class Pins:
             mapped_names.append(name)
         return mapped_names
 
+    @property
+    def names_string(self):
+        return " ".join(("~" if invert else "") + name for name, invert in zip(self.names, self.individual_inverts))
+
     def __repr__(self):
-        return "(pins{} {} {})".format("-n" if self.invert else "",
-            self.dir, " ".join(self.names))
+        return "(pins{} {} {})".format("-n" if self.invert else "", self.dir, self.names_string)
 
 
 def PinsN(*args, **kwargs):
@@ -70,8 +78,18 @@ class DiffPairs:
                             "and {!r} do not"
                             .format(self.p, self.n))
 
+        if self.p.individual_inverts != self.n.individual_inverts:
+            raise SyntaxError("The individual invertaitons of the positive and negative pins do not match.")
+
         self.dir    = dir
         self.invert = False
+
+    @property
+    def individual_inverts(self):
+        return self.p.individual_inverts
+
+    def get_inverts(self):
+        return tuple(invert ^ self.invert for invert in self.p.individual_inverts)
 
     def __len__(self):
         return len(self.p.names)
@@ -81,7 +99,7 @@ class DiffPairs:
 
     def __repr__(self):
         return "(diffpairs{} {} (p {}) (n {}))".format("-n" if self.invert else "",
-            self.dir, " ".join(self.p.names), " ".join(self.n.names))
+            self.dir, self.p.names_string, self.n.names_string)
 
 
 def DiffPairsN(*args, **kwargs):

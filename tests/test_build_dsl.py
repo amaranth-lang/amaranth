@@ -23,6 +23,25 @@ class PinsTestCase(FHDLTestCase):
         p = Pins("A0", invert=True)
         self.assertEqual(p.invert, True)
 
+    def test_individual_inverts(self):
+        p = Pins("~A0")
+        self.assertEqual(p.individual_inverts, (True, ))
+        self.assertEqual(repr(p), "(pins io ~A0)")
+
+    def test_get_inverts(self):
+        p = Pins("A0 A1")
+        self.assertEqual(p.get_inverts(), (False, False))
+
+        p = PinsN("A0 A1")
+        self.assertEqual(p.get_inverts(), (True, True))
+
+
+        p = Pins("A0 ~A1")
+        self.assertEqual(p.get_inverts(), (False, True))
+
+        p = PinsN("A0 ~A1")
+        self.assertEqual(p.get_inverts(), (True, False))
+
     def test_conn(self):
         p = Pins("0 1 2", conn=("pmod", 0))
         self.assertEqual(list(p), ["pmod_0:0", "pmod_0:1", "pmod_0:2"])
@@ -93,6 +112,28 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.p.names, ["A0"])
         self.assertEqual(dp.n.names, ["B0"])
         self.assertEqual(dp.invert, True)
+
+    def test_individual_invert_mismatch(self):
+        with self.assertRaisesRegex(SyntaxError, "do not match"):
+            dp = DiffPairs("A0 ~A1", "~B0 B1")
+
+    def test_individual_inverts(self):
+        dp = DiffPairs("~A0", "~B0")
+        self.assertEqual(dp.individual_inverts, (True, ))
+        self.assertEqual(repr(dp), "(diffpairs io (p ~A0) (n ~B0))")
+
+    def test_get_inverts(self):
+        dp = DiffPairs("A0 A1", "B0 B1")
+        self.assertEqual(dp.get_inverts(), (False, False))
+
+        dp = DiffPairsN("A0 A1", "B0 B1")
+        self.assertEqual(dp.get_inverts(), (True, True))
+
+        dp = DiffPairs("A0 ~A1", "B0 ~B1")
+        self.assertEqual(dp.get_inverts(), (False, True))
+
+        dp = DiffPairsN("A0 ~A1", "B0 ~B1")
+        self.assertEqual(dp.get_inverts(), (True, False))
 
     def test_conn(self):
         dp = DiffPairs(p="0 1 2", n="3 4 5", conn=("pmod", 0))
