@@ -28,7 +28,12 @@ class FHDLTestCase(unittest.TestCase):
         self.assertEqual(prepare_repr(repr(obj)), prepare_repr(repr_str))
 
     def assertFormal(self, spec, mode="bmc", depth=1):
-        caller, *_ = traceback.extract_stack(limit=2)
+        stack = traceback.extract_stack()
+        for frame in reversed(stack):
+            if os.path.dirname(__file__) not in frame.filename:
+                break
+            caller = frame
+
         spec_root, _ = os.path.splitext(caller.filename)
         spec_dir = os.path.dirname(spec_root)
         spec_name = "{}_{}".format(
