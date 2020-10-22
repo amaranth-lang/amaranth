@@ -337,7 +337,10 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             self.emitter.append("pass")
 
     def on_Assign(self, stmt):
-        return self.lhs(stmt.lhs)(self.rhs(stmt.rhs))
+        gen_rhs = f"({(1 << len(stmt.rhs)) - 1} & {self.rhs(stmt.rhs)})"
+        if stmt.rhs.shape().signed:
+            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1)})"
+        return self.lhs(stmt.lhs)(gen_rhs)
 
     def on_Switch(self, stmt):
         gen_test = self.emitter.def_var("test",
