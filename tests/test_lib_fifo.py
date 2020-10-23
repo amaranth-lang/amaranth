@@ -280,3 +280,26 @@ class FIFOFormalCase(FHDLTestCase):
 
     def test_async_buffered(self):
         self.check_async_fifo(AsyncFIFOBuffered(width=8, depth=4))
+
+
+class AsyncFIFOSimCase(FHDLTestCase):
+    def test_async_fifo_r_level_latency(self):
+        fifo = AsyncFIFO(width=32, depth=10, r_domain="sync", w_domain="sync")
+
+        ff_syncronizer_latency = 2
+
+        def testbench():
+            for i in range(10):
+                yield fifo.w_data.eq(i)
+                yield fifo.w_en.eq(1)
+                yield
+
+                if (i - ff_syncronizer_latency) > 0:
+                    self.assertEqual((yield fifo.r_level), i - ff_syncronizer_latency)
+                else:
+                    self.assertEqual((yield fifo.r_level), 0)
+
+        simulator = Simulator(fifo)
+        simulator.add_clock(100e-6)
+        simulator.add_sync_process(testbench)
+        simulator.run()
