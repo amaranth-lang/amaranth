@@ -1,5 +1,6 @@
 from abc import abstractproperty
 
+from .util import get_ineg, get_oneg
 from ..hdl import *
 from ..build import *
 
@@ -153,16 +154,8 @@ class IntelPlatform(TemplatedPlatform):
 
     @staticmethod
     def _get_ireg(m, pin, invert):
-        def get_ineg(i):
-            if invert:
-                i_neg = Signal.like(i, name_suffix="_neg")
-                m.d.comb += i.eq(~i_neg)
-                return i_neg
-            else:
-                return i
-
         if pin.xdr == 0:
-            return get_ineg(pin.i)
+            return get_ineg(m, pin.i, invert)
         elif pin.xdr == 1:
             i_sdr = Signal(pin.width, name="{}_i_sdr")
             m.submodules += Instance("$dff",
@@ -170,7 +163,7 @@ class IntelPlatform(TemplatedPlatform):
                 p_WIDTH=pin.width,
                 i_CLK=pin.i_clk,
                 i_D=i_sdr,
-                o_Q=get_ineg(pin.i),
+                o_Q=get_ineg(m, pin.i, invert),
             )
             return i_sdr
         elif pin.xdr == 2:
@@ -179,31 +172,23 @@ class IntelPlatform(TemplatedPlatform):
                 p_width=pin.width,
                 i_datain=i_ddr,
                 i_inclock=pin.i_clk,
-                o_dataout_h=get_ineg(pin.i0),
-                o_dataout_l=get_ineg(pin.i1),
+                o_dataout_h=get_ineg(m, pin.i0, invert),
+                o_dataout_l=get_ineg(m, pin.i1, invert),
             )
             return i_ddr
         assert False
 
     @staticmethod
     def _get_oreg(m, pin, invert):
-        def get_oneg(o):
-            if invert:
-                o_neg = Signal.like(o, name_suffix="_neg")
-                m.d.comb += o_neg.eq(~o)
-                return o_neg
-            else:
-                return o
-
         if pin.xdr == 0:
-            return get_oneg(pin.o)
+            return get_oneg(m, pin.o, invert)
         elif pin.xdr == 1:
             o_sdr = Signal(pin.width, name="{}_o_sdr".format(pin.name))
             m.submodules += Instance("$dff",
                 p_CLK_POLARITY=1,
                 p_WIDTH=pin.width,
                 i_CLK=pin.o_clk,
-                i_D=get_oneg(pin.o),
+                i_D=get_oneg(m, pin.o, invert),
                 o_Q=o_sdr,
             )
             return o_sdr
@@ -213,8 +198,8 @@ class IntelPlatform(TemplatedPlatform):
                 p_width=pin.width,
                 o_dataout=o_ddr,
                 i_outclock=pin.o_clk,
-                i_datain_h=get_oneg(pin.o0),
-                i_datain_l=get_oneg(pin.o1),
+                i_datain_h=get_oneg(m, pin.o0, invert),
+                i_datain_l=get_oneg(m, pin.o1, invert),
             )
             return o_ddr
         assert False

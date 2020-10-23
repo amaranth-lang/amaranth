@@ -190,8 +190,8 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
     @staticmethod
     def _invert_if(invert, value):
-        if invert:
-            return ~value
+        if any(invert):
+            return value ^ (int("".join(str(int(x)) for x in invert), 2))
         else:
             return value
 

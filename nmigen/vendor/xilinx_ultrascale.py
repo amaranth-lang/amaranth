@@ -1,5 +1,6 @@
 from abc import abstractproperty
 
+from .util import get_ineg, get_oneg
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
@@ -182,7 +183,7 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "TRUE"
 
-    def _get_xdr_buffer(self, m, pin, *, i_invert=False, o_invert=False):
+    def _get_xdr_buffer(self, m, pin, *, i_invert=None, o_invert=None):
         def get_dff(clk, d, q):
             # SDR I/O is performed by packing a flip-flop into the pad IOB.
             for bit in range(len(q)):
@@ -217,34 +218,20 @@ class XilinxUltraScalePlatform(TemplatedPlatform):
                     o_Q=q[bit]
                 )
 
-        def get_ineg(y, invert):
-            if invert:
-                a = Signal.like(y, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return a
-            else:
-                return y
-
-        def get_oneg(a, invert):
-            if invert:
-                y = Signal.like(a, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return y
-            else:
-                return a
-
         if "i" in pin.dir:
+            assert i_invert is not None
             if pin.xdr < 2:
-                pin_i  = get_ineg(pin.i,  i_invert)
+                pin_i  = get_ineg(m, pin.i,  i_invert)
             elif pin.xdr == 2:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
+                pin_i0 = get_ineg(m, pin.i0, i_invert)
+                pin_i1 = get_ineg(m, pin.i1, i_invert)
         if "o" in pin.dir:
+            assert o_invert is not None
             if pin.xdr < 2:
-                pin_o  = get_oneg(pin.o,  o_invert)
+                pin_o  = get_oneg(m, pin.o,  o_invert)
             elif pin.xdr == 2:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
+                pin_o0 = get_oneg(m, pin.o0, o_invert)
+                pin_o1 = get_oneg(m, pin.o1, o_invert)
 
         i = o = t = None
         if "i" in pin.dir:

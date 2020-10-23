@@ -1,5 +1,6 @@
 from abc import abstractproperty
 
+from .util import get_ineg, get_oneg
 from ..hdl import *
 from ..build import *
 
@@ -365,7 +366,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             return True
         return False
 
-    def _get_xdr_buffer(self, m, pin, *, i_invert=False, o_invert=False):
+    def _get_xdr_buffer(self, m, pin, *, i_invert=None, o_invert=None):
         def get_ireg(clk, d, q):
             for bit in range(len(q)):
                 m.submodules += Instance("IFS1P3DX",
@@ -446,60 +447,46 @@ class LatticeECP5Platform(TemplatedPlatform):
                     o_Q=q[bit]
                 )
 
-        def get_ineg(z, invert):
-            if invert:
-                a = Signal.like(z, name_suffix="_n")
-                m.d.comb += z.eq(~a)
-                return a
-            else:
-                return z
-
-        def get_oneg(a, invert):
-            if invert:
-                z = Signal.like(a, name_suffix="_n")
-                m.d.comb += z.eq(~a)
-                return z
-            else:
-                return a
-
         if "i" in pin.dir:
+            assert i_invert is not None
             if pin.xdr < 2:
-                pin_i  = get_ineg(pin.i,  i_invert)
+                pin_i  = get_ineg(m, pin.i,  i_invert)
             elif pin.xdr == 2:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
+                pin_i0 = get_ineg(m, pin.i0, i_invert)
+                pin_i1 = get_ineg(m, pin.i1, i_invert)
             elif pin.xdr == 4:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
-                pin_i2 = get_ineg(pin.i2, i_invert)
-                pin_i3 = get_ineg(pin.i3, i_invert)
+                pin_i0 = get_ineg(m, pin.i0, i_invert)
+                pin_i1 = get_ineg(m, pin.i1, i_invert)
+                pin_i2 = get_ineg(m, pin.i2, i_invert)
+                pin_i3 = get_ineg(m, pin.i3, i_invert)
             elif pin.xdr == 7:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
-                pin_i2 = get_ineg(pin.i2, i_invert)
-                pin_i3 = get_ineg(pin.i3, i_invert)
-                pin_i4 = get_ineg(pin.i4, i_invert)
-                pin_i5 = get_ineg(pin.i5, i_invert)
-                pin_i6 = get_ineg(pin.i6, i_invert)
+                pin_i0 = get_ineg(m, pin.i0, i_invert)
+                pin_i1 = get_ineg(m, pin.i1, i_invert)
+                pin_i2 = get_ineg(m, pin.i2, i_invert)
+                pin_i3 = get_ineg(m, pin.i3, i_invert)
+                pin_i4 = get_ineg(m, pin.i4, i_invert)
+                pin_i5 = get_ineg(m, pin.i5, i_invert)
+                pin_i6 = get_ineg(m, pin.i6, i_invert)
         if "o" in pin.dir:
+            assert o_invert is not None
             if pin.xdr < 2:
-                pin_o  = get_oneg(pin.o,  o_invert)
+                pin_o  = get_oneg(m, pin.o,  o_invert)
             elif pin.xdr == 2:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
+                pin_o0 = get_oneg(m, pin.o0, o_invert)
+                pin_o1 = get_oneg(m, pin.o1, o_invert)
             elif pin.xdr == 4:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
-                pin_o2 = get_oneg(pin.o2, o_invert)
-                pin_o3 = get_oneg(pin.o3, o_invert)
+                pin_o0 = get_oneg(m, pin.o0, o_invert)
+                pin_o1 = get_oneg(m, pin.o1, o_invert)
+                pin_o2 = get_oneg(m, pin.o2, o_invert)
+                pin_o3 = get_oneg(m, pin.o3, o_invert)
             elif pin.xdr == 7:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
-                pin_o2 = get_oneg(pin.o2, o_invert)
-                pin_o3 = get_oneg(pin.o3, o_invert)
-                pin_o4 = get_oneg(pin.o4, o_invert)
-                pin_o5 = get_oneg(pin.o5, o_invert)
-                pin_o6 = get_oneg(pin.o6, o_invert)
+                pin_o0 = get_oneg(m, pin.o0, o_invert)
+                pin_o1 = get_oneg(m, pin.o1, o_invert)
+                pin_o2 = get_oneg(m, pin.o2, o_invert)
+                pin_o3 = get_oneg(m, pin.o3, o_invert)
+                pin_o4 = get_oneg(m, pin.o4, o_invert)
+                pin_o5 = get_oneg(m, pin.o5, o_invert)
+                pin_o6 = get_oneg(m, pin.o6, o_invert)
 
         i = o = t = None
         if "i" in pin.dir:

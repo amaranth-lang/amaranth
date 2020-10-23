@@ -1,5 +1,6 @@
 from abc import abstractproperty
 
+from . import util
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
@@ -442,41 +443,33 @@ class LatticeICE40Platform(TemplatedPlatform):
 
         def get_ineg(y, invert):
             if invert_lut:
-                a = Signal.like(y, name_suffix="_x{}".format(1 if invert else 0))
-                for bit in range(len(y)):
+                a = Signal.like(y, name_suffix="_x")
+                for bit, inv in zip(range(len(y)), invert):
                     m.submodules += Instance("SB_LUT4",
-                        p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
+                        p_LUT_INIT=Const(0b01 if inv else 0b10, 16),
                         i_I0=a[bit],
                         i_I1=Const(0),
                         i_I2=Const(0),
                         i_I3=Const(0),
                         o_O=y[bit])
                 return a
-            elif invert:
-                a = Signal.like(y, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return a
             else:
-                return y
+                return util.get_ineg(m, y, invert)
 
         def get_oneg(a, invert):
             if invert_lut:
-                y = Signal.like(a, name_suffix="_x{}".format(1 if invert else 0))
-                for bit in range(len(a)):
+                y = Signal.like(a, name_suffix="_x")
+                for bit, inv in zip(range(len(a)), invert):
                     m.submodules += Instance("SB_LUT4",
-                        p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
+                        p_LUT_INIT=Const(0b01 if inv else 0b10, 16),
                         i_I0=a[bit],
                         i_I1=Const(0),
                         i_I2=Const(0),
                         i_I3=Const(0),
                         o_O=y[bit])
                 return y
-            elif invert:
-                y = Signal.like(a, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return y
             else:
-                return a
+                util.get_oneg(m, a, invert)
 
         if "GLOBAL" in attrs:
             is_global_input = bool(attrs["GLOBAL"])
