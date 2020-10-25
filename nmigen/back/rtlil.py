@@ -955,9 +955,8 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     # simulators to work properly, and is universally ignored by synthesizers,
                     # Verilator rejects it.
                     #
-                    # Running the Yosys proc_prune pass converts such pathological `always @*`
-                    # blocks to `assign` statements, so this workaround can be removed completely
-                    # once support for Yosys 0.9 is dropped.
+                    # Yosys >=0.9+3468 emits a better workaround on its own, so this code can be
+                    # removed completely once support for Yosys 0.9 is dropped.
                     if not stmt_compiler._has_rhs:
                         if verilog_trigger is None:
                             verilog_trigger = \

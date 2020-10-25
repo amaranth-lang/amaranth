@@ -13,11 +13,15 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
     script = []
     script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
 
+    if yosys_version >= (0, 9, 3468):
+        # Yosys >=0.9+3468 (since commit 128522f1) emits the workaround for the `always @*`
+        # initial scheduling issue on its own.
+        script.append("delete w:$verilog_initial_trigger")
+
     if yosys_version >= (0, 9, 3527):
         # Yosys >=0.9+3527 (since commit 656ee70f) supports the `-nomux` option for the `proc`
         # script pass. Because the individual `proc_*` passes are not a stable interface,
         # `proc -nomux` is used instead, if available.
-        script.append("delete w:$verilog_initial_trigger")
         script.append("proc -nomux")
     else:
         # On earlier versions, use individual `proc_*` passes; this is a known range of Yosys
