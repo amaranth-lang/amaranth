@@ -55,13 +55,11 @@ class Pins:
 
 
 def PinsN(*args, **kwargs):
-    pins = Pins(*args, **kwargs)
-    pins.invert = True
-    return pins
+    return Pins(*args, invert=True, **kwargs)
 
 
 class DiffPairs:
-    def __init__(self, p, n, *, dir="io", conn=None, assert_width=None):
+    def __init__(self, p, n, *, dir="io", invert=False, conn=None, assert_width=None):
         self.p = Pins(p, dir=dir, conn=conn, assert_width=assert_width)
         self.n = Pins(n, dir=dir, conn=conn, assert_width=assert_width)
 
@@ -71,7 +69,7 @@ class DiffPairs:
                             .format(self.p, self.n))
 
         self.dir    = dir
-        self.invert = False
+        self.invert = bool(invert)
 
     def __len__(self):
         return len(self.p.names)
@@ -85,9 +83,7 @@ class DiffPairs:
 
 
 def DiffPairsN(*args, **kwargs):
-    diff_pairs = DiffPairs(*args, **kwargs)
-    diff_pairs.invert = True
-    return diff_pairs
+    return DiffPairs(*args, invert=True, **kwargs)
 
 
 class Attrs(OrderedDict):

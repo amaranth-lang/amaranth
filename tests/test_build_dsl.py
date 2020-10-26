@@ -94,6 +94,10 @@ class DiffPairsTestCase(FHDLTestCase):
         self.assertEqual(dp.n.names, ["B0"])
         self.assertEqual(dp.invert, True)
 
+    def test_invert_arg(self):
+        dp = DiffPairs(p="A0", n="B0", invert=True)
+        self.assertEqual(dp.invert, True)
+
     def test_conn(self):
         dp = DiffPairs(p="0 1 2", n="3 4 5", conn=("pmod", 0))
         self.assertEqual(list(dp), [
