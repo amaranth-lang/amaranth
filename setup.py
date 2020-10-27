@@ -21,7 +21,9 @@ def doc_version():
         return ""
 
     git = parse_git(".")
-    if git.exact:
+    if not git:
+        return ""
+    elif git.exact:
         return git.format_with("{tag}")
     else:
         return "latest"
