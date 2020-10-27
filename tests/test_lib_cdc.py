@@ -69,6 +69,14 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
                 r"^AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', not 'xxx'$"):
             AsyncFFSynchronizer(Signal(), Signal(), o_domain="sync", async_edge="xxx")
 
+    def test_width_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^AsyncFFSynchronizer input width must be 1, not 2$"):
+            AsyncFFSynchronizer(Signal(2), Signal(), o_domain="sync")
+        with self.assertRaisesRegex(ValueError,
+                r"^AsyncFFSynchronizer output width must be 1, not 2$"):
+            AsyncFFSynchronizer(Signal(), Signal(2), o_domain="sync")
+
     def test_pos_edge(self):
         i = Signal()
         o = Signal()

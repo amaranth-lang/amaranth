@@ -128,16 +128,24 @@ class AsyncFFSynchronizer(Elaboratable):
     def __init__(self, i, o, *, o_domain="sync", stages=2, async_edge="pos", max_input_delay=None):
         _check_stages(stages)
 
+        if len(i) != 1:
+            raise ValueError("AsyncFFSynchronizer input width must be 1, not {}"
+                             .format(len(i)))
+        if len(o) != 1:
+            raise ValueError("AsyncFFSynchronizer output width must be 1, not {}"
+                             .format(len(o)))
+
+        if async_edge not in ("pos", "neg"):
+            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', "
+                             "not {!r}"
+                             .format(async_edge))
+
         self.i = i
         self.o = o
 
         self._o_domain = o_domain
         self._stages = stages
 
-        if async_edge not in ("pos", "neg"):
-            raise ValueError("AsyncFFSynchronizer async edge must be one of 'pos' or 'neg', "
-                             "not {!r}"
-                             .format(async_edge))
         self._edge = async_edge
 
         self._max_input_delay = max_input_delay
