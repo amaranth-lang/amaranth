@@ -143,7 +143,8 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             report_timing_summary -datasheet -max_paths 10 -file {{name}}_timing.rpt
             report_power -file {{name}}_power.rpt
             {{get_override("script_before_bitstream")|default("# (script_before_bitstream placeholder)")}}
-            write_bitstream -force -bin_file {{name}}.bit
+            write_bitstream -force {{name}}.bit
+            write_cfgmem -force -format bin -interface smapx32 -disablebitswap -loadbit "up 0 {{name}}.bit" {{name}}.bin
             {{get_override("script_after_bitstream")|default("# (script_after_bitstream placeholder)")}}
             quit
         """,
