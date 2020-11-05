@@ -1287,7 +1287,7 @@ class UserValue(Value):
 class ValueCastable:
     """Base class for classes which can be cast to Values.
 
-    A ``ValueCastable`` can be cast to ``Value``, meaning its recise representation does not have
+    A ``ValueCastable`` can be cast to ``Value``, meaning its precise representation does not have
     to be immediately known. This is useful in certain metaprogramming scenarios. Instead of
     providing fixed semantics upfront, it is kept abstract for as long as possible, only being
     cast to a concrete nMigen value when required.
