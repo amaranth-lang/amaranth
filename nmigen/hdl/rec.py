@@ -1,6 +1,6 @@
 from enum import Enum
 from collections import OrderedDict
-from functools import reduce
+from functools import reduce, wraps
 
 from .. import tracer
 from .._utils import union, deprecated
@@ -149,7 +149,10 @@ class Record(ValueCastable):
             # it seems we lose the implicit `self` argument at some point, so curry manually
             res = getattr(Value, name)
             if callable(res):
-                return lambda *args, **kwargs: res(self, *args, **kwargs)
+                @wraps(res)
+                def _wrapper(*args, **kwargs):
+                    return res(self, *args, **kwargs)
+                return _wrapper
             return res
         except AttributeError:
             return self[name]
