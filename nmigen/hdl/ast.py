@@ -1299,13 +1299,13 @@ class ValueCastable:
     up to the user to ensure that it is not mutated in a way that changes its representation after
     the first call to ``as_value``.
     """
-    def __new__(cls, *args, src_loc_at=0, **kwargs):
+    def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         if not hasattr(self, "as_value"):
-            raise TypeError("Classes deriving from `ValueCastable` must override the `as_value` method")
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override the `as_value` method")
 
         if not hasattr(self.as_value, "_ValueCastable__memoized"):
-            raise TypeError("Classes deriving from `ValueCastable` must decorate the `as_value` "
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate the `as_value` "
                             "method with the `ValueCastable.lowermethod` decorator")
         return self
 

@@ -1050,13 +1050,14 @@ class MockValueCastableNoOverride(ValueCastable):
 class ValueCastableTestCase(FHDLTestCase):
     def test_not_decorated(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Classes deriving from `ValueCastable` must decorate the `as_value` "
-                "method with the `ValueCastable.lowermethod` decorator$"):
+                r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must decorate the `as_value` "
+                r"method with the `ValueCastable.lowermethod` decorator$"):
             vc = MockValueCastableNotDecorated()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Classes deriving from `ValueCastable` must override the `as_value` method$"):
+                r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must override the `as_value` "
+                r"method$"):
             vc = MockValueCastableNoOverride()
 
     def test_memoized(self):
