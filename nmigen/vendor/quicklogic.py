@@ -12,6 +12,7 @@ class QuicklogicPlatform(TemplatedPlatform):
     """
     Symbiflow toolchain
     -------------------
+
     Required tools:
         * ``symbiflow_synth``
         * ``symbiflow_pack``
@@ -19,14 +20,16 @@ class QuicklogicPlatform(TemplatedPlatform):
         * ``symbiflow_route``
         * ``symbiflow_write_fasm``
         * ``symbiflow_write_bitstream``
+
     The environment is populated by running the script specified in the environment variable
     ``NMIGEN_ENV_QLSymbiflow``, if present.
+
     Available overrides:
         * ``add_constraints``: inserts commands in XDC file.
     """
 
     device  = abstractproperty()
-    part    = abstractproperty()
+    package = abstractproperty()
 
     # Since the QuickLogic version of SymbiFlow toolchain is not upstreamed yet
     # we should distinguish the QuickLogic version from mainline one.
@@ -82,7 +85,7 @@ class QuicklogicPlatform(TemplatedPlatform):
             -v {% for file in platform.iter_extra_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
             -d {{platform.device}}
             -p {{name}}.pcf
-            -P {{platform.part}}
+            -P {{platform.package}}
             -x {{name}}.xdc
         """,
         r"""
@@ -97,7 +100,7 @@ class QuicklogicPlatform(TemplatedPlatform):
             -d {{platform.device}}
             -p {{name}}.pcf
             -n {{name}}.net
-            -P {{platform.part}}
+            -P {{platform.package}}
             -s {{name}}.sdc
         """,
         r"""
@@ -116,7 +119,7 @@ class QuicklogicPlatform(TemplatedPlatform):
         {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
             -d {{platform.device}}
-            -P {{platform.part}}
+            -P {{platform.package}}
             -b {{name}}.bit
         """
     ]
