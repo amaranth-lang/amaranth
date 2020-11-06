@@ -146,6 +146,31 @@ class IntelPlatform(TemplatedPlatform):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "true"
 
+    @property
+    def default_clk_constraint(self):
+        # Internal high-speed oscillator on Cyclone V devices.
+        # It is specified to not be faster than 100MHz, but the actual
+        # frequency seems to vary a lot between devices. Measurements
+        # of 78 to 84 MHz have been observed.
+        if self.default_clk == "cyclonev_oscillator":
+            assert self.device.startswith("5C")
+            return Clock(100e6)
+        # Otherwise, use the defined Clock resource.
+        return super().default_clk_constraint
+
+    def create_missing_domain(self, name):
+        if name == "sync" and self.default_clk == "cyclonev_oscillator":
+            # Use the internal high-speed oscillator for Cyclone V devices
+            assert self.device.startswith("5C")
+            m = Module()
+            m.domains += ClockDomain("sync")
+            m.submodules += Instance("cyclonev_oscillator",
+                                     i_oscena=Const(1),
+                                     o_clkout=ClockSignal("sync"))
+            return m
+        else:
+            return super().create_missing_domain(name)
+
     # The altiobuf_* and altddio_* primitives are explained in the following Intel documents:
     # * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altiobuf.pdf
     # * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altddio.pdf
