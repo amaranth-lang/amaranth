@@ -2,7 +2,7 @@ import argparse
 
 from .hdl.ir import Fragment
 from .back import rtlil, cxxrtl, verilog
-from .sim import pysim
+from .sim import Simulator
 
 
 __all__ = ["main"]
@@ -67,7 +67,7 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
 
     if args.action == "simulate":
         fragment = Fragment.get(design, platform)
-        sim = pysim.Simulator(fragment)
+        sim = Simulator(fragment)
         sim.add_clock(args.sync_period)
         with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
