@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import traceback
+import sys
 import warnings
 import typing
+import functools
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum
@@ -16,7 +18,7 @@ __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
-    "UserValue",
+    "UserValue", "ValueCastable",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
@@ -142,6 +144,8 @@ class Value(metaclass=ABCMeta):
             return Const(obj)
         if isinstance(obj, Enum):
             return Const(obj.value, Shape.cast(type(obj)))
+        if isinstance(obj, ValueCastable):
+            return obj.as_value()
         raise TypeError("Object {!r} cannot be converted to an nMigen value".format(obj))
 
     def __init__(self, *, src_loc_at=0):
@@ -1278,6 +1282,51 @@ class UserValue(Value):
 
     def _rhs_signals(self):
         return self._lazy_lower()._rhs_signals()
+
+
+class ValueCastable:
+    """Base class for classes which can be cast to Values.
+
+    A ``ValueCastable`` can be cast to ``Value``, meaning its precise representation does not have
+    to be immediately known. This is useful in certain metaprogramming scenarios. Instead of
+    providing fixed semantics upfront, it is kept abstract for as long as possible, only being
+    cast to a concrete nMigen value when required.
+
+    Note that it is necessary to ensure that nMigen's view of representation of all values stays 
+    internally consistent. The class deriving from ``ValueCastable`` must decorate the ``as_value``
+    method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value``return the
+    same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable, it is
+    up to the user to ensure that it is not mutated in a way that changes its representation after
+    the first call to ``as_value``.
+    """
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls)
+        if not hasattr(self, "as_value"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override the `as_value` method")
+
+        if not hasattr(self.as_value, "_ValueCastable__memoized"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate the `as_value` "
+                            "method with the `ValueCastable.lowermethod` decorator")
+        return self
+
+    @staticmethod
+    def lowermethod(func):
+        """Decorator to memoize lowering methods.
+
+        Ensures the decorated method is called only once, with subsequent method calls returning the
+        object returned by the first first method call.
+
+        This decorator is required to decorate the ``as_value`` method of ``ValueCastable`` subclasses.
+        This is to ensure that nMigen's view of representation of all values stays internally
+        consistent.
+        """
+        @functools.wraps(func)
+        def wrapper_memoized(self, *args, **kwargs):
+            if not hasattr(self, "_ValueCastable__lowered_to"):
+                self.__lowered_to = func(self, *args, **kwargs)
+            return self.__lowered_to
+        wrapper_memoized.__memoized = True
+        return wrapper_memoized
 
 
 @final
