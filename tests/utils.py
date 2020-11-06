@@ -74,9 +74,10 @@ class FHDLTestCase(unittest.TestCase):
             script=script,
             rtlil=rtlil.convert(Fragment.get(spec, platform="formal"))
         )
-        with subprocess.Popen([require_tool("sby"), "-f", "-d", spec_name], cwd=spec_dir,
-                              universal_newlines=True,
-                              stdin=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
+        with subprocess.Popen(
+                [require_tool("sby"), "-f", "-d", spec_name],
+                cwd=spec_dir, env={**os.environ, "PYTHONWARNINGS":"ignore"},
+                universal_newlines=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
             stdout, stderr = proc.communicate(config)
             if proc.returncode != 0:
                 self.fail("Formal verification failed:\n" + stdout)
