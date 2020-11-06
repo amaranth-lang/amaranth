@@ -1237,6 +1237,7 @@ class ArrayProxy(Value):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
 
 
+# TODO(nmigen-0.4): remove
 class UserValue(Value):
     """Value with custom lowering.
 
@@ -1257,6 +1258,7 @@ class UserValue(Value):
         * Indexing or iterating through individual bits;
         * Adding an assignment to the value to a ``Module`` using ``m.d.<domain> +=``.
     """
+    @deprecated("instead of `UserValue`, use `ValueCastable`", stacklevel=3)
     def __init__(self, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.__lowered = None
@@ -1292,7 +1294,7 @@ class ValueCastable:
     providing fixed semantics upfront, it is kept abstract for as long as possible, only being
     cast to a concrete nMigen value when required.
 
-    Note that it is necessary to ensure that nMigen's view of representation of all values stays 
+    Note that it is necessary to ensure that nMigen's view of representation of all values stays
     internally consistent. The class deriving from ``ValueCastable`` must decorate the ``as_value``
     method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value``return the
     same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable, it is

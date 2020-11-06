@@ -1,5 +1,7 @@
 # nmigen: UnusedElaboratable=no
 
+import warnings
+
 from nmigen.hdl.ast import *
 from nmigen.hdl.cd import *
 from nmigen.hdl.ir import *
@@ -614,7 +616,9 @@ class UserValueTestCase(FHDLTestCase):
     def setUp(self):
         self.s  = Signal()
         self.c  = Signal()
-        self.uv = MockUserValue(self.s)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.uv = MockUserValue(self.s)
 
     def test_lower(self):
         sync = ClockDomain()
@@ -645,6 +649,8 @@ class UserValueRecursiveTestCase(UserValueTestCase):
     def setUp(self):
         self.s = Signal()
         self.c = Signal()
-        self.uv = MockUserValue(MockUserValue(self.s))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.uv = MockUserValue(MockUserValue(self.s))
 
     # inherit the test_lower method from UserValueTestCase because the checks are the same

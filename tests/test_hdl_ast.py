@@ -1009,20 +1009,24 @@ class MockUserValue(UserValue):
 
 class UserValueTestCase(FHDLTestCase):
     def test_shape(self):
-        uv = MockUserValue(1)
-        self.assertEqual(uv.shape(), unsigned(1))
-        self.assertIsInstance(uv.shape(), Shape)
-        uv.lowered = 2
-        self.assertEqual(uv.shape(), unsigned(1))
-        self.assertEqual(uv.lower_count, 1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            uv = MockUserValue(1)
+            self.assertEqual(uv.shape(), unsigned(1))
+            self.assertIsInstance(uv.shape(), Shape)
+            uv.lowered = 2
+            self.assertEqual(uv.shape(), unsigned(1))
+            self.assertEqual(uv.lower_count, 1)
 
     def test_lower_to_user_value(self):
-        uv = MockUserValue(MockUserValue(1))
-        self.assertEqual(uv.shape(), unsigned(1))
-        self.assertIsInstance(uv.shape(), Shape)
-        uv.lowered = MockUserValue(2)
-        self.assertEqual(uv.shape(), unsigned(1))
-        self.assertEqual(uv.lower_count, 1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            uv = MockUserValue(MockUserValue(1))
+            self.assertEqual(uv.shape(), unsigned(1))
+            self.assertIsInstance(uv.shape(), Shape)
+            uv.lowered = MockUserValue(2)
+            self.assertEqual(uv.shape(), unsigned(1))
+            self.assertEqual(uv.lower_count, 1)
 
 
 class MockValueCastableChanges(ValueCastable):
