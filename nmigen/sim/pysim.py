@@ -262,11 +262,13 @@ class _PySimulation(BaseSimulation):
     def wait_interval(self, process, interval):
         self.timeline.delay(interval, process)
 
-    def commit(self):
+    def commit(self, changed=None):
         converged = True
         for signal_state in self.pending:
             if signal_state.commit():
                 converged = False
+        if changed is not None:
+            changed.update(self.pending)
         self.pending.clear()
         return converged
 
@@ -294,6 +296,8 @@ class PySimEngine(BaseEngine):
             process.reset()
 
     def _step(self):
+        changed = set() if self._vcd_writers else None
+
         # Performs the two phases of a delta cycle in a loop:
         converged = False
         while not converged:
@@ -303,13 +307,13 @@ class PySimEngine(BaseEngine):
                     process.runnable = False
                     process.run()
 
-            for vcd_writer in self._vcd_writers:
-                for signal_state in self._state.pending:
-                    vcd_writer.update(self._timeline.now,
-                        signal_state.signal, signal_state.next)
-
             # 2. commit: apply every queued signal change, waking up any waiting processes
-            converged = self._state.commit()
+            converged = self._state.commit(changed)
+
+        for vcd_writer in self._vcd_writers:
+            for signal_state in changed:
+                vcd_writer.update(self._timeline.now,
+                    signal_state.signal, signal_state.curr)
 
     def advance(self):
         self._step()
