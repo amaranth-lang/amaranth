@@ -147,13 +147,13 @@ class Record(ValueCastable):
         # must check `getattr` before `self` - we need to hit Value methods before fields
         try:
             # it seems we lose the implicit `self` argument at some point, so curry manually
-            res = getattr(Value, name)
-            if callable(res):
-                @wraps(res)
+            value_attr = getattr(Value, name)
+            if callable(value_attr):
+                @wraps(value_attr)
                 def _wrapper(*args, **kwargs):
-                    return res(self, *args, **kwargs)
+                    return value_attr(self, *args, **kwargs)
                 return _wrapper
-            return res
+            return value_attr
         except AttributeError:
             return self[name]
 
