@@ -1,7 +1,8 @@
 import argparse
 
 from .hdl.ir import Fragment
-from .back import rtlil, cxxrtl, verilog, pysim
+from .back import rtlil, cxxrtl, verilog
+from .sim import pysim
 
 
 __all__ = ["main"]
