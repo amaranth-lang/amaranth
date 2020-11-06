@@ -85,7 +85,6 @@ class Layout:
         return "Layout([{}])".format(", ".join(field_reprs))
 
 
-# Unlike most Values, Record *can* be subclassed.
 class Record(ValueCastable):
     @staticmethod
     def like(other, *, name=None, name_suffix=None, src_loc_at=0):
@@ -190,7 +189,7 @@ class Record(ValueCastable):
         return Cat(self.fields.values())
 
     def __len__(self):
-        return len(Cat(self.fields.values()))
+        return len(self.as_value())
 
     def _lhs_signals(self):
         return union((f._lhs_signals() for f in self.fields.values()), start=SignalSet())
