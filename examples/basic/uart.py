@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.action == "simulate":
-        from nmigen.back.pysim import Simulator, Passive
+        from nmigen.sim import Simulator, Passive
 
         sim = Simulator(uart)
         sim.add_clock(1e-6)

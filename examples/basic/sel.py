@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from nmigen import *
 from nmigen.cli import main
 

@@ -1,5 +1,5 @@
 from nmigen import *
-from nmigen.cli import main, pysim
+from nmigen.cli import main
 
 
 class Counter(Elaboratable):
