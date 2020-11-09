@@ -211,6 +211,117 @@ class RecordTestCase(FHDLTestCase):
         r1 = Record([("a", UnsignedEnum)])
         self.assertEqual(r1.a.decoder(UnsignedEnum.FOO), "FOO/1")
 
+    def test_operators(self):
+        r1 = Record([("a", 1)])
+        s1 = Signal()
+
+        # __bool__
+        with self.assertRaisesRegex(TypeError,
+                r"^Attempted to convert nMigen value to Python boolean$"):
+            not r1
+
+        # __invert__, __neg__
+        self.assertEqual(repr(~r1), "(~ (cat (sig r1__a)))")
+        self.assertEqual(repr(-r1), "(- (cat (sig r1__a)))")
+
+        # __add__, __radd__, __sub__, __rsub__
+        self.assertEqual(repr(r1 + 1),  "(+ (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 + s1), "(+ (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 + r1),  "(+ (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 + r1), "(+ (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 - 1),  "(- (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 - s1), "(- (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 - r1),  "(- (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 - r1), "(- (sig s1) (cat (sig r1__a)))")
+
+        # __mul__, __rmul__
+        self.assertEqual(repr(r1 * 1),  "(* (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 * s1), "(* (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 * r1),  "(* (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 * r1), "(* (sig s1) (cat (sig r1__a)))")
+
+        # __mod__, __rmod__, __floordiv__, __rfloordiv__
+        self.assertEqual(repr(r1 % 1),   "(% (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 % s1),  "(% (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 % r1),   "(% (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 % r1),  "(% (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 // 1),  "(// (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 // s1), "(// (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 // r1),  "(// (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 // r1), "(// (sig s1) (cat (sig r1__a)))")
+
+        # __lshift__, __rlshift__, __rshift__, __rrshift__
+        self.assertEqual(repr(r1 >> 1),  "(>> (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 >> s1), "(>> (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 >> r1),  "(>> (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 >> r1), "(>> (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 << 1),  "(<< (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 << s1), "(<< (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 << r1),  "(<< (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 << r1), "(<< (sig s1) (cat (sig r1__a)))")
+
+        # __and__, __rand__, __xor__, __rxor__, __or__, __ror__
+        self.assertEqual(repr(r1 & 1),  "(& (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 & s1), "(& (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 & r1),  "(& (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 & r1), "(& (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 ^ 1),  "(^ (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 ^ s1), "(^ (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 ^ r1),  "(^ (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 ^ r1), "(^ (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 | 1),  "(| (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 | s1), "(| (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(1 | r1),  "(| (const 1'd1) (cat (sig r1__a)))")
+        self.assertEqual(repr(s1 | r1), "(| (sig s1) (cat (sig r1__a)))")
+
+        # __eq__, __ne__, __lt__, __le__, __gt__, __ge__
+        self.assertEqual(repr(r1 == 1),  "(== (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 == s1), "(== (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 == r1), "(== (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 != 1),  "(!= (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 != s1), "(!= (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 != r1), "(!= (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 < 1),   "(< (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 < s1),  "(< (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 < r1),  "(< (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 <= 1),  "(<= (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 <= s1), "(<= (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 <= r1), "(<= (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 > 1),   "(> (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 > s1),  "(> (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 > r1),  "(> (sig s1) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1 >= 1),  "(>= (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1 >= s1), "(>= (cat (sig r1__a)) (sig s1))")
+        self.assertEqual(repr(s1 >= r1), "(>= (sig s1) (cat (sig r1__a)))")
+
+        # __abs__, __len__
+        self.assertEqual(repr(abs(r1)), "(cat (sig r1__a))")
+        self.assertEqual(len(r1), 1)
+
+        # as_unsigned, as_signed, bool, any, all, xor, implies
+        self.assertEqual(repr(r1.as_unsigned()), "(u (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.as_signed()),   "(s (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.bool()),        "(b (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.any()),         "(r| (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.all()),         "(r& (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.xor()),         "(r^ (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.implies(1)),    "(| (~ (cat (sig r1__a))) (const 1'd1))")
+        self.assertEqual(repr(r1.implies(s1)),   "(| (~ (cat (sig r1__a))) (sig s1))")
+
+        # bit_select, word_select, matches,
+        self.assertEqual(repr(r1.bit_select(0, 1)),  "(slice (cat (sig r1__a)) 0:1)")
+        self.assertEqual(repr(r1.word_select(0, 1)), "(slice (cat (sig r1__a)) 0:1)")
+        self.assertEqual(repr(r1.matches("1")),
+                "(== (& (cat (sig r1__a)) (const 1'd1)) (const 1'd1))")
+
+        # shift_left, shift_right, rotate_left, rotate_right, eq
+        self.assertEqual(repr(r1.shift_left(1)),  "(cat (const 1'd0) (cat (sig r1__a)))")
+        self.assertEqual(repr(r1.shift_right(1)), "(slice (cat (sig r1__a)) 1:1)")
+        self.assertEqual(repr(r1.rotate_left(1)), "(cat (slice (cat (sig r1__a)) 0:1) (slice (cat (sig r1__a)) 0:0))")
+        self.assertEqual(repr(r1.rotate_right(1)), "(cat (slice (cat (sig r1__a)) 0:1) (slice (cat (sig r1__a)) 0:0))")
+        self.assertEqual(repr(r1.eq(1)), "(eq (cat (sig r1__a)) (const 1'd1))")
+        self.assertEqual(repr(r1.eq(s1)), "(eq (cat (sig r1__a)) (sig s1))")
+
 
 class ConnectTestCase(FHDLTestCase):
     def setUp_flat(self):
