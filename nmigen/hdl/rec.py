@@ -143,17 +143,7 @@ class Record(ValueCastable):
                                                      src_loc_at=1 + src_loc_at)
 
     def __getattr__(self, name):
-        # must check `getattr` before `self` - we need to hit Value methods before fields
-        try:
-            value_attr = getattr(Value, name)
-            if callable(value_attr):
-                @wraps(value_attr)
-                def _wrapper(*args, **kwargs):
-                    return value_attr(self, *args, **kwargs)
-                return _wrapper
-            return value_attr
-        except AttributeError:
-            return self[name]
+        return self[name]
 
     def __getitem__(self, item):
         if isinstance(item, str):
@@ -257,3 +247,29 @@ class Record(ValueCastable):
                     stmts += [item.eq(reduce(lambda a, b: a | b, subord_items))]
 
         return stmts
+
+def _valueproxy(name):
+    value_func = getattr(Value, name)
+    @wraps(value_func)
+    def _wrapper(self, *args, **kwargs):
+        return value_func(Value.cast(self), *args, **kwargs)
+    return _wrapper
+
+for name in [
+        "__bool__",
+        "__invert__", "__neg__",
+        "__add__", "__radd__", "__sub__", "__rsub__",
+        "__mul__", "__rmul__",
+        "__mod__", "__rmod__", "__floordiv__", "__rfloordiv__",
+        "__lshift__", "__rlshift__", "__rshift__", "__rrshift__",
+        "__and__", "__rand__", "__xor__", "__rxor__", "__or__", "__ror__",
+        "__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__",
+        "__abs__", "__len__",
+        "as_unsigned", "as_signed", "bool", "any", "all", "xor", "implies",
+        "bit_select", "word_select", "matches",
+        "shift_left", "shift_right", "rotate_left", "rotate_right", "eq"
+        ]:
+    setattr(Record, name, _valueproxy(name))
+
+del _valueproxy
+del name
