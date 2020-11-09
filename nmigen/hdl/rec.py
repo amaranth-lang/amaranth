@@ -142,13 +142,6 @@ class Record(ValueCastable):
                     self.fields[field_name] = Signal(field_shape, name=concat(name, field_name),
                                                      src_loc_at=1 + src_loc_at)
 
-    def _valueproxy(name):
-        value_func = getattr(Value, name)
-        @wraps(value_func)
-        def _wrapper(self, *args, **kwargs):
-            return value_func(Value.cast(self), *args, **kwargs)
-        return _wrapper
-
     def __getattr__(self, name):
         return self[name]
 
@@ -255,6 +248,13 @@ class Record(ValueCastable):
 
         return stmts
 
+def _valueproxy(name):
+    value_func = getattr(Value, name)
+    @wraps(value_func)
+    def _wrapper(self, *args, **kwargs):
+        return value_func(Value.cast(self), *args, **kwargs)
+    return _wrapper
+
 for name in [
         "__bool__",
         "__invert__", "__neg__",
@@ -269,4 +269,7 @@ for name in [
         "bit_select", "word_select", "matches",
         "shift_left", "shift_right", "rotate_left", "rotate_right", "eq"
         ]:
-    setattr(Record, name, Record._valueproxy(name))
+    setattr(Record, name, _valueproxy(name))
+
+del _valueproxy
+del name
