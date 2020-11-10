@@ -74,7 +74,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
                 -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}} \
                 -lpf {{name}}.lpf \
                 -synthesis synplify
-            {% for file in platform.iter_extra_files(".v", ".sv", ".vhd", ".vhdl") -%}
+            {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%}
                 prj_src add {{file|tcl_escape}}
             {% endfor %}
             prj_src add {{name}}.v

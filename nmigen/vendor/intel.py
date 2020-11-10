@@ -82,13 +82,13 @@ class IntelPlatform(TemplatedPlatform):
                 set_global_assignment -name NUM_PARALLEL_PROCESSORS {{get_override("nproc")}}
             {% endif %}
 
-            {% for file in platform.iter_extra_files(".v") -%}
+            {% for file in platform.iter_files(".v") -%}
                 set_global_assignment -name VERILOG_FILE {{file|tcl_quote}}
             {% endfor %}
-            {% for file in platform.iter_extra_files(".sv") -%}
+            {% for file in platform.iter_files(".sv") -%}
                 set_global_assignment -name SYSTEMVERILOG_FILE {{file|tcl_quote}}
             {% endfor %}
-            {% for file in platform.iter_extra_files(".vhd", ".vhdl") -%}
+            {% for file in platform.iter_files(".vhd", ".vhdl") -%}
                 set_global_assignment -name VHDL_FILE {{file|tcl_quote}}
             {% endfor %}
             set_global_assignment -name VERILOG_FILE {{name}}.v

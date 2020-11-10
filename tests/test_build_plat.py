@@ -51,3 +51,14 @@ class PlatformTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^File 'foo' already exists$"):
             self.platform.add_file("foo", "bar")
+
+    def test_iter_files(self):
+        self.platform.add_file("foo.v", "")
+        self.platform.add_file("bar.v", "")
+        self.platform.add_file("baz.vhd", "")
+        self.assertEqual(list(self.platform.iter_files(".v")),
+                         ["foo.v", "bar.v"])
+        self.assertEqual(list(self.platform.iter_files(".vhd")),
+                         ["baz.vhd"])
+        self.assertEqual(list(self.platform.iter_files(".v", ".vhd")),
+                         ["foo.v", "bar.v", "baz.vhd"])

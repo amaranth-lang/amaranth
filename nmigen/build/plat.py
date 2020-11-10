@@ -63,6 +63,11 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         else:
             self.extra_files[filename] = content
 
+    def iter_files(self, *suffixes):
+        for filename in self.extra_files:
+            if filename.endswith(suffixes):
+                yield filename
+
     @property
     def _toolchain_env_var(self):
         return f"NMIGEN_ENV_{self.toolchain}"
@@ -437,6 +442,3 @@ class TemplatedPlatform(Platform):
         for filename, content in self.extra_files.items():
             plan.add_file(filename, content)
         return plan
-
-    def iter_extra_files(self, *endswith):
-        return (f for f in self.extra_files if f.endswith(endswith))

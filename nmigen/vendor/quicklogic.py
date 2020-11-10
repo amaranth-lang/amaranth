@@ -82,7 +82,7 @@ class QuicklogicPlatform(TemplatedPlatform):
         r"""
         {{invoke_tool("symbiflow_synth")}}
             -t {{name}}
-            -v {% for file in platform.iter_extra_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
+            -v {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
             -d {{platform.device}}
             -p {{name}}.pcf
             -P {{platform.package}}
