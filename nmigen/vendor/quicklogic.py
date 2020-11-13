@@ -129,10 +129,18 @@ class QuicklogicPlatform(TemplatedPlatform):
         python3 -m quicklogic_fasm.bitstream_to_openocd
             {{name}}.bit
             {{name}}.openocd
+            --osc-freq {{platform.osc_freq}}
+            --fpga-clk-divider {{platform.osc_div}}
         """,
     ]
 
     # Common logic
+
+    @property
+    def default_clk_constraint(self):
+        if self.default_clk == "sys_clk0":
+            return Clock(self.osc_freq / self.osc_div)
+        return super().default_clk_constraint
 
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
@@ -142,6 +150,20 @@ class QuicklogicPlatform(TemplatedPlatform):
         if name == "sync" and self.default_clk is not None:
             m = Module()
             if self.default_clk == "sys_clk0":
+                if not hasattr(self, "osc_div"):
+                    raise ValueError("OSC divider (osc_div) must be an integer between 2 "
+                                     "and 512")
+                if not isinstance(self.osc_div, int) or self.osc_div < 2 or self.osc_div > 512:
+                    raise ValueError("OSC divider (osc_div) must be an integer between 2 "
+                                     "and 512, not {!r}"
+                                     .format(self.osc_div))
+                if not hasattr(self, "osc_freq"):
+                    raise ValueError("OSC frequency (osc_freq) must be an integer between 2100000 "
+                                     "and 80000000")
+                if not isinstance(self.osc_freq, int) or self.osc_freq < 2100000 or self.osc_freq > 80000000:
+                    raise ValueError("OSC frequency (osc_freq) must be an integer between 2100000 "
+                                     "and 80000000, not {!r}"
+                                     .format(self.osc_freq))
                 clk_i = Signal()
                 sys_clk0 = Signal()
                 m.submodules += Instance("qlal4s3b_cell_macro",
