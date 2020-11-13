@@ -42,7 +42,8 @@ class QuicklogicPlatform(TemplatedPlatform):
         "symbiflow_place",
         "symbiflow_route",
         "symbiflow_write_fasm",
-        "symbiflow_write_bitstream"
+        "symbiflow_write_bitstream",
+        "symbiflow_write_openocd",
     ]
     file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -121,13 +122,17 @@ class QuicklogicPlatform(TemplatedPlatform):
             -d {{platform.device}}
             -P {{platform.package}}
             -b {{name}}.bit
-        """
+        """,
+        # This should be `invoke_tool("symbiflow_write_openocd")`, but isn't because of a bug in
+        # the QLSymbiflow v1.3.0 toolchain release.
+        r"""
+        python3 -m quicklogic_fasm.bitstream_to_openocd
+            {{name}}.bit
+            {{name}}.openocd
+        """,
     ]
 
     # Common logic
-
-    def __init__(self):
-        super().__init__()
 
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
