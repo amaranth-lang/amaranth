@@ -186,7 +186,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(3, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(2, 4))
 
-    def test_mux_mask(self):
+    def test_mux_invert(self):
         stmt = lambda y, a, b, c: y.eq(Mux(~c, a, b))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(2, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(3, 4))
