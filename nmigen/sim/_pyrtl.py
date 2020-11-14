@@ -177,7 +177,7 @@ class _RHSValueCompiler(_ValueCompiler):
         elif len(value.operands) == 3:
             if value.operator == "m":
                 sel, val1, val0 = value.operands
-                return f"({self(val1)} if {self(sel)} else {self(val0)})"
+                return f"({self(val1)} if {mask(sel)} else {self(val0)})"
         raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
 
     def on_Slice(self, value):
