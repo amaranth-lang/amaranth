@@ -186,6 +186,11 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(3, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(2, 4))
 
+    def test_mux_mask(self):
+        stmt = lambda y, a, b, c: y.eq(Mux(~c, a, b))
+        self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(2, 4))
+        self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(3, 4))
+
     def test_abs(self):
         stmt = lambda y, a: y.eq(abs(a))
         self.assertStatement(stmt, [C(3,  unsigned(8))], C(3,  unsigned(8)))
