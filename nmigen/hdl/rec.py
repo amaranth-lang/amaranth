@@ -198,6 +198,9 @@ class Record(ValueCastable):
             name = "<unnamed>"
         return "(rec {} {})".format(name, " ".join(fields))
 
+    def shape(self):
+        return self.as_value().shape()
+
     def connect(self, *subordinates, include=None, exclude=None):
         def rec_name(record):
             if record.name is None:
