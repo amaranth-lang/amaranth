@@ -176,6 +176,10 @@ class RecordTestCase(FHDLTestCase):
         self.assertIs(r.stb, ns)
         self.assertIs(r.info, nr)
 
+    def test_shape(self):
+        r1 = Record([("a", 1), ("b", 2)])
+        self.assertEqual(r1.shape(), unsigned(3))
+
     def test_like(self):
         r1 = Record([("a", 1), ("b", 2)])
         r2 = Record.like(r1)
