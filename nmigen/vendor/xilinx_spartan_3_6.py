@@ -437,7 +437,7 @@ class XilinxSpartan3Or6Platform(TemplatedPlatform):
         return m
 
     def get_async_ff_sync(self, async_ff_sync):
-        if self._max_input_delay is not None:
+        if async_ff_sync._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for AsyncFFSynchronizer"
                                       .format(type(self).__name__))
