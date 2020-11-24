@@ -19,6 +19,8 @@ class IntelPlatform(TemplatedPlatform):
     ``NMIGEN_ENV_Quartus``, if present.
 
     Available overrides:
+        * ``add_settings``: inserts commands at the end of the QSF file.
+        * ``add_constraints``: inserts commands at the end of the SDC file.
         * ``nproc``: sets the number of cores used by all tools.
         * ``quartus_map_opts``: adds extra options for ``quartus_map``.
         * ``quartus_fit_opts``: adds extra options for ``quartus_fit``.
@@ -103,6 +105,8 @@ class IntelPlatform(TemplatedPlatform):
             {% endfor %}
 
             set_global_assignment -name GENERATE_RBF_FILE ON
+
+            {{get_override("add_settings")|default("# (add_settings placeholder)")}}
         """,
         "{{name}}.sdc": r"""
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
@@ -112,6 +116,7 @@ class IntelPlatform(TemplatedPlatform):
                     create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("|")|tcl_quote}}]
                 {% endif %}
             {% endfor %}
+            {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
         "{{name}}.srf": r"""
             {% for warning in platform.quartus_suppressed_warnings %}
