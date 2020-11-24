@@ -396,13 +396,13 @@ class TemplatedPlatform(Platform):
             return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
 
         def verbose(arg):
-            if "NMIGEN_verbose" in os.environ:
+            if get_override("verbose"):
                 return arg
             else:
                 return jinja2.Undefined(name="quiet")
 
         def quiet(arg):
-            if "NMIGEN_verbose" in os.environ:
+            if get_override("verbose"):
                 return jinja2.Undefined(name="quiet")
             else:
                 return arg
