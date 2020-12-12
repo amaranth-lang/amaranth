@@ -1290,19 +1290,20 @@ class ValueCastable:
 
     Note that it is necessary to ensure that nMigen's view of representation of all values stays
     internally consistent. The class deriving from ``ValueCastable`` must decorate the ``as_value``
-    method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value``return the
-    same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable, it is
-    up to the user to ensure that it is not mutated in a way that changes its representation after
-    the first call to ``as_value``.
+    method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value`` return
+    the same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable,
+    it is up to the user to ensure that it is not mutated in a way that changes its representation
+    after the first call to ``as_value``.
     """
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         if not hasattr(self, "as_value"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override the `as_value` method")
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
+                            "the `as_value` method")
 
         if not hasattr(self.as_value, "_ValueCastable__memoized"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate the `as_value` "
-                            "method with the `ValueCastable.lowermethod` decorator")
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate "
+                            "the `as_value` method with the `ValueCastable.lowermethod` decorator")
         return self
 
     @staticmethod
