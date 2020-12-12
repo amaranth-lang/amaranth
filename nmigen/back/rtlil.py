@@ -23,7 +23,7 @@ _escape_map = str.maketrans({
 })
 
 
-def signed(value):
+def _signed(value):
     if isinstance(value, str):
         return False
     elif isinstance(value, int):
@@ -34,7 +34,7 @@ def signed(value):
         assert False, "Invalid constant {!r}".format(value)
 
 
-def const(value):
+def _const(value):
     if isinstance(value, str):
         return "\"{}\"".format(value.translate(_escape_map))
     elif isinstance(value, int):
@@ -44,7 +44,7 @@ def const(value):
             # This code path is only used for Instances, where Verilog-like behavior is desirable.
             # Verilog ensures that integers with unspecified width are 32 bits wide or more.
             width = max(32, bits_for(value))
-            return const(ast.Const(value, width))
+            return _const(ast.Const(value, width))
     elif isinstance(value, ast.Const):
         value_twos_compl = value.value & ((1 << value.width) - 1)
         return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
@@ -98,7 +98,7 @@ class _ProxiedBuilder:
 class _AttrBuilder:
     def _attribute(self, name, value, *, indent=0):
         self._append("{}attribute \\{} {}\n",
-                     "  " * indent, name, const(value))
+                     "  " * indent, name, _const(value))
 
     def _attributes(self, attrs, *, src=None, **kwargs):
         for name, value in attrs.items():
@@ -166,12 +166,12 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
             if isinstance(value, float):
                 self._append("    parameter real \\{} \"{!r}\"\n",
                              param, value)
-            elif signed(value):
+            elif _signed(value):
                 self._append("    parameter signed \\{} {}\n",
-                             param, const(value))
+                             param, _const(value))
             else:
                 self._append("    parameter \\{} {}\n",
-                             param, const(value))
+                             param, _const(value))
         for port, wire in ports.items():
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
@@ -270,18 +270,14 @@ class _SyncBuilder(_ProxiedBuilder):
         self._append("      update {} {}\n", lhs, rhs)
 
 
-def src(src_loc):
+def _src(src_loc):
     if src_loc is None:
         return None
     file, line = src_loc
     return "{}:{}".format(file, line)
 
 
-def srcs(src_locs):
-    return "|".join(sorted(filter(lambda x: x, map(src, src_locs))))
-
-
-class LegalizeValue(Exception):
+class _LegalizeValue(Exception):
     def __init__(self, value, branches, src_loc):
         self.value    = value
         self.branches = list(branches)
@@ -335,10 +331,10 @@ class _ValueCompilerState:
 
         wire_curr = self.rtlil.wire(width=signal.width, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
-                                    attrs=attrs, src=src(signal.src_loc))
+                                    attrs=attrs, src=_src(signal.src_loc))
         if signal in self.driven and self.driven[signal]:
             wire_next = self.rtlil.wire(width=signal.width, name=wire_curr + "$next",
-                                        src=src(signal.src_loc))
+                                        src=_src(signal.src_loc))
         else:
             wire_next = None
         self.wires[signal] = (wire_curr, wire_next)
@@ -419,7 +415,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
         else:
             max_index = 1 << len(value.index)
             max_elem  = len(value.elems)
-            raise LegalizeValue(value.index, range(min(max_index, max_elem)), value.src_loc)
+            raise _LegalizeValue(value.index, range(min(max_index, max_elem)), value.src_loc)
 
 
 class _RHSValueCompiler(_ValueCompiler):
@@ -454,19 +450,19 @@ class _RHSValueCompiler(_ValueCompiler):
         return super().on_value(self.s.expand(value))
 
     def on_Const(self, value):
-        return const(value)
+        return _const(value)
 
     def on_AnyConst(self, value):
         if value in self.s.anys:
             return self.s.anys[value]
 
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         self.s.rtlil.cell("$anyconst", ports={
             "\\Y": res,
         }, params={
             "WIDTH": res_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         self.s.anys[value] = res
         return res
 
@@ -475,12 +471,12 @@ class _RHSValueCompiler(_ValueCompiler):
             return self.s.anys[value]
 
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         self.s.rtlil.cell("$anyseq", ports={
             "\\Y": res,
         }, params={
             "WIDTH": res_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         self.s.anys[value] = res
         return res
 
@@ -496,7 +492,7 @@ class _RHSValueCompiler(_ValueCompiler):
 
         arg_bits, arg_sign = arg.shape()
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(1, value.operator)], ports={
             "\\A": self(arg),
             "\\Y": res,
@@ -504,7 +500,7 @@ class _RHSValueCompiler(_ValueCompiler):
             "A_SIGNED": arg_sign,
             "A_WIDTH": arg_bits,
             "Y_WIDTH": res_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         return res
 
     def match_shape(self, value, new_bits, new_sign):
@@ -515,7 +511,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if new_bits <= value_bits:
             return self(ast.Slice(value, 0, new_bits))
 
-        res = self.s.rtlil.wire(width=new_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=new_bits, src=_src(value.src_loc))
         self.s.rtlil.cell("$pos", ports={
             "\\A": self(value),
             "\\Y": res,
@@ -523,7 +519,7 @@ class _RHSValueCompiler(_ValueCompiler):
             "A_SIGNED": value_sign,
             "A_WIDTH": value_bits,
             "Y_WIDTH": new_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         return res
 
     def on_Operator_binary(self, value):
@@ -539,7 +535,7 @@ class _RHSValueCompiler(_ValueCompiler):
             lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
             rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(2, value.operator)], ports={
             "\\A": lhs_wire,
             "\\B": rhs_wire,
@@ -550,11 +546,11 @@ class _RHSValueCompiler(_ValueCompiler):
             "B_SIGNED": rhs_sign,
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         if value.operator in ("//", "%"):
             # RTLIL leaves division by zero undefined, but we require it to return zero.
             divmod_res = res
-            res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+            res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
             self.s.rtlil.cell("$mux", ports={
                 "\\A": divmod_res,
                 "\\B": self(ast.Const(0, ast.Shape(res_bits, res_sign))),
@@ -562,7 +558,7 @@ class _RHSValueCompiler(_ValueCompiler):
                 "\\Y": res,
             }, params={
                 "WIDTH": res_bits
-            }, src=src(value.src_loc))
+            }, src=_src(value.src_loc))
         return res
 
     def on_Operator_mux(self, value):
@@ -573,7 +569,7 @@ class _RHSValueCompiler(_ValueCompiler):
         val1_bits = val0_bits = res_bits = max(val1_bits, val0_bits, res_bits)
         val1_wire = self.match_shape(val1, val1_bits, val1_sign)
         val0_wire = self.match_shape(val0, val0_bits, val0_sign)
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         self.s.rtlil.cell("$mux", ports={
             "\\A": val0_wire,
             "\\B": val1_wire,
@@ -581,7 +577,7 @@ class _RHSValueCompiler(_ValueCompiler):
             "\\Y": res,
         }, params={
             "WIDTH": res_bits
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         return res
 
     def on_Operator(self, value):
@@ -599,7 +595,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
             sigspec = self(value)
         else:
-            sigspec = self.s.rtlil.wire(len(value), src=src(value.src_loc))
+            sigspec = self.s.rtlil.wire(len(value), src=_src(value.src_loc))
             self.s.rtlil.connect(sigspec, self(value))
         return sigspec
 
@@ -610,7 +606,7 @@ class _RHSValueCompiler(_ValueCompiler):
         lhs_bits, lhs_sign = lhs.shape()
         rhs_bits, rhs_sign = rhs.shape()
         res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=src(value.src_loc))
+        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
         # Note: Verilog's x[o+:w] construct produces a $shiftx cell, not a $shift cell.
         # However, nMigen's semantics defines the out-of-range bits to be zero, so it is correct
         # to use a $shift cell here instead, even though it produces less idiomatic Verilog.
@@ -624,7 +620,7 @@ class _RHSValueCompiler(_ValueCompiler):
             "B_SIGNED": rhs_sign,
             "B_WIDTH": rhs_bits,
             "Y_WIDTH": res_bits,
-        }, src=src(value.src_loc))
+        }, src=_src(value.src_loc))
         return res
 
     def on_Repl(self, value):
@@ -681,9 +677,9 @@ class _LHSValueCompiler(_ValueCompiler):
             # is large (e.g. 32-bit wide), trying to naively legalize it is likely to exhaust
             # system resources.
             max_branches = len(value.value) // value.stride + 1
-            raise LegalizeValue(value.offset,
-                                range(1 << len(value.offset))[:max_branches],
-                                value.src_loc)
+            raise _LegalizeValue(value.offset,
+                                 range(1 << len(value.offset))[:max_branches],
+                                 value.src_loc)
 
     def on_Repl(self, value):
         raise TypeError # :nocov:
@@ -743,7 +739,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self.state.rtlil.cell("$" + stmt._kind, ports={
             "\\A": check_wire,
             "\\EN": en_wire,
-        }, src=src(stmt.src_loc))
+        }, src=_src(stmt.src_loc))
 
     on_Assert = on_property
     on_Assume = on_property
@@ -764,11 +760,11 @@ class _StatementCompiler(xfrm.StatementVisitor):
             # don't cache anything in that case.
             test_sigspec = self.rhs_compiler(stmt.test)
 
-        with self._case.switch(test_sigspec, src=src(stmt.src_loc)) as switch:
+        with self._case.switch(test_sigspec, src=_src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
                 case_attrs = {}
                 if values in stmt.case_src_locs:
-                    case_attrs["src"] = src(stmt.case_src_locs[values])
+                    case_attrs["src"] = _src(stmt.case_src_locs[values])
                 if isinstance(stmt.test, ast.Signal) and stmt.test.decoder:
                     decoded_values = []
                     for value in values:
@@ -785,9 +781,9 @@ class _StatementCompiler(xfrm.StatementVisitor):
     def on_statement(self, stmt):
         try:
             super().on_statement(stmt)
-        except LegalizeValue as legalize:
+        except _LegalizeValue as legalize:
             with self._case.switch(self.rhs_compiler(legalize.value),
-                                   src=src(legalize.src_loc)) as switch:
+                                   src=_src(legalize.src_loc)) as switch:
                 shape = legalize.value.shape()
                 tests = ["{:0{}b}".format(v, shape.width) for v in legalize.branches]
                 if tests:
