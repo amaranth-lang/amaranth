@@ -1499,13 +1499,14 @@ class Switch(Statement):
                 keys = (keys,)
             # Map: 2 -> "0010"; "0010" -> "0010"
             new_keys = ()
+            key_mask = (1 << len(self.test)) - 1
             for key in keys:
                 if isinstance(key, str):
                     key = "".join(key.split()) # remove whitespace
                 elif isinstance(key, int):
-                    key = format(key, "b").rjust(len(self.test), "0")
+                    key = format(key & key_mask, "b").rjust(len(self.test), "0")
                 elif isinstance(key, Enum):
-                    key = format(key.value, "b").rjust(len(self.test), "0")
+                    key = format(key.value & key_mask, "b").rjust(len(self.test), "0")
                 else:
                     raise TypeError("Object {!r} cannot be used as a switch key"
                                     .format(key))

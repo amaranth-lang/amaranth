@@ -1107,3 +1107,29 @@ class InitialTestCase(FHDLTestCase):
     def test_initial(self):
         i = Initial()
         self.assertEqual(i.shape(), unsigned(1))
+
+
+class SwitchTestCase(FHDLTestCase):
+    def test_default_case(self):
+        s = Switch(Const(0), {None: []})
+        self.assertEqual(s.cases, {(): []})
+
+    def test_int_case(self):
+        s = Switch(Const(0, 8), {10: []})
+        self.assertEqual(s.cases, {("00001010",): []})
+
+    def test_int_neg_case(self):
+        s = Switch(Const(0, 8), {-10: []})
+        self.assertEqual(s.cases, {("11110110",): []})
+
+    def test_enum_case(self):
+        s = Switch(Const(0, UnsignedEnum), {UnsignedEnum.FOO: []})
+        self.assertEqual(s.cases, {("01",): []})
+
+    def test_str_case(self):
+        s = Switch(Const(0, 8), {"0000 11\t01": []})
+        self.assertEqual(s.cases, {("00001101",): []})
+
+    def test_two_cases(self):
+        s = Switch(Const(0, 8), {("00001111", 123): []})
+        self.assertEqual(s.cases, {("00001111", "01111011"): []})
