@@ -104,9 +104,9 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
             set_hierarchy_separator {/}
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_escape}}]
+                    create_clock -name {{port_signal.name|sdc_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|sdc_quote}}]
                 {% else -%}
-                    create_clock -name {{net_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|tcl_escape}}]
+                    create_clock -name {{net_signal.name|sdc_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|sdc_quote}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
