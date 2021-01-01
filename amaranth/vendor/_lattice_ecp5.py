@@ -234,6 +234,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """,
         "{{name}}.sdc": r"""
+            set_hierarchy_separator {/}
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
                     create_clock -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_escape}}]
