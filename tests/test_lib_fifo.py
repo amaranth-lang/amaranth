@@ -312,16 +312,16 @@ class AsyncFIFOSimCase(FHDLTestCase):
             for i in range(fill_in):
                 yield fifo.w_data.eq(i)
                 yield fifo.w_en.eq(1)
-                yield
+                yield Tick("write")
             yield fifo.w_en.eq(0)
-            yield
-            yield
+            yield Tick("write")
+            yield Tick("write")
             self.assertEqual((yield fifo.w_level), expected_level)
             yield write_done.eq(1)
 
         def read_process():
             while not (yield write_done):
-                yield
+                yield Tick("read")
             self.assertEqual((yield fifo.r_level), expected_level)
 
         simulator = Simulator(fifo)
