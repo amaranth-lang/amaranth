@@ -305,7 +305,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
         simulator.add_sync_process(testbench)
         simulator.run()
 
-    def check_async_fifo_level(self, fifo, fill_in, expected_level):
+    def check_async_fifo_level(self, fifo, fill_in, expected_level, read=False):
         write_done = Signal()
 
         def write_process():
@@ -320,6 +320,8 @@ class AsyncFIFOSimCase(FHDLTestCase):
             yield write_done.eq(1)
 
         def read_process():
+            if read:
+                yield fifo.r_en.eq(1)
             while not (yield write_done):
                 yield Tick("read")
             self.assertEqual((yield fifo.r_level), expected_level)
@@ -351,3 +353,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
     def test_async_buffered_fifo_level_full(self):
         fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=10, expected_level=9)
+
+    def test_async_buffered_fifo_level_empty(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
+        self.check_async_fifo_level(fifo, fill_in=0, expected_level=0, read=True)
