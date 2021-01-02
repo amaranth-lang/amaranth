@@ -344,6 +344,10 @@ class AsyncFIFOSimCase(FHDLTestCase):
         fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=5, expected_level=5)
 
+    def test_async_buffered_fifo_level_only_three(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
+        self.check_async_fifo_level(fifo, fill_in=3, expected_level=3)
+
     def test_async_buffered_fifo_level_full(self):
         fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=10, expected_level=9)

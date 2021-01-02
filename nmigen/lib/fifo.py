@@ -513,7 +513,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         m.d[self._r_domain] += self.r_level.eq(fifo.r_level + r_consume_buffered)
 
         w_consume_buffered = Signal()
-        m.submodules.consume_buffered_cdc = FFSynchronizer(r_consume_buffered, w_consume_buffered, o_domain=self._w_domain)
+        m.submodules.consume_buffered_cdc = FFSynchronizer(r_consume_buffered, w_consume_buffered, o_domain=self._w_domain, stages=4)
         m.d.comb += self.w_level.eq(fifo.w_level + w_consume_buffered)
 
         with m.If(self.r_en | ~self.r_rdy):
