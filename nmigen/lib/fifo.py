@@ -509,7 +509,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         ]
 
         r_consume_buffered = Signal()
-        m.d.comb += r_consume_buffered.eq(self.r_rdy - self.r_en)
+        m.d.comb += r_consume_buffered.eq((self.r_rdy - self.r_en) & self.r_rdy)
         m.d[self._r_domain] += self.r_level.eq(fifo.r_level + r_consume_buffered)
 
         w_consume_buffered = Signal()
