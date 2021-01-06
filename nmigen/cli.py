@@ -1,4 +1,5 @@
 import argparse
+import re
 
 from .hdl.ir import Fragment
 from .back import rtlil, cxxrtl, verilog
@@ -19,6 +20,9 @@ def main_parser(parser=None):
     p_generate.add_argument("-t", "--type", dest="generate_type",
         metavar="LANGUAGE", choices=["il", "cc", "v"],
         help="generate LANGUAGE (il for RTLIL, v for Verilog, cc for CXXRTL; default: file extension of FILE, if given)")
+    p_generate.add_argument("--no-comments",
+        action="store_true",
+        help="Suppress code generation comments")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
@@ -56,10 +60,14 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
             parser.error("Unable to auto-detect language, specify explicitly with -t/--type")
         if generate_type == "il":
             output = rtlil.convert(fragment, name=name, ports=ports)
+            if args.no_comments:
+                output = re.sub(r"\s*attribute \\src.*\n", "", output)
         if generate_type == "cc":
             output = cxxrtl.convert(fragment, name=name, ports=ports)
+            if args.no_comments:
+                output = re.sub(r"\s*// \\src:.*\n", "", output)
         if generate_type == "v":
-            output = verilog.convert(fragment, name=name, ports=ports)
+            output = verilog.convert(fragment, name=name, ports=ports, strip_internal_attrs=args.no_comments)
         if args.generate_file:
             args.generate_file.write(output)
         else:
