@@ -19,6 +19,9 @@ def main_parser(parser=None):
     p_generate.add_argument("-t", "--type", dest="generate_type",
         metavar="LANGUAGE", choices=["il", "cc", "v"],
         help="generate LANGUAGE (il for RTLIL, v for Verilog, cc for CXXRTL; default: file extension of FILE, if given)")
+    p_generate.add_argument("--strip-verilog-attributes",
+        action="store_true",
+        help="strip verilog attributes, as they can generate warnings")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
@@ -59,7 +62,7 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
         if generate_type == "cc":
             output = cxxrtl.convert(fragment, name=name, ports=ports)
         if generate_type == "v":
-            output = verilog.convert(fragment, name=name, ports=ports)
+            output = verilog.convert(fragment, name=name, ports=ports, strip_internal_attrs=args.strip_verilog_attributes)
         if args.generate_file:
             args.generate_file.write(output)
         else:
