@@ -387,6 +387,16 @@ class LatticeECP5Platform(TemplatedPlatform):
                     o_Q=q[bit]
                 )
 
+        def get_oereg(clk, oe, q):
+            for bit in range(len(q)):
+                m.submodules += Instance("OFS1P3DX",
+                    i_SCLK=clk,
+                    i_SP=Const(1),
+                    i_CD=Const(0),
+                    i_D=oe,
+                    o_Q=q[bit]
+                )
+
         def get_iddr(sclk, d, q0, q1):
             for bit in range(len(d)):
                 m.submodules += Instance("IDDRX1F",
@@ -508,7 +518,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         if "o" in pin.dir:
             o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
         if pin.dir in ("oe", "io"):
-            t = Signal(1,         name="{}_xdr_t".format(pin.name))
+            t = Signal(pin.width, name="{}_xdr_t".format(pin.name))
 
         if pin.xdr == 0:
             if "i" in pin.dir:
@@ -523,31 +533,28 @@ class LatticeECP5Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 get_oreg(pin.o_clk, pin_o, o)
             if pin.dir in ("oe", "io"):
-                get_oreg(pin.o_clk, ~pin.oe, t)
+                get_oereg(pin.o_clk, ~pin.oe, t)
         elif pin.xdr == 2:
             if "i" in pin.dir:
                 get_iddr(pin.i_clk, i, pin_i0, pin_i1)
             if "o" in pin.dir:
                 get_oddr(pin.o_clk, pin_o0, pin_o1, o)
             if pin.dir in ("oe", "io"):
-                # It looks like Diamond will not pack an OREG as a tristate register in a DDR PIO.
-                # It is not clear what is the recommended set of primitives for this task.
-                # Similarly, nextpnr will not pack anything as a tristate register in a DDR PIO.
-                get_oreg(pin.o_clk, ~pin.oe, t)
+                get_oereg(pin.o_clk, ~pin.oe, t)
         elif pin.xdr == 4:
             if "i" in pin.dir:
                 get_iddrx2(pin.i_clk, pin.i_fclk, i, pin_i0, pin_i1, pin_i2, pin_i3)
             if "o" in pin.dir:
                 get_oddrx2(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, o)
             if pin.dir in ("oe", "io"):
-                get_oreg(pin.o_clk, ~pin.oe, t)
+                get_oereg(pin.o_clk, ~pin.oe, t)
         elif pin.xdr == 7:
             if "i" in pin.dir:
                 get_iddr71b(pin.i_clk, pin.i_fclk, i, pin_i0, pin_i1, pin_i2, pin_i3, pin_i4, pin_i5, pin_i6)
             if "o" in pin.dir:
                 get_oddr71b(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, pin_o4, pin_o5, pin_o6, o)
             if pin.dir in ("oe", "io"):
-                get_oreg(pin.o_clk, ~pin.oe, t)
+                get_oereg(pin.o_clk, ~pin.oe, t)
         else:
             assert False
 
@@ -584,7 +591,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
-                i_T=t,
+                i_T=t[bit],
                 i_I=o[bit],
                 o_O=port.io[bit]
             )
@@ -597,7 +604,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("BB",
-                i_T=t,
+                i_T=t[bit],
                 i_I=o[bit],
                 o_O=i[bit],
                 io_B=port.io[bit]
@@ -635,7 +642,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
-                i_T=t,
+                i_T=t[bit],
                 i_I=o[bit],
                 o_O=port.p[bit],
             )
@@ -648,7 +655,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("BB",
-                i_T=t,
+                i_T=t[bit],
                 i_I=o[bit],
                 o_O=i[bit],
                 io_B=port.p[bit],
