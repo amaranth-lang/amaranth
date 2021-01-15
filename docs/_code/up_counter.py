@@ -41,7 +41,7 @@ class UpCounter(Elaboratable):
 
         return m
 # --- TEST ---
-from nmigen.back.pysim import Simulator
+from nmigen.sim import Simulator
 
 
 dut = UpCounter(25)
