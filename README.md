@@ -12,11 +12,12 @@ Other nMigen libraries are built on FHDL and provide various tools and logic cor
 
 nMigen is based on Migen, a similar Python-based hardware description language. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
-The development of nMigen has been supported by [SymbioticEDA][] and [LambdaConcept][].
+The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept][], and [ChipEleven][].
 
 [yosys]: http://www.clifford.at/yosys/
 [symbioticeda]: https://www.symbioticeda.com/
 [lambdaconcept]: http://lambdaconcept.com/
+[chipeleven]: https://chipeleven.com/
 
 ### Introduction
 
