@@ -526,7 +526,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             if "o" in pin.dir:
                 o = pin_o
             if pin.dir in ("oe", "io"):
-                t = ~pin.oe
+                t = Repl(~pin.oe, pin.width)
         elif pin.xdr == 1:
             if "i" in pin.dir:
                 get_ireg(pin.i_clk, i, pin_i)
