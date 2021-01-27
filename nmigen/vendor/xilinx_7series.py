@@ -52,12 +52,12 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     -------------------
 
     Required tools:
-        * ``synth``
-        * ``pack``
-        * ``place``
-        * ``route``
-        * ``write_fasm``
-        * ``write_bitstream``
+        * ``symbiflow_synth``
+        * ``symbiflow_pack``
+        * ``symbiflow_place``
+        * ``symbiflow_route``
+        * ``symbiflow_write_fasm``
+        * ``symbiflow_write_bitstream``
 
     The environment is populated by running the script specified in the environment variable
     ``NMIGEN_ENV_Symbiflow``, if present.
@@ -183,12 +183,12 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     }
 
     _symbiflow_required_tools = [
-        "synth",
-        "pack",
-        "place",
-        "route",
-        "write_fasm",
-        "write_bitstream"
+        "symbiflow_synth",
+        "symbiflow_pack",
+        "symbiflow_place",
+        "symbiflow_route",
+        "symbiflow_write_fasm",
+        "symbiflow_write_bitstream"
     ]
     _symbiflow_file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -226,20 +226,20 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
     }
     _symbiflow_command_templates = [
         r"""
-        {{invoke_tool("synth")}}
+        {{invoke_tool("symbiflow_synth")}}
             -t {{name}}
             -v {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
             -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
             -x {{name}}.xdc
         """,
         r"""
-        {{invoke_tool("pack")}}
+        {{invoke_tool("symbiflow_pack")}}
             -e {{name}}.eblif
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("place")}}
+        {{invoke_tool("symbiflow_place")}}
             -e {{name}}.eblif
             -p {{name}}.pcf
             -n {{name}}.net
@@ -247,18 +247,18 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("route")}}
+        {{invoke_tool("symbiflow_route")}}
             -e {{name}}.eblif
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
             -s {{name}}.sdc
         """,
         r"""
-        {{invoke_tool("write_fasm")}}
+        {{invoke_tool("symbiflow_write_fasm")}}
             -e {{name}}.eblif
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
         """,
         r"""
-        {{invoke_tool("write_bitstream")}}
+        {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
             -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
             -b {{name}}.bit
