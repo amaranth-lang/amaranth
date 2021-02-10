@@ -71,6 +71,8 @@ class UART(Elaboratable):
                     ]
                 with m.Else():
                     m.d.sync += self.rx_ovf.eq(1)
+            with m.If(self.rx_ack):
+                m.d.sync += self.rx_rdy.eq(0)
         with m.Else():
             with m.If(rx_phase != 0):
                 m.d.sync += rx_phase.eq(rx_phase - 1)
@@ -135,6 +137,10 @@ if __name__ == "__main__":
 
             yield uart.rx_ack.eq(1)
             yield
+            yield uart.rx_ack.eq(0)
+            yield
+            assert not (yield uart.rx_rdy)
+
         sim.add_sync_process(transmit_proc)
 
         with sim.write_vcd("uart.vcd", "uart.gtkw"):
