@@ -94,6 +94,8 @@ class _VCDWriter:
                 var_init = signal.reset
 
             for (*var_scope, var_name) in names:
+                if ' ' in var_name:
+                    raise ValueError("Variable '{}' cannot contain a space.".format(var_name))
                 suffix = None
                 while True:
                     try:
