@@ -765,8 +765,8 @@ class Slice(Value):
 
         super().__init__(src_loc_at=src_loc_at)
         self.value = Value.cast(value)
-        self.start = start
-        self.stop  = stop
+        self.start = int(start)
+        self.stop  = int(stop)
 
     def shape(self):
         return Shape(self.stop - self.start)

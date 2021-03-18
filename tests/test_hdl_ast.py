@@ -630,6 +630,12 @@ class SliceTestCase(FHDLTestCase):
         s1 = Slice(c, -4, -1)
         self.assertEqual((s1.start, s1.stop), (4, 7))
 
+    def test_start_end_bool(self):
+        c  = Const(0, 8)
+        s  = Slice(c, False, True)
+        self.assertIs(type(s.start), int)
+        self.assertIs(type(s.stop),  int)
+
     def test_start_end_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Slice start must be an integer, not 'x'$"):
