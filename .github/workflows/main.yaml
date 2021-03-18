@@ -20,7 +20,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo add-apt-repository ppa:sri-csl/formal-methods
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys FA8E1301F4D3932C
+        sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
         pip install setuptools setuptools_scm wheel coverage codecov yowasp-yosys nmigen-yosys
