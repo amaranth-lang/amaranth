@@ -109,7 +109,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
                 read_xdc {{file|tcl_escape}}
             {% endfor %}
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
-            synth_design -top {{name}} {{get_override("synth_design_opts")|default("# (synth_design_opts placeholder)")}}
+            synth_design -top {{name}} {{get_override("synth_design_opts")}}
             foreach cell [get_cells -quiet -hier -filter {nmigen.vivado.false_path == "TRUE"}] {
                 set_false_path -to $cell
             }
