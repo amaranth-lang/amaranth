@@ -82,12 +82,12 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
             prj_src add {{name}}.sdc
             {{get_override("script_project")|default("# (script_project placeholder)")}}
             prj_project save
-            prj_run Synthesis -impl impl -forceAll
-            prj_run Translate -impl impl -forceAll
-            prj_run Map -impl impl -forceAll
-            prj_run PAR -impl impl -forceAll
-            prj_run Export -impl impl -forceAll -task Bitgen
-            prj_run Export -impl impl -forceAll -task Jedecgen
+            prj_run Synthesis -impl impl
+            prj_run Translate -impl impl
+            prj_run Map -impl impl
+            prj_run PAR -impl impl
+            prj_run Export -impl impl -task Bitgen
+            prj_run Export -impl impl -task Jedecgen
             {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
         """,
         "{{name}}.lpf": r"""
