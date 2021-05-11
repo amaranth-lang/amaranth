@@ -504,6 +504,15 @@ class DSLTestCase(FHDLTestCase):
                 with m.If(self.s2):
                     pass
 
+    def test_Case_wrong_nested(self):
+        m = Module()
+        with m.Switch(self.s1):
+            with m.Case(0):
+                with self.assertRaisesRegex(SyntaxError,
+                    r"^Case is not permitted outside of Switch$"):
+                    with m.Case(1):
+                        pass
+
     def test_FSM_basic(self):
         a = Signal()
         b = Signal()
@@ -659,6 +668,23 @@ class DSLTestCase(FHDLTestCase):
                         r"it is permitted inside of FSM State$")):
                 with m.If(self.s2):
                     pass
+
+    def test_State_outside_FSM_wrong(self):
+        m = Module()
+        with self.assertRaisesRegex(SyntaxError,
+            r"^FSM State is not permitted outside of FSM"):
+            with m.State("FOO"):
+                pass
+
+
+    def test_FSM_State_wrong_nested(self):
+        m = Module()
+        with m.FSM():
+            with m.State("FOO"):
+                with self.assertRaisesRegex(SyntaxError,
+                    r"^FSM State is not permitted outside of FSM"):
+                    with m.State("BAR"):
+                        pass
 
     def test_auto_pop_ctrl(self):
         m = Module()
