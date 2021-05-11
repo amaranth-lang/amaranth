@@ -281,6 +281,34 @@ class DSLTestCase(FHDLTestCase):
             with m.Else():
                 pass
 
+    def test_Else_wrong_nested(self):
+        m = Module()
+        with m.If(self.s1):
+            with self.assertRaisesRegex(SyntaxError,
+                    r"^Else without preceding If/Elif$"):
+                with m.Else():
+                    pass
+
+    def test_Elif_Elif_wrong_nested(self):
+        m = Module()
+        with m.If(self.s1):
+            pass
+        with m.Elif(self.s2):
+            with self.assertRaisesRegex(SyntaxError,
+                    r"^Elif without preceding If$"):
+                with m.Elif(self.s3):
+                    pass
+
+    def test_Else_Else_wrong_nested(self):
+        m = Module()
+        with m.If(self.s1):
+            pass
+        with m.Else():
+            with self.assertRaisesRegex(SyntaxError,
+                    r"^Else without preceding If/Elif$"):
+                with m.Else():
+                    pass
+
     def test_If_wide(self):
         m = Module()
         with m.If(self.w1):
