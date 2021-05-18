@@ -5,7 +5,6 @@ import subprocess
 import textwrap
 import traceback
 import unittest
-from contextlib import contextmanager
 
 from nmigen.hdl.ast import *
 from nmigen.hdl.ir import *

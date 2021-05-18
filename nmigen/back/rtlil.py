@@ -1,10 +1,9 @@
 import io
-import textwrap
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from .._utils import bits_for, flatten
-from ..hdl import ast, rec, ir, mem, xfrm
+from ..hdl import ast, ir, mem, xfrm
 
 
 __all__ = ["convert", "convert_fragment"]
