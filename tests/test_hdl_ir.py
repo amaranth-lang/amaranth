@@ -424,7 +424,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
             None: SignalSet((ResetSignal("b_sync"),))
         }))
 
-    def test_domain_conflict_rename_drivers(self):
+    def test_domain_conflict_rename_drivers_before_creating_missing(self):
         cda = ClockDomain("sync")
         cdb = ClockDomain("sync")
         s = Signal()
