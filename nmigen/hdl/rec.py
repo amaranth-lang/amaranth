@@ -49,7 +49,7 @@ class Layout:
                 try:
                     # Check provided shape by calling Shape.cast and checking for exception
                     Shape.cast(shape, src_loc_at=1 + src_loc_at)
-                except Exception as error:
+                except Exception:
                     raise TypeError("Field {!r} has invalid shape: should be castable to Shape "
                                     "or a list of fields of a nested record"
                                     .format(field))
