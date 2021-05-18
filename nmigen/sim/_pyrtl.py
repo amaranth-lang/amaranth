@@ -140,8 +140,6 @@ class _RHSValueCompiler(_ValueCompiler):
                 return self(arg)
         elif len(value.operands) == 2:
             lhs, rhs = value.operands
-            lhs_mask = (1 << len(lhs)) - 1
-            rhs_mask = (1 << len(rhs)) - 1
             if value.operator == "+":
                 return f"({sign(lhs)} + {sign(rhs)})"
             if value.operator == "-":
@@ -217,7 +215,6 @@ class _RHSValueCompiler(_ValueCompiler):
         gen_index = self.emitter.def_var("rhs_index", f"{index_mask} & {self(value.index)}")
         gen_value = self.emitter.gen_var("rhs_proxy")
         if value.elems:
-            gen_elems = []
             for index, elem in enumerate(value.elems):
                 if index == 0:
                     self.emitter.append(f"if {index} == {gen_index}:")
@@ -292,7 +289,6 @@ class _LHSValueCompiler(_ValueCompiler):
     def on_Cat(self, value):
         def gen(arg):
             gen_arg = self.emitter.def_var("cat", arg)
-            gen_parts = []
             offset = 0
             for part in value.parts:
                 part_mask = (1 << len(part)) - 1
@@ -308,7 +304,6 @@ class _LHSValueCompiler(_ValueCompiler):
             index_mask = (1 << len(value.index)) - 1
             gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask}")
             if value.elems:
-                gen_elems = []
                 for index, elem in enumerate(value.elems):
                     if index == 0:
                         self.emitter.append(f"if {index} == {gen_index}:")
