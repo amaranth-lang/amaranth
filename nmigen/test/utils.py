@@ -6,7 +6,6 @@ import textwrap
 import traceback
 import unittest
 import warnings
-from contextlib import contextmanager
 
 from ..hdl.ast import *
 from ..hdl.ir import *

@@ -1,4 +1,3 @@
-from .._utils import deprecated
 from .. import *
 
 

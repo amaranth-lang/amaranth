@@ -1,6 +1,6 @@
 from nmigen import *
 from nmigen.sim import *
-from nmigen.back import rtlil, verilog
+from nmigen.back import verilog
 
 
 class Counter(Elaboratable):

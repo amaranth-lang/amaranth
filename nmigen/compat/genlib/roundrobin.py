@@ -1,7 +1,6 @@
 import warnings
 
 from ..fhdl.structure import Signal, If, Case
-from ..._utils import deprecated
 from ..fhdl.module import CompatModule
 
 

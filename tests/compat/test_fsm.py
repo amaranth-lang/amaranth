@@ -1,5 +1,4 @@
 import unittest
-from itertools import count
 
 from nmigen.compat import *
 from nmigen.compat.genlib.fsm import FSM

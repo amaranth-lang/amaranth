@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 
-from nmigen._utils import flatten, union
+from nmigen._utils import flatten
 from nmigen.hdl.ast import *
 from nmigen.hdl.cd import  *
 from nmigen.hdl.mem import *

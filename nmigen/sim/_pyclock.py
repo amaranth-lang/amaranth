@@ -1,5 +1,3 @@
-import inspect
-
 from ._base import BaseProcess
 
 

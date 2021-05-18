@@ -1,11 +1,10 @@
-from collections import OrderedDict, namedtuple
-from collections.abc import Iterable
+from collections import OrderedDict
 from contextlib import contextmanager, _GeneratorContextManager
 from functools import wraps
 from enum import Enum
 import warnings
 
-from .._utils import flatten, bits_for, deprecated
+from .._utils import flatten, bits_for
 from .. import tracer
 from .ast import *
 from .ir import *

@@ -5,7 +5,6 @@ import linecache
 import re
 from collections import OrderedDict
 from collections.abc import Iterable
-from contextlib import contextmanager
 
 from .utils import *
 

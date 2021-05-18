@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
 
-from .._utils import flatten, deprecated
+from .._utils import flatten
 from .. import tracer
 from .ast import *
 from .ast import _StatementList

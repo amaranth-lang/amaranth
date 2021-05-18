@@ -3,7 +3,7 @@ from collections import OrderedDict
 from functools import reduce, wraps
 
 from .. import tracer
-from .._utils import union, deprecated
+from .._utils import union
 from .ast import *
 
 
