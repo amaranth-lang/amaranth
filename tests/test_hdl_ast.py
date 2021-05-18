@@ -548,11 +548,6 @@ class OperatorTestCase(FHDLTestCase):
         v = Mux(True, Const(0), Const(0))
         self.assertEqual(repr(v), "(m (const 1'd1) (const 1'd0) (const 1'd0))")
 
-    def test_bool(self):
-        v = Const(0).bool()
-        self.assertEqual(repr(v), "(b (const 1'd0))")
-        self.assertEqual(v.shape(), unsigned(1))
-
     def test_any(self):
         v = Const(0b101).any()
         self.assertEqual(repr(v), "(r| (const 3'd5))")
