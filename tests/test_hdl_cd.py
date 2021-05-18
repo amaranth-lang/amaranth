@@ -15,7 +15,7 @@ class ClockDomainTestCase(FHDLTestCase):
         self.assertEqual(pix.clk.name, "pix_clk")
         self.assertEqual(pix.rst.name, "pix_rst")
         cd_pix = ClockDomain()
-        self.assertEqual(pix.name, "pix")
+        self.assertEqual(cd_pix.name, "pix")
         dom = [ClockDomain("foo")][0]
         self.assertEqual(dom.name, "foo")
         with self.assertRaisesRegex(ValueError,
