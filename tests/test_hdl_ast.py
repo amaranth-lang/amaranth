@@ -561,7 +561,7 @@ class OperatorTestCase(FHDLTestCase):
         v = Const(0b101).all()
         self.assertEqual(repr(v), "(r& (const 3'd5))")
 
-    def test_xor(self):
+    def test_xor_value(self):
         v = Const(0b101).xor()
         self.assertEqual(repr(v), "(r^ (const 3'd5))")
 
