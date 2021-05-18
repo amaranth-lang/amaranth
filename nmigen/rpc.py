@@ -50,7 +50,7 @@ def _serve_yosys(modules):
                     width = len(parameter["value"])
                     parameter_value = int(parameter["value"], 2)
                     if parameter_value & (1 << (width - 1)):
-                        parameter_value = -((1 << width) - value)
+                        parameter_value = -((1 << width) - parameter_value)
                 elif parameter["type"] == "string":
                     parameter_value = parameter["value"]
                 elif parameter["type"] == "real":
