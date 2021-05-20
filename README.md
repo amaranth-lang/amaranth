@@ -58,7 +58,7 @@ Once your design passes verification with nMigen, you can migrate it to the nMig
 
 ### Community
 
-nMigen has a dedicated IRC channel, [#nmigen at freenode.net](https://webchat.freenode.net/?channels=nmigen). Feel free to join to ask questions about using nMigen or discuss ongoing development of nMigen and its related projects.
+nMigen has a dedicated IRC channel, [#nmigen at libera.chat](irc://irc.libera.chat/nmigen). Feel free to join to ask questions about using nMigen or discuss ongoing development of nMigen and its related projects.
 
 ### License
 
