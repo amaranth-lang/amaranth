@@ -115,13 +115,16 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, *, width, depth, fwft=True):
+    def __init__(self, *, width, depth, fwft=True, domain='sync'):
         super().__init__(width=width, depth=depth, fwft=fwft)
 
         self.level = Signal(range(depth + 1))
+        self.domain = domain
 
     def elaborate(self, platform):
         m = Module()
+        sync = m.d[self.domain]
+
         if self.depth == 0:
             m.d.comb += [
                 self.w_rdy.eq(0),
@@ -140,9 +143,9 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         do_write = self.w_rdy & self.w_en
 
         storage = Memory(width=self.width, depth=self.depth)
-        w_port  = m.submodules.w_port = storage.write_port()
+        w_port  = m.submodules.w_port = storage.write_port(domain=self.domain)
         r_port  = m.submodules.r_port = storage.read_port(
-            domain="comb" if self.fwft else "sync", transparent=self.fwft)
+            domain="comb" if self.fwft else self.domain, transparent=self.fwft)
         produce = Signal(range(self.depth))
         consume = Signal(range(self.depth))
 
@@ -152,7 +155,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
             w_port.en.eq(self.w_en & self.w_rdy),
         ]
         with m.If(do_write):
-            m.d.sync += produce.eq(_incr(produce, self.depth))
+            sync += produce.eq(_incr(produce, self.depth))
 
         m.d.comb += [
             r_port.addr.eq(consume),
@@ -161,12 +164,12 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         if not self.fwft:
             m.d.comb += r_port.en.eq(self.r_en)
         with m.If(do_read):
-            m.d.sync += consume.eq(_incr(consume, self.depth))
+            sync += consume.eq(_incr(consume, self.depth))
 
         with m.If(do_write & ~do_read):
-            m.d.sync += self.level.eq(self.level + 1)
+            sync += self.level.eq(self.level + 1)
         with m.If(do_read & ~do_write):
-            m.d.sync += self.level.eq(self.level - 1)
+            sync += self.level.eq(self.level - 1)
 
         if platform == "formal":
             # TODO: move this logic to SymbiYosys
@@ -219,13 +222,16 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     """.strip(),
     w_attributes="")
 
-    def __init__(self, *, width, depth):
+    def __init__(self, *, width, depth, domain='sync'):
         super().__init__(width=width, depth=depth, fwft=True)
 
         self.level = Signal(range(depth + 1))
+        self.domain = domain
 
     def elaborate(self, platform):
         m = Module()
+        sync = m.d[self.domain]
+
         if self.depth == 0:
             m.d.comb += [
                 self.w_rdy.eq(0),
@@ -236,7 +242,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
         # Effectively, this queue treats the output register of the non-FWFT inner queue as
         # an additional storage element.
         m.submodules.unbuffered = fifo = SyncFIFO(width=self.width, depth=self.depth - 1,
-                                                  fwft=False)
+                                                  fwft=False, domain=self.domain)
 
         m.d.comb += [
             fifo.w_data.eq(self.w_data),
@@ -249,9 +255,9 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
             fifo.r_en.eq(fifo.r_rdy & (~self.r_rdy | self.r_en)),
         ]
         with m.If(fifo.r_en):
-            m.d.sync += self.r_rdy.eq(1)
+            sync += self.r_rdy.eq(1)
         with m.Elif(self.r_en):
-            m.d.sync += self.r_rdy.eq(0)
+            sync += self.r_rdy.eq(0)
 
         m.d.comb += [
             self.level.eq(fifo.level + self.r_rdy),
