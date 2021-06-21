@@ -23,9 +23,18 @@ class OpenLANEPlatform(TemplatedPlatform):
     OpenLANE ASIC Flow
     ------------------
 
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE.
+
     Required tools:
         * ``openlane``
         * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``runs/*``: OpenLANE flow output
 
     """
 
