@@ -32,8 +32,9 @@ class Inverter(Elaboratable):
 
         return m
 
-	def get_ports(self):
-		return [self.i, self.o]
+    def get_ports(self):
+        return [self.i, self.o]
+
 class Blinky(Elaboratable):
     def __init__(self):
         self.o = Signal()
