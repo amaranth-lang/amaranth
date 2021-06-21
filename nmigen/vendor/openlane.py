@@ -254,23 +254,6 @@ class OpenLANEPlatform(TemplatedPlatform):
             else:
                 return arg
 
-
-        def create_missing_domain(self, name):
-            if name == "sync" and self.defualt_clk is None:
-                m = Module()
-                #clk_i = self.request.(self.default_clk).i
-
-                #if self.default_rst is not None:
-                #    rst_i = self.request(self.default_rst).i
-                #else:
-                #    rst_i = Const(0)
-
-                m.domains += ClockDomain("sync", reset_less=True),
-                m.d.comb += ClockSignal("sync").eq(1)
-                return m
-
-
-
         def render(source, origin, syntax=None):
             try:
                 source   = textwrap.dedent(source).strip()
@@ -306,3 +289,22 @@ class OpenLANEPlatform(TemplatedPlatform):
         for filename, content in self.extra_files.items():
             plan.add_file(filename, content)
         return plan
+
+    def create_missing_domain(self, name):
+        if name == "sync":
+            m = Module()
+            if self.default_clk is not None:
+                clk_i = self.request(self.default_clk).i
+            else:
+                clk_i = Const(1)
+
+            if self.default_rst is not None:
+               rst_i = self.request(self.default_rst).i
+            else:
+               rst_i = Const(0)
+
+            m.domains += ClockDomain("sync"),
+            m.d.comb += ClockSignal("sync").eq(clk_i)
+            m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
+
+            return m
