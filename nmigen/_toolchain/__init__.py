@@ -10,7 +10,7 @@ class ToolNotFound(Exception):
 
 
 def tool_env_var(name):
-    return name.upper().replace("-", "_")
+    return name.upper().replace("-", "_").replace("+", "X")
 
 
 def _get_tool(name):
