@@ -45,6 +45,23 @@ class _NameExtractor:
 
         return self.names
 
+class _NotableExtractor:
+    def __init__(self):
+        self.notables = {}
+
+    def __call__(self, names, **kwargs):
+        for sig in names:
+            if hasattr(sig, "_notable"):
+                if len(sig) > 1 and not sig.decoder:
+                    suffix = "[{}:0]".format(len(sig) - 1)
+                else:
+                    suffix = ""
+
+                hname = list(map(lambda a: ".".join(a), names[sig]))
+                self.notables.setdefault(sig._notable, []).append(hname[-1] + suffix)
+
+        return self.notables
+
 
 class _VCDWriter:
     @staticmethod
@@ -73,6 +90,8 @@ class _VCDWriter:
         self.traces = []
 
         signal_names = _NameExtractor()(fragment)
+
+        self.notables = _NotableExtractor()(signal_names)
 
         trace_names = SignalDict()
         for trace in traces:
@@ -114,8 +133,9 @@ class _VCDWriter:
                     except KeyError:
                         suffix = (suffix or 0) + 1
 
-                if signal not in self.gtkw_names:
-                    self.gtkw_names[signal] = (*var_scope, var_name_suffix)
+                if not self.notables:
+                    if signal not in self.gtkw_names:
+                        self.gtkw_names[signal] = (*var_scope, var_name_suffix)
 
     def update(self, timestamp, signal, value):
         vcd_var = self.vcd_vars.get(signal)
@@ -138,12 +158,18 @@ class _VCDWriter:
             self.gtkw_save.dumpfile_size(self.vcd_file.tell())
 
             self.gtkw_save.treeopen("top")
-            for signal in self.traces:
-                if len(signal) > 1 and not signal.decoder:
-                    suffix = "[{}:0]".format(len(signal) - 1)
-                else:
-                    suffix = ""
-                self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)
+            if not self.notables:
+                for signal in self.traces:
+                    if len(signal) > 1 and not signal.decoder:
+                        suffix = "[{}:0]".format(len(signal) - 1)
+                    else:
+                        suffix = ""
+                    self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)
+            else:
+                for group, signals in self.notables.items():
+                    self.gtkw_save.blank(label=group)
+                    for signal in signals:
+                        self.gtkw_save.trace(signal)
 
         if self.vcd_file is not None:
             self.vcd_file.close()

@@ -807,3 +807,29 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             self.assertEqual((yield -(Const(0b11, 2).as_signed())), 1)
         sim.add_process(process)
         sim.run()
+
+
+class SimulatorGTKWTestCase(FHDLTestCase):
+    def test_notable_signals(self):
+        m = Module()
+        nya = Signal(notable=True)
+        uwu = Signal()
+        umu = Signal(notable='owo')
+        flop = Signal(notable='owo')
+
+        m.d.sync += [
+            nya.eq(~nya),
+            umu.eq(~nya ^ flop),
+            uwu.eq(nya & umu),
+        ]
+
+        m.d.comb += [
+            flop.eq(~umu)
+        ]
+
+        sim = Simulator(m)
+
+        sim.add_clock(1 / 12e6, domain = "sync")
+
+        with sim.write_vcd("umu.vcd", "umu.gtkw"):
+            sim.run()

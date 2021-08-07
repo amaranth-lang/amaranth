@@ -925,6 +925,9 @@ class Signal(Value, DUID):
         names). If an ``Enum`` subclass is passed, it is concisely decoded using format string
         ``"{0.name:}/{0.value:}"``, or a number if the signal value is not a member of
         the enumeration.
+    notable : None or bool or str
+        Indicates that this function is notable for storage in the gtkw file for simulation
+        and if so what group to place it in.
 
     Attributes
     ----------
@@ -938,7 +941,7 @@ class Signal(Value, DUID):
     """
 
     def __init__(self, shape=None, *, name=None, reset=0, reset_less=False,
-                 attrs=None, decoder=None, src_loc_at=0):
+                 attrs=None, decoder=None, notable=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
         if name is not None and not isinstance(name, str):
@@ -979,6 +982,17 @@ class Signal(Value, DUID):
         else:
             self.decoder = decoder
             self._enum_class = None
+
+        # Indicates that a signal is notable
+        if notable is not None:
+            if not isinstance(notable, bool) and not isinstance(notable, str):
+                raise TypeError("notable must be either None, bool, or str, not {!r}".format(type(notable)))
+
+            if notable:
+                if isinstance(notable, bool):
+                    self._notable = 'global'
+                else:
+                    self._notable = notable
 
     # Not a @classmethod because nmigen.compat requires it.
     @staticmethod
