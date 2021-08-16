@@ -122,7 +122,7 @@ class Xilinx7SeriesPlatform(TemplatedPlatform):
             }
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             report_timing_summary -file {{name}}_timing_synth.rpt
-            report_utilization -hierarchical -file {{name}}_utilization_hierachical_synth.rpt
+            report_utilization -hierarchical -file {{name}}_utilization_hierarchical_synth.rpt
             report_utilization -file {{name}}_utilization_synth.rpt
             opt_design
             place_design
