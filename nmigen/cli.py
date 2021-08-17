@@ -1,7 +1,7 @@
 import argparse
 
 from .hdl.ir import Fragment
-from .back import rtlil, cxxrtl, verilog
+from .back import rtlil, cxxrtl, verilog, show
 from .sim import Simulator
 
 
@@ -23,6 +23,8 @@ def main_parser(parser=None):
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
 
+    p_action.add_parser("show", help="show diagrams of the generated RTL")
+
     p_simulate = p_action.add_parser(
         "simulate", help="simulate the design")
     p_simulate.add_argument("-v", "--vcd-file",
@@ -42,8 +44,9 @@ def main_parser(parser=None):
 
 
 def main_runner(parser, args, design, platform=None, name="top", ports=()):
+    fragment = Fragment.get(design, platform)
+
     if args.action == "generate":
-        fragment = Fragment.get(design, platform)
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
             if args.generate_file.name.endswith(".il"):
@@ -66,11 +69,13 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
             print(output)
 
     if args.action == "simulate":
-        fragment = Fragment.get(design, platform)
         sim = Simulator(fragment)
         sim.add_clock(args.sync_period)
         with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
+
+    if args.action == "show":
+        show.convert(fragment, name=name, ports=ports)
 
 
 def main(*args, **kwargs):
