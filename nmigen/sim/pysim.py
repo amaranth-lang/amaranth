@@ -280,6 +280,7 @@ class PySimEngine(BaseEngine):
 
         self._fragment = fragment
         self._processes = _FragmentCompiler(self._state)(self._fragment)
+        self._observers = []
         self._vcd_writers = []
 
     def add_coroutine_process(self, process, *, default_cmd):
@@ -296,7 +297,7 @@ class PySimEngine(BaseEngine):
             process.reset()
 
     def _step(self):
-        changed = set() if self._vcd_writers else None
+        changed = set() if self._vcd_writers or self._observers else None
 
         # Performs the two phases of a delta cycle in a loop:
         converged = False
@@ -309,6 +310,13 @@ class PySimEngine(BaseEngine):
 
             # 2. commit: apply every queued signal change, waking up any waiting processes
             converged = self._state.commit(changed)
+
+        for observer in self._observers:
+            observer.begin(self.now)
+            for signal_state in changed:
+                observer.value_change(self.now,
+                    signal_state.signal, signal_state.curr)
+            observer.end(self.now)
 
         for vcd_writer in self._vcd_writers:
             for signal_state in changed:
@@ -323,6 +331,18 @@ class PySimEngine(BaseEngine):
     @property
     def now(self):
         return self._timeline.now
+
+    @contextmanager
+    def observe(self, observers):
+        try:
+            self._observers += observers
+            for observer in observers:
+                observer.open(self.now)
+            yield
+        finally:
+            for observer in observers:
+                observer.close(self.now)
+            del self._observers[:-len(observers)]
 
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces):

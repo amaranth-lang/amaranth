@@ -6,7 +6,7 @@ from ..hdl.ir import *
 from ._base import BaseEngine
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator", "Observer"]
 
 
 class Command:
@@ -50,6 +50,30 @@ class Active(Command):
     def __repr__(self):
         return "(active)"
 
+class Observer:
+    """Observes changing values in a simulation."""
+    
+    def open(self, timestamp):
+        """Called when observing simulation, before receiving any values"""
+        pass
+
+    def close(self, timestamp):
+        """Called on observation of a simulation is finished."""
+        pass
+
+    def begin(self, timestamp):
+        """Called on start of a batch of updates at a single timestamp.
+
+        There may be multiple batches at a single timestamp, but timestamps
+        never decrease.
+        """
+        pass
+
+    def end(self, timestamp):
+        pass
+
+    def value_change(self, timestamp, signal, value):
+        pass
 
 class Simulator:
     def __init__(self, fragment, *, engine="pysim"):
@@ -177,6 +201,18 @@ class Simulator:
         assert self._engine.now <= deadline
         while (self.advance() or run_passive) and self._engine.now < deadline:
             pass
+
+    def observe(self, *observers):
+        """Notifies observers of changes to values in the simulation
+
+        This method returns a context manager... see below
+
+        Arguments
+        ---------
+        observers:
+          Objects that implement the Observer protocol and will be notifed of changes.
+        """
+        return self._engine.observe(observers)
 
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=()):
         """Write waveforms to a Value Change Dump file, optionally populating a GTKWave save file.

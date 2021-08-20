@@ -1,4 +1,4 @@
 from .core import *
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator", "Observer"]
