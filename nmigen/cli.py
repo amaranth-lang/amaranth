@@ -2,10 +2,24 @@ import argparse
 
 from .hdl.ir import Fragment
 from .back import rtlil, cxxrtl, verilog
-from .sim import Simulator
+from .sim import Simulator, Observer
 
 
 __all__ = ["main"]
+
+
+class ObserveAll(Observer):
+    def open(self, timestamp):
+        print(f"Simulation begins at {timestamp}")
+
+    def close(self, timestamp):
+        print(f"Simulation ends at {timestamp}")
+
+    def begin(self, timestamp):
+        print(f"{timestamp:6.1f}")
+
+    def value_change(self, timestamp, signal, value):
+        print(f"  {signal.name:>12s}: {value:10}")
 
 
 def main_parser(parser=None):
@@ -33,6 +47,15 @@ def main_parser(parser=None):
         help="write GTKWave configuration to GTKW-FILE")
     p_simulate.add_argument("-p", "--period", dest="sync_period",
         metavar="TIME", type=float, default=1e-6,
+        help="set 'sync' clock domain period to TIME (default: %(default)s)")
+    p_simulate.add_argument("-c", "--clocks", dest="sync_clocks",
+        metavar="COUNT", type=int, required=True,
+        help="simulate for COUNT 'sync' clock periods")
+
+    p_simulate = p_action.add_parser(
+        "observe", help="simulate the design and observe changing values")
+    p_simulate.add_argument("-p", "--period", dest="sync_period",
+        metavar="TIME", type=float, default=1,
         help="set 'sync' clock domain period to TIME (default: %(default)s)")
     p_simulate.add_argument("-c", "--clocks", dest="sync_clocks",
         metavar="COUNT", type=int, required=True,
@@ -70,6 +93,13 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
         sim = Simulator(fragment)
         sim.add_clock(args.sync_period)
         with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
+            sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
+
+    if args.action == "observe":
+        fragment = Fragment.get(design, platform)
+        sim = Simulator(fragment)
+        sim.add_clock(args.sync_period)
+        with sim.observe(ObserveAll()):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
 
 
