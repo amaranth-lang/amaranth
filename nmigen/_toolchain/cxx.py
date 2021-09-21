@@ -36,6 +36,16 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
             linker_so=ld_cxxflags,
         )
 
+        # Sometimes CCompiler is modified to have additional executable entries for compiling and
+        # linking CXX shared objects (e.g. on Gentoo). These executables have to be set then.
+        try:
+            cc_driver.set_executables(
+                compiler_so_cxx=f"{cxx} {cflags}",
+                linker_so_cxx=ld_cxxflags,
+            )
+        except:
+            pass
+
         for include_dir in include_dirs:
             cc_driver.add_include_dir(include_dir)
         for macro in macros:
