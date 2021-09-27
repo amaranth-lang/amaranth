@@ -4,6 +4,7 @@ import functools
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum
+from itertools import chain
 
 from .. import tracer
 from .._utils import *
@@ -1404,7 +1405,7 @@ class Statement:
     @staticmethod
     def cast(obj):
         if isinstance(obj, Iterable):
-            return _StatementList(sum((Statement.cast(e) for e in obj), []))
+            return _StatementList(list(chain.from_iterable(map(Statement.cast, obj))))
         else:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
