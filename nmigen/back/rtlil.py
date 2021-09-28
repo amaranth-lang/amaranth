@@ -511,12 +511,19 @@ class _RHSValueCompiler(_ValueCompiler):
             return self(ast.Slice(value, 0, new_bits))
 
         res = self.s.rtlil.wire(width=new_bits, src=_src(value.src_loc))
+        assert value_bits >= 0
+        assert new_bits >= 0
+        # quartus cannot parse the zero bit width expression +"" 
+        # which is the verilog generated when value_bits is 0.
+        # In that case we generate a zero value, one bit wide signal
+        # but only in the case that the output bit width is also nonzero
+        quartus_fix_empty_value = value_bits == 0 and new_bits > 0
         self.s.rtlil.cell("$pos", ports={
-            "\\A": self(value),
+            "\\A": "1'0" if quartus_fix_empty_value else self(value),
             "\\Y": res,
         }, params={
             "A_SIGNED": value_sign,
-            "A_WIDTH": value_bits,
+            "A_WIDTH": 1 if quartus_fix_empty_value else value_bits,
             "Y_WIDTH": new_bits,
         }, src=_src(value.src_loc))
         return res
