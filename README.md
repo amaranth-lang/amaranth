@@ -1,5 +1,7 @@
 # nMigen
 
+> An actively developed version of [`m-labs/nmigen`](https://github.com/m-labs/nmigen/).
+
 ## A refreshed Python toolbox for building complex digital hardware
 
 **Although nMigen is incomplete and in active development, it can already be used for real-world designs. The nMigen language (`nmigen.hdl.ast`, `nmigen.hdl.dsl`) will not undergo incompatible changes. The nMigen standard library (`nmigen.lib`) and build system (`nmigen.build`) will undergo minimal changes before their design is finalized.**
@@ -10,7 +12,7 @@ To address those issues, we have developed the *nMigen FHDL*, a library that rep
 
 Other nMigen libraries are built on FHDL and provide various tools and logic cores. nMigen also contains a simulator that allows test benches to be written in Python.
 
-nMigen is based on Migen, a similar Python-based hardware description language. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
+nMigen is based on [Migen](https://github.com/m-labs/migen/), a similar Python-based hardware description language developed by [m-labs](https://m-labs.hk/). Nmigen's development was initiated by m-labs at [`m-labs/nmigen`](https://github.com/m-labs/nmigen/) but development continues here independently. Although Migen works very well in production, its design could be improved in many fundamental ways, and nMigen reimplements Migen concepts from scratch to do so. nMigen also provides an extensive [compatibility layer](#migration-from-migen) that makes it possible to build and simulate most Migen designs unmodified, as well as integrate modules written for Migen and nMigen.
 
 The development of nMigen has been supported by [SymbioticEDA][], [LambdaConcept][], and [ChipEleven][].
 
