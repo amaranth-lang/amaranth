@@ -433,7 +433,6 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             tests, cases = [], OrderedDict()
             for if_test, if_case in zip(if_tests + [None], if_bodies):
                 if if_test is not None:
-                    if_test = Value.cast(if_test)
                     if len(if_test) != 1:
                         if_test = if_test.bool()
                     tests.append(if_test)
