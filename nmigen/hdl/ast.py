@@ -735,9 +735,6 @@ def Mux(sel, val1, val0):
     Value, out
         Output ``Value``. If ``sel`` is asserted, the Mux returns ``val1``, else ``val0``.
     """
-    sel = Value.cast(sel)
-    if len(sel) != 1:
-        sel = sel.bool()
     return Operator("m", [sel, val1, val0])
 
 

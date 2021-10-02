@@ -542,7 +542,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux_wide(self):
         s = Const(0b100)
         v = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
-        self.assertEqual(repr(v), "(m (b (const 3'd4)) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v), "(m (const 3'd4) (const 4'd0) (const 6'd0))")
 
     def test_mux_bool(self):
         v = Mux(True, Const(0), Const(0))

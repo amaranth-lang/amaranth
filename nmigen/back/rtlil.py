@@ -562,6 +562,8 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Operator_mux(self, value):
         sel, val1, val0 = value.operands
+        if len(sel) != 1:
+            sel = sel.bool()
         val1_bits, val1_sign = val1.shape()
         val0_bits, val0_sign = val0.shape()
         res_bits, res_sign = value.shape()
