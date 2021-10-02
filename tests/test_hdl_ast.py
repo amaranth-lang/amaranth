@@ -737,6 +737,10 @@ class CatTestCase(FHDLTestCase):
         c1 = Cat(Const(10), Const(1))
         self.assertEqual(repr(c1), "(cat (const 4'd10) (const 1'd1))")
 
+    def test_cast(self):
+        c = Cat(1, 0)
+        self.assertEqual(repr(c), "(cat (const 1'd1) (const 1'd0))")
+
 
 class ReplTestCase(FHDLTestCase):
     def test_shape(self):
@@ -755,6 +759,10 @@ class ReplTestCase(FHDLTestCase):
     def test_repr(self):
         s = Repl(Const(10), 3)
         self.assertEqual(repr(s), "(repl (const 4'd10) 3)")
+
+    def test_cast(self):
+        r = Repl(0, 3)
+        self.assertEqual(repr(r), "(repl (const 1'd0) 3)")
 
 
 class ArrayTestCase(FHDLTestCase):
