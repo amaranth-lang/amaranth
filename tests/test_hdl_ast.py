@@ -1060,6 +1060,18 @@ class MockValueCastableNoOverride(ValueCastable):
         pass
 
 
+class MockValueCastableCustomGetattr(ValueCastable):
+    def __init__(self):
+        pass
+
+    @ValueCastable.lowermethod
+    def as_value(self):
+        return Const(0)
+
+    def __getattr__(self, attr):
+        assert False
+
+
 class ValueCastableTestCase(FHDLTestCase):
     def test_not_decorated(self):
         with self.assertRaisesRegex(TypeError,
@@ -1082,6 +1094,10 @@ class ValueCastableTestCase(FHDLTestCase):
         vc.width = 3
         sig3 = Value.cast(vc)
         self.assertIs(sig1, sig3)
+
+    def test_custom_getattr(self):
+        vc = MockValueCastableCustomGetattr()
+        vc.as_value() # shouldn't call __getattr__
 
 
 class SampleTestCase(FHDLTestCase):

@@ -1305,16 +1305,18 @@ class ValueCastable:
     def lowermethod(func):
         """Decorator to memoize lowering methods.
 
-        Ensures the decorated method is called only once, with subsequent method calls returning the
-        object returned by the first first method call.
+        Ensures the decorated method is called only once, with subsequent method calls returning
+        the object returned by the first first method call.
 
-        This decorator is required to decorate the ``as_value`` method of ``ValueCastable`` subclasses.
-        This is to ensure that nMigen's view of representation of all values stays internally
-        consistent.
+        This decorator is required to decorate the ``as_value`` method of ``ValueCastable``
+        subclasses. This is to ensure that nMigen's view of representation of all values stays
+        internally consistent.
         """
         @functools.wraps(func)
         def wrapper_memoized(self, *args, **kwargs):
-            if not hasattr(self, "_ValueCastable__lowered_to"):
+            # Use `in self.__dict__` instead of `hasattr` to avoid interfering with custom
+            # `__getattr__` implementations.
+            if not "_ValueCastable__lowered_to" in self.__dict__:
                 self.__lowered_to = func(self, *args, **kwargs)
             return self.__lowered_to
         wrapper_memoized.__memoized = True
