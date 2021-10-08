@@ -1,7 +1,7 @@
 import tempfile
 import sysconfig
 import os.path
-from distutils import ccompiler
+from setuptools import distutils
 
 
 __all__ = ["build_cxx"]
@@ -17,7 +17,7 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
         # the output directory directly.
         os.chdir(build_dir.name)
 
-        cc_driver = ccompiler.new_compiler()
+        cc_driver = distutils.ccompiler.new_compiler()
         cc_driver.output_dir = "."
 
         cc = sysconfig.get_config_var("CC")
