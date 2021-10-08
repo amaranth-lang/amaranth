@@ -4,12 +4,6 @@ import warnings
 import os.path
 
 
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    # this causes a DeprecationWarning on Python 3.6 (but not later)
-    from setuptools import distutils
-
-
 __all__ = ["build_cxx"]
 
 
@@ -23,7 +17,12 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
         # the output directory directly.
         os.chdir(build_dir.name)
 
-        cc_driver = distutils.ccompiler.new_compiler()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            # This emits a DeprecationWarning on Python 3.6 and 3.10.
+            from setuptools import distutils
+            cc_driver = distutils.ccompiler.new_compiler()
+
         cc_driver.output_dir = "."
 
         cc = sysconfig.get_config_var("CC")
