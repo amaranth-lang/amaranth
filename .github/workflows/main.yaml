@@ -26,11 +26,13 @@ jobs:
         sudo apt-get install yices2
         pip install coverage codecov yowasp-yosys
         pip install -e .[builtin-yosys]
-    - name: Preserve wasmtime cache
+    - name: Preserve Wasm cache
       uses: actions/cache@v1
       with:
-        path: ~/.cache/wasmtime
-        key: ${{ runner.os }}-wasmtime
+        path: |
+          ~/.cache/wasmtime
+          ~/.cache/yowasp
+        key: ${{ runner.os }}-wasm
     - name: Run tests
       run: |
         export NMIGEN_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
