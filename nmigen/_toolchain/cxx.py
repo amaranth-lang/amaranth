@@ -1,7 +1,13 @@
 import tempfile
 import sysconfig
+import warnings
 import os.path
-from setuptools import distutils
+
+
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    # this causes a DeprecationWarning on Python 3.6 (but not later)
+    from setuptools import distutils
 
 
 __all__ = ["build_cxx"]
