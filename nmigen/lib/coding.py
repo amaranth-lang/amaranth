@@ -78,7 +78,7 @@ class PriorityEncoder(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        for j in reversed(range(self.width)):
+        for j in range(self.width):
             with m.If(self.i[j]):
                 m.d.comb += self.o.eq(j)
         m.d.comb += self.n.eq(self.i == 0)
