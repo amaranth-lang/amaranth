@@ -124,7 +124,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             -v {{platform._INVK_DIR}}/build:/design_{{name}}
             -e PDK_ROOT=/PDK
             -u {{platform._UID}}:{{platform._GID}}
-            efabless/openlane:v0.12
+            efabless/openlane:latest
             sh -c "./flow.tcl -design /design_{{name}}"
         """
     ]
