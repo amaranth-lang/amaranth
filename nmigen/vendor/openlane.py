@@ -120,11 +120,11 @@ class OpenLANEPlatform(TemplatedPlatform):
             -it
             --rm
             -v {{platform.openlane_root}}:/openLANE_flow
-            -v {{platform.openlane_root}}/pdks:/PDK
+            -v {{get_override("pdk_path")|default(platform.openlane_root + "/pdks")}}:/PDK
             -v {{platform._INVK_DIR}}/build:/design_{{name}}
             -e PDK_ROOT=/PDK
             -u {{platform._UID}}:{{platform._GID}}
-            efabless/openlane:latest
+            efabless/openlane:{{get_override("openlane_version")|default("latest")}}
             sh -c "./flow.tcl -design /design_{{name}}"
         """
     ]
