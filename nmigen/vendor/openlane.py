@@ -27,6 +27,9 @@ class OpenLANEPlatform(TemplatedPlatform):
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
 
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
+
     Required tools:
         * ``openlane``
         * ``docker``
@@ -330,6 +333,9 @@ class Sky130FDSCHDPlatform(OpenLANEPlatform):
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
 
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
+
     Required tools:
         * ``openlane``
         * ``docker``
@@ -352,6 +358,9 @@ class Sky130FDSCHSPlatform(OpenLANEPlatform):
 
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
+
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
 
     Required tools:
         * ``openlane``
@@ -376,6 +385,9 @@ class Sky130FDSCMSPlatform(OpenLANEPlatform):
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
 
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
+
     Required tools:
         * ``openlane``
         * ``docker``
@@ -399,6 +411,9 @@ class Sky130FDSCLSPlatform(OpenLANEPlatform):
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
 
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
+
     Required tools:
         * ``openlane``
         * ``docker``
@@ -421,6 +436,9 @@ class Sky130FDSCHDLLPlatform(OpenLANEPlatform):
 
     **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
     information on how to setup OpenLANE and the sky130 PDK.
+
+    For information the the possible `flow_settings` that can be set, see
+    https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
 
     Required tools:
         * ``openlane``
