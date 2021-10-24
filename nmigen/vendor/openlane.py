@@ -131,6 +131,10 @@ class OpenLANEPlatform(TemplatedPlatform):
     def __init__(self):
         super().__init__()
 
+    @property
+    def default_clk_frequency(self):
+        return 4e6
+
     # This was lifted directly from the TemplatedPlatform.toolchain_prepare because I needed to tweak it a bit
     def prepare(self, elaboratable, name, **kwargs):
         # Restrict the name of the design to a strict alphanumeric character set. Platforms will
