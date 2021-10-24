@@ -1,14 +1,12 @@
 from nmigen import *
-from nmigen.vendor.openlane import *
+from nmigen.vendor.openlane import Sky130FDSCHDPlatform
 
 import os
 
-class sky130_fd_sc_hd(OpenLANEPlatform):
+class OpenlaneExamplePlatform(Sky130FDSCHDPlatform):
     openlane_root = os.environ['OPENLANE_ROOT']
-    pdk = "sky130A"
-    cell_library = "sky130_fd_sc_hd"
 
-    settings = {
+    flow_settings = {
         "PL_TARGET_DENSITY": 0.75,
         "FP_HORIZONTAL_HALO": 6,
         "FP_VERTICAL_HALO": 6,
@@ -54,7 +52,7 @@ class Blinky(Elaboratable):
         return [self.o]
 
 if __name__ == "__main__":
-    platform = sky130_fd_sc_hd()
+    platform = OpenlaneExamplePlatform()
 
     inverter = Inverter()
     platform.build(inverter, name="inverter", ports=inverter.get_ports())
