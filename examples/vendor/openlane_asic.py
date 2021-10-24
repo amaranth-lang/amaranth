@@ -35,6 +35,7 @@ class Inverter(Elaboratable):
     def get_ports(self):
         return [self.i, self.o]
 
+# A small blinky showing the synchronous capabilities
 class Blinky(Elaboratable):
     def __init__(self):
         self.o = Signal()
@@ -55,8 +56,8 @@ class Blinky(Elaboratable):
 if __name__ == "__main__":
     platform = sky130_fd_sc_hd()
 
-    # inverter = Inverter()
-    # platform.build(inverter, name="inverter", ports=inverter.get_ports())
+    inverter = Inverter()
+    platform.build(inverter, name="inverter", ports=inverter.get_ports())
 
     blinky = Blinky()
     platform.build(blinky, name="blinky", ports=blinky.get_ports())
