@@ -69,8 +69,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             set ::env(SDC_FILE) "/design_{{name}}/{{name}}.sdc"
             {% if platform.default_clk %}
             # Clock Settings
-            # TODO, use platform.default_clk_frequency() to calc CLOCK_PERIOD
-            set ::env(CLOCK_PERIOD) "18.0"
+            set ::env(CLOCK_PERIOD) "{{ get_override("clk_period") | default((1 / platform.default_clk_frequency) * 1e9) }}"
             set ::env(CLOCK_PORT) "{{platform.default_clk}}"
             set ::env(CLOCK_NET) $::env(CLOCK_PORT)
             {% else %}
