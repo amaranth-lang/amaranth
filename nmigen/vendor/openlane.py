@@ -49,8 +49,7 @@ class OpenLANEPlatform(TemplatedPlatform):
     openlane_root = abstractproperty()
     pdk = abstractproperty()
     cell_library = abstractproperty()
-
-    settings = abstractproperty()
+    flow_settings = abstractproperty()
 
     required_tools = ["docker"]
 
