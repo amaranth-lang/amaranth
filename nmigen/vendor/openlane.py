@@ -17,7 +17,7 @@ from ..build.run import *
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
-__all__ = ["OpenLANEPlatform"]
+__all__ = ["OpenLANEPlatform", "Sky130FDSCHDPlatform", "Sky130FDSCHSPlatform", "Sky130FDSCMSPlatform", "Sky130FDSCLSPlatform", "Sky130FDSCHDLLPlatform"]
 
 class OpenLANEPlatform(TemplatedPlatform):
     """
@@ -317,3 +317,119 @@ class OpenLANEPlatform(TemplatedPlatform):
 
                 return m
         return create_domain
+
+class Sky130FDSCHDPlatform(OpenLANEPlatform):
+    """
+    sky130A sky130_fd_sc_hd OpenLANE Flow
+    ------------------
+
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE and the sky130 PDK.
+
+    Required tools:
+        * ``openlane``
+        * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``{{name}}.debug.v``: Design debug verilog
+        * ``runs/*``: OpenLANE flow output
+
+    """
+    pdk = "sky130A"
+    cell_library = "sky130_fd_sc_hd"
+
+class Sky130FDSCHSPlatform(OpenLANEPlatform):
+    """
+    sky130A sky130_fd_sc_hs OpenLANE Flow
+    ------------------
+
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE and the sky130 PDK.
+
+    Required tools:
+        * ``openlane``
+        * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``{{name}}.debug.v``: Design debug verilog
+        * ``runs/*``: OpenLANE flow output
+
+    """
+    pdk = "sky130A"
+    cell_library = "sky130_fd_sc_hs"
+
+class Sky130FDSCMSPlatform(OpenLANEPlatform):
+    """
+    sky130A sky130_fd_sc_ms OpenLANE Flow
+    ------------------
+
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE and the sky130 PDK.
+
+    Required tools:
+        * ``openlane``
+        * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``{{name}}.debug.v``: Design debug verilog
+        * ``runs/*``: OpenLANE flow output
+
+    """
+    pdk = "sky130A"
+    cell_library = "sky130_fd_sc_ms"
+
+class Sky130FDSCLSPlatform(OpenLANEPlatform):
+    """
+    sky130A sky130_fd_sc_ls OpenLANE Flow
+    ------------------
+
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE and the sky130 PDK.
+
+    Required tools:
+        * ``openlane``
+        * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``{{name}}.debug.v``: Design debug verilog
+        * ``runs/*``: OpenLANE flow output
+
+    """
+    pdk = "sky130A"
+    cell_library = "sky130_fd_sc_ls"
+
+class Sky130FDSCHDLLPlatform(OpenLANEPlatform):
+    """
+    sky130A sky130_fd_sc_hdll OpenLANE Flow
+    ------------------
+
+    **NOTE:** See https://github.com/The-OpenROAD-Project/OpenLane#setting-up-openlane for
+    information on how to setup OpenLANE and the sky130 PDK.
+
+    Required tools:
+        * ``openlane``
+        * ``docker``
+
+    Build products:
+        * ``config.tcl``: OpenLANE configuration script.
+        * ``{{name}}.sdc``: Clock constraints.
+        * ``{{name}}.v``: Design verilog
+        * ``{{name}}.debug.v``: Design debug verilog
+        * ``runs/*``: OpenLANE flow output
+
+    """
+
+    pdk = "sky130A"
+    cell_library = "sky130_fd_sc_hdll"
