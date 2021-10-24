@@ -151,7 +151,8 @@ class OpenLANEPlatform(TemplatedPlatform):
 
         ports = kwargs.get('ports', ())
 
-        rtlil_text, self._name_map = rtlil.convert2(fragment, name=name, ports=ports)
+        rtlil_text, self._name_map = rtlil.convert2(elaboratable, name=name, ports=ports,
+            missing_domain=self.create_missing_domain(ports))
         # _, self._name_map = rtlil.convert_fragment(fragment, name=name)
 
         def emit_rtlil():
@@ -290,21 +291,29 @@ class OpenLANEPlatform(TemplatedPlatform):
             plan.add_file(filename, content)
         return plan
 
-    def create_missing_domain(self, name):
-        if name == "sync":
-            m = Module()
-            if self.default_clk is not None:
-                clk_i = self.request(self.default_clk).i
-            else:
-                clk_i = Const(1)
+    def create_missing_domain(self, ports):
+        def create_domain(name):
+            if name == "sync":
+                m = Module()
+                if self.default_clk is not None:
+                    clk_i = self.request(self.default_clk).i
+                else:
+                    assert 'clk' not in (signal.name for signal in ports)
+                    clk_i = Signal(name = 'clk')
+                    ports.append(clk_i)
+                    self.default_clk = 'clk'
 
-            if self.default_rst is not None:
-               rst_i = self.request(self.default_rst).i
-            else:
-               rst_i = Const(0)
+                if self.default_rst is not None:
+                    rst_i = self.request(self.default_rst).i
+                else:
+                    assert 'rst' not in (signal.name for signal in ports)
+                    rst_i = Signal(name = 'rst')
+                    ports.append(rst_i)
+                    self.default_rst = 'rst'
 
-            m.domains += ClockDomain("sync"),
-            m.d.comb += ClockSignal("sync").eq(clk_i)
-            m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
+                m.domains += ClockDomain("sync")
+                m.d.comb += ClockSignal("sync").eq(clk_i)
+                m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
 
-            return m
+                return m
+        return create_domain
