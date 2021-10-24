@@ -82,7 +82,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             set ::env(PDK) "{{platform.pdk}}"
             set ::env(STD_CELL_LIBRARY) "{{platform.cell_library}}"
 
-            {% for s, v in platform.settings.items() %}
+            {% for s, v in platform.flow_settings.items() %}
             set ::env({{s}}) {{v}}
             {% endfor %}
 
