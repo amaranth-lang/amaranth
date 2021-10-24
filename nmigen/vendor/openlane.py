@@ -132,8 +132,8 @@ class OpenLANEPlatform(TemplatedPlatform):
     def __init__(self, *, toolchain="openLANE"):
         super().__init__()
 
-    # This was lifted directly from the TemplatedPlatform because I needed to tweak it a bit
-    def toolchain_prepare(self, fragment, name, **kwargs):
+    # This was lifted directly from the TemplatedPlatform.toolchain_prepare because I needed to tweak it a bit
+    def prepare(self, elaboratable, name, **kwargs):
         # Restrict the name of the design to a strict alphanumeric character set. Platforms will
         # interpolate the name of the design in many different contexts: filesystem paths, Python
         # scripts, Tcl scripts, ad-hoc constraint files, and so on. It is not practical to add
