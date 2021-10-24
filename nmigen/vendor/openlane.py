@@ -130,7 +130,7 @@ class OpenLANEPlatform(TemplatedPlatform):
         """
     ]
 
-    def __init__(self, *, toolchain="openLANE"):
+    def __init__(self):
         super().__init__()
 
     # This was lifted directly from the TemplatedPlatform.toolchain_prepare because I needed to tweak it a bit
