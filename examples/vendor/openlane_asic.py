@@ -5,7 +5,8 @@ import os
 
 class OpenlaneExamplePlatform(Sky130FDSCHDPlatform):
     openlane_root = os.environ['OPENLANE_ROOT']
-
+    # For more information on the variables that are valid see:
+    # https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
     flow_settings = {
         "PL_TARGET_DENSITY": 0.75,
         "FP_HORIZONTAL_HALO": 6,
