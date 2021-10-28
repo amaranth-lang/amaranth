@@ -72,8 +72,8 @@ class OpenLANEPlatform(TemplatedPlatform):
             set ::env(SDC_FILE) "/design_{{name}}/{{name}}.sdc"
             {% if platform.default_clk %}
             # Clock Settings
-            set ::env(CLOCK_PERIOD) "{{ get_override("clk_period") | default((1 / platform.default_clk_frequency) * 1e9) }}"
-            set ::env(CLOCK_PORT) "{{platform.default_clk}}"
+            set ::env(CLOCK_PERIOD) "{{platform.default_clk_constraint.period / 1e-9}}"
+            set ::env(CLOCK_PORT) "{{platform._default_clk_name}}"
             set ::env(CLOCK_NET) $::env(CLOCK_PORT)
             {% else %}
             # Disable the clock
@@ -131,12 +131,21 @@ class OpenLANEPlatform(TemplatedPlatform):
         """
     ]
 
-    def __init__(self):
-        super().__init__()
-
     @property
-    def default_clk_frequency(self):
-        return 4e6
+    def _default_clk_name(self):
+        if self.default_clk is None:
+            raise AttributeError("Platform '{}' does not define a default clock"
+                                 .format(type(self).__name__))
+        resource = self.lookup(self.default_clk)
+        #port = self._requested[resource.name, resource.number]
+        #assert isinstance(resource.ios[0], Pins)
+        for res, pin, port, attrs in self._ports:
+            if res == resource:
+                if res.ios[0].dir == 'i':
+                    return pin.i.name
+                else:
+                    return pin.o.name
+        raise AssertionError(f"Platform '{type(self).__name__}' defined default clock but no matching resource")
 
     # This was lifted directly from the TemplatedPlatform.toolchain_prepare because I needed to tweak it a bit
     def prepare(self, elaboratable, name, **kwargs):
