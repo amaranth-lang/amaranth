@@ -45,7 +45,6 @@ class OpenLANEPlatform(TemplatedPlatform):
 
     toolchain = "OpenLANE"
 
-    _INVK_DIR = os.getcwd()
     _UID = os.getuid()
     _GID = os.getgid()
 
@@ -123,7 +122,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             --rm
             -v {{platform.openlane_root}}:/openLANE_flow
             -v {{get_override("pdk_path")|default(platform.openlane_root + "/pdks")}}:/PDK
-            -v {{platform._INVK_DIR}}/build:/design_{{name}}
+            -v {{platform.build_dir}}:/design_{{name}}
             -e PDK_ROOT=/PDK
             -u {{platform._UID}}:{{platform._GID}}
             efabless/openlane:{{get_override("openlane_version")|default("latest")}}
