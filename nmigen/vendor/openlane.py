@@ -313,15 +313,10 @@ class OpenLANEPlatform(TemplatedPlatform):
 
     def create_missing_domain(self, ports):
         def create_domain(name):
-            if name == "sync":
+            if name == "sync" and self.default_clk is not None:
+                clk_i = self.request(self.default_clk).i
+                ports.append(clk_i)
                 m = Module()
-                if self.default_clk is not None:
-                    clk_i = self.request(self.default_clk).i
-                else:
-                    assert 'clk' not in (signal.name for signal in ports)
-                    clk_i = Signal(name = 'clk')
-                    ports.append(clk_i)
-                    self.default_clk = 'clk'
 
                 if self.default_rst is not None:
                     rst_i = self.request(self.default_rst).i
