@@ -355,7 +355,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         consume_enc = m.submodules.consume_enc = \
             GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
-            FFSynchronizer(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
+            FFSynchronizer(consume_r_gry, consume_w_gry, o_domain=self._w_domain, reset_less=False)
         m.d.comb += consume_enc.i.eq(consume_r_nxt)
         m.d[self._r_domain] += consume_r_gry.eq(consume_enc.o)
 
@@ -414,9 +414,10 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
 
-        # Async-set-sync-release synchronizer avoids CDC hazards
+        # Async-set-sync-release synchronizer avoids CDC hazards. In the read domain, 3 clock cycles
+        # are needed to propagate the reset value of produce_w_gry to consume_r_bin.
         rst_cdc = m.submodules.rst_cdc = \
-            AsyncFFSynchronizer(w_rst, r_rst, o_domain=self._r_domain)
+            AsyncFFSynchronizer(w_rst, r_rst, o_domain=self._r_domain, stages=3)
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.
@@ -425,7 +426,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d.comb += rst_dec.i.eq(produce_r_gry)
         with m.If(r_rst):
             m.d.comb += r_empty.eq(1)
-            m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry)
+            m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry.reset)
             m.d[self._r_domain] += consume_r_bin.eq(rst_dec.o)
             m.d[self._r_domain] += self.r_rst.eq(1)
         with m.Else():
@@ -435,6 +436,9 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             with m.If(Initial()):
                 m.d.comb += Assume(produce_w_gry == (produce_w_bin ^ produce_w_bin[1:]))
                 m.d.comb += Assume(consume_r_gry == (consume_r_bin ^ consume_r_bin[1:]))
+            for i in range(rst_cdc._stages):
+                with m.If(Past(Initial(), i)):
+                    m.d.comb += Assume(r_rst.implies(w_rst))
 
         return m
 
@@ -509,21 +513,25 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         ]
 
         r_consume_buffered = Signal()
-        m.d.comb += r_consume_buffered.eq((self.r_rdy - self.r_en) & self.r_rdy)
+        m.d.comb += r_consume_buffered.eq((self.r_rdy - self.r_en) & self.r_rdy & ~fifo.r_rst)
         m.d[self._r_domain] += self.r_level.eq(fifo.r_level + r_consume_buffered)
 
         w_consume_buffered = Signal()
-        m.submodules.consume_buffered_cdc = FFSynchronizer(r_consume_buffered, w_consume_buffered, o_domain=self._w_domain, stages=4)
+        m.submodules.consume_buffered_cdc = FFSynchronizer(r_consume_buffered, w_consume_buffered,
+            o_domain=self._w_domain, stages=4, reset_less=False)
         m.d.comb += self.w_level.eq(fifo.w_level + w_consume_buffered)
 
-        with m.If(self.r_en | ~self.r_rdy):
+        with m.If(fifo.r_rst):
+            m.d[self._r_domain] += self.r_rdy.eq(0)
+        with m.Elif(self.r_en | ~self.r_rdy):
             m.d[self._r_domain] += [
                 self.r_data.eq(fifo.r_data),
                 self.r_rdy.eq(fifo.r_rdy),
-                self.r_rst.eq(fifo.r_rst),
             ]
             m.d.comb += [
                 fifo.r_en.eq(1)
             ]
+
+        m.d[self._r_domain] += self.r_rst.eq(fifo.r_rst)
 
         return m

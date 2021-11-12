@@ -357,3 +357,79 @@ class AsyncFIFOSimCase(FHDLTestCase):
     def test_async_buffered_fifo_level_empty(self):
         fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=0, expected_level=0, read=True)
+
+    def check_async_fifo_reset(self, fifo, fill_in, r_period, w_period):
+        m = Module()
+        m.submodules.fifo = fifo
+        write_rst = Signal()
+        m.d.comb += ResetSignal("write").eq(write_rst)
+        read_por_done = Signal()
+
+        def write_process():
+            while not (yield read_por_done):
+                yield
+
+            yield fifo.w_en.eq(1)
+            for _ in range(fill_in):
+                yield
+            yield fifo.w_en.eq(0)
+            yield
+
+            while not (yield fifo.r_rdy):
+                yield
+
+            yield write_rst.eq(1)
+            yield
+            yield write_rst.eq(0)
+            yield
+            yield Passive()
+            while True:
+                self.assertEqual((yield fifo.w_level), 0)
+                yield
+
+        def read_process():
+            while not (yield fifo.r_rst):
+                yield
+            while (yield fifo.r_rst):
+                yield
+            yield read_por_done.eq(1)
+
+            while not (yield fifo.r_rst):
+                yield
+            while (yield fifo.r_rst):
+                yield
+            for _ in range(10):
+                self.assertEqual((yield fifo.r_level), 0)
+                yield
+
+        simulator = Simulator(m)
+        simulator.add_clock(w_period, domain="write")
+        simulator.add_clock(r_period, domain="read")
+        simulator.add_sync_process(write_process, domain="write")
+        simulator.add_sync_process(read_process,  domain="read")
+        with simulator.write_vcd("test.vcd"):
+            simulator.run()
+
+    def test_async_fifo_reset_r10w10(self):
+        fifo = AsyncFIFO(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=10e-9, w_period=10e-9)
+
+    def test_async_fifo_reset_r10w27(self):
+        fifo = AsyncFIFO(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=10e-9, w_period=27e-9)
+
+    def test_async_fifo_reset_r27w10(self):
+        fifo = AsyncFIFO(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=27e-9, w_period=10e-9)
+
+    def test_async_buffered_fifo_reset_r10w10(self):
+        fifo = AsyncFIFOBuffered(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=10e-9, w_period=10e-9)
+
+    def test_async_buffered_fifo_reset_r10w27(self):
+        fifo = AsyncFIFOBuffered(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=10e-9, w_period=27e-9)
+
+    def test_async_buffered_fifo_reset_r27w10(self):
+        fifo = AsyncFIFOBuffered(width=1, depth=8, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, fill_in=4, r_period=27e-9, w_period=10e-9)
