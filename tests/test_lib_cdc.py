@@ -1,8 +1,8 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
-from nmigen.hdl import *
-from nmigen.sim import *
-from nmigen.lib.cdc import *
+from amaranth.hdl import *
+from amaranth.sim import *
+from amaranth.lib.cdc import *
 
 from .utils import *
 

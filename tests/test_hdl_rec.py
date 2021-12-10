@@ -1,7 +1,7 @@
 from enum import Enum
 
-from nmigen.hdl.ast import *
-from nmigen.hdl.rec import *
+from amaranth.hdl.ast import *
+from amaranth.hdl.rec import *
 
 from .utils import *
 
@@ -221,7 +221,7 @@ class RecordTestCase(FHDLTestCase):
 
         # __bool__
         with self.assertRaisesRegex(TypeError,
-                r"^Attempted to convert nMigen value to Python boolean$"):
+                r"^Attempted to convert Amaranth value to Python boolean$"):
             not r1
 
         # __invert__, __neg__

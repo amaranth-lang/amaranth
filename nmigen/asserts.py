@@ -1,2 +1,6 @@
-from .hdl.ast import AnyConst, AnySeq, Assert, Assume, Cover
-from .hdl.ast import Past, Stable, Rose, Fell, Initial
+from amaranth.asserts import *
+
+
+import warnings
+warnings.warn("instead of nmigen.asserts, use amaranth.asserts",
+              DeprecationWarning, stacklevel=2)

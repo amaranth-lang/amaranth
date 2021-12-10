@@ -1,10 +1,10 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
-from nmigen import *
-from nmigen.hdl.rec import *
-from nmigen.lib.io import *
-from nmigen.build.dsl import *
-from nmigen.build.res import *
+from amaranth import *
+from amaranth.hdl.rec import *
+from amaranth.lib.io import *
+from amaranth.build.dsl import *
+from amaranth.build.res import *
 
 from .utils import *
 

@@ -1,7 +1,7 @@
 Getting started
 ###############
 
-This section demonstrates the basic nMigen workflow to provide a cursory overview of the language and the toolchain. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`language guide <lang>` for a detailed explanation of every language construct.
+This section demonstrates the basic Amaranth workflow to provide a cursory overview of the language and the toolchain. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`language guide <lang>` for a detailed explanation of every language construct.
 
 .. TODO: add link to build system doc
 .. TODO: add link to more complex examples?
@@ -20,14 +20,14 @@ As a first example, consider a counter with a fixed limit, enable, and overflow.
 Implementing a counter
 ----------------------
 
-A 16-bit up counter with enable input, overflow output, and a limit fixed at design time can be implemented in nMigen as follows:
+A 16-bit up counter with enable input, overflow output, and a limit fixed at design time can be implemented in Amaranth as follows:
 
 .. literalinclude:: _code/up_counter.py
    :linenos:
    :lineno-match:
    :end-before: # --- TEST ---
 
-The reusable building block of nMigen designs is an ``Elaboratable``: a Python class that includes HDL signals (``en`` and ``ovf``, in this case) as a part of its interface, and provides the ``elaborate`` method that defines its behavior.
+The reusable building block of Amaranth designs is an ``Elaboratable``: a Python class that includes HDL signals (``en`` and ``ovf``, in this case) as a part of its interface, and provides the ``elaborate`` method that defines its behavior.
 
 .. TODO: link to Elaboratable reference
 
@@ -60,7 +60,7 @@ When run, the test bench finishes successfully, since all of the assertions hold
 Converting a counter
 --------------------
 
-Although some nMigen workflows do not include Verilog at all, it is still the de facto standard for HDL interoperability. Any nMigen design can be converted to synthesizable Verilog using the corresponding backend:
+Although some Amaranth workflows do not include Verilog at all, it is still the de facto standard for HDL interoperability. Any Amaranth design can be converted to synthesizable Verilog using the corresponding backend:
 
 .. literalinclude:: _code/up_counter.py
    :linenos:
@@ -75,7 +75,7 @@ The signals that will be connected to the ports of the top-level Verilog module 
 	 :language: verilog
 	 :linenos:
 
-To aid debugging, the generated Verilog code has the same general structure as the nMigen source code (although more verbose), and contains extensive source location information.
+To aid debugging, the generated Verilog code has the same general structure as the Amaranth source code (although more verbose), and contains extensive source location information.
 
 .. note::
 
@@ -85,14 +85,14 @@ To aid debugging, the generated Verilog code has the same general structure as t
 A blinking LED
 ==============
 
-Although nMigen works well as a standalone HDL, it also includes a build system that integrates with FPGA toolchains, and many board definition files for common developer boards that include pinouts and programming adapter invocations. The following code will blink a LED with a frequency of 1 Hz on any board that has a LED and an oscillator:
+Although Amaranth works well as a standalone HDL, it also includes a build system that integrates with FPGA toolchains, and many board definition files for common developer boards that include pinouts and programming adapter invocations. The following code will blink a LED with a frequency of 1 Hz on any board that has a LED and an oscillator:
 
 .. literalinclude:: _code/led_blinker.py
    :linenos:
    :lineno-match:
    :end-before: # --- BUILD ---
 
-The ``LEDBlinker`` module will use the first LED available on the board, and derive the clock divisor from the oscillator frequency specified in the clock constraint. It can be used, for example, with the `Lattice iCEStick evaluation board <https://www.latticesemi.com/icestick>`_, one of the many boards already supported by nMigen:
+The ``LEDBlinker`` module will use the first LED available on the board, and derive the clock divisor from the oscillator frequency specified in the clock constraint. It can be used, for example, with the `Lattice iCEStick evaluation board <https://www.latticesemi.com/icestick>`_, one of the many boards already supported by Amaranth:
 
 .. TODO: link to list of supported boards
 
@@ -105,7 +105,7 @@ The ``LEDBlinker`` module will use the first LED available on the board, and der
    :lineno-match:
    :start-after: # --- BUILD ---
 
-With only a single line of code, the design is synthesized, placed, routed, and programmed to the on-board Flash memory. Although not all applications will use the nMigen build system, the designs that choose it can benefit from the "turnkey" built-in workflows; if necessary, the built-in workflows can be customized to include user-specified options, commands, and files.
+With only a single line of code, the design is synthesized, placed, routed, and programmed to the on-board Flash memory. Although not all applications will use the Amaranth build system, the designs that choose it can benefit from the "turnkey" built-in workflows; if necessary, the built-in workflows can be customized to include user-specified options, commands, and files.
 
 .. TODO: link to build system reference
 
@@ -115,6 +115,6 @@ With only a single line of code, the design is synthesized, placed, routed, and 
 
    .. code-block:: shell
 
-      $ python3 -m nmigen_boards.icestick
+      $ python3 -m amaranth_boards.icestick
 
    This command will build and program a test bitstream similar to the example above.

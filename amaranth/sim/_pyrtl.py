@@ -430,8 +430,8 @@ class _FragmentCompiler:
             # (almost certainly due to a bug in the code generator), use this environment variable
             # to make backtraces useful.
             code = emitter.flush()
-            if os.getenv("NMIGEN_pysim_dump"):
-                file = tempfile.NamedTemporaryFile("w", prefix="nmigen_pysim_", delete=False)
+            if os.getenv("AMARANTH_pysim_dump"):
+                file = tempfile.NamedTemporaryFile("w", prefix="amaranth_pysim_", delete=False)
                 file.write(code)
                 filename = file.name
             else:

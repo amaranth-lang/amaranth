@@ -114,7 +114,7 @@ class YosysBinary:
 
 
 class _BuiltinYosys(YosysBinary):
-    YOSYS_PACKAGE = "nmigen_yosys"
+    YOSYS_PACKAGE = "amaranth_yosys"
 
     @classmethod
     def available(cls):
@@ -205,14 +205,14 @@ def find_yosys(requirement):
         Raised if required Yosys version is not found.
     """
     proxies = []
-    clauses = os.environ.get("NMIGEN_USE_YOSYS", "system,builtin").split(",")
+    clauses = os.environ.get("AMARANTH_USE_YOSYS", "system,builtin").split(",")
     for clause in clauses:
         if clause == "builtin":
             proxies.append(_BuiltinYosys)
         elif clause == "system":
             proxies.append(_SystemYosys)
         else:
-            raise YosysError("The NMIGEN_USE_YOSYS environment variable contains "
+            raise YosysError("The AMARANTH_USE_YOSYS environment variable contains "
                              "an unrecognized clause {!r}"
                              .format(clause))
     for proxy in proxies:
@@ -221,9 +221,9 @@ def find_yosys(requirement):
             if version is not None and requirement(version):
                 return proxy
     else:
-        if "NMIGEN_USE_YOSYS" in os.environ:
+        if "AMARANTH_USE_YOSYS" in os.environ:
             raise YosysError("Could not find an acceptable Yosys binary. Searched: {}"
                              .format(", ".join(clauses)))
         else:
-            raise YosysError("Could not find an acceptable Yosys binary. The `nmigen-yosys` PyPI "
+            raise YosysError("Could not find an acceptable Yosys binary. The `amaranth-yosys` PyPI "
                              "package, if available for this platform, can be used as fallback")

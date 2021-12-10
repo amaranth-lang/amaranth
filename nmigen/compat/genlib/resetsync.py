@@ -1,16 +1,7 @@
-from ..._utils import deprecated
-from ...lib.cdc import ResetSynchronizer as NativeResetSynchronizer
+from amaranth.compat.genlib.resetsync import *
+from amaranth.compat.genlib.resetsync import __all__
 
 
-__all__ = ["AsyncResetSynchronizer"]
-
-
-@deprecated("instead of `migen.genlib.resetsync.AsyncResetSynchronizer`, "
-            "use `nmigen.lib.cdc.ResetSynchronizer`; note that ResetSynchronizer accepts "
-            "a clock domain name as an argument, not a clock domain object")
-class CompatResetSynchronizer(NativeResetSynchronizer):
-    def __init__(self, cd, async_reset):
-        super().__init__(async_reset, domain=cd.name)
-
-
-AsyncResetSynchronizer = CompatResetSynchronizer
+import warnings
+warnings.warn("instead of nmigen.compat.genlib.resetsync, use amaranth.compat.genlib.resetsync",
+              DeprecationWarning, stacklevel=2)

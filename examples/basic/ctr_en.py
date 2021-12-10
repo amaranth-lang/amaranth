@@ -1,6 +1,6 @@
-from nmigen import *
-from nmigen.sim import *
-from nmigen.back import verilog
+from amaranth import *
+from amaranth.sim import *
+from amaranth.back import verilog
 
 
 class Counter(Elaboratable):

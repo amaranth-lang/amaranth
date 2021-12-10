@@ -1,8 +1,8 @@
-The nMigen documentation
-########################
+Amaranth HDL documentation
+##########################
 
 .. toctree::
    :maxdepth: 1
 
    index
-   Board definitions <https://nmigen.info/nmigen-boards/latest/>
+   Board definitions <https://amaranth-lang.org/amaranth-boards/latest/>

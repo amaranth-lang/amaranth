@@ -1,12 +1,12 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
 import warnings
 
-from nmigen.hdl.ast import *
-from nmigen.hdl.cd import *
-from nmigen.hdl.ir import *
-from nmigen.hdl.xfrm import *
-from nmigen.hdl.mem import *
+from amaranth.hdl.ast import *
+from amaranth.hdl.cd import *
+from amaranth.hdl.ir import *
+from amaranth.hdl.xfrm import *
+from amaranth.hdl.mem import *
 
 from .utils import *
 

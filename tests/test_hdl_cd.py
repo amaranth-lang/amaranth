@@ -1,4 +1,4 @@
-from nmigen.hdl.cd import *
+from amaranth.hdl.cd import *
 
 from .utils import *
 

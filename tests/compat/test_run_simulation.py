@@ -1,12 +1,12 @@
 import unittest
 
-from nmigen import Signal, Module, Elaboratable
+from amaranth import Signal, Module, Elaboratable
 
 from .support import SimCase
 
 
 class RunSimulation(SimCase, unittest.TestCase):
-    """ test for https://github.com/nmigen/nmigen/issues/344 """
+    """ test for https://github.com/amaranth-lang/amaranth/issues/344 """
 
     class TestBench(Elaboratable):
         def __init__(self):

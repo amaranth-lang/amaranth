@@ -1,12 +1,12 @@
 import os, sys
 sys.path.insert(0, os.path.abspath("."))
 
-import nmigen
+import amaranth
 
-project = "nMigen toolchain"
-version = nmigen.__version__
+project = "Amaranth HDL toolchain"
+version = amaranth.__version__
 release = version.split("+")[0]
-copyright = "2020, nMigen developers"
+copyright = "2020—2021, Amaranth HDL developers"
 
 extensions = [
 	"sphinx.ext.intersphinx",

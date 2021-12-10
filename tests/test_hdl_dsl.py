@@ -1,11 +1,11 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
 from collections import OrderedDict
 from enum import Enum
 
-from nmigen.hdl.ast import *
-from nmigen.hdl.cd import *
-from nmigen.hdl.dsl import *
+from amaranth.hdl.ast import *
+from amaranth.hdl.cd import *
+from amaranth.hdl.dsl import *
 
 from .utils import *
 

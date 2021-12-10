@@ -1,7 +1,7 @@
-from nmigen.hdl import *
-from nmigen.asserts import *
-from nmigen.sim import *
-from nmigen.lib.coding import *
+from amaranth.hdl import *
+from amaranth.asserts import *
+from amaranth.sim import *
+from amaranth.lib.coding import *
 
 from .utils import *
 

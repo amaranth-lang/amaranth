@@ -1,11 +1,6 @@
-from .fhdl.structure import *
-from .fhdl.module import *
-from .fhdl.specials import *
-from .fhdl.bitcontainer import *
-from .fhdl.decorators import *
-# from .fhdl.simplify import *
+from amaranth.compat import *
 
-from .sim import *
 
-from .genlib.record import *
-from .genlib.fsm import *
+import warnings
+warnings.warn("instead of nmigen.compat, use amaranth.compat",
+              DeprecationWarning, stacklevel=2)

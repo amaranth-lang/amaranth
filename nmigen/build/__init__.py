@@ -1,3 +1,6 @@
-from .dsl import *
-from .res import ResourceError
-from .plat import *
+from amaranth.build import *
+
+
+import warnings
+warnings.warn("instead of nmigen.build, use amaranth.build",
+              DeprecationWarning, stacklevel=2)

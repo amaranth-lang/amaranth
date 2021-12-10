@@ -1,9 +1,9 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
 import unittest
 
-from nmigen.compat import *
-from nmigen.compat.genlib.coding import *
+from amaranth.compat import *
+from amaranth.compat.genlib.coding import *
 
 from .support import SimCase
 

@@ -5,7 +5,7 @@ Language guide
 
    This guide is a work in progress and is seriously incomplete!
 
-This guide introduces the nMigen language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language.
+This guide introduces the Amaranth language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language.
 
 .. TODO: link to a good synchronous logic tutorial and a Python tutorial?
 
@@ -15,23 +15,23 @@ This guide introduces the nMigen language in depth. It assumes familiarity with 
 The prelude
 ===========
 
-Because nMigen is a regular Python library, it needs to be imported before use. The root ``nmigen`` module, called *the prelude*, is carefully curated to export a small amount of the most essential names, useful in nearly every design. In source files dedicated to nMigen code, it is a good practice to use a :ref:`glob import <python:tut-pkg-import-star>` for readability:
+Because Amaranth is a regular Python library, it needs to be imported before use. The root ``amaranth`` module, called *the prelude*, is carefully curated to export a small amount of the most essential names, useful in nearly every design. In source files dedicated to Amaranth code, it is a good practice to use a :ref:`glob import <python:tut-pkg-import-star>` for readability:
 
 .. code-block::
 
-   from nmigen import *
+   from amaranth import *
 
-However, if a source file uses nMigen together with other libraries, or if glob imports are frowned upon, it is conventional to use a short alias instead:
+However, if a source file uses Amaranth together with other libraries, or if glob imports are frowned upon, it is conventional to use a short alias instead:
 
 .. code-block::
 
-   import nmigen as nm
+   import amaranth as am
 
 All of the examples below assume that a glob import is used.
 
 .. testsetup::
 
-   from nmigen import *
+   from amaranth import *
 
 
 .. _lang-values:
@@ -39,7 +39,7 @@ All of the examples below assume that a glob import is used.
 Values
 ======
 
-The basic building block of the nMigen language is a *value*, which is a term for a binary number that is computed or stored anywhere in the design. Each value has a *width*---the amount of bits used to represent the value---and a *signedness*---the interpretation of the value by arithmetic operations---collectively called its *shape*. Signed values always use `two's complement`_ representation.
+The basic building block of the Amaranth language is a *value*, which is a term for a binary number that is computed or stored anywhere in the design. Each value has a *width*---the amount of bits used to represent the value---and a *signedness*---the interpretation of the value by arithmetic operations---collectively called its *shape*. Signed values always use `two's complement`_ representation.
 
 .. _two's complement: https://en.wikipedia.org/wiki/Two's_complement
 
@@ -49,14 +49,14 @@ The basic building block of the nMigen language is a *value*, which is a term fo
 Constants
 =========
 
-The simplest nMigen value is a *constant*, representing a fixed number, and introduced using ``Const(...)`` or its short alias ``C(...)``:
+The simplest Amaranth value is a *constant*, representing a fixed number, and introduced using ``Const(...)`` or its short alias ``C(...)``:
 
 .. doctest::
 
    >>> ten = Const(10)
    >>> minus_two = C(-2)
 
-The code above does not specify any shape for the constants. If the shape is omitted, nMigen uses unsigned shape for positive numbers and signed shape for negative numbers, with the width inferred from the smallest amount of bits necessary to represent the number. As a special case, in order to get the same inferred shape for ``True`` and ``False``, ``0`` is considered to be 1-bit unsigned.
+The code above does not specify any shape for the constants. If the shape is omitted, Amaranth uses unsigned shape for positive numbers and signed shape for negative numbers, with the width inferred from the smallest amount of bits necessary to represent the number. As a special case, in order to get the same inferred shape for ``True`` and ``False``, ``0`` is considered to be 1-bit unsigned.
 
 .. doctest::
 
@@ -212,7 +212,7 @@ Specifying a shape with an enumeration is convenient for finite state machines, 
 Value casting
 =============
 
-Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting allows objects that are not provided by nMigen, such as integers or enumeration members, to be used in nMigen expressions directly.
+Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
 
 .. TODO: link to UserValue
 
@@ -348,7 +348,7 @@ Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected b
 Operators
 =========
 
-To describe computations, nMigen values can be combined with each other or with :ref:`value-castable <lang-valuecasting>` objects using a rich array of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
+To describe computations, Amaranth values can be combined with each other or with :ref:`value-castable <lang-valuecasting>` objects using a rich array of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
 
 
 .. _lang-abstractexpr:
@@ -364,7 +364,7 @@ Code written in the Python language *performs* computations on concrete objects,
    >>> a + 1
    6
 
-In contrast, code written in the nMigen language *describes* computations on abstract objects, like :ref:`signals <lang-signals>`, with the goal of generating a hardware *circuit* that can be simulated, synthesized, and so on. nMigen expressions are ordinary Python objects that represent parts of this circuit:
+In contrast, code written in the Amaranth language *describes* computations on abstract objects, like :ref:`signals <lang-signals>`, with the goal of generating a hardware *circuit* that can be simulated, synthesized, and so on. Amaranth expressions are ordinary Python objects that represent parts of this circuit:
 
 .. doctest::
 
@@ -372,7 +372,7 @@ In contrast, code written in the nMigen language *describes* computations on abs
    >>> a + 1
    (+ (sig a) (const 1'd1))
 
-Although the syntax is similar, it is important to remember that nMigen values exist on a higher level of abstraction than Python values. For example, expressions that include nMigen values cannot be used in Python control flow structures:
+Although the syntax is similar, it is important to remember that Amaranth values exist on a higher level of abstraction than Python values. For example, expressions that include Amaranth values cannot be used in Python control flow structures:
 
 .. doctest::
 
@@ -380,9 +380,9 @@ Although the syntax is similar, it is important to remember that nMigen values e
    ...     print("Zero!")
    Traceback (most recent call last):
      ...
-   TypeError: Attempted to convert nMigen value to Python boolean
+   TypeError: Attempted to convert Amaranth value to Python boolean
 
-Because the value of ``a``, and therefore ``a == 0``, is not known at the time when the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, nMigen provides its own :ref:`control structures <lang-control>` that, also, manipulate circuits.
+Because the value of ``a``, and therefore ``a == 0``, is not known at the time when the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, Amaranth provides its own :ref:`control structures <lang-control>` that, also, manipulate circuits.
 
 
 .. _lang-widthext:
@@ -398,9 +398,9 @@ Many of the operations described below (for example, addition, equality, bitwise
 Arithmetic operators
 --------------------
 
-Most arithmetic operations on integers provided by Python can be used on nMigen values, too.
+Most arithmetic operations on integers provided by Python can be used on Amaranth values, too.
 
-Although Python integers have unlimited precision and nMigen values are represented with a :ref:`finite amount of bits <lang-values>`, arithmetics on nMigen values never overflows because the width of the arithmetic expression is always sufficient to represent all possible results.
+Although Python integers have unlimited precision and Amaranth values are represented with a :ref:`finite amount of bits <lang-values>`, arithmetics on Amaranth values never overflows because the width of the arithmetic expression is always sufficient to represent all possible results.
 
 .. doctest::
 
@@ -408,7 +408,7 @@ Although Python integers have unlimited precision and nMigen values are represen
    >>> (a + 1).shape() # needs to represent 1 to 256
    unsigned(9)
 
-Similarly, although Python integers are always signed and nMigen values can be either :ref:`signed or unsigned <lang-values>`, if any of the operands of an nMigen arithmetic expression is signed, the expression itself is also signed, matching the behavior of Python.
+Similarly, although Python integers are always signed and Amaranth values can be either :ref:`signed or unsigned <lang-values>`, if any of the operands of an Amaranth arithmetic expression is signed, the expression itself is also signed, matching the behavior of Python.
 
 .. doctest::
 
@@ -419,7 +419,7 @@ Similarly, although Python integers are always signed and nMigen values can be e
 
 While arithmetic computations never result in an overflow, :ref:`assigning <lang-assigns>` their results to signals may truncate the most significant bits.
 
-The following table lists the arithmetic operations provided by nMigen:
+The following table lists the arithmetic operations provided by Amaranth:
 
 ============ ========================== ======
 Operation    Description                Notes
@@ -433,7 +433,7 @@ Operation    Description                Notes
 ``abs(a)``   absolute value
 ============ ========================== ======
 
-.. [#opA1] Divisor must be unsigned; this is an nMigen limitation that may be lifted in the future.
+.. [#opA1] Divisor must be unsigned; this is an Amaranth limitation that may be lifted in the future.
 
 
 .. _lang-cmpops:
@@ -441,11 +441,11 @@ Operation    Description                Notes
 Comparison operators
 --------------------
 
-All comparison operations on integers provided by Python can be used on nMigen values. However, due to a limitation of Python, chained comparisons (e.g. ``a < b < c``) cannot be used.
+All comparison operations on integers provided by Python can be used on Amaranth values. However, due to a limitation of Python, chained comparisons (e.g. ``a < b < c``) cannot be used.
 
 Similar to arithmetic operations, if any operand of a comparison expression is signed, a signed comparison is performed. The result of a comparison is a 1-bit unsigned value.
 
-The following table lists the comparison operations provided by nMigen:
+The following table lists the comparison operations provided by Amaranth:
 
 ============ ==========================
 Operation    Description
@@ -464,13 +464,13 @@ Operation    Description
 Bitwise, shift, and rotate operators
 ------------------------------------
 
-All bitwise and shift operations on integers provided by Python can be used on nMigen values as well.
+All bitwise and shift operations on integers provided by Python can be used on Amaranth values as well.
 
 Similar to arithmetic operations, if any operand of a bitwise expression is signed, the expression itself is signed as well. A shift expression is signed if the shifted value is signed. A rotate expression is always unsigned.
 
 Rotate operations with variable rotate amounts cannot be efficiently synthesized for non-power-of-2 widths of the rotated value. Because of that, the rotate operations are only provided for constant rotate amounts, specified as Python :py:class:`int`\ s.
 
-The following table lists the bitwise and shift operations provided by nMigen:
+The following table lists the bitwise and shift operations provided by Amaranth:
 
 ===================== ========================================== ======
 Operation             Description                                Notes
@@ -497,14 +497,14 @@ Operation             Description                                Notes
 
 .. note::
 
-   Because nMigen ensures that the width of a variable left shift expression is wide enough to represent any possible result, variable left shift by a wide amount produces exponentially wider intermediate values, stressing the synthesis tools:
+   Because Amaranth ensures that the width of a variable left shift expression is wide enough to represent any possible result, variable left shift by a wide amount produces exponentially wider intermediate values, stressing the synthesis tools:
 
    .. doctest::
 
       >>> (1 << C(0, 32)).shape()
       unsigned(4294967296)
 
-   Although nMigen will detect and reject expressions wide enough to break other tools, it is a good practice to explicitly limit the width of a shift amount in a variable left shift.
+   Although Amaranth will detect and reject expressions wide enough to break other tools, it is a good practice to explicitly limit the width of a shift amount in a variable left shift.
 
 
 .. _lang-reduceops:
@@ -516,7 +516,7 @@ Bitwise reduction operations on integers are not provided by Python, but are ver
 
 The result of a reduction is a 1-bit unsigned value.
 
-The following table lists the reduction operations provided by nMigen:
+The following table lists the reduction operations provided by Amaranth:
 
 ============ ============================================= ======
 Operation    Description                                   Notes
@@ -536,12 +536,12 @@ Operation    Description                                   Notes
 Logical operators
 -----------------
 
-Unlike the arithmetic or bitwise operators, it is not possible to change the behavior of the Python logical operators ``not``, ``and``, and ``or``. Due to that, logical expressions in nMigen are written using bitwise operations on boolean (1-bit unsigned) values, with explicit boolean conversions added where necessary.
+Unlike the arithmetic or bitwise operators, it is not possible to change the behavior of the Python logical operators ``not``, ``and``, and ``or``. Due to that, logical expressions in Amaranth are written using bitwise operations on boolean (1-bit unsigned) values, with explicit boolean conversions added where necessary.
 
-The following table lists the Python logical expressions and their nMigen equivalents:
+The following table lists the Python logical expressions and their Amaranth equivalents:
 
 ================= ====================================
-Python expression nMigen expression (any operands)
+Python expression Amaranth expression (any operands)
 ================= ====================================
 ``not a``         ``~(a).bool()``
 ``a and b``       ``(a).bool() & (b).bool()``
@@ -551,7 +551,7 @@ Python expression nMigen expression (any operands)
 When the operands are known to be boolean values, such as comparisons, reductions, or boolean signals, the ``.bool()`` conversion may be omitted for clarity:
 
 ================= ====================================
-Python expression nMigen expression (boolean operands)
+Python expression Amaranth expression (boolean operands)
 ================= ====================================
 ``not p``         ``~(p)``
 ``p and q``       ``(p) & (q)``
@@ -562,9 +562,9 @@ Python expression nMigen expression (boolean operands)
 
 .. warning::
 
-   Because of Python :ref:`operator precedence <python:operator-summary>`, logical operators bind less tightly than comparison operators whereas bitwise operators bind more tightly than comparison operators. As a result, all logical expressions in nMigen **must** have parenthesized operands.
+   Because of Python :ref:`operator precedence <python:operator-summary>`, logical operators bind less tightly than comparison operators whereas bitwise operators bind more tightly than comparison operators. As a result, all logical expressions in Amaranth **must** have parenthesized operands.
 
-   Omitting parentheses around operands in an nMigen a logical expression is likely to introduce a subtle bug:
+   Omitting parentheses around operands in an Amaranth a logical expression is likely to introduce a subtle bug:
 
    .. doctest::
 
@@ -581,7 +581,7 @@ Python expression nMigen expression (boolean operands)
 
 .. warning::
 
-   When applied to nMigen boolean values, the ``~`` operator computes negation, and when applied to Python boolean values, the ``not`` operator also computes negation. However, the ``~`` operator applied to Python boolean values produces an unexpected result:
+   When applied to Amaranth boolean values, the ``~`` operator computes negation, and when applied to Python boolean values, the ``not`` operator also computes negation. However, the ``~`` operator applied to Python boolean values produces an unexpected result:
 
    .. doctest::
 
@@ -590,7 +590,7 @@ Python expression nMigen expression (boolean operands)
       >>> ~True
       -2
 
-   Because of this, Python booleans used in nMigen logical expressions **must** be negated with the ``not`` operator, not the ``~`` operator. Negating a Python boolean with the ``~`` operator in an nMigen logical expression is likely to introduce a subtle bug:
+   Because of this, Python booleans used in Amaranth logical expressions **must** be negated with the ``not`` operator, not the ``~`` operator. Negating a Python boolean with the ``~`` operator in an Amaranth logical expression is likely to introduce a subtle bug:
 
    .. doctest::
 
@@ -601,7 +601,7 @@ Python expression nMigen expression (boolean operands)
       >>> ~use_stb | stb # WRONG! MSB of 2-bit wide OR expression is always 1
       (| (const 2'sd-2) (sig stb))
 
-   nMigen automatically detects some cases of misuse of ``~`` and emits a detailed diagnostic message.
+   Amaranth automatically detects some cases of misuse of ``~`` and emits a detailed diagnostic message.
 
    .. TODO: this isn't quite reliable, #380
 
@@ -611,13 +611,13 @@ Python expression nMigen expression (boolean operands)
 Bit sequence operators
 ----------------------
 
-Apart from acting as numbers, nMigen values can also be treated as bit :ref:`sequences <python:typesseq>`, supporting slicing, concatenation, replication, and other sequence operations. Since some of the operators Python defines for sequences clash with the operators it defines for numbers, nMigen gives these operators a different name. Except for the names, nMigen values follow Python sequence semantics, with the least significant bit at index 0.
+Apart from acting as numbers, Amaranth values can also be treated as bit :ref:`sequences <python:typesseq>`, supporting slicing, concatenation, replication, and other sequence operations. Since some of the operators Python defines for sequences clash with the operators it defines for numbers, Amaranth gives these operators a different name. Except for the names, Amaranth values follow Python sequence semantics, with the least significant bit at index 0.
 
-Because every nMigen value has a single fixed width, bit slicing and replication operations require the subscripts and count to be constant, specified as Python :py:class:`int`\ s. It is often useful to slice a value with a constant width and variable offset, but this cannot be expressed with the Python slice notation. To solve this problem, nMigen provides additional *part select* operations with the necessary semantics.
+Because every Amaranth value has a single fixed width, bit slicing and replication operations require the subscripts and count to be constant, specified as Python :py:class:`int`\ s. It is often useful to slice a value with a constant width and variable offset, but this cannot be expressed with the Python slice notation. To solve this problem, Amaranth provides additional *part select* operations with the necessary semantics.
 
 The result of any bit sequence operation is an unsigned value.
 
-The following table lists the bit sequence operations provided by nMigen:
+The following table lists the bit sequence operations provided by Amaranth:
 
 ======================= ================================================ ======
 Operation               Description                                      Notes
@@ -631,14 +631,14 @@ Operation               Description                                      Notes
 ``Repl(a, n)``          replication
 ======================= ================================================ ======
 
-.. [#opS1] Words "length" and "width" have the same meaning when talking about nMigen values. Conventionally, "width" is used.
+.. [#opS1] Words "length" and "width" have the same meaning when talking about Amaranth values. Conventionally, "width" is used.
 .. [#opS2] All variations of the Python slice notation are supported, including "extended slicing". E.g. all of ``a[0]``, ``a[1:9]``, ``a[2:]``, ``a[:-2]``, ``a[::-1]``, ``a[0:8:2]`` select bits in the same way as other Python sequence types select their elements.
 .. [#opS3] In the concatenated value, ``a`` occupies the least significant bits, and ``b`` the most significant bits.
 
-For the operators introduced by nMigen, the following table explains them in terms of Python code operating on tuples of bits rather than nMigen values:
+For the operators introduced by Amaranth, the following table explains them in terms of Python code operating on tuples of bits rather than Amaranth values:
 
 ======================= ======================
-nMigen operation        Equivalent Python code
+Amaranth operation        Equivalent Python code
 ======================= ======================
 ``Cat(a, b)``           ``a + b``
 ``Repl(a, n)``          ``a * n``
@@ -654,7 +654,7 @@ nMigen operation        Equivalent Python code
 
 .. note::
 
-   Could nMigen have used a different indexing or iteration order for values? Yes, but it would be necessary to either place the most significant bit at index 0, or deliberately break the Python sequence type interface. Both of these options would cause more issues than using different iteration orders for numeric and sequence operations.
+   Could Amaranth have used a different indexing or iteration order for values? Yes, but it would be necessary to either place the most significant bit at index 0, or deliberately break the Python sequence type interface. Both of these options would cause more issues than using different iteration orders for numeric and sequence operations.
 
 
 .. _lang-convops:
@@ -664,7 +664,7 @@ Conversion operators
 
 The ``.as_signed()`` and ``.as_unsigned()`` conversion operators reinterpret the bits of a value with the requested signedness. This is useful when the same value is sometimes treated as signed and sometimes as unsigned, or when a signed value is constructed using slices or concatenations. For example, ``(pc + imm[:7].as_signed()).as_unsigned()`` sign-extends the 7 least significant bits of ``imm`` to the width of ``pc``, performs the addition, and produces an unsigned result.
 
-.. TODO: more general shape conversion? https://github.com/nmigen/nmigen/issues/381
+.. TODO: more general shape conversion? https://github.com/amaranth-lang/amaranth/issues/381
 
 
 .. _lang-muxop:
@@ -680,12 +680,12 @@ The ``Mux(sel, val1, val0)`` choice expression (similar to the :ref:`conditional
 Modules
 =======
 
-A *module* is a unit of the nMigen design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control structures <lang-control>`, manage clock domains, and aggregate submodules.
+A *module* is a unit of the Amaranth design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control structures <lang-control>`, manage clock domains, and aggregate submodules.
 
 .. TODO: link to clock domains
 .. TODO: link to submodules
 
-Every nMigen design starts with a fresh module:
+Every Amaranth design starts with a fresh module:
 
 .. doctest::
 
@@ -721,7 +721,7 @@ Assigning to signals
    >>> s.eq(1)
    (eq (sig s) (const 1'd1))
 
-Similar to :ref:`how nMigen operators work <lang-abstractexpr>`, an nMigen assignment is an ordinary Python object used to describe a part of a circuit. An assignment does not have any effect on the signal it changes until it is added to a control domain in a module. Once added, it introduces logic into the circuit generated from that module.
+Similar to :ref:`how Amaranth operators work <lang-abstractexpr>`, an Amaranth assignment is an ordinary Python object used to describe a part of a circuit. An assignment does not have any effect on the signal it changes until it is added to a control domain in a module. Once added, it introduces logic into the circuit generated from that module.
 
 
 .. _lang-assignlhs:
@@ -783,11 +783,11 @@ Every signal included in the target of an assignment becomes a part of the domai
    >>> m.d.sync += d.eq(0)
    Traceback (most recent call last):
      ...
-   nmigen.hdl.dsl.SyntaxError: Driver-driver conflict: trying to drive (sig d) from d.sync, but it is already driven from d.comb
+   amaranth.hdl.dsl.SyntaxError: Driver-driver conflict: trying to drive (sig d) from d.sync, but it is already driven from d.comb
 
 .. note::
 
-   Clearly, nMigen code that drives a single bit of a signal from two different domains does not describe a meaningful circuit. However, driving two different bits of a signal from two different domains does not inherently cause such a conflict. Would nMigen accept the following code?
+   Clearly, Amaranth code that drives a single bit of a signal from two different domains does not describe a meaningful circuit. However, driving two different bits of a signal from two different domains does not inherently cause such a conflict. Would Amaranth accept the following code?
 
    .. testcode::
 
@@ -844,7 +844,7 @@ Multiple assignments to the same signal bits are more useful when combined with 
 Control structures
 ------------------
 
-Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, nMigen provides *control structures* tailored for this task: If, Switch, and FSM. The syntax of all control structures is based on :ref:`context managers <python:context-managers>` and uses ``with`` blocks, for example:
+Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control structures* tailored for this task: If, Switch, and FSM. The syntax of all control structures is based on :ref:`context managers <python:context-managers>` and uses ``with`` blocks, for example:
 
 .. TODO: link to relevant subsections
 
@@ -856,14 +856,14 @@ Although it is possible to write any decision tree as a combination of :ref:`ass
    with m.Else():
        m.d.sync += timer.eq(timer - 1)
 
-While some nMigen control structures are superficially similar to imperative control flow statements (such as Python's ``if``), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
+While some Amaranth control structures are superficially similar to imperative control flow statements (such as Python's ``if``), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
 
 .. testcode::
 
    timer = Signal(8)
    m.d.sync += timer.eq(Mux(timer == 0, 10, timer - 1))
 
-Because all branches of a decision tree affect the generated circuit, all of the Python code inside nMigen control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as ``print()``:
+Because all branches of a decision tree affect the generated circuit, all of the Python code inside Amaranth control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as ``print()``:
 
 .. testcode::
 
@@ -886,7 +886,7 @@ Because all branches of a decision tree affect the generated circuit, all of the
 Active and inactive assignments
 -------------------------------
 
-An assignment added inside an nMigen control structure, i.e. ``with m.<...>:`` block, is *active* if the condition of the control structure is satisfied, and *inactive* otherwise. For any given set of conditions, the final value of every signal assigned in a module is the same as if the inactive assignments were removed and the active assignments were performed unconditionally, taking into account the :ref:`assignment order <lang-assignorder>`.
+An assignment added inside an Amaranth control structure, i.e. ``with m.<...>:`` block, is *active* if the condition of the control structure is satisfied, and *inactive* otherwise. For any given set of conditions, the final value of every signal assigned in a module is the same as if the inactive assignments were removed and the active assignments were performed unconditionally, taking into account the :ref:`assignment order <lang-assignorder>`.
 
 For example, there are two possible cases in the circuit generated from the following code:
 
@@ -945,15 +945,15 @@ Consider the following code:
 
 Whenever the signals ``en`` or ``b`` change, the signal ``a`` changes as well. If ``en`` is false, the final value of ``a`` is its initial value, ``1``. If ``en`` is true, the final value of ``a`` is equal to ``b + 1``.
 
-A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (i.e. implement a constant driver or a transparent latch), or unstable (i.e. implement a ring oscillator). nMigen prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
+A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (i.e. implement a constant driver or a transparent latch), or unstable (i.e. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
 
 .. warning::
 
-   The current version of nMigen does not detect combinatorial feedback loops, but processes the design under the assumption that there aren't any. If the design does in fact contain a combinatorial feedback loop, it will likely be **silently miscompiled**, though some cases will be detected during synthesis or place & route.
+   The current version of Amaranth does not detect combinatorial feedback loops, but processes the design under the assumption that there aren't any. If the design does in fact contain a combinatorial feedback loop, it will likely be **silently miscompiled**, though some cases will be detected during synthesis or place & route.
 
    This hazard will be eliminated in the future.
 
-.. TODO: fix this, either as a part of https://github.com/nmigen/nmigen/issues/6 or on its own
+.. TODO: fix this, either as a part of https://github.com/amaranth-lang/amaranth/issues/6 or on its own
 
 .. note::
 

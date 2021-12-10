@@ -1,9 +1,9 @@
 [run]
 branch = True
 include =
-  nmigen/*
+  amaranth/*
 omit =
-  nmigen/test/*
+  amaranth/test/*
 
 [report]
 exclude_lines =

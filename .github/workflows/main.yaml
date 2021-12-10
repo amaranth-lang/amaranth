@@ -35,7 +35,7 @@ jobs:
         key: ${{ runner.os }}-wasm
     - name: Run tests
       run: |
-        export NMIGEN_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
+        export AMARANTH_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
         export PYTHONWARNINGS=error
         python -m coverage run -m unittest
         codecov
@@ -56,7 +56,7 @@ jobs:
         run: |
           sphinx-build docs docs/_build
       - name: Publish documentation
-        if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

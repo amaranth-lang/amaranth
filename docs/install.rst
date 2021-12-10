@@ -4,19 +4,19 @@ Installation
 System requirements
 ===================
 
-nMigen requires Python 3.6; it works on CPython_ 3.6 (or newer), and works faster on PyPy3.6_ 7.2 (or newer).
+Amaranth HDL requires Python 3.6; it works on CPython_ 3.6 (or newer), and works faster on PyPy3.6_ 7.2 (or newer).
 
-For most workflows, nMigen requires Yosys_ 0.9 (or newer). A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
+For most workflows, Amaranth requires Yosys_ 0.9 (or newer). A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
 
-Simulating nMigen code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging.
+Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging.
 
-Synthesizing, placing and routing an nMigen design for an FPGA requires the FPGA family specific toolchain.
+Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain.
 
 .. TODO: Link to FPGA family docs here
 
 .. _CPython: https://www.python.org/
 .. _PyPy3.6: https://www.pypy.org/
-.. _Yosys: http://www.clifford.at/yosys/
+.. _Yosys: https://yosyshq.net/yosys/
 .. _PyPI: https://pypi.org/
 .. _GTKWave: http://gtkwave.sourceforge.net/
 
@@ -92,10 +92,10 @@ Installing prerequisites
 
 .. _install:
 
-Installing nMigen
-=================
+Installing Amaranth
+===================
 
-The latest release of nMigen should work well for most applications. A development snapshot---any commit from the ``master`` branch of nMigen---should be similarly reliable, but is likely to include experimental API changes that will be in flux until the next release. With that in mind, development snapshots can be used to try out new functionality or to avoid bugs fixed since the last release.
+The latest release of Amaranth should work well for most applications. A development snapshot---any commit from the ``main`` branch of Amaranth---should be similarly reliable, but is likely to include experimental API changes that will be in flux until the next release. With that in mind, development snapshots can be used to try out new functionality or to avoid bugs fixed since the last release.
 
 
 .. _install-release:
@@ -103,7 +103,7 @@ The latest release of nMigen should work well for most applications. A developme
 Latest release
 --------------
 
-.. |release:install| replace:: To install the latest release of nMigen, run:
+.. |release:install| replace:: To install the latest release of Amaranth, run:
 
 .. platform-picker::
 
@@ -114,7 +114,7 @@ Latest release
 
       .. code-block:: doscon
 
-         > pip install --upgrade nmigen[builtin-yosys]
+         > pip install --upgrade amaranth[builtin-yosys]
 
    .. platform-choice:: macos
       :title: macOS
@@ -123,22 +123,22 @@ Latest release
 
       .. code-block:: console
 
-         $ pip install --user --upgrade 'nmigen[builtin-yosys]'
+         $ pip install --user --upgrade 'amaranth[builtin-yosys]'
 
    .. platform-choice:: linux
       :title: Linux
 
-      If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of nMigen, run:
+      If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of Amaranth, run:
 
       .. code-block:: console
 
-         $ pip3 install --user --upgrade 'nmigen[builtin-yosys]'
+         $ pip3 install --user --upgrade 'amaranth[builtin-yosys]'
 
       If you **did** install Yosys manually in the previous step, run:
 
       .. code-block:: console
 
-         $ pip3 install --user --upgrade nmigen
+         $ pip3 install --user --upgrade amaranth
 
    .. platform-choice:: arch
       :altname: linux
@@ -148,7 +148,7 @@ Latest release
 
       .. code-block:: console
 
-         $ sudo pacman -S python-nmigen
+         $ sudo pacman -S python-amaranth
 
 
 .. _install-snapshot:
@@ -156,7 +156,7 @@ Latest release
 Development snapshot
 --------------------
 
-.. |snapshot:install| replace:: To install the latest development snapshot of nMigen, run:
+.. |snapshot:install| replace:: To install the latest development snapshot of Amaranth, run:
 
 .. platform-picker::
 
@@ -167,7 +167,7 @@ Development snapshot
 
       .. code-block:: doscon
 
-         > pip install git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]
+         > pip install git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]
 
    .. platform-choice:: macos
       :title: macOS
@@ -176,22 +176,22 @@ Development snapshot
 
       .. code-block:: console
 
-         $ pip install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]'
+         $ pip install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]'
 
    .. platform-choice:: linux
       :title: Linux
 
-      If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of nMigen, run:
+      If you **did not** install Yosys manually in the :ref:`previous step <install-deps>`, to install the latest release of Amaranth, run:
 
       .. code-block:: console
 
-         $ pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen[builtin-yosys]'
+         $ pip3 install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]'
 
       If you **did** install Yosys manually in the previous step, run:
 
       .. code-block:: console
 
-         $ pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
+         $ pip3 install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth'
 
 
 .. _install-develop:
@@ -199,9 +199,9 @@ Development snapshot
 Editable development snapshot
 -----------------------------
 
-.. |develop:first-time| replace:: To install an editable development snapshot of nMigen for the first time, run:
-.. |develop:update| replace:: Any changes made to the ``nmigen`` directory will immediately affect any code that uses nMigen. To update the snapshot, run:
-.. |develop:reinstall| replace:: each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using nMigen may misbehave or crash with an ``ImportError``.
+.. |develop:first-time| replace:: To install an editable development snapshot of Amaranth for the first time, run:
+.. |develop:update| replace:: Any changes made to the ``amaranth`` directory will immediately affect any code that uses Amaranth. To update the snapshot, run:
+.. |develop:reinstall| replace:: each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using Amaranth may misbehave or crash with an ``ImportError``.
 
 .. platform-picker::
 
@@ -212,16 +212,16 @@ Editable development snapshot
 
       .. code-block:: doscon
 
-         > git clone https://github.com/nmigen/nmigen
-         > cd nmigen
+         > git clone https://github.com/amaranth-lang/amaranth
+         > cd amaranth
          > pip install --editable .[builtin-yosys]
 
       |develop:update|
 
       .. code-block:: doscon
 
-         > cd nmigen
-         > git pull --ff-only origin master
+         > cd amaranth
+         > git pull --ff-only origin main
          > pip install --editable .[builtin-yosys]
 
       Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
@@ -233,16 +233,16 @@ Editable development snapshot
 
       .. code-block:: console
 
-         $ git clone https://github.com/nmigen/nmigen
-         $ cd nmigen
+         $ git clone https://github.com/amaranth-lang/amaranth
+         $ cd amaranth
          $ pip install --user --editable '.[builtin-yosys]'
 
       |develop:update|
 
       .. code-block:: console
 
-         $ cd nmigen
-         $ git pull --ff-only origin master
+         $ cd amaranth
+         $ git pull --ff-only origin main
          $ pip install --user --editable '.[builtin-yosys]'
 
       Run the ``pip install --editable .[builtin-yosys]`` command |develop:reinstall|
@@ -256,16 +256,16 @@ Editable development snapshot
 
       .. code-block:: console
 
-         $ git clone https://github.com/nmigen/nmigen
-         $ cd nmigen
+         $ git clone https://github.com/amaranth-lang/amaranth
+         $ cd amaranth
          $ pip3 install --user --editable '.[builtin-yosys]'
 
       |develop:update|
 
       .. code-block:: console
 
-         $ cd nmigen
-         $ git pull --ff-only origin master
+         $ cd amaranth
+         $ git pull --ff-only origin main
          $ pip3 install --user --editable '.[builtin-yosys]'
 
       Run the ``pip3 install --editable .[builtin-yosys]`` command |develop:reinstall|
@@ -276,4 +276,4 @@ Installing board definitions
 
 .. todo::
 
-	 Explain how to install `<https://github.com/nmigen/nmigen-boards>`_.
+	 Explain how to install `<https://github.com/amaranth-lang/amaranth-boards>`_.

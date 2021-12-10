@@ -1,6 +1,6 @@
-from nmigen.compat import *
-from nmigen.compat.fhdl import verilog
-from nmigen._utils import _ignore_deprecated
+from amaranth.compat import *
+from amaranth.compat.fhdl import verilog
+from amaranth._utils import _ignore_deprecated
 
 
 class SimCase:

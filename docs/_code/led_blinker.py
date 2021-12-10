@@ -1,4 +1,4 @@
-from nmigen import *
+from amaranth import *
 
 
 class LEDBlinker(Elaboratable):
@@ -18,7 +18,7 @@ class LEDBlinker(Elaboratable):
 
         return m
 # --- BUILD ---
-from nmigen_boards.icestick import *
+from amaranth_boards.icestick import *
 
 
 ICEStickPlatform().build(LEDBlinker(), do_program=True)

@@ -1,7 +1,7 @@
 import warnings
 from enum import Enum
 
-from nmigen.hdl.ast import *
+from amaranth.hdl.ast import *
 
 from .utils import *
 
@@ -152,7 +152,7 @@ class ValueTestCase(FHDLTestCase):
         c = Const(0)
         self.assertIs(Value.cast(c), c)
         with self.assertRaisesRegex(TypeError,
-                r"^Object 'str' cannot be converted to an nMigen value$"):
+                r"^Object 'str' cannot be converted to an Amaranth value$"):
             Value.cast("str")
 
     def test_cast_enum(self):
@@ -170,7 +170,7 @@ class ValueTestCase(FHDLTestCase):
 
     def test_bool(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Attempted to convert nMigen value to Python boolean$"):
+                r"^Attempted to convert Amaranth value to Python boolean$"):
             if Const(0):
                 pass
 

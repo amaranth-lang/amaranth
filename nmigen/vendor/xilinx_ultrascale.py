@@ -1,15 +1,7 @@
+from amaranth.vendor.xilinx_ultrascale import *
+from amaranth.vendor.xilinx_ultrascale import __all__
+
+
 import warnings
-
-from .xilinx import XilinxPlatform
-
-
-__all__ = ["XilinxUltraScalePlatform"]
-
-
-XilinxUltraScalePlatform = XilinxPlatform
-
-
-# TODO(nmigen-0.4): remove
-warnings.warn("instead of nmigen.vendor.xilinx_ultrascale.XilinxUltraScalePlatform, "
-              "use nmigen.vendor.xilinx.XilinxPlatform",
+warnings.warn("instead of nmigen.vendor.xilinx_ultrascale, use amaranth.vendor.xilinx_ultrascale",
               DeprecationWarning, stacklevel=2)

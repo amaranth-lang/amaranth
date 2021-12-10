@@ -1,5 +1,5 @@
-from nmigen import *
-from nmigen.build.plat import *
+from amaranth import *
+from amaranth.build.plat import *
 
 from .utils import *
 

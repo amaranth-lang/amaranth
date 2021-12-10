@@ -1,8 +1,8 @@
-(* generator = "nMigen" *)
+(* generator = "Amaranth" *)
 module top(clk, rst, en, ovf);
-  (* src = "<nmigen-root>/nmigen/hdl/ir.py:526" *)
+  (* src = "<amaranth-root>/amaranth/hdl/ir.py:526" *)
   input clk;
-  (* src = "<nmigen-root>/nmigen/hdl/ir.py:526" *)
+  (* src = "<amaranth-root>/amaranth/hdl/ir.py:526" *)
   input rst;
   (* src = "up_counter.py:26" *)
   input en;
@@ -38,7 +38,7 @@ module top(clk, rst, en, ovf);
                 \count$next  = \$3 [15:0];
           endcase
     endcase
-    (* src = "<nmigen-root>/nmigen/hdl/xfrm.py:518" *)
+    (* src = "<amaranth-root>/amaranth/hdl/xfrm.py:518" *)
     casez (rst)
       1'h1:
           \count$next  = 16'h0000;

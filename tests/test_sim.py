@@ -1,14 +1,14 @@
 import os
 from contextlib import contextmanager
 
-from nmigen._utils import flatten
-from nmigen.hdl.ast import *
-from nmigen.hdl.cd import  *
-from nmigen.hdl.mem import *
-from nmigen.hdl.rec import *
-from nmigen.hdl.dsl import  *
-from nmigen.hdl.ir import *
-from nmigen.sim import *
+from amaranth._utils import flatten
+from amaranth.hdl.ast import *
+from amaranth.hdl.cd import  *
+from amaranth.hdl.mem import *
+from amaranth.hdl.rec import *
+from amaranth.hdl.dsl import  *
+from amaranth.hdl.ir import *
+from amaranth.sim import *
 
 from .utils import *
 

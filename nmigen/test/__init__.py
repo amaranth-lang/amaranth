@@ -1,1 +1,6 @@
-# TODO(nmigen-0.4): remove the entire package
+from amaranth.test import *
+
+
+import warnings
+warnings.warn("instead of nmigen.test, use amaranth.test",
+              DeprecationWarning, stacklevel=2)

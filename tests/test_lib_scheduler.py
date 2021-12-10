@@ -1,11 +1,11 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
 import unittest
 
-from nmigen.hdl import *
-from nmigen.asserts import *
-from nmigen.sim import *
-from nmigen.lib.scheduler import *
+from amaranth.hdl import *
+from amaranth.asserts import *
+from amaranth.sim import *
+from amaranth.lib.scheduler import *
 
 from .utils import *
 

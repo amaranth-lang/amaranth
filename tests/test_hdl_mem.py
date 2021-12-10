@@ -1,7 +1,7 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
-from nmigen.hdl.ast import *
-from nmigen.hdl.mem import *
+from amaranth.hdl.ast import *
+from amaranth.hdl.mem import *
 
 from .utils import *
 

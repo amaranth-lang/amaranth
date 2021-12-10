@@ -1,7 +1,7 @@
 import unittest
 
-from nmigen.compat import *
-from nmigen.compat.genlib.fsm import FSM
+from amaranth.compat import *
+from amaranth.compat.genlib.fsm import FSM
 
 from .support import SimCase
 

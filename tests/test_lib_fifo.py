@@ -1,9 +1,9 @@
-# nmigen: UnusedElaboratable=no
+# amaranth: UnusedElaboratable=no
 
-from nmigen.hdl import *
-from nmigen.asserts import *
-from nmigen.sim import *
-from nmigen.lib.fifo import *
+from amaranth.hdl import *
+from amaranth.asserts import *
+from amaranth.sim import *
+from amaranth.lib.fifo import *
 
 from .utils import *
 

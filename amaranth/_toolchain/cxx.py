@@ -8,7 +8,7 @@ __all__ = ["build_cxx"]
 
 
 def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
-    build_dir = tempfile.TemporaryDirectory(prefix="nmigen_cxx_")
+    build_dir = tempfile.TemporaryDirectory(prefix="amaranth_cxx_")
 
     cwd = os.getcwd()
     try:

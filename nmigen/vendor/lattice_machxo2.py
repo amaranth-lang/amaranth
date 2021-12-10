@@ -1,11 +1,7 @@
+from amaranth.vendor.lattice_machxo2 import *
+from amaranth.vendor.lattice_machxo2 import __all__
+
+
 import warnings
-
-from .lattice_machxo_2_3l import LatticeMachXO2Platform
-
-
-__all__ = ["LatticeMachXO2Platform"]
-
-
-# TODO(nmigen-0.4): remove
-warnings.warn("instead of nmigen.vendor.lattice_machxo2, use nmigen.vendor.lattice_machxo_2_3l",
+warnings.warn("instead of nmigen.vendor.lattice_machxo2, use amaranth.vendor.lattice_machxo2",
               DeprecationWarning, stacklevel=2)

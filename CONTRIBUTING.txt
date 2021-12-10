@@ -7,8 +7,8 @@ this purpose.
 
 COPYRIGHTS and LICENSE
 
-nMigen is licensed under the 2-clause BSD license, which is contained in the
-LICENSE.txt file.
+Amaranth HDL is licensed under the 2-clause BSD license, which is contained in
+the LICENSE.txt file.
 
 All authors retain copyright ownership of their contributions.
 

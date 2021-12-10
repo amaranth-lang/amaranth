@@ -1,8 +1,8 @@
 import unittest
 from itertools import count
 
-from nmigen.compat import *
-from nmigen.compat.genlib.fifo import SyncFIFO
+from amaranth.compat import *
+from amaranth.compat.genlib.fifo import SyncFIFO
 
 from .support import SimCase
 

@@ -30,35 +30,36 @@ def doc_version():
 
 
 setup(
-    name="nmigen",
+    name="amaranth",
     use_scm_version=scm_version(),
     author="whitequark",
     author_email="whitequark@whitequark.org",
-    description="Python toolbox for building complex digital hardware",
+    description="Amaranth hardware definition language",
     #long_description="""TODO""",
     license="BSD",
     python_requires="~=3.6",
     setup_requires=["wheel", "setuptools", "setuptools_scm"],
     install_requires=[
-        "importlib_metadata; python_version<'3.8'",  # for __version__ and nmigen._yosys
-        "importlib_resources; python_version<'3.9'", # for nmigen._yosys
-        "pyvcd~=0.2.2", # for nmigen.pysim
-        "Jinja2~=2.11", # for nmigen.build
+        "importlib_metadata; python_version<'3.8'",  # for __version__ and amaranth._toolchain.yosys
+        "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
+        "pyvcd~=0.2.2", # for amaranth.pysim
+        "Jinja2~=2.11", # for amaranth.build
     ],
     extras_require={
-        # this version requirement needs to be synchronized with the one in nmigen.back.verilog!
-        "builtin-yosys": ["nmigen-yosys>=0.9.post3527.*"],
+        # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
+        "builtin-yosys": ["amaranth-yosys>=0.9.post3527.*"],
         "remote-build": ["paramiko~=2.7"],
     },
-    packages=find_packages(exclude=["tests*"]),
+    packages=find_packages(exclude=("tests", "tests.*")),
     entry_points={
         "console_scripts": [
+            "amaranth-rpc = amaranth.rpc:main",
             "nmigen-rpc = nmigen.rpc:main",
         ]
     },
     project_urls={
-        "Documentation": "https://nmigen.info/nmigen/{}".format(doc_version()),
-        "Source Code": "https://github.com/nmigen/nmigen",
-        "Bug Tracker": "https://github.com/nmigen/nmigen/issues",
+        "Documentation": "https://amaranth-lang.org/amaranth/{}".format(doc_version()),
+        "Source Code": "https://github.com/amaranth-lang/amaranth",
+        "Bug Tracker": "https://github.com/amaranth-lang/amaranth/issues",
     },
 )

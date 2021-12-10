@@ -1,7 +1,7 @@
 import unittest
 
-from nmigen._utils import _ignore_deprecated
-from nmigen.compat import *
+from amaranth._utils import _ignore_deprecated
+from amaranth.compat import *
 
 
 def _same_slices(a, b):

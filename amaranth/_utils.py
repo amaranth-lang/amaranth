@@ -91,6 +91,11 @@ def get_linter_options(filename):
     if first_line:
         match = re.match(r"^#\s*nmigen:\s*((?:\w+=\w+\s*)(?:,\s*\w+=\w+\s*)*)\n$", first_line)
         if match:
+            warnings.warn_explicit("Use `# amaranth:` annotation instead of `# nmigen:`",
+                DeprecationWarning, filename, 1)
+        else:
+            match = re.match(r"^#\s*amaranth:\s*((?:\w+=\w+\s*)(?:,\s*\w+=\w+\s*)*)\n$", first_line)
+        if match:
             return dict(map(lambda s: s.strip().split("=", 2), match.group(1).split(",")))
     return dict()
 

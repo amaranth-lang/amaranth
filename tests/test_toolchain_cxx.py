@@ -3,7 +3,7 @@ import ctypes
 import tempfile
 import unittest
 
-from nmigen._toolchain.cxx import *
+from amaranth._toolchain.cxx import *
 
 
 class ToolchainCxxTestCase(unittest.TestCase):
@@ -51,7 +51,7 @@ class ToolchainCxxTestCase(unittest.TestCase):
         self.assertEqual(library.answer(), 42)
 
     def test_include(self):
-        self.include_dir = tempfile.TemporaryDirectory(prefix="nmigen_hxx_")
+        self.include_dir = tempfile.TemporaryDirectory(prefix="amaranth_hxx_")
         with open(os.path.join(self.include_dir.name, "answer.h"), "w") as f:
             f.write("#define ANSWER 42")
 

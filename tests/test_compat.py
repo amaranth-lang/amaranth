@@ -1,5 +1,5 @@
-from nmigen.hdl.ir import Fragment
-from nmigen.compat import *
+from amaranth.hdl.ir import Fragment
+from amaranth.compat import *
 
 from .utils import *
 

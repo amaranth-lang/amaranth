@@ -1,4 +1,7 @@
-from .core import *
+from amaranth.sim import *
+from amaranth.sim import __all__
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+import warnings
+warnings.warn("instead of nmigen.sim, use amaranth.sim",
+              DeprecationWarning, stacklevel=2)

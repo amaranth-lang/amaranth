@@ -1,5 +1,5 @@
-from nmigen import *
-from nmigen.cli import main
+from amaranth import *
+from amaranth.cli import main
 
 
 class UARTReceiver(Elaboratable):

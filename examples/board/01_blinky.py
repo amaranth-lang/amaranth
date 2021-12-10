@@ -1,8 +1,8 @@
-# If the design does not create a "sync" clock domain, it is created by the nMigen build system
+# If the design does not create a "sync" clock domain, it is created by the Amaranth build system
 # using the platform default clock (and default reset, if any).
 
-from nmigen import *
-from nmigen_boards.ice40_hx1k_blink_evn import *
+from amaranth import *
+from amaranth_boards.ice40_hx1k_blink_evn import *
 
 
 class Blinky(Elaboratable):

@@ -1,6 +1,6 @@
 import unittest
 
-from nmigen.compat import *
+from amaranth.compat import *
 
 
 class PassiveCase(unittest.TestCase):

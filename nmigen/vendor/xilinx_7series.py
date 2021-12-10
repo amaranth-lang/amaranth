@@ -1,15 +1,7 @@
+from amaranth.vendor.xilinx_7series import *
+from amaranth.vendor.xilinx_7series import __all__
+
+
 import warnings
-
-from .xilinx import XilinxPlatform
-
-
-__all__ = ["Xilinx7SeriesPlatform"]
-
-
-Xilinx7SeriesPlatform = XilinxPlatform
-
-
-# TODO(nmigen-0.4): remove
-warnings.warn("instead of nmigen.vendor.xilinx_7series.Xilinx7SeriesPlatform, "
-              "use nmigen.vendor.xilinx.XilinxPlatform",
+warnings.warn("instead of nmigen.vendor.xilinx_7series, use amaranth.vendor.xilinx_7series",
               DeprecationWarning, stacklevel=2)
