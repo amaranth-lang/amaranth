@@ -1,5 +1,5 @@
-from nmigen import *
-from nmigen.vendor.openlane import Sky130FDSCHDPlatform
+from amaranth import *
+from amaranth.vendor.openlane import Sky130FDSCHDPlatform
 
 import os
 
