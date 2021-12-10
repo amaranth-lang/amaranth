@@ -37,7 +37,7 @@ jobs:
       run: |
         export AMARANTH_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
         export PYTHONWARNINGS=error
-        python -m coverage run -m unittest -t . -s tests
+        python -m coverage run -m unittest discover -t . -s tests
         codecov
   document:
     runs-on: ubuntu-latest
