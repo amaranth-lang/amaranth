@@ -1,4 +1,4 @@
-from amaranth.cli import *
+from amaranth.cli import main, main_parser, main_runner
 from amaranth.cli import __all__
 
 
