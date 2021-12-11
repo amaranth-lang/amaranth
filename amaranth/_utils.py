@@ -15,10 +15,10 @@ __all__ = ["flatten", "union" , "log2_int", "bits_for", "memoize", "final", "dep
 
 def flatten(i):
     for e in i:
-        if isinstance(e, Iterable):
-            yield from flatten(e)
-        else:
+        if isinstance(e, str) or not isinstance(e, Iterable):
             yield e
+        else:
+            yield from flatten(e)
 
 
 def union(i, start=None):

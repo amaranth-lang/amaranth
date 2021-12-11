@@ -740,6 +740,11 @@ class CatTestCase(FHDLTestCase):
     def test_cast(self):
         c = Cat(1, 0)
         self.assertEqual(repr(c), "(cat (const 1'd1) (const 1'd0))")
+    
+    def test_str_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Object 'foo' cannot be converted to an Amaranth value$"):
+            Cat("foo")
 
 
 class ReplTestCase(FHDLTestCase):
