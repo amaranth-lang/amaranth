@@ -22,8 +22,6 @@ class PyClockProcess(BaseProcess):
         self.initial = True
 
     def run(self):
-        self.runnable = False
-
         if self.initial:
             self.initial = False
             self.state.wait_interval(self, self.phase)

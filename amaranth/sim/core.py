@@ -59,6 +59,9 @@ class Simulator:
         elif engine == "pysim":
             from .pysim import PySimEngine
             engine = PySimEngine
+        elif engine == "cxxsim":
+            from .cxxsim import CxxSimEngine
+            engine = CxxSimEngine
         else:
             raise TypeError("Value '{!r}' is not a simulation engine class or "
                             "a simulation engine name"
