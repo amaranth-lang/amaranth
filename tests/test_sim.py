@@ -840,3 +840,14 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             with open(os.path.devnull, "w") as f:
                 with sim.write_vcd(f):
                     sim.run()
+
+    def test_bug_588(self):
+        dut = Module()
+        a = Signal(32)
+        b = Signal(32)
+        z = Signal(32)
+        dut.d.comb += z.eq(a << b)
+        with self.assertRaisesRegex(OverflowError,
+                r"^Value defined at .+?/test_sim\.py:\d+ is 4294967327 bits wide, "
+                r"which is unlikely to simulate in reasonable time$"):
+            Simulator(dut)

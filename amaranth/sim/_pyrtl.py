@@ -70,6 +70,19 @@ class _ValueCompiler(ValueVisitor, _Compiler):
         "zmod": lambda lhs, rhs: 0 if rhs == 0 else lhs % rhs,
     }
 
+    def on_value(self, value):
+        # Very large values are unlikely to compile or simulate in reasonable time.
+        if len(value) > 2 ** 16:
+            if value.src_loc:
+                src = "{}:{}".format(*value.src_loc)
+            else:
+                src = "unknown location"
+            raise OverflowError("Value defined at {} is {} bits wide, which is unlikely to "
+                                "simulate in reasonable time"
+                                .format(src, len(value)))
+
+        return super().on_value(value)
+
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
 
@@ -332,14 +345,15 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             self.emitter.append("pass")
 
     def on_Assign(self, stmt):
-        gen_rhs = f"({(1 << len(stmt.rhs)) - 1} & {self.rhs(stmt.rhs)})"
+        gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
+        gen_rhs = f"({(1 << len(stmt.rhs)) - 1} & {gen_rhs_value})"
         if stmt.rhs.shape().signed:
             gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1)})"
         return self.lhs(stmt.lhs)(gen_rhs)
 
     def on_Switch(self, stmt):
-        gen_test = self.emitter.def_var("test",
-            f"{(1 << len(stmt.test)) - 1} & {self.rhs(stmt.test)}")
+        gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
+        gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1} & {gen_test_value}")
         for index, (patterns, stmts) in enumerate(stmt.cases.items()):
             gen_checks = []
             if not patterns:

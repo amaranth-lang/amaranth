@@ -9,10 +9,6 @@ from ..hdl import ast, ir, mem, xfrm
 __all__ = ["convert", "convert_fragment"]
 
 
-class ImplementationLimit(Exception):
-    pass
-
-
 _escape_map = str.maketrans({
     "\"": "\\\"",
     "\\": "\\\\",
@@ -143,9 +139,9 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
         # bits. In practice, wires larger than 2**16 bits, although accepted, cause performance
         # problems without an immediately visible cause, so conservatively limit wire size.
         if width > 2 ** 16:
-            raise ImplementationLimit("Wire created at {} is {} bits wide, which is unlikely to "
-                                      "synthesize correctly"
-                                      .format(src or "unknown location", width))
+            raise OverflowError("Wire created at {} is {} bits wide, which is unlikely to "
+                                "synthesize correctly"
+                                .format(src or "unknown location", width))
 
         self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
