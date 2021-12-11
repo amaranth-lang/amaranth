@@ -34,7 +34,7 @@ class Fragment:
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
                 obj._MustUse__used = True
-                obj = obj.elaborate(platform)
+                new_obj = obj.elaborate(platform)
             elif hasattr(obj, "elaborate"):
                 warnings.warn(
                     message="Class {!r} is an elaboratable that does not explicitly inherit from "
@@ -43,15 +43,18 @@ class Fragment:
                     category=RuntimeWarning,
                     stacklevel=2)
                 code = obj.elaborate.__code__
-                obj = obj.elaborate(platform)
+                new_obj = obj.elaborate(platform)
             else:
                 raise AttributeError("Object {!r} cannot be elaborated".format(obj))
-            if obj is None and code is not None:
+            if new_obj is obj:
+                raise RecursionError("Object {!r} elaborates to itself".format(obj))
+            if new_obj is None and code is not None:
                 warnings.warn_explicit(
                     message=".elaborate() returned None; missing return statement?",
                     category=UserWarning,
                     filename=code.co_filename,
                     lineno=code.co_firstlineno)
+            obj = new_obj
 
     def __init__(self):
         self.ports = SignalDict()

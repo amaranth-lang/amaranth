@@ -10,13 +10,18 @@ from amaranth.hdl.mem import *
 from .utils import *
 
 
-class BadElaboratable(Elaboratable):
+class ElaboratesToNone(Elaboratable):
     def elaborate(self, platform):
         return
 
 
+class ElaboratesToSelf(Elaboratable):
+    def elaborate(self, platform):
+        return self
+
+
 class FragmentGetTestCase(FHDLTestCase):
-    def test_get_wrong(self):
+    def test_get_wrong_none(self):
         with self.assertRaisesRegex(AttributeError,
                 r"^Object None cannot be elaborated$"):
             Fragment.get(None, platform=None)
@@ -25,7 +30,12 @@ class FragmentGetTestCase(FHDLTestCase):
                 r"^\.elaborate\(\) returned None; missing return statement\?$"):
             with self.assertRaisesRegex(AttributeError,
                     r"^Object None cannot be elaborated$"):
-                Fragment.get(BadElaboratable(), platform=None)
+                Fragment.get(ElaboratesToNone(), platform=None)
+
+    def test_get_wrong_self(self):
+        with self.assertRaisesRegex(RecursionError,
+                r"^Object <.+?ElaboratesToSelf.+?> elaborates to itself$"):
+            Fragment.get(ElaboratesToSelf(), platform=None)
 
 
 class FragmentGeneratedTestCase(FHDLTestCase):
