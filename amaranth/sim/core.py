@@ -1,4 +1,5 @@
 import inspect
+import warnings
 
 from .._utils import deprecated
 from ..hdl.cd import *
@@ -112,7 +113,13 @@ class Simulator:
             in this case.
         """
         if isinstance(domain, ClockDomain):
-            pass
+            if (domain.name in self._fragment.domains and
+                    domain is not self._fragment.domains[domain.name]):
+                warnings.warn("Adding a clock process that drives a clock domain object "
+                              "named {!r}, which is distinct from an identically named domain "
+                              "in the simulated design"
+                              .format(domain.name),
+                              UserWarning, stacklevel=2)
         elif domain in self._fragment.domains:
             domain = self._fragment.domains[domain]
         elif if_exists:

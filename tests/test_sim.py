@@ -851,3 +851,12 @@ class SimulatorRegressionTestCase(FHDLTestCase):
                 r"^Value defined at .+?/test_sim\.py:\d+ is 4294967327 bits wide, "
                 r"which is unlikely to simulate in reasonable time$"):
             Simulator(dut)
+
+    def test_bug_566(self):
+        dut = Module()
+        dut.d.sync += Signal().eq(0)
+        sim = Simulator(dut)
+        with self.assertWarnsRegex(UserWarning,
+                r"^Adding a clock process that drives a clock domain object named 'sync', "
+                r"which is distinct from an identically named domain in the simulated design$"):
+            sim.add_clock(1e-6, domain=ClockDomain("sync"))
