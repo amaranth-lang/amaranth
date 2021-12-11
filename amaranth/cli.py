@@ -19,6 +19,8 @@ def main_parser(parser=None):
     p_generate.add_argument("-t", "--type", dest="generate_type",
         metavar="LANGUAGE", choices=["il", "cc", "v"],
         help="generate LANGUAGE (il for RTLIL, v for Verilog, cc for CXXRTL; default: file extension of FILE, if given)")
+    p_generate.add_argument("--no-src", dest="emit_src", default=True, action="store_false",
+        help="suppress generation of source location attributes")
     p_generate.add_argument("generate_file",
         metavar="FILE", type=argparse.FileType("w"), nargs="?",
         help="write generated code to FILE")
@@ -55,11 +57,11 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
         if generate_type is None:
             parser.error("Unable to auto-detect language, specify explicitly with -t/--type")
         if generate_type == "il":
-            output = rtlil.convert(fragment, name=name, ports=ports)
+            output = rtlil.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
         if generate_type == "cc":
-            output = cxxrtl.convert(fragment, name=name, ports=ports)
+            output = cxxrtl.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
         if generate_type == "v":
-            output = verilog.convert(fragment, name=name, ports=ports)
+            output = verilog.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
         if args.generate_file:
             args.generate_file.write(output)
         else:

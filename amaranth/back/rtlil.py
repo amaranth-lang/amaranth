@@ -95,6 +95,10 @@ class _ProxiedBuilder:
 
 
 class _AttrBuilder:
+    def __init__(self, emit_src, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.emit_src = emit_src
+
     def _attribute(self, name, value, *, indent=0):
         self._append("{}attribute \\{} {}\n",
                      "  " * indent, name, _const(value))
@@ -102,19 +106,23 @@ class _AttrBuilder:
     def _attributes(self, attrs, *, src=None, **kwargs):
         for name, value in attrs.items():
             self._attribute(name, value, **kwargs)
-        if src:
+        if src and self.emit_src:
             self._attribute("src", src, **kwargs)
 
 
-class _Builder(_Namer, _BufferedBuilder):
+class _Builder(_BufferedBuilder, _Namer):
+    def __init__(self, emit_src):
+        super().__init__()
+        self.emit_src = emit_src
+
     def module(self, name=None, attrs={}):
         name = self._make_name(name, local=False)
         return _ModuleBuilder(self, name, attrs)
 
 
-class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
+class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
     def __init__(self, rtlil, name, attrs):
-        super().__init__()
+        super().__init__(emit_src=rtlil.emit_src)
         self.rtlil = rtlil
         self.name  = name
         self.attrs = {"generator": "Amaranth"}
@@ -181,9 +189,9 @@ class _ModuleBuilder(_Namer, _BufferedBuilder, _AttrBuilder):
         return _ProcessBuilder(self, name, attrs, src)
 
 
-class _ProcessBuilder(_BufferedBuilder, _AttrBuilder):
+class _ProcessBuilder(_AttrBuilder, _BufferedBuilder):
     def __init__(self, rtlil, name, attrs, src):
-        super().__init__()
+        super().__init__(emit_src=rtlil.emit_src)
         self.rtlil = rtlil
         self.name  = name
         self.attrs = {}
@@ -223,8 +231,9 @@ class _CaseBuilder(_ProxiedBuilder):
         return _SwitchBuilder(self.rtlil, cond, attrs, src, self.indent)
 
 
-class _SwitchBuilder(_ProxiedBuilder, _AttrBuilder):
+class _SwitchBuilder(_AttrBuilder, _ProxiedBuilder):
     def __init__(self, rtlil, cond, attrs, src, indent):
+        super().__init__(emit_src=rtlil.emit_src)
         self.rtlil  = rtlil
         self.cond   = cond
         self.attrs  = attrs
@@ -1015,15 +1024,15 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
     return module.name, port_map
 
 
-def convert_fragment(fragment, name="top"):
+def convert_fragment(fragment, name="top", *, emit_src=True):
     assert isinstance(fragment, ir.Fragment)
-    builder = _Builder()
+    builder = _Builder(emit_src=emit_src)
     name_map = ast.SignalDict()
     _convert_fragment(builder, fragment, name_map, hierarchy=(name,))
     return str(builder), name_map
 
 
-def convert(elaboratable, name="top", platform=None, **kwargs):
+def convert(elaboratable, name="top", platform=None, *, emit_src=True, **kwargs):
     fragment = ir.Fragment.get(elaboratable, platform).prepare(**kwargs)
-    il_text, name_map = convert_fragment(fragment, name)
+    il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
     return il_text
