@@ -668,7 +668,7 @@ class _LHSValueCompiler(_ValueCompiler):
         return wire_next or wire_curr
 
     def _prepare_value_for_Slice(self, value):
-        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat))
+        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat, ast.Part))
         return self(value)
 
     def on_Part(self, value):
