@@ -242,6 +242,12 @@ class ResourceTestCase(FHDLTestCase):
                                   " (subsignal rx (pins i A1))"
                                   " (attrs IOSTANDARD='LVCMOS33'))")
 
+    def test_number_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Resource number must be an integer, not \(pins o 1\)$"):
+            # number omitted by accident
+            Resource("led", Pins("1", dir="o"))
+
     def test_family(self):
         ios = [Subsignal("clk", Pins("A0", dir="o"))]
         r1  = Resource.family(0, default_name="spi", ios=ios)

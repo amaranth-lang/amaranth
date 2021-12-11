@@ -197,8 +197,11 @@ class Resource(Subsignal):
             return cls(name_or_number + name_suffix, number, *ios)
 
     def __init__(self, name, number, *args):
-        super().__init__(name, *args)
+        if not isinstance(number, int):
+            raise TypeError("Resource number must be an integer, not {!r}"
+                            .format(number))
 
+        super().__init__(name, *args)
         self.number = number
 
     def __repr__(self):
