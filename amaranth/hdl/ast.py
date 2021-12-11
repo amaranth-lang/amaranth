@@ -172,26 +172,13 @@ class Value(metaclass=ABCMeta):
     def __rmul__(self, other):
         return Operator("*", [other, self])
 
-    def __check_divisor(self):
-        width, signed = self.shape()
-        if signed:
-            # Python's division semantics and Verilog's division semantics differ for negative
-            # divisors (Python uses div/mod, Verilog uses quo/rem); for now, avoid the issue
-            # completely by prohibiting such division operations.
-            raise NotImplementedError("Division by a signed value is not supported")
     def __mod__(self, other):
-        other = Value.cast(other)
-        other.__check_divisor()
         return Operator("%", [self, other])
     def __rmod__(self, other):
-        self.__check_divisor()
         return Operator("%", [other, self])
     def __floordiv__(self, other):
-        other = Value.cast(other)
-        other.__check_divisor()
         return Operator("//", [self, other])
     def __rfloordiv__(self, other):
-        self.__check_divisor()
         return Operator("//", [other, self])
 
     def __check_shamt(self):
@@ -692,9 +679,10 @@ class Operator(Value):
                 return Shape(width + 1, signed)
             if self.operator == "*":
                 return Shape(a_width + b_width, a_signed or b_signed)
-            if self.operator in ("//", "%"):
-                assert not b_signed
-                return Shape(a_width, a_signed)
+            if self.operator == "//":
+                return Shape(a_width + b_signed, a_signed or b_signed)
+            if self.operator == "%":
+                return Shape(b_width, b_signed)
             if self.operator in ("<", "<=", "==", "!=", ">", ">="):
                 return Shape(1, False)
             if self.operator in ("&", "^", "|"):

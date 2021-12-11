@@ -7,29 +7,12 @@ __all__ = ["YosysError", "convert", "convert_fragment"]
 
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
     # this version requirement needs to be synchronized with the one in setup.py!
-    yosys = find_yosys(lambda ver: ver >= (0, 9))
+    yosys = find_yosys(lambda ver: ver >= (0, 10))
     yosys_version = yosys.version()
 
     script = []
     script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
-
-    if yosys_version >= (0, 9, 3468):
-        # Yosys >=0.9+3468 (since commit 128522f1) emits the workaround for the `always @*`
-        # initial scheduling issue on its own.
-        script.append("delete w:$verilog_initial_trigger")
-
-    if yosys_version >= (0, 9, 3527):
-        # Yosys >=0.9+3527 (since commit 656ee70f) supports the `-nomux` option for the `proc`
-        # script pass. Because the individual `proc_*` passes are not a stable interface,
-        # `proc -nomux` is used instead, if available.
-        script.append("proc -nomux")
-    else:
-        # On earlier versions, use individual `proc_*` passes; this is a known range of Yosys
-        # versions and we know it's compatible with what Amaranth does.
-        script.append("proc_init")
-        script.append("proc_arst")
-        script.append("proc_dff")
-        script.append("proc_clean")
+    script.append("proc -nomux")
     script.append("memory_collect")
 
     if strip_internal_attrs:

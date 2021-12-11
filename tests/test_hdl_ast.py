@@ -407,16 +407,13 @@ class OperatorTestCase(FHDLTestCase):
     def test_mod(self):
         v1 = Const(0, unsigned(4)) % Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(% (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), unsigned(4))
+        self.assertEqual(v1.shape(), unsigned(6))
         v3 = Const(0, signed(4)) % Const(0, unsigned(4))
-        self.assertEqual(v3.shape(), signed(4))
+        self.assertEqual(v3.shape(), unsigned(4))
+        v4 = Const(0, signed(4)) % Const(0, signed(6))
+        self.assertEqual(v4.shape(), signed(6))
         v5 = 10 % Const(0, 4)
         self.assertEqual(v5.shape(), unsigned(4))
-
-    def test_mod_wrong(self):
-        with self.assertRaisesRegex(NotImplementedError,
-                r"^Division by a signed value is not supported$"):
-            Const(0, signed(4)) % Const(0, signed(6))
 
     def test_floordiv(self):
         v1 = Const(0, unsigned(4)) // Const(0, unsigned(6))
@@ -424,13 +421,10 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(v1.shape(), unsigned(4))
         v3 = Const(0, signed(4)) // Const(0, unsigned(4))
         self.assertEqual(v3.shape(), signed(4))
+        v4 = Const(0, signed(4)) // Const(0, signed(6))
+        self.assertEqual(v4.shape(), signed(5))
         v5 = 10 // Const(0, 4)
         self.assertEqual(v5.shape(), unsigned(4))
-
-    def test_floordiv_wrong(self):
-        with self.assertRaisesRegex(NotImplementedError,
-                r"^Division by a signed value is not supported$"):
-            Const(0, signed(4)) // Const(0, signed(6))
 
     def test_and(self):
         v1 = Const(0, unsigned(4)) & Const(0, unsigned(6))

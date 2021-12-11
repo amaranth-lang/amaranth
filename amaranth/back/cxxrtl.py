@@ -18,14 +18,13 @@ def _convert_rtlil_text(rtlil_text, black_boxes, *, src_loc_at=0):
                 raise TypeError("CXXRTL black box source code must be a string, not {!r}"
                                 .format(box_source))
 
-    yosys = find_yosys(lambda ver: ver >= (0, 9, 3468))
+    yosys = find_yosys(lambda ver: ver >= (0, 10))
 
     script = []
     if black_boxes is not None:
         for box_name, box_source in black_boxes.items():
             script.append("read_ilang <<rtlil\n{}\nrtlil".format(box_source))
     script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
-    script.append("delete w:$verilog_initial_trigger")
     script.append("write_cxxrtl")
 
     return yosys.run(["-q", "-"], "\n".join(script), src_loc_at=1 + src_loc_at)

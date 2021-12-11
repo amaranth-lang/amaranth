@@ -47,7 +47,7 @@ setup(
     ],
     extras_require={
         # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
-        "builtin-yosys": ["amaranth-yosys>=0.9.post3527.*"],
+        "builtin-yosys": ["amaranth-yosys>=0.10.*"],
         "remote-build": ["paramiko~=2.7"],
     },
     packages=find_packages(exclude=("tests", "tests.*")),

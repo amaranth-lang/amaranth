@@ -428,8 +428,8 @@ class _RHSValueCompiler(_ValueCompiler):
         (2, "+"):    "$add",
         (2, "-"):    "$sub",
         (2, "*"):    "$mul",
-        (2, "//"):   "$div",
-        (2, "%"):    "$mod",
+        (2, "//"):   "$divfloor",
+        (2, "%"):    "$modfloor",
         (2, "**"):   "$pow",
         (2, "<<"):   "$sshl",
         (2, ">>"):   "$sshr",
@@ -825,9 +825,6 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         lhs_compiler   = _LHSValueCompiler(compiler_state)
         stmt_compiler  = _StatementCompiler(compiler_state, rhs_compiler, lhs_compiler)
 
-        verilog_trigger = None
-        verilog_trigger_sync_emitted = False
-
         # If the fragment is completely empty, add a dummy wire to it, or Yosys will interpret
         # it as a black box by default (when read as Verilog).
         if not fragment.ports and not fragment.statements and not fragment.subfragments:
@@ -942,24 +939,6 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     stmt_compiler._wrap_assign = False
                     stmt_compiler(group_stmts)
 
-                    # Verilog `always @*` blocks will not run if `*` does not match anything, i.e.
-                    # if the implicit sensitivity list is empty. We check this while translating,
-                    # by looking for any signals on RHS. If there aren't any, we add some logic
-                    # whose only purpose is to trigger Verilog simulators when it converts
-                    # through RTLIL and to Verilog, by populating the sensitivity list.
-                    #
-                    # Unfortunately, while this workaround allows true (event-driven) Verilog
-                    # simulators to work properly, and is universally ignored by synthesizers,
-                    # Verilator rejects it.
-                    #
-                    # Yosys >=0.9+3468 emits a better workaround on its own, so this code can be
-                    # removed completely once support for Yosys 0.9 is dropped.
-                    if not stmt_compiler._has_rhs:
-                        if verilog_trigger is None:
-                            verilog_trigger = \
-                                module.wire(1, name="$verilog_initial_trigger")
-                        case.assign(verilog_trigger, verilog_trigger)
-
                 # For every signal in the sync domain, assign \sig's initial value (which will
                 # end up as the \init reg attribute) to the reset value.
                 with process.sync("init") as sync:
@@ -968,12 +947,6 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                             continue
                         wire_curr, wire_next = compiler_state.resolve(signal)
                         sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.width)))
-
-                    # The Verilog simulator trigger needs to change at time 0, so if we haven't
-                    # yet done that in some process, do it.
-                    if verilog_trigger and not verilog_trigger_sync_emitted:
-                        sync.update(verilog_trigger, "1'0")
-                        verilog_trigger_sync_emitted = True
 
                 # For every signal in every sync domain, assign \sig to \sig$next. The sensitivity
                 # list, however, differs between domains: for domains with sync reset, it is

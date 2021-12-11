@@ -4,9 +4,11 @@ Installation
 System requirements
 ===================
 
+.. |yosys-version| replace:: 0.10 (or newer)
+
 Amaranth HDL requires Python 3.6; it works on CPython_ 3.6 (or newer), and works faster on PyPy3.6_ 7.2 (or newer).
 
-For most workflows, Amaranth requires Yosys_ 0.9 (or newer). A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
+For most workflows, Amaranth requires Yosys_ |yosys-version|. A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
 
 Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging.
 
@@ -66,7 +68,7 @@ Installing prerequisites
 
          $ sudo apt-get install yosys
 
-      If Yosys 0.9 (or newer) is not available, `build Yosys from source`_.
+      If Yosys |yosys-version| is not available, `build Yosys from source`_.
 
    .. platform-choice:: arch
       :altname: linux
@@ -85,7 +87,7 @@ Installing prerequisites
 
       On architectures other than |builtin-yosys-architectures|, install Yosys from the package repository of your distribution.
 
-      If Yosys 0.9 (or newer) is not available, `build Yosys from source`_.
+      If Yosys |yosys-version| is not available, `build Yosys from source`_.
 
       .. _build Yosys from source: https://github.com/YosysHQ/yosys/#setup
 
