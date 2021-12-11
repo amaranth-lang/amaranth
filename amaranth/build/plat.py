@@ -92,7 +92,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         #     may fail.
         # This is OK because even if `require_tool` succeeds, the toolchain might be broken anyway.
         # The check only serves to catch common errors earlier.
-        if do_build and (self._deprecated_toolchain_env_var not in os.environ or
+        if do_build and (self._deprecated_toolchain_env_var not in os.environ and
                          self._toolchain_env_var not in os.environ):
             for tool in self.required_tools:
                 require_tool(tool)
