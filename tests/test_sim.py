@@ -806,8 +806,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sim.run_until(1e-5)
         with self.assertRaisesRegex(ValueError,
                 r"^Cannot start writing waveforms after advancing simulation time$"):
-            with sim.write_vcd(open(os.path.devnull, "wt")):
-                pass
+            with open(os.path.devnull, "w") as f:
+                with sim.write_vcd(f):
+                    pass
 
 
 class SimulatorRegressionTestCase(FHDLTestCase):
@@ -827,3 +828,15 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             self.assertEqual((yield -(Const(0b11, 2).as_signed())), 1)
         sim.add_process(process)
         sim.run()
+
+    def test_bug_595(self):
+        dut = Module()
+        with dut.FSM(name="name with space"):
+            with dut.State(0):
+                pass
+        sim = Simulator(dut)
+        with self.assertRaisesRegex(NameError,
+                r"^Signal 'top\.name with space_state' contains a whitespace character$"):
+            with open(os.path.devnull, "w") as f:
+                with sim.write_vcd(f):
+                    sim.run()

@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import itertools
+import re
 from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
@@ -94,6 +95,10 @@ class _VCDWriter:
                 var_init = signal.reset
 
             for (*var_scope, var_name) in names:
+                if re.search(r"[ \t\r\n]", var_name):
+                    raise NameError("Signal '{}.{}' contains a whitespace character"
+                                    .format(".".join(var_scope), var_name))
+
                 suffix = None
                 while True:
                     try:
