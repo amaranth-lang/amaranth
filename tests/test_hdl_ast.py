@@ -746,6 +746,17 @@ class CatTestCase(FHDLTestCase):
                 r"^Object 'foo' cannot be converted to an Amaranth value$"):
             Cat("foo")
 
+    def test_int_01(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="error", category=SyntaxWarning)
+            Cat(0, 1, 1, 0)
+
+    def test_int_wrong(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Argument #1 of Cat\(\) is a bare integer 2 used in bit vector context; "
+                r"consider specifying explicit width using C\(2, 2\) instead$"):
+            Cat(2)
+
 
 class ReplTestCase(FHDLTestCase):
     def test_shape(self):
@@ -768,6 +779,18 @@ class ReplTestCase(FHDLTestCase):
     def test_cast(self):
         r = Repl(0, 3)
         self.assertEqual(repr(r), "(repl (const 1'd0) 3)")
+
+    def test_int_01(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="error", category=SyntaxWarning)
+            Repl(0, 3)
+            Repl(1, 3)
+
+    def test_int_wrong(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Value argument of Repl\(\) is a bare integer 2 used in bit vector context; "
+                r"consider specifying explicit width using C\(2, 2\) instead$"):
+            Repl(2, 3)
 
 
 class ArrayTestCase(FHDLTestCase):

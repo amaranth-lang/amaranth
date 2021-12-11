@@ -831,7 +831,14 @@ class Cat(Value):
     """
     def __init__(self, *args, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.parts = [Value.cast(v) for v in flatten(args)]
+        self.parts = []
+        for index, arg in enumerate(flatten(args)):
+            if isinstance(arg, int) and arg not in [0, 1]:
+                warnings.warn("Argument #{} of Cat() is a bare integer {} used in bit vector "
+                              "context; consider specifying explicit width using C({}, {}) instead"
+                              .format(index + 1, arg, arg, bits_for(arg)),
+                              SyntaxWarning, stacklevel=2 + src_loc_at)
+            self.parts.append(Value.cast(arg))
 
     def shape(self):
         return Shape(sum(len(part) for part in self.parts))
@@ -880,6 +887,11 @@ class Repl(Value):
                             .format(count))
 
         super().__init__(src_loc_at=src_loc_at)
+        if isinstance(value, int) and value not in [0, 1]:
+            warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
+                          "context; consider specifying explicit width using C({}, {}) instead"
+                          .format(value, value, bits_for(value)),
+                          SyntaxWarning, stacklevel=2 + src_loc_at)
         self.value = Value.cast(value)
         self.count = count
 
