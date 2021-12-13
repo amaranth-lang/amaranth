@@ -10,3 +10,4 @@ Standard library
 
    stdlib/coding
    stdlib/cdc
+   stdlib/fifo
