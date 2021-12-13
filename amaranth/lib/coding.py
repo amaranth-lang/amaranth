@@ -1,5 +1,3 @@
-"""Encoders and decoders between binary and one-hot representation."""
-
 from .. import *
 
 
@@ -26,7 +24,7 @@ class Encoder(Elaboratable):
     i : Signal(width), in
         One-hot input.
     o : Signal(range(width)), out
-        Encoded binary.
+        Encoded natural binary.
     n : Signal, out
         Invalid: either none or multiple input bits are asserted.
     """
@@ -65,7 +63,7 @@ class PriorityEncoder(Elaboratable):
     i : Signal(width), in
         Input requests.
     o : Signal(range(width)), out
-        Encoded binary.
+        Encoded natural binary.
     n : Signal, out
         Invalid: no input bits are asserted.
     """
@@ -88,7 +86,7 @@ class PriorityEncoder(Elaboratable):
 class Decoder(Elaboratable):
     """Decode binary to one-hot.
 
-    If ``n`` is low, only the ``i``th bit in ``o`` is asserted.
+    If ``n`` is low, only the ``i``-th bit in ``o`` is asserted.
     If ``n`` is high, ``o`` is ``0``.
 
     Parameters
@@ -141,7 +139,7 @@ class GrayEncoder(Elaboratable):
     Attributes
     ----------
     i : Signal(width), in
-        Input natural binary.
+        Natural binary input.
     o : Signal(width), out
         Encoded Gray code.
     """
@@ -168,7 +166,7 @@ class GrayDecoder(Elaboratable):
     Attributes
     ----------
     i : Signal(width), in
-        Input Gray code.
+        Gray code input.
     o : Signal(width), out
         Decoded natural binary.
     """

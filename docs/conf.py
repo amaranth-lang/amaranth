@@ -12,6 +12,8 @@ extensions = [
 	"sphinx.ext.intersphinx",
 	"sphinx.ext.doctest",
     "sphinx.ext.todo",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
     "sphinxcontrib.platformpicker",
 ]
@@ -24,6 +26,10 @@ root_doc = "cover"
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 todo_include_todos = True
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_use_ivar = True
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]

@@ -13,3 +13,4 @@ Language & toolchain
    start
    tutorial
    lang
+   stdlib
