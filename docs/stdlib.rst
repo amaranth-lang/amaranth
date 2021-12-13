@@ -9,3 +9,4 @@ Standard library
    :maxdepth: 2
 
    stdlib/coding
+   stdlib/cdc

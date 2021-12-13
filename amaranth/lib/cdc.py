@@ -31,35 +31,35 @@ class FFSynchronizer(Elaboratable):
         the :class:`FFSynchronizer` is still set to this value during initialization.
     reset_less : bool
         If ``True`` (the default), this :class:`FFSynchronizer` is unaffected by ``o_domain``
-        reset. See "Note on Reset" below.
-    stages : int
+        reset. See the note below for details.
+    stages : int, >=2
         Number of synchronization stages between input and output. The lowest safe number is 2,
         with higher numbers reducing MTBF further, at the cost of increased latency.
     max_input_delay : None or float
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
 
-    Platform override
-    -----------------
+    Platform overrides
+    ------------------
     Define the ``get_ff_sync`` platform method to override the implementation of
     :class:`FFSynchronizer`, e.g. to instantiate library cells directly.
 
-    Note on Reset
-    -------------
-    :class:`FFSynchronizer` is non-resettable by default. Usually this is the safest option;
-    on FPGAs the :class:`FFSynchronizer` will still be initialized to its ``reset`` value when
-    the FPGA loads its configuration.
+    .. note::
 
-    However, in designs where the value of the :class:`FFSynchronizer` must be valid immediately
-    after reset, consider setting ``reset_less`` to False if any of the following is true:
+        :class:`FFSynchronizer` is non-resettable by default. Usually this is the safest option;
+        on FPGAs the :class:`FFSynchronizer` will still be initialized to its ``reset`` value when
+        the FPGA loads its configuration.
 
-    - You are targeting an ASIC, or an FPGA that does not allow arbitrary initial flip-flop states;
-    - Your design features warm (non-power-on) resets of ``o_domain``, so the one-time
-      initialization at power on is insufficient;
-    - Your design features a sequenced reset, and the :class:`FFSynchronizer` must maintain
-      its reset value until ``o_domain`` reset specifically is deasserted.
+        However, in designs where the value of the :class:`FFSynchronizer` must be valid immediately
+        after reset, consider setting ``reset_less`` to False if any of the following is true:
 
-    :class:`FFSynchronizer` is reset by the ``o_domain`` reset only.
+        - You are targeting an ASIC, or an FPGA that does not allow arbitrary initial flip-flop states;
+        - Your design features warm (non-power-on) resets of ``o_domain``, so the one-time
+          initialization at power on is insufficient;
+        - Your design features a sequenced reset, and the :class:`FFSynchronizer` must maintain
+          its reset value until ``o_domain`` reset specifically is deasserted.
+
+        :class:`FFSynchronizer` is reset by the ``o_domain`` reset only.
     """
     def __init__(self, i, o, *, o_domain="sync", reset=0, reset_less=True, stages=2,
                  max_input_delay=None):
@@ -119,8 +119,8 @@ class AsyncFFSynchronizer(Elaboratable):
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
 
-    Platform override
-    -----------------
+    Platform overrides
+    ------------------
     Define the ``get_async_ff_sync`` platform method to override the implementation of
     :class:`AsyncFFSynchronizer`, e.g. to instantiate library cells directly.
     """
@@ -203,8 +203,8 @@ class ResetSynchronizer(Elaboratable):
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
 
-    Platform override
-    -----------------
+    Platform overrides
+    ------------------
     Define the ``get_reset_sync`` platform method to override the implementation of
     :class:`ResetSynchronizer`, e.g. to instantiate library cells directly.
     """
@@ -227,9 +227,9 @@ class PulseSynchronizer(Elaboratable):
     """A one-clock pulse on the input produces a one-clock pulse on the output.
 
     If the output clock is faster than the input clock, then the input may be safely asserted at
-    100% duty cycle. Otherwise, if the clock ratio is `n`:1, the input may be asserted at most once
-    in every `n` input clocks, else pulses may be dropped. Other than this there is no constraint
-    on the ratio of input and output clock frequency.
+    100% duty cycle. Otherwise, if the clock ratio is ``n``:1, the input may be asserted at most
+    once in every ``n`` input clocks, else pulses may be dropped. Other than this there is
+    no constraint on the ratio of input and output clock frequency.
 
     Parameters
     ----------
