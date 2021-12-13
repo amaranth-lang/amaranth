@@ -130,12 +130,15 @@ class Simulator:
         if domain in self._clocked:
             raise ValueError("Domain {!r} already has a clock driving it"
                              .format(domain.name))
+        
+        # We represent times internally in 1 ps units, but users supply float quantities of seconds
+        period = int(period * 1e12)
 
         if phase is None:
             # By default, delay the first edge by half period. This causes any synchronous activity
             # to happen at a non-zero time, distinguishing it from the reset values in the waveform
             # viewer.
-            phase = period / 2
+            phase = period // 2
         self._engine.add_clock_process(domain.clk, phase=phase, period=period)
         self._clocked.add(domain)
 
@@ -181,6 +184,8 @@ class Simulator:
 
         If the simulation stops advancing, this function will never return.
         """
+        # Convert deadline in seconds into internal 1 ps units
+        deadline = deadline * 1e12
         assert self._engine.now <= deadline
         while (self.advance() or run_passive) and self._engine.now < deadline:
             pass
@@ -204,7 +209,7 @@ class Simulator:
         traces : iterable of Signal
             Signals to display traces for.
         """
-        if self._engine.now != 0.0:
+        if self._engine.now != 0:
             for file in (vcd_file, gtkw_file):
                 if hasattr(file, "close"):
                     file.close()

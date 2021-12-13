@@ -571,6 +571,19 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.fail()
             sim.add_process(process)
 
+    def test_run_until_fail(self):
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertRaises(AssertionError):
+            with self.assertSimulation(m, deadline=100e-6) as sim:
+                    sim.add_clock(1e-6)
+                    def process():
+                        for _ in range(99):
+                            yield Delay(1e-6)
+                        self.fail()
+                    sim.add_process(process)
+
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
