@@ -883,6 +883,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUF",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_I=port.io[bit],
                 o_O=i[bit]
             )
@@ -896,6 +898,8 @@ class XilinxPlatform(TemplatedPlatform):
         if self.toolchain != "Symbiflow":
             for bit in range(pin.width):
                 m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUF",
+                    # Ugly hack to workaround ISE not supporting attributes in constraints
+                    **{"p_" + k: v for k,v in attrs.items()},
                     i_I=o[bit],
                     o_O=port.io[bit]
                 )
@@ -913,6 +917,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFT",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.io[bit]
@@ -929,6 +935,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUF",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -946,6 +954,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUFDS",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_I=port.p[bit], i_IB=port.n[bit],
                 o_O=i[bit]
             )
@@ -961,6 +971,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFDS",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_I=o[bit],
                 o_O=port.p[bit], o_OB=port.n[bit]
             )
@@ -976,6 +988,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFTDS",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.p[bit], o_OB=port.n[bit]
@@ -992,6 +1006,8 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
             m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUFDS",
+                # Ugly hack to workaround ISE not supporting attributes in constraints
+                **{"p_" + k: v for k,v in attrs.items()},
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
