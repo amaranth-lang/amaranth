@@ -10,8 +10,7 @@ __all__ = ["QuicklogicPlatform"]
 
 class QuicklogicPlatform(TemplatedPlatform):
     """
-    Symbiflow toolchain
-    -------------------
+    .. rubric:: Symbiflow toolchain
 
     Required tools:
         * ``symbiflow_synth``

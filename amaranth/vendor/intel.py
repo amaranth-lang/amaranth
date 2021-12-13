@@ -9,8 +9,7 @@ __all__ = ["IntelPlatform"]
 
 class IntelPlatform(TemplatedPlatform):
     """
-    Quartus toolchain
-    -----------------
+    .. rubric:: Quartus toolchain
 
     Required tools:
         * ``quartus_map``
@@ -36,8 +35,7 @@ class IntelPlatform(TemplatedPlatform):
         * ``{{name}}.rbf``: bitstream as raw binary file.
 
 
-    Mistral toolchain
-    -----------------
+    .. rubric:: Mistral toolchain
 
     Required tools:
         * ``yosys``

@@ -9,8 +9,7 @@ __all__ = ["LatticeECP5Platform"]
 
 class LatticeECP5Platform(TemplatedPlatform):
     """
-    Trellis toolchain
-    -----------------
+    .. rubric:: Trellis toolchain
 
     Required tools:
         * ``yosys``
@@ -39,8 +38,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream.
         * ``{{name}}.svf``: JTAG programming vector.
 
-    Diamond toolchain
-    -----------------
+    .. rubric:: Diamond toolchain
 
     Required tools:
         * ``pnmainc``
