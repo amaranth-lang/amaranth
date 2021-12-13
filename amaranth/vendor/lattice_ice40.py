@@ -10,8 +10,7 @@ __all__ = ["LatticeICE40Platform"]
 
 class LatticeICE40Platform(TemplatedPlatform):
     """
-    IceStorm toolchain
-    ------------------
+    .. rubric:: IceStorm toolchain
 
     Required tools:
         * ``yosys``
@@ -39,8 +38,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``{{name}}.asc``: ASCII bitstream.
         * ``{{name}}.bin``: binary bitstream.
 
-    iCECube2 toolchain
-    ------------------
+    .. rubric:: iCECube2 toolchain
 
     This toolchain comes in two variants: ``LSE-iCECube2`` and ``Synplify-iCECube2``.
 

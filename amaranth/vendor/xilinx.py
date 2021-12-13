@@ -10,8 +10,7 @@ __all__ = ["XilinxPlatform"]
 
 class XilinxPlatform(TemplatedPlatform):
     """
-    Vivado toolchain
-    ----------------
+    .. rubric:: Vivado toolchain
 
     Required tools:
         * ``vivado``
@@ -49,8 +48,7 @@ class XilinxPlatform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream with metadata.
         * ``{{name}}.bin``: binary bitstream.
 
-    ISE toolchain
-    -------------
+    .. rubric:: ISE toolchain
 
     Required tools:
         * ``xst``
@@ -89,8 +87,7 @@ class XilinxPlatform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream with metadata.
         * ``{{name}}.bin``: raw binary bitstream.
 
-    Symbiflow toolchain
-    -------------------
+    .. rubric:: Symbiflow toolchain
 
     Required tools:
         * ``symbiflow_synth``

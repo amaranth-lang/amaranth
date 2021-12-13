@@ -14,3 +14,4 @@ Language & toolchain
    tutorial
    lang
    stdlib
+   platform
