@@ -394,7 +394,12 @@ class Fragment:
                 if sig not in defs:
                     defs[sig] = self
                 else:
-                    assert defs[sig] is self
+                    if defs[sig] is not self:
+                        raise SyntaxError(
+                            "Driver-driver conflict: trying to drive {!r}, but it is "
+                            "connected to the output of an Instance or an input pin"
+                            .format(sig))
+
 
         def add_io(*sigs):
             for sig in flatten(sigs):

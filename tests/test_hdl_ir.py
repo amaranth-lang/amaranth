@@ -75,6 +75,20 @@ class FragmentDriversTestCase(FHDLTestCase):
         self.assertEqual(list(f.iter_comb()), [])
         self.assertEqual(list(f.iter_sync()), [])
 
+    def test_instance_conflict(self):
+        a = Signal()
+        f = Fragment()
+        m = Fragment()
+        i = Instance("test", o_aout = a)
+        m.add_subfragment(Fragment.get(i, None))
+        f.add_subfragment(Fragment.get(m, None))
+        f.add_statements(a.eq(1))
+
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Driver-driver conflict: trying to drive \(sig a\), but it is connected to the "
+                "output of an Instance or an input pin$"):
+            f.prepare()
+
 
 class FragmentPortsTestCase(FHDLTestCase):
     def setUp(self):
