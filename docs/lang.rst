@@ -126,6 +126,8 @@ Shapes can be *cast* from other objects, which are called *shape-castable*. Cast
 Casting to a shape can be done explicitly with ``Shape.cast``, but is usually implicit, since shape-castable objects are accepted anywhere shapes are.
 
 
+.. _lang-shapeint:
+
 Shapes from integers
 --------------------
 
@@ -138,6 +140,8 @@ Casting a shape from an integer ``i`` is a shorthand for constructing a shape wi
    >>> C(0, 3).shape()
    unsigned(3)
 
+
+.. _lang-shaperange:
 
 Shapes from ranges
 ------------------
@@ -173,6 +177,8 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 
    Be mindful of this edge case!
 
+
+.. _lang-shapeenum:
 
 Shapes from enumerations
 ------------------------
