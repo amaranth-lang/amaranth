@@ -142,7 +142,7 @@ Casting a shape from an integer ``i`` is a shorthand for constructing a shape wi
 Shapes from ranges
 ------------------
 
-Casting a shape from a :py:class:`range` ``r`` produces a shape that:
+Casting a shape from a :class:`range` ``r`` produces a shape that:
 
   * has a width large enough to represent both ``min(r)`` and ``max(r)``, and
   * is signed if either ``min(r)`` or ``max(r)`` are negative, unsigned otherwise.
@@ -177,7 +177,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 Shapes from enumerations
 ------------------------
 
-Casting a shape from an :py:class:`enum.Enum` subclass ``E``:
+Casting a shape from an :class:`enum.Enum` subclass ``E``:
 
   * fails if any of the enumeration members have non-integer values,
   * has a width large enough to represent both ``min(m.value for m in E)`` and ``max(m.value for m in E)``, and
@@ -204,7 +204,7 @@ Specifying a shape with an enumeration is convenient for finite state machines, 
 
 .. note::
 
-   The enumeration does not have to subclass :py:class:`enum.IntEnum`; it only needs to have integers as values of every member. Using enumerations based on :py:class:`enum.Enum` rather than :py:class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
+   The enumeration does not have to subclass :class:`enum.IntEnum`; it only needs to have integers as values of every member. Using enumerations based on :class:`enum.Enum` rather than :class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
 
 
 .. _lang-valuecasting:
@@ -466,7 +466,7 @@ All bitwise and shift operations on integers provided by Python can be used on A
 
 Similar to arithmetic operations, if any operand of a bitwise expression is signed, the expression itself is signed as well. A shift expression is signed if the shifted value is signed. A rotate expression is always unsigned.
 
-Rotate operations with variable rotate amounts cannot be efficiently synthesized for non-power-of-2 widths of the rotated value. Because of that, the rotate operations are only provided for constant rotate amounts, specified as Python :py:class:`int`\ s.
+Rotate operations with variable rotate amounts cannot be efficiently synthesized for non-power-of-2 widths of the rotated value. Because of that, the rotate operations are only provided for constant rotate amounts, specified as Python :class:`int`\ s.
 
 The following table lists the bitwise and shift operations provided by Amaranth:
 
@@ -525,8 +525,8 @@ Operation    Description                                   Notes
 ``a.bool()`` conversion to boolean; is non-zero?           [#opR2]_
 ============ ============================================= ======
 
-.. [#opR1] Conceptually the same as applying the Python :py:func:`all` or :py:func:`any` function to the value viewed as a collection of bits.
-.. [#opR2] Conceptually the same as applying the Python :py:func:`bool` function to the value viewed as an integer.
+.. [#opR1] Conceptually the same as applying the Python :func:`all` or :func:`any` function to the value viewed as a collection of bits.
+.. [#opR2] Conceptually the same as applying the Python :func:`bool` function to the value viewed as an integer.
 
 
 .. _lang-logicops:
@@ -611,7 +611,7 @@ Bit sequence operators
 
 Apart from acting as numbers, Amaranth values can also be treated as bit :ref:`sequences <python:typesseq>`, supporting slicing, concatenation, replication, and other sequence operations. Since some of the operators Python defines for sequences clash with the operators it defines for numbers, Amaranth gives these operators a different name. Except for the names, Amaranth values follow Python sequence semantics, with the least significant bit at index 0.
 
-Because every Amaranth value has a single fixed width, bit slicing and replication operations require the subscripts and count to be constant, specified as Python :py:class:`int`\ s. It is often useful to slice a value with a constant width and variable offset, but this cannot be expressed with the Python slice notation. To solve this problem, Amaranth provides additional *part select* operations with the necessary semantics.
+Because every Amaranth value has a single fixed width, bit slicing and replication operations require the subscripts and count to be constant, specified as Python :class:`int`\ s. It is often useful to slice a value with a constant width and variable offset, but this cannot be expressed with the Python slice notation. To solve this problem, Amaranth provides additional *part select* operations with the necessary semantics.
 
 The result of any bit sequence operation is an unsigned value.
 
