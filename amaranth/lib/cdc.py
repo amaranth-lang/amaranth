@@ -27,7 +27,7 @@ class FFSynchronizer(Elaboratable):
     o_domain : str
         Name of output clock domain.
     reset : int
-        Reset value of the flip-flops. On FPGAs, even if ``reset_less`` is True,
+        Reset value of the flip-flops. On FPGAs, even if ``reset_less`` is ``True``,
         the :class:`FFSynchronizer` is still set to this value during initialization.
     reset_less : bool
         If ``True`` (the default), this :class:`FFSynchronizer` is unaffected by ``o_domain``
@@ -39,10 +39,6 @@ class FFSynchronizer(Elaboratable):
         Maximum delay from the input signal's clock to the first synchronization stage, in seconds.
         If specified and the platform does not support it, elaboration will fail.
 
-    Platform overrides
-    ------------------
-    Define the ``get_ff_sync`` platform method to override the implementation of
-    :class:`FFSynchronizer`, e.g. to instantiate library cells directly.
 
     .. note::
 
@@ -51,7 +47,7 @@ class FFSynchronizer(Elaboratable):
         the FPGA loads its configuration.
 
         However, in designs where the value of the :class:`FFSynchronizer` must be valid immediately
-        after reset, consider setting ``reset_less`` to False if any of the following is true:
+        after reset, consider setting ``reset_less`` to ``False`` if any of the following is true:
 
         - You are targeting an ASIC, or an FPGA that does not allow arbitrary initial flip-flop states;
         - Your design features warm (non-power-on) resets of ``o_domain``, so the one-time
@@ -60,6 +56,11 @@ class FFSynchronizer(Elaboratable):
           its reset value until ``o_domain`` reset specifically is deasserted.
 
         :class:`FFSynchronizer` is reset by the ``o_domain`` reset only.
+
+    Platform overrides
+    ------------------
+    Define the ``get_ff_sync`` platform method to override the implementation of
+    :class:`FFSynchronizer`, e.g. to instantiate library cells directly.
     """
     def __init__(self, i, o, *, o_domain="sync", reset=0, reset_less=True, stages=2,
                  max_input_delay=None):
