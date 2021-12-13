@@ -1,6 +1,7 @@
 import io
 from collections import OrderedDict
 from contextlib import contextmanager
+import warnings
 
 from .._utils import bits_for, flatten
 from ..hdl import ast, ir, mem, xfrm
@@ -1028,7 +1029,11 @@ def convert_fragment(fragment, name="top", *, emit_src=True):
     return str(builder), name_map
 
 
-def convert(elaboratable, name="top", platform=None, *, emit_src=True, **kwargs):
+def convert(elaboratable, name="top", platform=None, ports=None, *, emit_src=True, **kwargs):
+    # TODO(amaranth-0.4): remove
+    if ports is None:
+        warnings.warn("Implicit port determination is deprecated, specify ports explictly",
+                      DeprecationWarning, stacklevel=2)
     fragment = ir.Fragment.get(elaboratable, platform).prepare(**kwargs)
     il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
     return il_text
