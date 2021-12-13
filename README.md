@@ -53,7 +53,7 @@ Once your design passes verification with Amaranth, you can migrate it to the Am
 
 ## Community
 
-Amaranth has a dedicated IRC channel, [#amaranth-lang at libera.chat](irc://irc.libera.chat/amaranth-lang). Feel free to join to ask questions about using Amaranth or discuss ongoing development of Amaranth and its related projects.
+Amaranth has a dedicated IRC channel, [#amaranth-lang at libera.chat](https://web.libera.chat/#amaranth-lang). Feel free to join to ask questions about using Amaranth or discuss ongoing development of Amaranth and its related projects.
 
 ## License
 
