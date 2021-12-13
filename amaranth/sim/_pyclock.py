@@ -31,4 +31,4 @@ class PyClockProcess(BaseProcess):
         else:
             clk_state = self.state.slots[self.slot]
             clk_state.set(not clk_state.curr)
-            self.state.wait_interval(self, self.period / 2)
+            self.state.wait_interval(self, self.period // 2)

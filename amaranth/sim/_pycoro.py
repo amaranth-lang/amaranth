@@ -95,7 +95,9 @@ class PyCoroProcess(BaseProcess):
                     return
 
                 elif type(command) is Delay:
-                    self.state.wait_interval(self, command.interval)
+                    # Internal timeline is in 1ps integeral units, intervals are public API and in floating point
+                    interval = int(command.interval * 1e12) if command.interval is not None else None
+                    self.state.wait_interval(self, interval)
                     return
 
                 elif type(command) is Passive:
