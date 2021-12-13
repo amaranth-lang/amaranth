@@ -25,42 +25,42 @@ class FIFOInterface:
     Attributes
     ----------
     {attributes}
-    w_data : in, width
+    w_data : Signal(width), in
         Input data.
-    w_rdy : out
+    w_rdy : Signal(1), out
         Asserted if there is space in the queue, i.e. ``w_en`` can be asserted to write
         a new entry.
-    w_en : in
+    w_en : Signal(1), in
         Write strobe. Latches ``w_data`` into the queue. Does nothing if ``w_rdy`` is not asserted.
-    w_level : out
+    w_level : Signal(range(depth + 1)), out
         Number of unread entries.
     {w_attributes}
-    r_data : out, width
+    r_data : Signal(width), out
         Output data. {r_data_valid}
-    r_rdy : out
+    r_rdy : Signal(1), out
         Asserted if there is an entry in the queue, i.e. ``r_en`` can be asserted to read
         an existing entry.
-    r_en : in
+    r_en : Signal(1), in
         Read strobe. Makes the next entry (if any) available on ``r_data`` at the next cycle.
         Does nothing if ``r_rdy`` is not asserted.
-    r_level : out
+    r_level : Signal(range(depth + 1)), out
         Number of unread entries.
     {r_attributes}
     """
 
     __doc__ = _doc_template.format(description="""
     Data written to the input interface (``w_data``, ``w_rdy``, ``w_en``) is buffered and can be
-    read at the output interface (``r_data``, ``r_rdy``, ``r_en`). The data entry written first
+    read at the output interface (``r_data``, ``r_rdy``, ``r_en``). The data entry written first
     to the input also appears first on the output.
     """,
-    parameters="",
-    r_data_valid="The conditions in which ``r_data`` is valid depends on the type of the queue.",
-    attributes="""
+    parameters="""
     fwft : bool
         First-word fallthrough. If set, when ``r_rdy`` rises, the first entry is already
         available, i.e. ``r_data`` is valid. Otherwise, after ``r_rdy`` rises, it is necessary
         to strobe ``r_en`` for ``r_data`` to become valid.
     """.strip(),
+    r_data_valid="The conditions in which ``r_data`` is valid depends on the type of the queue.",
+    attributes="",
     w_attributes="",
     r_attributes="")
 
@@ -107,11 +107,12 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         that entry becomes available on the output on the same clock cycle. Otherwise, it is
         necessary to assert ``r_en`` for ``r_data`` to become valid.
     """.strip(),
-    r_data_valid="""
-    For FWFT queues, valid if ``r_rdy`` is asserted. For non-FWFT queues, valid on the next
-    cycle after ``r_rdy`` and ``r_en`` have been asserted.
+    r_data_valid="For FWFT queues, valid if ``r_rdy`` is asserted. "
+                 "For non-FWFT queues, valid on the next cycle after ``r_rdy`` and ``r_en`` have been asserted.",
+    attributes="""
+    level : Signal(range(depth + 1)), out
+        Number of unread entries. This level is the same between read and write for synchronous FIFOs.
     """.strip(),
-    attributes="",
     r_attributes="",
     w_attributes="")
 
@@ -211,12 +212,12 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     fwft : bool
         Always set.
     """.strip(),
-    attributes="",
-    r_data_valid="Valid if ``r_rdy`` is asserted.",
-    r_attributes="""
-    level : out
-        Number of unread entries.
+    attributes="""
+    level : Signal(range(depth + 1)), out
+        Number of unread entries. This level is the same between read and write for synchronous FIFOs.
     """.strip(),
+    r_data_valid="Valid if ``r_rdy`` is asserted.",
+    r_attributes="",
     w_attributes="")
 
     def __init__(self, *, width, depth):
@@ -282,14 +283,13 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         Read clock domain.
     w_domain : str
         Write clock domain.
-    """.strip(),
-    attributes="""
     fwft : bool
         Always set.
     """.strip(),
+    attributes="",
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
-    r_rst : Signal, out
+    r_rst : Signal(1), out
         Asserted while the FIFO is being reset by the write-domain reset (for at least one
         read-domain clock cycle).
     """.strip(),
@@ -462,14 +462,13 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         Read clock domain.
     w_domain : str
         Write clock domain.
-    """.strip(),
-    attributes="""
     fwft : bool
         Always set.
     """.strip(),
+    attributes="",
     r_data_valid="Valid if ``r_rdy`` is asserted.",
     r_attributes="""
-    r_rst : Signal, out
+    r_rst : Signal(1), out
         Asserted while the FIFO is being reset by the write-domain reset (for at least one
         read-domain clock cycle).
     """.strip(),
