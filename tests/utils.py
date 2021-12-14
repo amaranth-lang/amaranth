@@ -71,7 +71,7 @@ class FHDLTestCase(unittest.TestCase):
             mode=mode,
             depth=depth,
             script=script,
-            rtlil=rtlil.convert(Fragment.get(spec, platform="formal"), ports=())
+            rtlil=rtlil.convert_fragment(Fragment.get(spec, platform="formal").prepare())[0]
         )
         with subprocess.Popen(
                 [require_tool("sby"), "-f", "-d", spec_name],
