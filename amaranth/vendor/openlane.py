@@ -4,6 +4,7 @@ import textwrap
 import re
 import jinja2
 import os
+from markupsafe import Markup
 
 from .. import __version__
 from .._toolchain import *
@@ -84,7 +85,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             set ::env(STD_CELL_LIBRARY) "{{platform.cell_library}}"
 
             {% for s, v in platform.flow_settings.items() %}
-            set ::env({{s}}) {{v}}
+            set ::env({{s}}) {{v|tcl_escape}}
             {% endfor %}
 
             # Pull in PDK specific settings
@@ -257,9 +258,17 @@ class OpenLANEPlatform(TemplatedPlatform):
             return "".join(escape_one(m) for m in re.finditer(r"([^A-Za-z0-9_])|(.)", string))
 
         def tcl_escape(string):
+            if isinstance(string, Markup):
+                return string
+            else:
+                string = str(string)
             return "{" + re.sub(r"([{}\\])", r"\\\1", string) + "}"
 
         def tcl_quote(string):
+            if isinstance(string, Markup):
+                return string
+            else:
+                string = str(string)
             return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
 
         def verbose(arg):
