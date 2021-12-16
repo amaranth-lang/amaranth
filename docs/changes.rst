@@ -25,8 +25,9 @@ Apply the following changes to code written against nMigen 0.2 to migrate it to 
 * Update board definitions using :class:`vendor.lattice_machxo2.LatticeMachXO2Platform` to use :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Platform`.
 * Update board definitions using :class:`vendor.xilinx_spartan_3_6.XilinxSpartan3APlatform`, :class:`vendor.xilinx_spartan_3_6.XilinxSpartan6Platform`, :class:`vendor.xilinx_7series.Xilinx7SeriesPlatform`, :class:`vendor.xilinx_ultrascale.XilinxUltrascalePlatform` to use :class:`vendor.xilinx.XilinxPlatform`.
 * Switch uses of :class:`hdl.ast.UserValue` to :class:`ValueCastable`; note that :class:`ValueCastable` does not inherit from :class:`Value`, and inheriting from :class:`Value` is not supported.
-* Remove uses of :class:`test.utils.FHDLTestCase` and vendor the implementation of :class:`test.utils.FHDLTestCase.assertFormal` if necessary.
+* Switch uses of :mod:`back.pysim` to :mod:`sim`.
 * Add an explicit ``ports=`` argument to uses of :func:`back.rtlil.convert` and :func:`back.verilog.convert` if missing.
+* Remove uses of :class:`test.utils.FHDLTestCase` and vendor the implementation of :class:`test.utils.FHDLTestCase.assertFormal` if necessary.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.3, they will be removed in the next version.
 
@@ -65,8 +66,11 @@ Toolchain changes
 * Added: Backend emits Yosys enumeration attributes for :ref:`enumeration-shaped <lang-shapeenum>` signals.
 * Added: If a compatible Yosys version is not installed, :mod:`back.verilog` will fall back to the `amaranth-yosys <https://github.com/amaranth-lang/amaranth-yosys>`_ PyPI package. The package can be :ref:`installed <install>` as ``amaranth[builtin-yosys]`` to ensure this dependency is available.
 * Added: :mod:`back.cxxrtl`.
+* Added: :mod:`sim`, a simulator interface with support for multiple simulation backends.
+* Deprecated: :mod:`back.pysim`; use :mod:`sim` instead.
 * Removed: The ``with Simulator(fragment, ...) as sim:`` form.
 * Removed: :meth:`sim.Simulator.add_process` with a generator argument.
+* Deprecated: :meth:`sim.Simulator.step`; use :meth:`sim.Simulator.advance` instead.
 * Added: :meth:`build.BuildPlan.execute_remote_ssh`.
 * Deprecated: :class:`test.utils.FHDLTestCase`, with no replacement.
 * Deprecated: :func:`back.rtlil.convert()` and :func:`back.verilog.convert()` without an explicit `ports=` argument.
