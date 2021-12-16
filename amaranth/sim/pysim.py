@@ -19,7 +19,7 @@ class _NameExtractor:
     def __init__(self):
         self.names = SignalDict()
 
-    def __call__(self, fragment, *, hierarchy=("top",)):
+    def __call__(self, fragment, *, hierarchy=("bench", "top",)):
         def add_signal_name(signal):
             hierarchical_signal_name = (*hierarchy, signal.name)
             if signal not in self.names:
@@ -74,7 +74,7 @@ class _VCDWriter:
         trace_names = SignalDict()
         for trace in traces:
             if trace not in signal_names:
-                trace_names[trace] = {("top", trace.name)}
+                trace_names[trace] = {('bench', trace.name)}
             self.traces.append(trace)
 
         if self.vcd_writer is None:

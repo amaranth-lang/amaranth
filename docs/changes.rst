@@ -74,6 +74,7 @@ Toolchain changes
 * Added: :meth:`build.BuildPlan.execute_remote_ssh`.
 * Deprecated: :class:`test.utils.FHDLTestCase`, with no replacement.
 * Deprecated: :func:`back.rtlil.convert()` and :func:`back.verilog.convert()` without an explicit `ports=` argument.
+* Changed: VCD output now uses a top-level "bench" module that contains testbench only signals.
 
 
 Platform integration changes
