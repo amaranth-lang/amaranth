@@ -849,7 +849,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
                 pass
         sim = Simulator(dut)
         with self.assertRaisesRegex(NameError,
-                r"^Signal 'top\.name with space_state' contains a whitespace character$"):
+                r"^Signal 'bench\.top\.name with space_state' contains a whitespace character$"):
             with open(os.path.devnull, "w") as f:
                 with sim.write_vcd(f):
                     sim.run()
