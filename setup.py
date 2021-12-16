@@ -1,10 +1,6 @@
 from setuptools import setup, find_packages
 
 
-# TODO: Remove when https://github.com/pypa/pip/issues/7953 is resolved
-import site, sys; site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
-
-
 def scm_version():
     def local_scheme(version):
         if version.tag and not version.distance:
