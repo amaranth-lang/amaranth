@@ -57,20 +57,22 @@ jobs:
           sphinx-build docs docs/_build
       - name: Publish development documentation
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: docs/_build
-          TARGET_FOLDER: latest/
+          repository-name: amaranth-lang/amaranth-lang.github.io
+          ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
+          branch: main
+          folder: docs/_build
+          target-folder: docs/amaranth/latest/
       - name: Extract release version
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
         run: echo "VERSION=$(python setup.py --version)" >>$GITHUB_ENV
       - name: Publish release documentation
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: docs/_build
-          TARGET_FOLDER: v${{ env.VERSION }}/
+          repository-name: amaranth-lang/amaranth-lang.github.io
+          ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
+          branch: main
+          folder: docs/_build
+          target-folder: docs/amaranth/v${{ env.VERSION }}/

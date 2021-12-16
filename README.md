@@ -16,11 +16,11 @@ The development of Amaranth has been supported by [SymbioticEDA][], [LambdaConce
 
 ## Introduction
 
-See the [Introduction](https://amaranth-lang.org/amaranth/latest/intro.html) section of the documentation.
+See the [Introduction](https://amaranth-lang.org/docs/amaranth/latest/intro.html) section of the documentation.
 
 ## Installation
 
-See the [Installation](https://amaranth-lang.org/amaranth/latest/install.html) section of the documentation.
+See the [Installation](https://amaranth-lang.org/docs/amaranth/latest/install.html) section of the documentation.
 
 ## Supported devices
 

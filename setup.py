@@ -58,7 +58,7 @@ setup(
         ]
     },
     project_urls={
-        "Documentation": "https://amaranth-lang.org/amaranth/{}".format(doc_version()),
+        "Documentation": "https://amaranth-lang.org/docs/amaranth/{}".format(doc_version()),
         "Source Code": "https://github.com/amaranth-lang/amaranth",
         "Bug Tracker": "https://github.com/amaranth-lang/amaranth/issues",
     },
