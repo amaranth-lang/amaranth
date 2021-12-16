@@ -3,7 +3,7 @@ First-in first-out queues
 
 .. py:module:: amaranth.lib.fifo
 
-The ``amaranth.lib.fifo`` package provides modules for first-in, first-out queues.
+The ``amaranth.lib.fifo`` module provides building blocks for first-in, first-out queues.
 
 
 .. autoclass:: FIFOInterface
