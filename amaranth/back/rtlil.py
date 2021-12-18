@@ -328,16 +328,23 @@ class _ValueCompilerState:
         else:
             wire_name = signal.name
 
+        is_sync_driven = signal in self.driven and self.driven[signal]
+        
         attrs = dict(signal.attrs)
         if signal._enum_class is not None:
             attrs["enum_base_type"] = signal._enum_class.__name__
             for value in signal._enum_class:
                 attrs["enum_value_{:0{}b}".format(value.value, signal.width)] = value.name
 
+        # For every signal in the sync domain, assign \sig's initial value (using the \init reg
+        # attribute) to the reset value.
+        if is_sync_driven:
+            attrs["init"] = ast.Const(signal.reset, signal.width)
+
         wire_curr = self.rtlil.wire(width=signal.width, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
                                     attrs=attrs, src=_src(signal.src_loc))
-        if signal in self.driven and self.driven[signal]:
+        if is_sync_driven:
             wire_next = self.rtlil.wire(width=signal.width, name=wire_curr + "$next",
                                         src=_src(signal.src_loc))
         else:
@@ -944,40 +951,42 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     stmt_compiler._has_rhs = False
                     stmt_compiler._wrap_assign = False
                     stmt_compiler(group_stmts)
+        
+        # For every driven signal in the sync domain, create a flop of appropriate type. Which type
+        # is appropriate depends on the domain: for domains with sync reset, it is a $dff, for
+        # domains with async reset it is an $adff. The latter is directly provided with the reset
+        # value as a parameter to the cell, which is directly assigned during reset.
+        for domain, signal in fragment.iter_sync():
+            cd = fragment.domains[domain]
 
-                # For every signal in the sync domain, assign \sig's initial value (which will
-                # end up as the \init reg attribute) to the reset value.
-                with process.sync("init") as sync:
-                    for domain, signal in fragment.iter_sync():
-                        if signal not in group_signals:
-                            continue
-                        wire_curr, wire_next = compiler_state.resolve(signal)
-                        sync.update(wire_curr, rhs_compiler(ast.Const(signal.reset, signal.width)))
+            wire_clk = compiler_state.resolve_curr(cd.clk)
+            wire_rst = compiler_state.resolve_curr(cd.rst) if cd.rst is not None else None
+            wire_curr, wire_next = compiler_state.resolve(signal)
 
-                # For every signal in every sync domain, assign \sig to \sig$next. The sensitivity
-                # list, however, differs between domains: for domains with sync reset, it is
-                # `[pos|neg]edge clk`, for sync domains with async reset it is `[pos|neg]edge clk
-                # or posedge rst`.
-                for domain, signals in fragment.drivers.items():
-                    if domain is None:
-                        continue
-
-                    signals = signals & group_signals
-                    if not signals:
-                        continue
-
-                    cd = fragment.domains[domain]
-
-                    triggers = []
-                    triggers.append((cd.clk_edge + "edge", compiler_state.resolve_curr(cd.clk)))
-                    if cd.async_reset:
-                        triggers.append(("posedge", compiler_state.resolve_curr(cd.rst)))
-
-                    for trigger in triggers:
-                        with process.sync(*trigger) as sync:
-                            for signal in signals:
-                                wire_curr, wire_next = compiler_state.resolve(signal)
-                                sync.update(wire_curr, wire_next)
+            if not cd.async_reset:
+                # For sync reset flops, the reset value comes from logic inserted by 
+                # `hdl.xfrm.DomainLowerer`.
+                module.cell("$dff", ports={
+                    "\\CLK": wire_clk,
+                    "\\D": wire_next,
+                    "\\Q": wire_curr
+                }, params={
+                    "CLK_POLARITY": int(cd.clk_edge == "pos"),
+                    "WIDTH": signal.width
+                })
+            else:
+                # For async reset flops, the reset value is provided directly to the cell.
+                module.cell("$adff", ports={
+                    "\\ARST": wire_rst,
+                    "\\CLK": wire_clk,
+                    "\\D": wire_next,
+                    "\\Q": wire_curr
+                }, params={
+                    "ARST_POLARITY": ast.Const(1),
+                    "ARST_VALUE": ast.Const(signal.reset, signal.width),
+                    "CLK_POLARITY": int(cd.clk_edge == "pos"),
+                    "WIDTH": signal.width
+                })
 
         # Any signals that are used but neither driven nor connected to an input port always
         # assume their reset values. We need to assign the reset value explicitly, since only
@@ -1010,7 +1019,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
     for signal in fragment.ports:
         port_map[compiler_state.resolve_curr(signal)] = signal
 
-    # Finally, collect tha names we've given to each wire in RTLIL, and provide these to
+    # Finally, collect the names we've given to each wire in RTLIL, and provide these to
     # the caller, to allow manipulating them in the toolchain.
     for signal in compiler_state.wires:
         wire_name = compiler_state.resolve_curr(signal)
