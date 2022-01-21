@@ -52,6 +52,8 @@ class OpenLANEPlatform(TemplatedPlatform):
     flow_settings = abstractproperty()
 
     required_tools = ["docker"]
+    # known default
+    _build_dir = 'nya'
 
     file_templates = {
         **TemplatedPlatform.build_script_templates,
@@ -151,6 +153,14 @@ class OpenLANEPlatform(TemplatedPlatform):
                 else:
                     return pin.o.name
         raise AssertionError(f"Platform '{type(self).__name__}' defined default clock but no matching resource")
+
+
+    # This is a silly hack but we need to know the build dir
+    def build(self, *args, **kwargs):
+        self._build_dir = kwargs.get('build_dir', 'build')
+
+        super().build(*args, **kwargs)
+
 
     # This was lifted directly from the TemplatedPlatform.toolchain_prepare because I needed to tweak it a bit
     def prepare(self, elaboratable, name, **kwargs):
