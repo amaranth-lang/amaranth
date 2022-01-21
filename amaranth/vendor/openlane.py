@@ -45,12 +45,11 @@ class OpenLANEPlatform(TemplatedPlatform):
     """
 
     toolchain = "OpenLANE"
+    openlane_root = ''
+    pdk_path = ''
 
     _UID = os.getuid()
     _GID = os.getgid()
-
-    openlane_root = abstractproperty()
-    pdk = abstractproperty()
     cell_library = abstractproperty()
     flow_settings = abstractproperty()
 
@@ -121,9 +120,9 @@ class OpenLANEPlatform(TemplatedPlatform):
             run
             -it
             --rm
-            -v {{platform.openlane_root}}:/openLANE_flow
-            -v {{get_override("pdk_path")|default(platform.openlane_root + "/pdks")}}:/PDK
-            -v {{platform.build_dir}}:/design_{{name}}
+            -v {{get_override("OpenLANE")|default(platform.openlane_root)}}:/openLANE_flow
+            -v {{get_override("PDKPath")|default(platform.pdk_path)}}:/PDK
+            -v /tmp/{{platform._build_dir}}:/design_{{name}}
             -e PDK_ROOT=/PDK
             -u {{platform._UID}}:{{platform._GID}}
             efabless/openlane:{{get_override("openlane_version")|default("latest")}}
@@ -215,7 +214,7 @@ class OpenLANEPlatform(TemplatedPlatform):
             return "\n".join(commands)
 
         def get_override(var):
-            var_env = "NMIGEN_{}".format(var)
+            var_env = "AMARANTH_ENV_{}".format(var)
             if var_env in os.environ:
                 # On Windows, there is no way to define an "empty but set" variable; it is tempting
                 # to use a quoted empty string, but it doesn't do what one would expect. Recognize
