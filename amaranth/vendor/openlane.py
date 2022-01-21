@@ -340,7 +340,15 @@ class OpenLANEPlatform(TemplatedPlatform):
                 return m
         return create_domain
 
-class Sky130FDSCHDPlatform(OpenLANEPlatform):
+
+# PDK Key:
+# FD - Foundry
+# SC - Standard Cell
+# HD - High Density
+# HDLL - High Density Low Leakage
+# LS/MS/HS Low/Medium/High Speeds
+
+class Sky130HighDensityPlatform(OpenLANEPlatform):
     """
     sky130A sky130_fd_sc_hd OpenLANE Flow
     ------------------
@@ -366,7 +374,7 @@ class Sky130FDSCHDPlatform(OpenLANEPlatform):
     pdk = "sky130A"
     cell_library = "sky130_fd_sc_hd"
 
-class Sky130FDSCHSPlatform(OpenLANEPlatform):
+class Sky130HighSpeedPlatform(OpenLANEPlatform):
     """
     sky130A sky130_fd_sc_hs OpenLANE Flow
     ------------------
@@ -392,7 +400,7 @@ class Sky130FDSCHSPlatform(OpenLANEPlatform):
     pdk = "sky130A"
     cell_library = "sky130_fd_sc_hs"
 
-class Sky130FDSCMSPlatform(OpenLANEPlatform):
+class Sky130MediumSpeedPlatform(OpenLANEPlatform):
     """
     sky130A sky130_fd_sc_ms OpenLANE Flow
     ------------------
@@ -418,7 +426,7 @@ class Sky130FDSCMSPlatform(OpenLANEPlatform):
     pdk = "sky130A"
     cell_library = "sky130_fd_sc_ms"
 
-class Sky130FDSCLSPlatform(OpenLANEPlatform):
+class Sky130LowSpeedPlatform(OpenLANEPlatform):
     """
     sky130A sky130_fd_sc_ls OpenLANE Flow
     ------------------
@@ -444,7 +452,7 @@ class Sky130FDSCLSPlatform(OpenLANEPlatform):
     pdk = "sky130A"
     cell_library = "sky130_fd_sc_ls"
 
-class Sky130FDSCHDLLPlatform(OpenLANEPlatform):
+class Sky130HighDensityLowLeakagePlatform(OpenLANEPlatform):
     """
     sky130A sky130_fd_sc_hdll OpenLANE Flow
     ------------------

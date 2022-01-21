@@ -1,10 +1,9 @@
 from amaranth import *
-from amaranth.vendor.openlane import Sky130FDSCHDPlatform
+from amaranth.vendor.openlane import Sky130HighDensityPlatform
 
 import os
 
-class OpenlaneExamplePlatform(Sky130FDSCHDPlatform):
-    openlane_root = os.environ['OPENLANE_ROOT']
+class OpenlaneExamplePlatform(Sky130HighDensityPlatform):
     # For more information on the variables that are valid see:
     # https://openlane.readthedocs.io/en/latest/configuration/README.html#variables-information
     flow_settings = {
