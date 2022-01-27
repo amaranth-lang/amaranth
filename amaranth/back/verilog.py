@@ -48,5 +48,5 @@ def convert(elaboratable, name="top", platform=None, ports=None, *, emit_src=Tru
         warnings.warn("Implicit port determination is deprecated, specify ports explictly",
                       DeprecationWarning, stacklevel=2)
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
-    verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
+    verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs)
     return verilog_text
