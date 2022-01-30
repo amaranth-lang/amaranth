@@ -516,6 +516,45 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual((yield self.o), 0)
             sim.add_sync_process(process)
 
+    def setUp_clock_phase(self):
+        self.m = Module()
+        self.phase0 = self.m.domains.phase0 = ClockDomain()
+        self.phase90 = self.m.domains.phase90 = ClockDomain()
+        self.phase180 = self.m.domains.phase180 = ClockDomain()
+        self.phase270 = self.m.domains.phase270 = ClockDomain()
+        self.check = self.m.domains.check = ClockDomain()
+
+        self.expected = [
+            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        ]
+
+    def test_clock_phase(self):
+        self.setUp_clock_phase()
+        with self.assertSimulation(self.m) as sim:
+            period=1
+            sim.add_clock(period/8, phase=0,          domain="check")
+            sim.add_clock(period,   phase=0*period/4, domain="phase0")
+            sim.add_clock(period,   phase=1*period/4, domain="phase90")
+            sim.add_clock(period,   phase=2*period/4, domain="phase180")
+            sim.add_clock(period,   phase=3*period/4, domain="phase270")
+
+            def proc():
+                clocks = [
+                    self.phase0.clk,
+                    self.phase90.clk,
+                    self.phase180.clk,
+                    self.phase270.clk
+                ]
+                for i in range(16):
+                    yield
+                    for j, c in enumerate(clocks):
+                        self.assertEqual((yield c), self.expected[j][i])
+
+            sim.add_sync_process(proc, domain="check")
+
     def setUp_multiclock(self):
         self.sys = ClockDomain()
         self.pix = ClockDomain()
