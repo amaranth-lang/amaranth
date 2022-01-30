@@ -12,4 +12,5 @@ Standard library
    stdlib/data
    stdlib/coding
    stdlib/cdc
+   stdlib/crc
    stdlib/fifo
