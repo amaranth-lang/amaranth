@@ -35,6 +35,9 @@ Implemented RFCs
 .. _RFC 3: https://amaranth-lang.org/rfcs/0003-enumeration-shapes.html
 .. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
 .. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
+.. _RFC 6: https://amaranth-lang.org/rfcs/0006-stdlib-crc.html
+.. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
+.. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
 .. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
 .. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
 .. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
@@ -44,6 +47,9 @@ Implemented RFCs
 * `RFC 3`_: Enumeration shapes
 * `RFC 4`_: Constant-castable expressions
 * `RFC 5`_: Remove Const.normalize
+* `RFC 6`_: CRC generator
+* `RFC 8`_: Aggregate extensibility
+* `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 10`_: Move Repl to Value.replicate
@@ -79,6 +85,7 @@ Standard library changes
 
 * Added: :mod:`amaranth.lib.enum`. (`RFC 3`_)
 * Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
+* Added: :mod:`amaranth.lib.crc`. (`RFC 6`_)
 
 
 Toolchain changes
