@@ -139,6 +139,8 @@ class Simulator:
             # to happen at a non-zero time, distinguishing it from the reset values in the waveform
             # viewer.
             phase = period // 2
+        else:
+            phase = int(phase * 1e12) + period // 2
         self._engine.add_clock_process(domain.clk, phase=phase, period=period)
         self._clocked.add(domain)
 
