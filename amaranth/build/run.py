@@ -154,10 +154,11 @@ class BuildPlan:
 
                     mkdirs(filename)
 
-                    mode = "wt" if isinstance(content, str) else "wb"
-                    with sftp.file(str(filename), mode) as f:
+                    mode = "t" if isinstance(content, str) else "b"
+                    with sftp.file(str(filename), "w" + mode) as f:
+                        f.set_pipelined()
                         # "b/t" modifier ignored in SFTP.
-                        if mode == "wt":
+                        if mode == "t":
                             f.write(content.encode("utf-8"))
                         else:
                             f.write(content)
@@ -261,6 +262,7 @@ class RemoteSSHBuildProducts(BuildProducts):
                 sftp.chdir(self.__root)
 
                 with sftp.file(filename, "r" + mode) as f:
+                    f.prefetch()
                     # "b/t" modifier ignored in SFTP.
                     if mode == "t":
                         return f.read().decode("utf-8")
