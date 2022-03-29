@@ -157,27 +157,31 @@ class FSM:
         return Operator("==", [self.state, self.encoding[name]], src_loc_at=0)
 
 class _PipelineState:
-    def __init__(self, output_stb, builder_domain, comb_builder_domain):
+    def __init__(self, input_stb, output_stb, builder_domain, comb_builder_domain):
         self._in_stage = False
         self._output_stb = output_stb
         self._builder_domain = builder_domain
         self._comb_builder_domain = comb_builder_domain
         self._signals = {}
         self._strobes = []
+        self._current_valid = None
         self._stages = set()
 
+        # comb_builder_domain += self._current_valid.eq(input_stb)
+
 class Pipeline(_ModuleBuilderProxy):
-    def __init__(self, output_stb, builder_domain, comb_builder_domain):
-        object.__setattr__(self, "_state", _PipelineState(output_stb, builder_domain, comb_builder_domain))
+    def __init__(self, input_stb, output_stb, builder_domain, comb_builder_domain):
+        object.__setattr__(self, "_state", _PipelineState(input_stb, output_stb, builder_domain, comb_builder_domain))
 
     def _new_stage(self, name):
         self._state._stages.add(name)
         new_stb = Signal(name="{}_stb".format(name))
-        if len(self._state._strobes) > 0:
-            previous_stb = self._state._strobes[-1]
-            self._state._builder_domain += new_stb.eq(previous_stb)
 
+        if self._state._current_valid is not None:
+            self._state._builder_domain += new_stb.eq(self._state._current_valid)
+        self._state._current_valid = Signal()
         self._state._strobes.append(new_stb)
+        self._state._comb_builder_domain += self._state._current_valid.eq(self._state._strobes[-1])
 
         old_signals, self._state._signals = self._state._signals, {}
         for name, signal in old_signals.items():
@@ -192,7 +196,7 @@ class Pipeline(_ModuleBuilderProxy):
     def stage_invalid(self):
         if not self._state._in_stage:
             raise SyntaxError("A stage can only be declared invalid from within a stage")
-        self._state._builder_domain += self._state._strobes[-1].eq(0)
+        self._state._comb_builder_domain += self._state._current_valid.eq(0)
 
     def __setattr__(self, name: str, value):
         if not self._state._in_stage:
@@ -463,7 +467,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             raise ValueError("A pipeline may not be driven by the '{}' domain".format(domain))
 
         output_stb = Signal(name="{}_output_stb".format(name))
-        pipeline = Pipeline(output_stb, self.d[domain], self.d.comb)
+        pipeline = Pipeline(stb, output_stb, self.d[domain], self.d.comb)
         self._set_ctrl("Pipeline", {
             "pipeline": pipeline,
             "src_loc":  tracer.get_src_loc(src_loc_at=1),

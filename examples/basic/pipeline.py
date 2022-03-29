@@ -21,6 +21,8 @@ class MulAdd(Elaboratable):
                 pln.mul = self.a * self.b
             with m.Stage("ADD_ONE"):
                 pln.added_one = pln.mul + 1
+                with m.If(pln.mul == 20):
+                    pln.stage_invalid()
             with m.Stage("ADD"):
                 m.d.sync += self.o.eq(pln.added_one + self.c)
             
