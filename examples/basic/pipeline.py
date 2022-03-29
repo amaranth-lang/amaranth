@@ -16,7 +16,7 @@ class MulAdd(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        with m.Pipeline(stb=self.stb) as pln:
+        with m.Pipeline(self.stb) as pln:
             with m.Stage():
                 pln.mul = self.a * self.b
             with m.Stage("ADD_ONE"):

@@ -172,7 +172,7 @@ class Pipeline(_ModuleBuilderProxy):
 
     def _new_stage(self, name):
         self._state._stages.add(name)
-        new_stb = Signal(name=f"{name}_stb")
+        new_stb = Signal(name="{}_stb".format(name))
         if len(self._state._strobes) > 0:
             previous_stb = self._state._strobes[-1]
             self._state._builder_domain += new_stb.eq(previous_stb)
@@ -457,12 +457,12 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = "FSM"
 
     @contextmanager
-    def Pipeline(self, domain="sync", name="pipeline", *, stb):
+    def Pipeline(self, stb, name="pipeline", *, domain="sync"):
         self._check_context("Pipeline", context=None)
         if domain == "comb":
             raise ValueError("A pipeline may not be driven by the '{}' domain".format(domain))
 
-        output_stb = Signal(name=f"{name}_output_stb")
+        output_stb = Signal(name="{}_output_stb".format(name))
         pipeline = Pipeline(output_stb, self.d[domain], self.d.comb)
         self._set_ctrl("Pipeline", {
             "pipeline": pipeline,
@@ -493,7 +493,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             name = f"STAGE{n}"
         
         if name in pipeline._state._stages:
-            raise NameError(f"Pipeline stage '{name}' is already defined")
+            raise NameError("Pipeline stage '{}' is already defined".format(name))
 
         try:
             self._ctrl_context = None
