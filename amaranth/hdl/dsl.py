@@ -474,10 +474,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self.domain._depth += 1
             yield pipeline
 
-            self.d.comb += [
-                output_stb.eq(pipeline._state._strobes[-1]),
-                pipeline._state._strobes[0].eq(stb),
-            ]
+            self.d[domain] += output_stb.eq(pipeline._state._strobes[-1]),
+            self.d.comb += pipeline._state._strobes[0].eq(stb)
         finally:
             self.domain._depth -= 1
             self._ctrl_context = None

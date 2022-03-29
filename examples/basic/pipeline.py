@@ -22,7 +22,7 @@ class MulAdd(Elaboratable):
             with m.Stage("ADD_ONE"):
                 pln.added_one = pln.mul + 1
             with m.Stage("ADD"):
-                m.d.comb += self.o.eq(pln.mul + self.c)
+                m.d.sync += self.o.eq(pln.mul + self.c)
             
             m.d.comb += self.o_stb.eq(pln.o_stb)
 
@@ -41,6 +41,8 @@ if __name__ == "__main__":
         yield dut.stb.eq(1)
         yield
         yield dut.stb.eq(0)
+
+        yield
 
         yield dut.a.eq(11)
         yield dut.b.eq(2)
