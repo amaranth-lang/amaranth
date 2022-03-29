@@ -22,7 +22,7 @@ class MulAdd(Elaboratable):
             with m.Stage("ADD_ONE"):
                 pln.added_one = pln.mul + 1
             with m.Stage("ADD"):
-                m.d.sync += self.o.eq(pln.mul + self.c)
+                m.d.sync += self.o.eq(pln.added_one + self.c)
             
             m.d.comb += self.o_stb.eq(pln.o_stb)
 

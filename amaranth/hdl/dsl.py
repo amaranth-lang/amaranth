@@ -457,7 +457,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = "FSM"
 
     @contextmanager
-    def Pipeline(self, stb, name="pipeline", *, domain="sync"):
+    def Pipeline(self, stb, name="pipeline", domain="sync"):
         self._check_context("Pipeline", context=None)
         if domain == "comb":
             raise ValueError("A pipeline may not be driven by the '{}' domain".format(domain))
