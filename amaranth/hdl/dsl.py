@@ -156,6 +156,60 @@ class FSM:
             self.encoding[name] = len(self.encoding)
         return Operator("==", [self.state, self.encoding[name]], src_loc_at=0)
 
+class _PipelineState:
+    def __init__(self, output_stb, builder_domain, comb_builder_domain):
+        self._in_stage = False
+        self._output_stb = output_stb
+        self._builder_domain = builder_domain
+        self._comb_builder_domain = comb_builder_domain
+        self._signals = {}
+        self._strobes = []
+        self._stages = set()
+
+class Pipeline(_ModuleBuilderProxy):
+    def __init__(self, output_stb, builder_domain, comb_builder_domain):
+        object.__setattr__(self, "_state", _PipelineState(output_stb, builder_domain, comb_builder_domain))
+
+    def _new_stage(self, name):
+        self._state._stages.add(name)
+        new_stb = Signal(name=f"{name}_stb")
+        if len(self._state._strobes) > 0:
+            previous_stb = self._state._strobes[-1]
+            self._state._builder_domain += new_stb.eq(previous_stb)
+
+        self._state._strobes.append(new_stb)
+
+        old_signals, self._state._signals = self._state._signals, {}
+        for name, signal in old_signals.items():
+            new_signal = Signal.like(signal, name=f"{signal.name}")
+            self._state._builder_domain += new_signal.eq(signal)
+            self._state._signals[name] = new_signal
+
+    @property
+    def o_stb(self):
+        return self._state._output_stb
+
+    def stage_invalid(self):
+        if not self._state._in_stage:
+            raise SyntaxError("A stage can only be declared invalid from within a stage")
+        self._state._builder_domain += self._state._strobes[-1].eq(0)
+
+    def __setattr__(self, name: str, value):
+        if not self._state._in_stage:
+            raise SyntaxError("A value can only be pipelined from within a stage")
+        if not isinstance(value, Value):
+            raise SyntaxError("Only values can be pipelined")
+        
+        self._state._signals[name] = set_value = Signal(value.shape(), reset_less=True, name=name)
+        self._state._comb_builder_domain += set_value.eq(value)
+
+    def __getattr__(self, name: str):
+        if not self._state._in_stage:
+            raise SyntaxError("A pipelined value can only be accessed from within a stage")
+        if name not in self._state._signals:
+            raise SyntaxError("Pipelined signal must be set before they can be accessed")
+        
+        return self._state._signals[name]
 
 class Module(_ModuleBuilderRoot, Elaboratable):
     @classmethod
@@ -401,7 +455,60 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fsm_data["state_src_locs"][name] = src_loc
         finally:
             self._ctrl_context = "FSM"
-            self._statements = _outer_case
+
+    @contextmanager
+    def Pipeline(self, domain="sync", name="pipeline", *, stb):
+        self._check_context("Pipeline", context=None)
+        if domain == "comb":
+            raise ValueError("A pipeline may not be driven by the '{}' domain".format(domain))
+
+        output_stb = Signal(name=f"{name}_output_stb")
+        pipeline = Pipeline(output_stb, self.d[domain], self.d.comb)
+        self._set_ctrl("Pipeline", {
+            "pipeline": pipeline,
+            "src_loc":  tracer.get_src_loc(src_loc_at=1),
+        })
+
+        try:
+            self._ctrl_context = "Pipeline"
+            self.domain._depth += 1
+            yield pipeline
+
+            self.d.comb += [
+                output_stb.eq(pipeline._state._strobes[-1]),
+                pipeline._state._strobes[0].eq(stb),
+            ]
+        finally:
+            self.domain._depth -= 1
+            self._ctrl_context = None
+        self._pop_ctrl()
+
+    @contextmanager
+    def Stage(self, name=None):
+        self._check_context("Pipeline Stage", context="Pipeline")
+        pipeline = self._get_ctrl("Pipeline")["pipeline"]
+
+        if name is None:
+            n = len(pipeline._state._stages)
+            name = f"STAGE{n}"
+        
+        if name in pipeline._state._stages:
+            raise NameError(f"Pipeline stage '{name}' is already defined")
+
+        try:
+            self._ctrl_context = None
+
+            pipeline._state._in_stage = True
+
+            pipeline._new_stage(name)
+
+            with self.If(pipeline._state._strobes[-1]):
+                yield
+
+            self._flush_ctrl()
+            pipeline._state._in_stage = False
+        finally:
+            self._ctrl_context = "Pipeline"
 
     @property
     def next(self):
