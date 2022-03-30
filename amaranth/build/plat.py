@@ -375,7 +375,7 @@ class TemplatedPlatform(Platform):
             else:
                 return jinja2.Undefined(name=var)
 
-        @jinja2.contextfunction
+        @jinja2.pass_context
         def invoke_tool(context, name):
             env_var = tool_env_var(name)
             if context.parent["syntax"] == "sh":
