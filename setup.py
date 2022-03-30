@@ -43,7 +43,7 @@ setup(
         "importlib_metadata; python_version<'3.8'",  # for __version__ and amaranth._toolchain.yosys
         "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
         "pyvcd~=0.2.2", # for amaranth.pysim
-        "Jinja2>=2.11,<4.0", # for amaranth.build
+        "Jinja2~=3.0",  # for amaranth.build
     ],
     extras_require={
         # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
