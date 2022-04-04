@@ -6,7 +6,7 @@ System requirements
 
 .. |yosys-version| replace:: 0.10 (or newer)
 
-Amaranth HDL requires Python 3.6; it works on CPython_ 3.6 (or newer), and works faster on PyPy3.6_ 7.2 (or newer).
+Amaranth HDL requires Python 3.7; it works on CPython_ 3.7 (or newer), and works faster on PyPy3.7_ 7.3.2 (or newer).
 
 For most workflows, Amaranth requires Yosys_ |yosys-version|. A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
 
@@ -17,7 +17,7 @@ Synthesizing, placing and routing an Amaranth design for an FPGA requires the FP
 .. TODO: Link to FPGA family docs here
 
 .. _CPython: https://www.python.org/
-.. _PyPy3.6: https://www.pypy.org/
+.. _PyPy3.7: https://www.pypy.org/
 .. _Yosys: https://yosyshq.net/yosys/
 .. _PyPI: https://pypi.org/
 .. _GTKWave: http://gtkwave.sourceforge.net/

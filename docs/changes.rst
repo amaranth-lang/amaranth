@@ -4,6 +4,12 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
+Next version
+============
+
+Support for Python 3.6 has been dropped.
+
+
 Version 0.3
 ============
 

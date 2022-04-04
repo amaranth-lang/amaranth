@@ -19,7 +19,7 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
 
         with warnings.catch_warnings():
             warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            # This emits a DeprecationWarning on Python 3.6 and 3.10.
+            # This emits a DeprecationWarning on Python 3.10.
             from setuptools import distutils
             cc_driver = distutils.ccompiler.new_compiler()
 

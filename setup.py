@@ -37,7 +37,7 @@ setup(
     description="Amaranth hardware definition language",
     #long_description="""TODO""",
     license="BSD",
-    python_requires="~=3.6",
+    python_requires="~=3.7",
     setup_requires=["wheel", "setuptools", "setuptools_scm"],
     install_requires=[
         "importlib_metadata; python_version<'3.8'",  # for __version__ and amaranth._toolchain.yosys
