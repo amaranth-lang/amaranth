@@ -6,7 +6,7 @@ System requirements
 
 .. |yosys-version| replace:: 0.10 (or newer)
 
-Amaranth HDL requires Python 3.7; it works on CPython_ 3.7 (or newer), and works faster on PyPy3.7_ 7.3.2 (or newer).
+Amaranth HDL requires Python 3.7; it works on CPython_ 3.7 (or newer), and works faster on PyPy3.7_ 7.3.3 (or newer).
 
 For most workflows, Amaranth requires Yosys_ |yosys-version|. A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
 
