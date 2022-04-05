@@ -42,7 +42,7 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_compare_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Shapes may be compared with other Shapes and \(int, bool\) tuples, not 'hi'$"):
+                r"^Shapes may be compared with shape-castable objects, not 'hi'$"):
             Shape(1, True) == 'hi'
 
     def test_compare_tuple_wrong(self):
@@ -141,8 +141,44 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_cast_bad(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Object 'foo' cannot be used as value shape$"):
+                r"^Object 'foo' cannot be converted to an Amaranth shape$"):
             Shape.cast("foo")
+
+
+class MockShapeCastable(ShapeCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def as_shape(self):
+        return self.dest
+
+
+class MockShapeCastableNoOverride(ShapeCastable):
+    def __init__(self):
+        pass
+
+
+class ShapeCastableTestCase(FHDLTestCase):
+    def test_no_override(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
+                r"override the `as_shape` method$"):
+            sc = MockShapeCastableNoOverride()
+
+    def test_cast(self):
+        sc = MockShapeCastable(unsigned(2))
+        self.assertEqual(Shape.cast(sc), unsigned(2))
+
+    def test_recurse_bad(self):
+        sc = MockShapeCastable(None)
+        sc.dest = sc
+        with self.assertRaisesRegex(RecursionError,
+                r"^Shape-castable object <.+> casts to itself$"):
+            Shape.cast(sc)
+
+    def test_recurse(self):
+        sc = MockShapeCastable(MockShapeCastable(unsigned(1)))
+        self.assertEqual(Shape.cast(sc), unsigned(1))
 
 
 class ValueTestCase(FHDLTestCase):
