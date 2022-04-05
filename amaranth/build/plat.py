@@ -367,8 +367,11 @@ class TemplatedPlatform(Platform):
                 strip_internal_attrs=True, write_verilog_opts=opts)
 
         def emit_debug_verilog(opts=()):
-            return verilog._convert_rtlil_text(rtlil_text,
-                strip_internal_attrs=False, write_verilog_opts=opts)
+            if not get_override_flag("debug_verilog"):
+                return "/* Debug Verilog generation was disabled. */"
+            else:
+                return verilog._convert_rtlil_text(rtlil_text,
+                    strip_internal_attrs=False, write_verilog_opts=opts)
 
         def emit_commands(syntax):
             commands = []
