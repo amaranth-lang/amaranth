@@ -220,7 +220,7 @@ Value casting
 
 Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
 
-.. TODO: link to UserValue
+.. TODO: link to ValueCastable
 
 Casting to a value can be done explicitly with ``Value.cast``, but is usually implicit, since value-castable objects are accepted anywhere values are.
 

@@ -135,16 +135,22 @@ class Value(metaclass=ABCMeta):
 
         Booleans and integers are wrapped into a :class:`Const`. Enumerations whose members are
         all integers are converted to a :class:`Const` with a shape that fits every member.
+        :class:`ValueCastable` objects are recursively cast to an Amaranth value.
         """
-        if isinstance(obj, Value):
-            return obj
-        if isinstance(obj, int):
-            return Const(obj)
-        if isinstance(obj, Enum):
-            return Const(obj.value, Shape.cast(type(obj)))
-        if isinstance(obj, ValueCastable):
-            return obj.as_value()
-        raise TypeError("Object {!r} cannot be converted to an Amaranth value".format(obj))
+        while True:
+            if isinstance(obj, Value):
+                return obj
+            elif isinstance(obj, int):
+                return Const(obj)
+            elif isinstance(obj, Enum):
+                return Const(obj.value, Shape.cast(type(obj)))
+            elif isinstance(obj, ValueCastable):
+                new_obj = obj.as_value()
+            else:
+                raise TypeError("Object {!r} cannot be converted to an Amaranth value".format(obj))
+            if new_obj is obj:
+                raise RecursionError("Value-castable object {!r} casts to itself".format(obj))
+            obj = new_obj
 
     def __init__(self, *, src_loc_at=0):
         super().__init__()
@@ -1276,7 +1282,7 @@ class UserValue(Value):
 
 
 class ValueCastable:
-    """Base class for classes which can be cast to Values.
+    """Interface of objects can be cast to :class:`Value`s.
 
     A ``ValueCastable`` can be cast to ``Value``, meaning its precise representation does not have
     to be immediately known. This is useful in certain metaprogramming scenarios. Instead of

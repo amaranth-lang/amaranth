@@ -1060,6 +1060,15 @@ class UserValueTestCase(FHDLTestCase):
             self.assertEqual(uv.lower_count, 1)
 
 
+class MockValueCastable(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    @ValueCastable.lowermethod
+    def as_value(self):
+        return self.dest
+
+
 class MockValueCastableChanges(ValueCastable):
     def __init__(self, width=0):
         self.width = width
@@ -1097,14 +1106,14 @@ class MockValueCastableCustomGetattr(ValueCastable):
 class ValueCastableTestCase(FHDLTestCase):
     def test_not_decorated(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must decorate the `as_value` "
-                r"method with the `ValueCastable.lowermethod` decorator$"):
+                r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must "
+                r"decorate the `as_value` method with the `ValueCastable.lowermethod` decorator$"):
             vc = MockValueCastableNotDecorated()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must override the `as_value` "
-                r"method$"):
+                r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must "
+                r"override the `as_value` method$"):
             vc = MockValueCastableNoOverride()
 
     def test_memoized(self):
@@ -1120,6 +1129,17 @@ class ValueCastableTestCase(FHDLTestCase):
     def test_custom_getattr(self):
         vc = MockValueCastableCustomGetattr()
         vc.as_value() # shouldn't call __getattr__
+
+    def test_recurse_bad(self):
+        vc = MockValueCastable(None)
+        vc.dest = vc
+        with self.assertRaisesRegex(RecursionError,
+                r"^Value-castable object <.+> casts to itself$"):
+            Value.cast(vc)
+
+    def test_recurse(self):
+        vc = MockValueCastable(MockValueCastable(Signal()))
+        self.assertIsInstance(Value.cast(vc), Signal)
 
 
 class SampleTestCase(FHDLTestCase):
