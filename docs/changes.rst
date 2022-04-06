@@ -9,6 +9,13 @@ Next version
 
 Support for Python 3.6 has been dropped.
 
+Toolchain changes
+-----------------
+
+.. currentmodule:: amaranth
+
+* Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
+
 
 Version 0.3
 ============
