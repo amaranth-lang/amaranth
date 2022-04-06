@@ -9,12 +9,21 @@ Next version
 
 Support for Python 3.6 has been dropped.
 
+
 Toolchain changes
 -----------------
 
 .. currentmodule:: amaranth
 
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
+
+
+Platform integration changes
+----------------------------
+
+.. currentmodule:: amaranth.vendor
+
+* Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform`.
 
 
 Version 0.3
@@ -95,7 +104,7 @@ Platform integration changes
 
 .. currentmodule:: amaranth.vendor
 
-* Added: ``SB_LFOSC`` and ``SB_HFOSC`` as ``default_clk`` clock sources in :class:`lattice_ice40.LatticeICE40Platform`, .
+* Added: ``SB_LFOSC`` and ``SB_HFOSC`` as ``default_clk`` clock sources in :class:`lattice_ice40.LatticeICE40Platform`.
 * Added: :class:`lattice_machxo2.LatticeMachXO2Platform` generates binary (``.bit``) bitstreams.
 * Added: :class:`lattice_machxo_2_3l.LatticeMachXO3LPlatform`.
 * Deprecated: :mod:`lattice_machxo2`; use :class:`lattice_machxo_2_3l.LatticeMachXO2Platform` instead.
