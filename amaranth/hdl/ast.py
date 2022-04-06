@@ -33,12 +33,12 @@ class DUID:
 
 
 class ShapeCastable:
-    """Interface of user-defined objects that can be cast to :class:`Shape`s.
+    """Interface of user-defined objects that can be cast to :class:`Shape` s.
 
-    An object deriving from ``ShapeCastable`` is automatically converted to a ``Shape`` when it is
-    used in a context where a ``Shape`` is expected. Such objects can contain a richer description
-    of the shape than what is supported by the core Amaranth language, yet still be transparently
-    used with it.
+    An object deriving from :class:`ShapeCastable` is automatically converted to a :class:`Shape`
+    when it is used in a context where a :class:`Shape` is expected. Such objects can contain
+    a richer description of the shape than what is supported by the core Amaranth language, yet
+    still be transparently used with it.
     """
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
@@ -1310,21 +1310,21 @@ class UserValue(Value):
 
 
 class ValueCastable:
-    """Interface of user-defined objects that can be cast to :class:`Value`s.
+    """Interface of user-defined objects that can be cast to :class:`Value` s.
 
-    An object deriving from ``ValueCastable`` is automatically converted to a ``Value`` when it is
-    used in a context where a ``Value`` is expected. Such objects can implement different or
-    richer semantics than what is supported by the core Amaranth language, yet still be
-    transparently used with it as long as the final underlying representation is a single Amaranth
-    ``Value``. These objects also need not commit to a specific representation until they are
-    converted to a concrete Amaranth value.
+    An object deriving from :class:`ValueCastable`` is automatically converted to a :class:`Value`
+    when it is used in a context where a :class:`Value`` is expected. Such objects can implement
+    different or richer semantics than what is supported by the core Amaranth language, yet still
+    be transparently used with it as long as the final underlying representation is a single
+    Amaranth :class:`Value`. These objects also need not commit to a specific representation until
+    they are converted to a concrete Amaranth value.
 
     Note that it is necessary to ensure that Amaranth's view of representation of all values stays
-    internally consistent. The class deriving from ``ValueCastable`` must decorate the ``as_value``
-    method with the ``lowermethod`` decorator, which ensures that all calls to ``as_value`` return
-    the same ``Value`` representation. If the class deriving from ``ValueCastable`` is mutable,
-    it is up to the user to ensure that it is not mutated in a way that changes its representation
-    after the first call to ``as_value``.
+    internally consistent. The class deriving from :class:`ValueCastable`` must decorate
+    the :meth:`as_value` method with the :meth:`lowermethod` decorator, which ensures that all
+    calls to :meth:`as_value` return the same :class:`Value` representation. If the class deriving
+    from :class:`ValueCastable` is mutable, it is up to the user to ensure that it is not mutated
+    in a way that changes its representation after the first call to :meth:`as_value`.
     """
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
