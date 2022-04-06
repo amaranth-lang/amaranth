@@ -6,6 +6,34 @@ __all__ = ["Pins", "PinsN", "DiffPairs", "DiffPairsN",
 
 
 class Pins:
+    """A list of :class:`Pin` defining one or more pairs of single-ended I/O pins
+    with the same direction, polarity and connector.
+
+    Parameters
+    ----------
+    names : str
+       Space-separated pin names. If ``conn`` is defined these are aliased when requested using
+       the :class:`Connector` ``conn`` for the mappings.
+    dir : ``"i"``, ``"o"``, ``"io"``, ``"oe"``
+        Direction of the buffers. If ``"i"`` is specified, only the ``i``/``iN`` signals are
+        present. If ``"o"`` is specified, only the ``o``/``oN`` signals are present. If ``"oe"`` is
+        specified, the ``o``/``oN`` signals are present, and an ``oe`` signal is present.
+        If ``"io"`` is specified, both the ``i``/``iN`` and ``o``/``oN`` signals are present, and
+        an ``oe`` signal is present.
+    invert : bool
+        Swap the polarity of the I/O pins.
+    conn : tuple[str, int | str] - (name, number)
+        :class:`Connector` that will be used to resolve output pin names on this instance to names
+        defined by the referenced :class:`Connector`.
+    assert_width : None | int
+        Exact number of pins that should be defined in ``names``. Ignored if set to ``None``.
+
+    Attributes
+    ----------
+    names : str
+    dir : ``"i"``, ``"o"``, ``"io"``, ``"oe"``
+    invert : bool
+    """
     def __init__(self, names, *, dir="io", invert=False, conn=None, assert_width=None):
         if not isinstance(names, str):
             raise TypeError("Names must be a whitespace-separated string, not {!r}"
@@ -55,10 +83,42 @@ class Pins:
 
 
 def PinsN(*args, **kwargs):
+    """An inverted :class:`Pins`."""
     return Pins(*args, invert=True, **kwargs)
 
 
 class DiffPairs:
+    """A pair of :class:`Pins` defining one or more pairs of differential I/O pins
+    with the same direction, polarity and connector.
+
+    Parameters
+    ----------
+    p : str
+       Space-separated pin names for the P side of one or more differential pairs.
+    n : str
+       Space-separated pin names for the N side of one or more differential pairs.
+    dir : ``"i"``, ``"o"``, ``"io"``, ``"oe"``
+        Direction of the buffers. If ``"i"`` is specified, only the ``i``/``iN`` signals are
+        present. If ``"o"`` is specified, only the ``o``/``oN`` signals are present. If ``"oe"`` is
+        specified, the ``o``/``oN`` signals are present, and an ``oe`` signal is present.
+        If ``"io"`` is specified, both the ``i``/``iN`` and ``o``/``oN`` signals are present, and
+        an ``oe`` signal is present.
+    invert : bool
+        Swap the polarity of the P and N inputs.
+    conn : tuple[str, int | str] - (name, number)
+        :class:`Connector` that will be used to resolve output pin names on this instance to names
+        defined by the referenced :class:`Connector`.
+    assert_width : None | int
+        Exact number of differential pairs that should be defined in ``p`` and ``n``. Ignored if set
+        to ``None``.
+
+    Attributes
+    ----------
+    p : Pins
+    n : Pins
+    dir : ``"i"``, ``"o"``, ``"io"``, ``"oe"``
+    invert : bool
+    """
     def __init__(self, p, n, *, dir="io", invert=False, conn=None, assert_width=None):
         self.p = Pins(p, dir=dir, conn=conn, assert_width=assert_width)
         self.n = Pins(n, dir=dir, conn=conn, assert_width=assert_width)
@@ -83,10 +143,15 @@ class DiffPairs:
 
 
 def DiffPairsN(*args, **kwargs):
+    """An inverted :class:`DiffPairs`."""
     return DiffPairs(*args, invert=True, **kwargs)
 
 
 class Attrs(OrderedDict):
+    """Defined platform attributes. Applied to a :class:`Subsignal`.
+
+    Inherits from :class:`collections.OrderedDict`.
+    """
     def __init__(self, **attrs):
         for key, value in attrs.items():
             if not (value is None or isinstance(value, (str, int)) or hasattr(value, "__call__")):
@@ -107,6 +172,20 @@ class Attrs(OrderedDict):
 
 
 class Clock:
+    """An indicator for pins connected to a clock source.
+
+    Parameters
+    ----------
+    frequency : float
+        Frequency of the connected clock in Hz.
+
+    Attributes
+    ----------
+    frequency : float
+        Frequency of the connected clock in Hz.
+    period : float
+        Clock period in seconds.
+    """
     def __init__(self, frequency):
         if not isinstance(frequency, (float, int)):
             raise TypeError("Clock frequency must be a number")
@@ -122,6 +201,41 @@ class Clock:
 
 
 class Subsignal:
+    """Collection of I/O resources sharing the same platform attributes.
+
+    Groups related signals together with a name.
+
+    Multiple I/O :class:`Pins` or :class:`DiffPairs` can be defined.
+    They will all share a common set of attributes defined by :class:`Attrs` instance(s) in
+    the arguments list.
+
+    A clock can be defined by including :class:`Clock` in the list after the :class:`Pins`
+    or :class:`DiffPairs` representing the clock I/O pin/pair.
+
+    Alternatively, one or more child :class:`Subsignal` instances can be
+    grouped together. Allowing for hierarchy under a parent :class:`Resource`
+    these will not use the attributes defined on their parent :class:`Subsignal`
+    instance.
+
+    Parameters
+    ----------
+    *args : typing.Sequence[Pins | DiffPairs | Clock | Attrs] | typing.Sequence[Subsignal]
+        Components to construct a :class:`Subsignal`.  Either a :class:`Sequence` that can
+        contain :class:`Pins` and :class:`DiffPairs` along with a :class:`Clock` constraint
+        and zero or more :class:`Attrs` or a list containing one or more child :class:`Subsignal` s.
+
+    Attributes
+    ----------
+    name : str
+        Subsignal name.
+    ios : list[Pins, DiffPairs] | list[Subsignal]
+        Defined I/O. Either a :class:`list` that can contain :class:`Pins` and :class:`DiffPairs`
+        or a list containing one or more child :class:`Subsignal` s.
+    attrs : Attrs
+        Platform attributes. Overall combination of all provided :class:`Attrs`
+    clock : None | Clock
+        Applied clock constraint.
+    """
     def __init__(self, name, *args):
         self.name  = name
         self.ios   = []
@@ -177,6 +291,26 @@ class Subsignal:
 
 
 class Resource(Subsignal):
+    """Platform resource definition.
+
+    :class:`Resource` is used to define resources that can be requested from :class:`Platform`
+    instances. :class:`Resource` s can have multiple distinct entries for the same name; this
+    name typically represents a shared category of functionality, such as LEDs.
+
+    The name and number are used as parameters to :func:`Platform.request` and must be a unique
+    combination.
+
+    See :class:`Subsignal` for details.
+
+    Parameters
+    ----------
+    name : str
+        Resource name to define on the attached platform.
+    number : int
+        Resource index under that name to define.
+    *args : list[Pins | DiffPairs | Subsignal | Attrs | Clock]
+        See :class:`Subsignal` .
+    """
     @classmethod
     def family(cls, name_or_number, number=None, *, ios, default_name, name_suffix=""):
         # This constructor accepts two different forms:
@@ -209,6 +343,45 @@ class Resource(Subsignal):
 
 
 class Connector:
+    """ Defines mappings between pin aliases and an underlying pin name.
+
+    This underlying pin name can also be an alias when connectors are given a reference to
+    another :class:`Connector` instance. This is helpful to define a layer of connectors with
+    unique intermediate naming conventions.
+
+    The mapping is defined in one of two ways:
+
+        * A string, defining a space-separated list of the target pin names. The source
+          mapping for the pins is an incrementing integer starting at ``1``. To skip an
+          entry, ``-`` can be used instead of a pin name.
+
+        * A dict, containing mappings from source pin name to target pin name.
+
+    The first type of mapping definition is primarily useful for defining a connector that
+    visually matches the layout of the physical pinout for the connector. The second mapping
+    is useful to map between established naming schemes for the connector pins.
+
+    Parameters
+    ----------
+    name : str
+        Name for this family of connector.
+    number : int | str
+        Number identifying this specific connector instance. Can also be an alphanumeric string.
+    io : str or dict[str, str]
+        String or dictionary defining a mapping from one pin to another.
+    conn : tuple[str, int | str] - (name, number)
+        Reference another :class:`Connector` that will be used to define another mapping
+        from the output pins on this instance to names defined by the referenced
+        :class:`Connector`.
+
+    Attributes
+    ----------
+    name : str
+    number : int | str
+    mapping : dict[str, str]
+        Defined mapping. Mapping between pin alias names and underlying pin names. Might produce
+        another alias name if multiple layers of connectors used.
+    """
     def __init__(self, name, number, io, *, conn=None):
         self.name    = name
         self.number  = number

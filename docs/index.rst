@@ -14,5 +14,6 @@ Language & toolchain
    tutorial
    lang
    stdlib
+   buildsys
    platform
    changes

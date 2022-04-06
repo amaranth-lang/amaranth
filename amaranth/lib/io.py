@@ -54,7 +54,7 @@ class Pin(Record):
     or tristate buffers that may include a 1:n gearbox. (A 1:2 gearbox is typically called "DDR".)
 
     A :class:`Pin` is identical to a :class:`Record` that uses the corresponding :meth:`pin_layout`
-    except that it allos accessing the parameters like ``width`` as attributes. It is legal to use
+    except that it allows accessing the parameters like ``width`` as attributes. It is legal to use
     a plain :class:`Record` anywhere a :class:`Pin` is used, provided that these attributes are
     not necessary.
 
