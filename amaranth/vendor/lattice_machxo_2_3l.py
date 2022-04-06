@@ -154,6 +154,27 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
             -if {{name}}_impl/{{name}}_impl.bit -of {{name}}_sram.svf
         """,
     ]
+    # These numbers were extracted from
+    # "MachXO2 sysCLOCK PLL Design and Usage Guide"
+    _supported_osch_freqs = [
+        2.08, 2.15, 2.22, 2.29, 2.38, 2.46, 2.56, 2.66, 2.77, 2.89,
+        3.02, 3.17, 3.33, 3.50, 3.69, 3.91, 4.16, 4.29, 4.43, 4.59,
+        4.75, 4.93, 5.12, 5.32, 5.54, 5.78, 6.05, 6.33, 6.65, 7.00,
+        7.39, 7.82, 8.31, 8.58, 8.87, 9.17, 9.50, 9.85, 10.23, 10.64,
+        11.08, 11.57, 12.09, 12.67, 13.30, 14.00, 14.78, 15.65, 15.65, 16.63,
+        17.73, 19.00, 20.46, 22.17, 24.18, 26.60, 29.56, 33.25, 38.00, 44.33,
+        53.20, 66.50, 88.67, 133.00
+    ]
+
+    @property
+    def default_clk_constraint(self):
+        # Internal high-speed oscillator on MachXO2/MachXO3L devices.
+        # It can have a range of frequencies.
+        if self.default_clk == "OSCH":
+            assert self.osch_frequency in self._supported_osch_freqs
+            return Clock(int(self.osch_frequency * 1e6))
+        # Otherwise, use the defined Clock resource.
+        return super().default_clk_constraint
 
     def create_missing_domain(self, name):
         # Lattice MachXO2/MachXO3L devices have two global set/reset signals: PUR, which is driven at
@@ -164,7 +185,12 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         # relation to a user clock. To avoid this, a GSR/SGSR instance should be driven
         # synchronized to user clock.
         if name == "sync" and self.default_clk is not None:
-            clk_i = self.request(self.default_clk).i
+            using_osch = False
+            if self.default_clk == "OSCH":
+                using_osch = True
+                clk_i = Signal()
+            else:
+                clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
             else:
@@ -183,6 +209,13 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
                 # more reliable. (None of this is documented.)
                 Instance("SGSR", i_CLK=clk_i, i_GSR=gsr1),
             ]
+            if using_osch:
+                osch_freq = self.osch_frequency
+                if osch_freq not in self._supported_osch_freqs:
+                    raise ValueError("Frequency {!r} is not valid for OSCH clock. Valid frequencies are {!r}"
+                             .format(osch_freq, self._supported_osch_freqs))
+                osch_freq_param = "{:.2f}".format(float(osch_freq))
+                m.submodules += [ Instance("OSCH", p_NOM_FREQ=osch_freq_param, i_STDBY=Const(0), o_OSC=clk_i, o_SEDSTDBY=Signal()) ]
             # GSR implicitly connects to every appropriate storage element. As such, the sync
             # domain is reset-less; domains driven by other clocks would need to have dedicated
             # reset circuitry or otherwise meet setup/hold constraints on their own.
