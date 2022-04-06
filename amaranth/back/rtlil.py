@@ -652,6 +652,11 @@ class _LHSValueCompiler(_ValueCompiler):
         raise TypeError # :nocov:
 
     def on_Operator(self, value):
+        if value.operator in ("u", "s"):
+            # These operators are transparent on the LHS.
+            arg, = value.operands
+            return self(arg)
+
         raise TypeError # :nocov:
 
     def match_shape(self, value, new_bits, new_sign):

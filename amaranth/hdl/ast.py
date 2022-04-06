@@ -734,6 +734,11 @@ class Operator(Value):
         raise NotImplementedError("Operator {}/{} not implemented"
                                   .format(self.operator, len(op_shapes))) # :nocov:
 
+    def _lhs_signals(self):
+        if self.operator in ("u", "s"):
+            return union(op._lhs_signals() for op in self.operands)
+        return super()._lhs_signals()
+
     def _rhs_signals(self):
         return union(op._rhs_signals() for op in self.operands)
 
