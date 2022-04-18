@@ -43,8 +43,10 @@ def main_parser(parser=None):
     return parser
 
 
-def main_runner(parser, args, design, platform=None, name="top", ports=()):
+def main_runner(parser, args, design, platform=None, name="top", ports=(), prepareVerification=None, prepareSimulation=None):
     if args.action == "generate":
+        if not prepareVerification is None:
+            prepareVerification(design)
         fragment = Fragment.get(design, platform)
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
@@ -71,6 +73,8 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
         fragment = Fragment.get(design, platform)
         sim = Simulator(fragment)
         sim.add_clock(args.sync_period)
+        if not prepareSimulation is None:
+            prepareSimulation(sim, design)
         with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
 
