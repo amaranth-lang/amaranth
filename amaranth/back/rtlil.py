@@ -777,7 +777,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         with self._case.switch(test_sigspec, src=_src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
                 case_attrs = {}
-                if values in stmt.case_src_locs:
+                if values in stmt.case_src_locs and self.state.rtlil.emit_src:
                     case_attrs["src"] = _src(stmt.case_src_locs[values])
                 if isinstance(stmt.test, ast.Signal) and stmt.test.decoder:
                     decoded_values = []
