@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', 'pypy-3.7-v7.3.3']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11-dev', 'pypy-3.7-v7.3.3']
     steps:
     - name: Check out source code
       uses: actions/checkout@v2
@@ -38,6 +38,7 @@ jobs:
         export AMARANTH_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
         export PYTHONWARNINGS=error
         python -m coverage run -m unittest discover -t . -s tests
+        unset PYTHONWARNINGS
         codecov
   document:
     runs-on: ubuntu-latest
