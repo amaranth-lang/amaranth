@@ -1,6 +1,7 @@
 import os
 import tempfile
 from contextlib import contextmanager
+import sys
 
 from ..hdl import *
 from ..hdl.ast import SignalSet
@@ -224,20 +225,33 @@ class _RHSValueCompiler(_ValueCompiler):
         return f"0"
 
     def on_ArrayProxy(self, value):
+        use_pm = sys.version_info >= (3, 10)
         index_mask = (1 << len(value.index)) - 1
         gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
         gen_value = self.emitter.gen_var("rhs_proxy")
         if value.elems:
-            for index, elem in enumerate(value.elems):
-                if index == 0:
-                    self.emitter.append(f"if {index} == {gen_index}:")
-                else:
-                    self.emitter.append(f"elif {index} == {gen_index}:")
+            if use_pm:
+                self.emitter.append(f"match {gen_index}:")
                 with self.emitter.indent():
-                    self.emitter.append(f"{gen_value} = {self(elem)}")
-            self.emitter.append(f"else:")
-            with self.emitter.indent():
-                self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
+                    for index, elem in enumerate(value.elems):
+                        self.emitter.append(f"case {index}:")
+                        with self.emitter.indent():
+                            self.emitter.append(f"{gen_value} = {self(elem)}")
+                    self.emitter.append("case _:")
+                    with self.emitter.indent():
+                            self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
+            else:
+                for index, elem in enumerate(value.elems):
+                    if index == 0:
+                        self.emitter.append(f"if {index} == {gen_index}:")
+                    else:
+                        self.emitter.append(f"elif {index} == {gen_index}:")
+                    with self.emitter.indent():
+                        self.emitter.append(f"{gen_value} = {self(elem)}")
+                self.emitter.append(f"else:")
+                with self.emitter.indent():
+                    self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
+
             return gen_value
         else:
             return f"0"
@@ -316,19 +330,31 @@ class _LHSValueCompiler(_ValueCompiler):
 
     def on_ArrayProxy(self, value):
         def gen(arg):
+            use_pm = sys.version_info >= (3, 10)
             index_mask = (1 << len(value.index)) - 1
             gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask:#x}")
             if value.elems:
-                for index, elem in enumerate(value.elems):
-                    if index == 0:
-                        self.emitter.append(f"if {index} == {gen_index}:")
-                    else:
-                        self.emitter.append(f"elif {index} == {gen_index}:")
+                if use_pm:
+                    self.emitter.append(f"match {gen_index}:")
                     with self.emitter.indent():
-                        self(elem)(arg)
-                self.emitter.append(f"else:")
-                with self.emitter.indent():
-                    self(value.elems[-1])(arg)
+                        for index, elem in enumerate(value.elems):
+                            self.emitter.append(f"case {index}:")
+                            with self.emitter.indent():
+                                self(elem)(arg)
+                        self.emitter.append("case _:")
+                        with self.emitter.indent():
+                            self(value.elems[-1])(arg)
+                else:
+                    for index, elem in enumerate(value.elems):
+                        if index == 0:
+                            self.emitter.append(f"if {index} == {gen_index}:")
+                        else:
+                            self.emitter.append(f"elif {index} == {gen_index}:")
+                        with self.emitter.indent():
+                            self(elem)(arg)
+                    self.emitter.append(f"else:")
+                    with self.emitter.indent():
+                        self(value.elems[-1])(arg)
             else:
                 self.emitter.append(f"pass")
         return gen
