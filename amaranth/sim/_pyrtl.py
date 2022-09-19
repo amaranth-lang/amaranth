@@ -11,6 +11,7 @@ from ._base import BaseProcess
 
 __all__ = ["PyRTLProcess"]
 
+_USE_PATTERN_MATCHING = (sys.version_info >= (3, 10))
 
 class PyRTLProcess(BaseProcess):
     __slots__ = ("is_comb", "runnable", "passive", "run")
@@ -225,12 +226,11 @@ class _RHSValueCompiler(_ValueCompiler):
         return f"0"
 
     def on_ArrayProxy(self, value):
-        use_pm = sys.version_info >= (3, 10)
         index_mask = (1 << len(value.index)) - 1
         gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
         gen_value = self.emitter.gen_var("rhs_proxy")
         if value.elems:
-            if use_pm:
+            if _USE_PATTERN_MATCHING:
                 self.emitter.append(f"match {gen_index}:")
                 with self.emitter.indent():
                     for index, elem in enumerate(value.elems):
@@ -330,11 +330,10 @@ class _LHSValueCompiler(_ValueCompiler):
 
     def on_ArrayProxy(self, value):
         def gen(arg):
-            use_pm = sys.version_info >= (3, 10)
             index_mask = (1 << len(value.index)) - 1
             gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask:#x}")
             if value.elems:
-                if use_pm:
+                if _USE_PATTERN_MATCHING:
                     self.emitter.append(f"match {gen_index}:")
                     with self.emitter.indent():
                         for index, elem in enumerate(value.elems):
