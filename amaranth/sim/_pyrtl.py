@@ -125,11 +125,11 @@ class _RHSValueCompiler(_ValueCompiler):
     def on_Operator(self, value):
         def mask(value):
             value_mask = (1 << len(value)) - 1
-            return f"({value_mask} & {self(value)})"
+            return f"({value_mask:#x} & {self(value)})"
 
         def sign(value):
             if value.shape().signed:
-                return f"sign({mask(value)}, {-1 << (len(value) - 1)})"
+                return f"sign({mask(value)}, {-1 << (len(value) - 1):#x})"
             else: # unsigned
                 return mask(value)
 
@@ -192,11 +192,11 @@ class _RHSValueCompiler(_ValueCompiler):
         raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
 
     def on_Slice(self, value):
-        return f"({(1 << len(value)) - 1} & ({self(value.value)} >> {value.start}))"
+        return f"({(1 << len(value)) - 1:#x} & ({self(value.value)} >> {value.start}))"
 
     def on_Part(self, value):
         offset_mask = (1 << len(value.offset)) - 1
-        offset = f"({value.stride} * ({offset_mask} & {self(value.offset)}))"
+        offset = f"({value.stride} * ({offset_mask:#x} & {self(value.offset)}))"
         return f"({(1 << value.width) - 1} & " \
                f"{self(value.value)} >> {offset})"
 
@@ -205,7 +205,7 @@ class _RHSValueCompiler(_ValueCompiler):
         offset = 0
         for part in value.parts:
             part_mask = (1 << len(part)) - 1
-            gen_parts.append(f"(({part_mask} & {self(part)}) << {offset})")
+            gen_parts.append(f"(({part_mask:#x} & {self(part)}) << {offset})")
             offset += len(part)
         if gen_parts:
             return f"({' | '.join(gen_parts)})"
@@ -213,7 +213,7 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Repl(self, value):
         part_mask = (1 << len(value.value)) - 1
-        gen_part = self.emitter.def_var("repl", f"{part_mask} & {self(value.value)}")
+        gen_part = self.emitter.def_var("repl", f"{part_mask:#x} & {self(value.value)}")
         gen_parts = []
         offset = 0
         for _ in range(value.count):
@@ -225,7 +225,7 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_ArrayProxy(self, value):
         index_mask = (1 << len(value.index)) - 1
-        gen_index = self.emitter.def_var("rhs_index", f"{index_mask} & {self(value.index)}")
+        gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
         gen_value = self.emitter.gen_var("rhs_proxy")
         if value.elems:
             for index, elem in enumerate(value.elems):
@@ -272,9 +272,9 @@ class _LHSValueCompiler(_ValueCompiler):
         def gen(arg):
             value_mask = (1 << len(value)) - 1
             if value.shape().signed:
-                value_sign = f"sign({value_mask} & {arg}, {-1 << (len(value) - 1)})"
+                value_sign = f"sign({value_mask:#x} & {arg}, {-1 << (len(value) - 1)})"
             else: # unsigned
-                value_sign = f"{value_mask} & {arg}"
+                value_sign = f"{value_mask:#x} & {arg}"
             self.emitter.append(f"next_{self.state.get_signal(value)} = {value_sign}")
         return gen
 
@@ -287,18 +287,18 @@ class _LHSValueCompiler(_ValueCompiler):
         def gen(arg):
             width_mask = (1 << (value.stop - value.start)) - 1
             self(value.value)(f"({self.lrhs(value.value)} & " \
-                f"{~(width_mask << value.start)} | " \
-                f"(({width_mask} & {arg}) << {value.start}))")
+                f"{~(width_mask << value.start):#x} | " \
+                f"(({width_mask:#x} & {arg}) << {value.start}))")
         return gen
 
     def on_Part(self, value):
         def gen(arg):
             width_mask = (1 << value.width) - 1
             offset_mask = (1 << len(value.offset)) - 1
-            offset = f"({value.stride} * ({offset_mask} & {self.rrhs(value.offset)}))"
+            offset = f"({value.stride} * ({offset_mask:#x} & {self.rrhs(value.offset)}))"
             self(value.value)(f"({self.lrhs(value.value)} & " \
-                f"~({width_mask} << {offset}) | " \
-                f"(({width_mask} & {arg}) << {offset}))")
+                f"~({width_mask:#x} << {offset}) | " \
+                f"(({width_mask:#x} & {arg}) << {offset}))")
         return gen
 
     def on_Cat(self, value):
@@ -307,7 +307,7 @@ class _LHSValueCompiler(_ValueCompiler):
             offset = 0
             for part in value.parts:
                 part_mask = (1 << len(part)) - 1
-                self(part)(f"({part_mask} & ({gen_arg} >> {offset}))")
+                self(part)(f"({part_mask:#x} & ({gen_arg} >> {offset}))")
                 offset += len(part)
         return gen
 
@@ -317,7 +317,7 @@ class _LHSValueCompiler(_ValueCompiler):
     def on_ArrayProxy(self, value):
         def gen(arg):
             index_mask = (1 << len(value.index)) - 1
-            gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask}")
+            gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask:#x}")
             if value.elems:
                 for index, elem in enumerate(value.elems):
                     if index == 0:
@@ -348,14 +348,14 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 
     def on_Assign(self, stmt):
         gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
-        gen_rhs = f"({(1 << len(stmt.rhs)) - 1} & {gen_rhs_value})"
+        gen_rhs = f"({(1 << len(stmt.rhs)) - 1:#x} & {gen_rhs_value})"
         if stmt.rhs.shape().signed:
-            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1)})"
+            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1):#x})"
         return self.lhs(stmt.lhs)(gen_rhs)
 
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
-        gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1} & {gen_test_value}")
+        gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1:#x} & {gen_test_value}")
         for index, (patterns, stmts) in enumerate(stmt.cases.items()):
             gen_checks = []
             if not patterns:
