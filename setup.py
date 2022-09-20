@@ -44,6 +44,7 @@ setup(
         "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
         "pyvcd>=0.2.2,<0.4", # for amaranth.pysim
         "Jinja2~=3.0",  # for amaranth.build
+        "MarkupSafe<2.1.0" # for amaranth_boards
     ],
     extras_require={
         # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
