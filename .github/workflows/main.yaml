@@ -24,7 +24,8 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install coverage codecov yowasp-yosys
+        pip install coverage codecov
+        pip install 'yowasp-yosys==0.20.dev398' # latest version that works on Python 3.7
         pip install -e .[builtin-yosys]
     - name: Preserve Wasm cache
       uses: actions/cache@v1
