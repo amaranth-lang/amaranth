@@ -1798,7 +1798,7 @@ class SignalKey:
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
-            raise TypeError("Object {!r} cannot be compared to a SignalKey".format(signal))
+            raise TypeError("Object {!r} cannot be compared to a SignalKey".format(other))
         return self._intern < other._intern
 
     def __repr__(self):
