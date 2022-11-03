@@ -178,7 +178,8 @@ class GrayDecoder(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        m.d.comb += self.o[-1].eq(self.i[-1])
-        for i in reversed(range(self.width - 1)):
-            m.d.comb += self.o[i].eq(self.o[i + 1] ^ self.i[i])
+        rhs = Const(0)
+        for i in reversed(range(self.width)):
+            rhs = rhs ^ self.i[i]
+            m.d.comb += self.o[i].eq(rhs)
         return m
