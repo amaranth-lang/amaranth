@@ -330,6 +330,14 @@ class XilinxPlatform(TemplatedPlatform):
         "xc7a35ticsg324-1L": "xc7a35tcsg324-1", # Arty-A7
     }
 
+    _symbiflow_bitstream_device_map = {
+            "xc7a35ticsg324-1L": "artix7",
+    }
+
+    _symbiflow_device_map = {
+            "xc7a35ticsg324-1L": "xc7a50t_test",
+    }
+
     _symbiflow_required_tools = [
         "symbiflow_synth",
         "symbiflow_pack",
@@ -378,12 +386,13 @@ class XilinxPlatform(TemplatedPlatform):
             -t {{name}}
             -v {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
             -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_bitstream_device_map.get(platform._part, platform._part)}}
             -x {{name}}.xdc
         """,
         r"""
         {{invoke_tool("symbiflow_pack")}}
             -e {{name}}.eblif
-            -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
             -s {{name}}.sdc
         """,
         r"""
@@ -392,23 +401,27 @@ class XilinxPlatform(TemplatedPlatform):
             -p {{name}}.pcf
             -n {{name}}.net
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_route")}}
             -e {{name}}.eblif
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_write_fasm")}}
             -e {{name}}.eblif
             -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
         """,
         r"""
         {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
             -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
+            -d {{platform._symbiflow_bitstream_device_map.get(platform._part, platform._part)}}
             -b {{name}}.bit
         """
     ]
