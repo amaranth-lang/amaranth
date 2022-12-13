@@ -8,6 +8,7 @@ Platform integration
 .. toctree::
    :maxdepth: 2
 
+   platform/gowin
    platform/intel
    platform/lattice-ecp5
    platform/lattice-ice40

@@ -110,6 +110,7 @@ Platform integration changes
 
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform`.
 * Added: Xray toolchain support in :class:`vendor.xilinx.XilinxPlatform`.
+* Added: :class:`vendor.gowin.GowinPlatform`.
 * Removed: (deprecated in 0.3) :mod:`lattice_machxo2`
 * Removed: (deprecated in 0.3) :class:`lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform` SVF programming vector ``{{name}}.svf``.
 * Removed: (deprecated in 0.3) :class:`xilinx_spartan_3_6.XilinxSpartan3APlatform`, :class:`xilinx_spartan_3_6.XilinxSpartan6Platform`, :class:`xilinx_7series.Xilinx7SeriesPlatform`, :class:`xilinx_ultrascale.XilinxUltrascalePlatform`.
