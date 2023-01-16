@@ -1691,6 +1691,8 @@ class ValueKey:
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
         elif isinstance(self.value, Sample):
             self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
+        elif isinstance(self.value, Repl):
+            self._hash = hash((ValueKey(self.value.value), self.value.count))
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
@@ -1729,6 +1731,9 @@ class ValueKey:
         elif isinstance(self.value, Cat):
             return all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value.parts, other.value.parts))
+        elif isinstance(self.value, Repl):
+            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
+                    self.value.count == other.value.count)
         elif isinstance(self.value, ArrayProxy):
             return (ValueKey(self.value.index) == ValueKey(other.value.index) and
                     len(self.value.elems) == len(other.value.elems) and
