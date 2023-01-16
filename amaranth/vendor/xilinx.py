@@ -343,14 +343,20 @@ class XilinxPlatform(TemplatedPlatform):
 
     _symbiflow_part_map = {
         "xc7a35ticsg324-1L": "xc7a35tcsg324-1", # Arty-A7
+        "xc7a15tcpg236-1": "xc7a15tcpg236-1", # Cmod-A7-15
+        "xc7a35tcpg236-1": "xc7a35tcpg236-1", # Cmod-A7-35
     }
 
     _symbiflow_bitstream_device_map = {
             "xc7a35ticsg324-1L": "artix7",
+            "xc7a15tcpg236-1": "artix7",
+            "xc7a35tcpg236-1": "artix7",
     }
 
     _symbiflow_device_map = {
             "xc7a35ticsg324-1L": "xc7a50t_test",
+            "xc7a15tcpg236-1": "xc7a50t_test",
+            "xc7a35tcpg236-1": "xc7a50t_test",
     }
 
     _symbiflow_required_tools = [
