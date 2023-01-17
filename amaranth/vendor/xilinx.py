@@ -358,11 +358,11 @@ class XilinxPlatform(TemplatedPlatform):
     def symbiflow_bitstream_device(self):
         if self._part.startswith("xc7a"):
             return "artix7"
-        if self._part.startswith("xc7k"):
+        elif self._part.startswith("xc7k"):
             return "kintex7"
-        if self._part.startswith("xc7z"):
+        elif self._part.startswith("xc7z"):
             return "zynq7"
-        if self._part.startswith("xc7s"):
+        elif self._part.startswith("xc7s"):
             return "spartan7"
         else:
             print("Unknown bitstream device for part {}".format(self._part))
