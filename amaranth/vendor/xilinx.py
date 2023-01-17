@@ -4,6 +4,7 @@ from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
+import re
 
 __all__ = ["XilinxPlatform"]
 
@@ -341,23 +342,45 @@ class XilinxPlatform(TemplatedPlatform):
 
     # Symbiflow templates
 
-    _symbiflow_part_map = {
-        "xc7a35ticsg324-1L": "xc7a35tcsg324-1", # Arty-A7
-        "xc7a15tcpg236-1": "xc7a15tcpg236-1", # Cmod-A7-15
-        "xc7a35tcpg236-1": "xc7a35tcpg236-1", # Cmod-A7-35
-    }
+    # symbiflow does not distinguish between speed grades
+    # TODO: join with _xray_part
+    @property
+    def symbiflow_part(self):
+        # drop the trailing speed grade letter(s), if any
+        part = re.sub("[^\d]+$", "", self._part)
+        # drop temp/speed grade letters after family name, if any
+        part = re.sub("(.{4}\d+t)[il]", r"\1", part)
+        return part
 
-    _symbiflow_bitstream_device_map = {
-            "xc7a35ticsg324-1L": "artix7",
-            "xc7a15tcpg236-1": "artix7",
-            "xc7a35tcpg236-1": "artix7",
-    }
+    # bitstream device name according to prjxray-db path
+    # TODO: join with _xray_family
+    @property
+    def symbiflow_bitstream_device(self):
+        if self._part.startswith("xc7a"):
+            return "artix7"
+        if self._part.startswith("xc7k"):
+            return "kintex7"
+        if self._part.startswith("xc7z"):
+            return "zynq7"
+        if self._part.startswith("xc7s"):
+            return "spartan7"
+        else:
+            print("Unknown bitstream device for part {}".format(self._part))
+            raise ValueError
 
-    _symbiflow_device_map = {
-            "xc7a35ticsg324-1L": "xc7a50t_test",
-            "xc7a15tcpg236-1": "xc7a50t_test",
-            "xc7a35tcpg236-1": "xc7a50t_test",
-    }
+    # device naming according to part_db.yml of f4pga project
+    @property
+    def symbiflow_device(self):
+        if self._part.startswith("xc7a35") or self._part.startswith("xc7a50"):
+            return "xc7a50t_test"
+        elif self._part.startswith("xc7a100"):
+            return "xc7a100t_test"
+        elif self._part.startswith("xc7a200"):
+            return "xc7a200t_test"
+        else:
+            print("Unknown symbiflow device for part {}".format(self._part))
+            raise ValueError
+
 
     _symbiflow_required_tools = [
         "symbiflow_synth",
@@ -406,14 +429,14 @@ class XilinxPlatform(TemplatedPlatform):
         {{invoke_tool("symbiflow_synth")}}
             -t {{name}}
             -v {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
-            -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
-            -d {{platform._symbiflow_bitstream_device_map.get(platform._part, platform._part)}}
+            -p {{platform.symbiflow_part}}
+            -d {{platform.symbiflow_bitstream_device}}
             -x {{name}}.xdc
         """,
         r"""
         {{invoke_tool("symbiflow_pack")}}
             -e {{name}}.eblif
-            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
+            -d {{platform.symbiflow_device}}
             -s {{name}}.sdc
         """,
         r"""
@@ -421,28 +444,29 @@ class XilinxPlatform(TemplatedPlatform):
             -e {{name}}.eblif
             -p {{name}}.pcf
             -n {{name}}.net
-            -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
-            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
+            -P {{platform.symbiflow_part}}
+            -d {{platform.symbiflow_device}}
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_route")}}
             -e {{name}}.eblif
-            -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
-            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
+            -P {{platform.symbiflow_part}}
+            -d {{platform.symbiflow_device}}
+            -s {{name}}.sdc
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_write_fasm")}}
             -e {{name}}.eblif
-            -P {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
-            -d {{platform._symbiflow_device_map.get(platform._part, platform._part)}}
+            -P {{platform.symbiflow_part}}
+            -d {{platform.symbiflow_device}}
         """,
         r"""
         {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
-            -p {{platform._symbiflow_part_map.get(platform._part, platform._part)}}
-            -d {{platform._symbiflow_bitstream_device_map.get(platform._part, platform._part)}}
+            -p {{platform.symbiflow_part}}
+            -d {{platform.symbiflow_bitstream_device}}
             -b {{name}}.bit
         """
     ]
