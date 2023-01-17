@@ -854,7 +854,7 @@ class Cat(Value):
     Returns
     -------
     Value, inout
-        Resulting ``Value`` obtained by concatentation.
+        Resulting ``Value`` obtained by concatenation.
     """
     def __init__(self, *args, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)

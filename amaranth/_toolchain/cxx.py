@@ -12,7 +12,7 @@ def build_cxx(*, cxx_sources, output_name, include_dirs, macros):
 
     cwd = os.getcwd()
     try:
-        # Unforuntately, `ccompiler.compile` assumes the paths are relative, and interprets
+        # Unfortunately, `ccompiler.compile` assumes the paths are relative, and interprets
         # the directory name of the source path specially. That makes it necessary to build in
         # the output directory directly.
         os.chdir(build_dir.name)

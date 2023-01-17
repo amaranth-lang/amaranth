@@ -654,9 +654,9 @@ class XilinxPlatform(TemplatedPlatform):
         assert False
 
     def create_missing_domain(self, name):
-        # Xilinx devices have a global write enable (GWE) signal that asserted during configuraiton
+        # Xilinx devices have a global write enable (GWE) signal that asserted during configuration
         # and deasserted once it ends. Because it is an asynchronous signal (GWE is driven by logic
-        # syncronous to configuration clock, which is not used by most designs), even though it is
+        # synchronous to configuration clock, which is not used by most designs), even though it is
         # a low-skew global network, its deassertion may violate a setup/hold constraint with
         # relation to a user clock. The recommended solution is to use a BUFGCE driven by the EOS
         # signal (if available). For details, see:

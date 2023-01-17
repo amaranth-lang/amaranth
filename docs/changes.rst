@@ -64,7 +64,7 @@ Language changes
 * Added: :meth:`Value.shift_left` and :meth:`Value.shift_right`.
 * Added: :class:`ValueCastable`.
 * Deprecated: :class:`ast.UserValue`; use :class:`ValueCastable` instead.
-* Added: Divison and modulo operators can be used with a negative divisor.
+* Added: Division and modulo operators can be used with a negative divisor.
 
 
 Standard library changes
