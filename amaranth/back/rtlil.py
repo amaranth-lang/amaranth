@@ -1046,7 +1046,7 @@ def convert_fragment(fragment, name="top", *, emit_src=True):
 def convert(elaboratable, name="top", platform=None, ports=None, *, emit_src=True, **kwargs):
     # TODO(amaranth-0.4): remove
     if ports is None:
-        warnings.warn("Implicit port determination is deprecated, specify ports explictly",
+        warnings.warn("Implicit port determination is deprecated, specify ports explicitly",
                       DeprecationWarning, stacklevel=2)
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
