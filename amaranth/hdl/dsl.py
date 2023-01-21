@@ -307,6 +307,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
         for pattern in patterns:
+            if isinstance(pattern, Value):
+                pattern = pattern._as_const()
             if not isinstance(pattern, (int, str, Enum)):
                 raise SyntaxError("Case pattern must be an integer, a string, or an enumeration, "
                                   "not {!r}"

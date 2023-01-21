@@ -423,6 +423,8 @@ class Value(metaclass=ABCMeta):
         """
         matches = []
         for pattern in patterns:
+            if isinstance(pattern, Value):
+                pattern = pattern._as_const()
             if not isinstance(pattern, (int, str, Enum)):
                 raise SyntaxError("Match pattern must be an integer, a string, or an enumeration, "
                                   "not {!r}"

@@ -446,6 +446,21 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    def test_Switch_Cat(self):
+        m = Module()
+        v1 = C(1, 2)
+        v3 = C(3, 2)
+        with m.Switch(self.w1):
+            with m.Case(Cat(v1, v3)):
+                m.d.comb += self.c1.eq(1)
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig w1)
+                (case 1101 (eq (sig c1) (const 1'd1)))
+            )
+        )
+        """)
+
     def test_Case_width_wrong(self):
         class Color(Enum):
             RED = 0b10101010

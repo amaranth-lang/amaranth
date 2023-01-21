@@ -612,6 +612,14 @@ class OperatorTestCase(FHDLTestCase):
         (== (sig s) (const 1'sd-1))
         """)
 
+    def test_matches_Cat(self):
+        s = Signal(4)
+        v1 = C(1, 2)
+        v3 = C(3, 2)
+        self.assertRepr(s.matches(Cat(v1, v3)), """
+        (== (sig s) (const 4'd13))
+        """)
+
     def test_matches_width_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
