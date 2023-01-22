@@ -168,12 +168,12 @@ class Value(metaclass=ABCMeta):
         while True:
             if isinstance(obj, Value):
                 return obj
-            elif isinstance(obj, int):
-                return Const(obj)
-            elif isinstance(obj, Enum):
-                return Const(obj.value, Shape.cast(type(obj)))
             elif isinstance(obj, ValueCastable):
                 new_obj = obj.as_value()
+            elif isinstance(obj, Enum):
+                return Const(obj.value, Shape.cast(type(obj)))
+            elif isinstance(obj, int):
+                return Const(obj)
             else:
                 raise TypeError("Object {!r} cannot be converted to an Amaranth value".format(obj))
             if new_obj is obj:
