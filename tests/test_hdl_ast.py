@@ -801,6 +801,15 @@ class CatTestCase(FHDLTestCase):
             c = Cat(Color.RED, Color.BLUE)
         self.assertEqual(repr(c), "(cat (const 2'd1) (const 2'd2))")
 
+    def test_intenum(self):
+        class Color(int, Enum):
+            RED  = 1
+            BLUE = 2
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="error", category=SyntaxWarning)
+            c = Cat(Color.RED, Color.BLUE)
+        self.assertEqual(repr(c), "(cat (const 2'd1) (const 2'd2))")
+
     def test_int_wrong(self):
         with self.assertWarnsRegex(SyntaxWarning,
                 r"^Argument #1 of Cat\(\) is a bare integer 2 used in bit vector context; "
