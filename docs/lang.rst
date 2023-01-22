@@ -235,6 +235,9 @@ Casting a value from an integer ``i`` is a shorthand for ``Const(i)``:
    >>> Value.cast(5)
    (const 3'd5)
 
+.. note::
+
+   If a value subclasses :class:`enum.IntEnum` or its class otherwise inherits from both :class:`int` and :class:`Enum`, it is treated as an enumeration.
 
 Values from enumeration members
 -------------------------------
@@ -246,6 +249,10 @@ Casting a value from an enumeration member ``m`` is a shorthand for ``Const(m.va
    >>> Value.cast(Direction.LEFT)
    (const 2'd1)
 
+
+.. note::
+
+   If a value subclasses :class:`enum.IntEnum` or its class otherwise inherits from both :class:`int` and :class:`Enum`, it is treated as an enumeration.
 
 .. _lang-signals:
 

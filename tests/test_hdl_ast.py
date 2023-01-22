@@ -23,6 +23,12 @@ class StringEnum(Enum):
     BAR = "b"
 
 
+class TypedEnum(int, Enum):
+    FOO = 1
+    BAR = 2
+    BAZ = 3
+
+
 class ShapeTestCase(FHDLTestCase):
     def test_make(self):
         s1 = Shape()
@@ -198,6 +204,11 @@ class ValueTestCase(FHDLTestCase):
         e2 = Value.cast(SignedEnum.FOO)
         self.assertIsInstance(e2, Const)
         self.assertEqual(e2.shape(), signed(2))
+
+    def test_cast_typedenum(self):
+        e1 = Value.cast(TypedEnum.FOO)
+        self.assertIsInstance(e1, Const)
+        self.assertEqual(e1.shape(), unsigned(2))
 
     def test_cast_enum_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -780,6 +791,15 @@ class CatTestCase(FHDLTestCase):
         with warnings.catch_warnings():
             warnings.filterwarnings(action="error", category=SyntaxWarning)
             Cat(0, 1, 1, 0)
+
+    def test_enum(self):
+        class Color(Enum):
+            RED  = 1
+            BLUE = 2
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="error", category=SyntaxWarning)
+            c = Cat(Color.RED, Color.BLUE)
+        self.assertEqual(repr(c), "(cat (const 2'd1) (const 2'd2))")
 
     def test_int_wrong(self):
         with self.assertWarnsRegex(SyntaxWarning,
