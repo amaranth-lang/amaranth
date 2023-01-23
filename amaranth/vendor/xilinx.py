@@ -345,7 +345,7 @@ class XilinxPlatform(TemplatedPlatform):
     # symbiflow does not distinguish between speed grades
     # TODO: join with _xray_part
     @property
-    def symbiflow_part(self):
+    def _symbiflow_part(self):
         # drop the trailing speed grade letter(s), if any
         part = re.sub("[^\d]+$", "", self._part)
         # drop temp/speed grade letters after family name, if any
@@ -355,7 +355,7 @@ class XilinxPlatform(TemplatedPlatform):
     # bitstream device name according to prjxray-db path
     # TODO: join with _xray_family
     @property
-    def symbiflow_bitstream_device(self):
+    def _symbiflow_bitstream_device(self):
         if self._part.startswith("xc7a"):
             return "artix7"
         elif self._part.startswith("xc7k"):
@@ -370,7 +370,7 @@ class XilinxPlatform(TemplatedPlatform):
 
     # device naming according to part_db.yml of f4pga project
     @property
-    def symbiflow_device(self):
+    def _symbiflow_device(self):
         if self._part.startswith("xc7a35") or self._part.startswith("xc7a50"):
             return "xc7a50t_test"
         elif self._part.startswith("xc7a100"):
@@ -429,14 +429,14 @@ class XilinxPlatform(TemplatedPlatform):
         {{invoke_tool("symbiflow_synth")}}
             -t {{name}}
             -v {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%} {{file}} {% endfor %} {{name}}.v
-            -p {{platform.symbiflow_part}}
-            -d {{platform.symbiflow_bitstream_device}}
+            -p {{platform._symbiflow_part}}
+            -d {{platform._symbiflow_bitstream_device}}
             -x {{name}}.xdc
         """,
         r"""
         {{invoke_tool("symbiflow_pack")}}
             -e {{name}}.eblif
-            -d {{platform.symbiflow_device}}
+            -d {{platform._symbiflow_device}}
             -s {{name}}.sdc
         """,
         r"""
@@ -444,29 +444,29 @@ class XilinxPlatform(TemplatedPlatform):
             -e {{name}}.eblif
             -p {{name}}.pcf
             -n {{name}}.net
-            -P {{platform.symbiflow_part}}
-            -d {{platform.symbiflow_device}}
+            -P {{platform._symbiflow_part}}
+            -d {{platform._symbiflow_device}}
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_route")}}
             -e {{name}}.eblif
-            -P {{platform.symbiflow_part}}
-            -d {{platform.symbiflow_device}}
+            -P {{platform._symbiflow_part}}
+            -d {{platform._symbiflow_device}}
             -s {{name}}.sdc
             -s {{name}}.sdc
         """,
         r"""
         {{invoke_tool("symbiflow_write_fasm")}}
             -e {{name}}.eblif
-            -P {{platform.symbiflow_part}}
-            -d {{platform.symbiflow_device}}
+            -P {{platform._symbiflow_part}}
+            -d {{platform._symbiflow_device}}
         """,
         r"""
         {{invoke_tool("symbiflow_write_bitstream")}}
             -f {{name}}.fasm
-            -p {{platform.symbiflow_part}}
-            -d {{platform.symbiflow_bitstream_device}}
+            -p {{platform._symbiflow_part}}
+            -d {{platform._symbiflow_bitstream_device}}
             -b {{name}}.bit
         """
     ]
