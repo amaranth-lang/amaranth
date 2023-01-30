@@ -84,8 +84,9 @@ class BuildPlan:
                 if dirname:
                     os.makedirs(dirname, exist_ok=True)
 
-                mode = "wt" if isinstance(content, str) else "wb"
-                with open(filename, mode) as f:
+                if isinstance(content, str):
+                    content = content.encode("utf-8")
+                with open(filename, "wb") as f:
                     f.write(content)
 
             if run_script:
