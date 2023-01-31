@@ -2,6 +2,7 @@ import io
 from collections import OrderedDict
 from contextlib import contextmanager
 import warnings
+import re
 
 from .._utils import bits_for, flatten
 from ..hdl import ast, ir, mem, xfrm
@@ -150,6 +151,9 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
             self._append("  wire width {} {}\n", width, name)
         else:
             assert port_kind in ("input", "output", "inout")
+            # By convention, Yosys ports named $\d+ are positional, so there is no way to use
+            # a port with such a name. See amaranth-lang/amaranth#733.
+            assert port_id is not None
             self._append("  wire width {} {} {} {}\n", width, port_kind, port_id, name)
         return name
 
@@ -177,6 +181,9 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
                 self._append("    parameter \\{} {}\n",
                              param, _const(value))
         for port, wire in ports.items():
+            # By convention, Yosys ports named $\d+ are positional. Amaranth does not support
+            # connecting cell ports by position. See amaranth-lang/amaranth#733.
+            assert not re.match(r"^\$\d+$", port)
             self._append("    connect {} {}\n", port, wire)
         self._append("  end\n")
         return name
