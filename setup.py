@@ -32,8 +32,7 @@ def doc_version():
 setup(
     name="amaranth",
     use_scm_version=scm_version(),
-    author="whitequark",
-    author_email="whitequark@whitequark.org",
+    author="Amaranth HDL contributors",
     description="Amaranth hardware definition language",
     #long_description="""TODO""",
     license="BSD",
