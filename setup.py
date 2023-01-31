@@ -54,7 +54,6 @@ setup(
     entry_points={
         "console_scripts": [
             "amaranth-rpc = amaranth.rpc:main",
-            "nmigen-rpc = nmigen.rpc:main",
         ]
     },
     project_urls={

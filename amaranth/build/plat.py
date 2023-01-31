@@ -69,19 +69,13 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 yield filename
 
     @property
-    def _deprecated_toolchain_env_vars(self):
-        return (
-            f"NMIGEN_ENV_{self.toolchain}",
-            f"AMARANTH_ENV_{self.toolchain}",
-        )
-
-    @property
     def _toolchain_env_var(self):
         return f"AMARANTH_ENV_{tool_env_var(self.toolchain)}"
 
+    # TODO(amaranth-0.5): remove
     @property
     def _all_toolchain_env_vars(self):
-        return self._deprecated_toolchain_env_vars + (self._toolchain_env_var,)
+        return (f"AMARANTH_ENV_{self.toolchain}", self._toolchain_env_var,)
 
     def build(self, elaboratable, name="top",
               build_dir="build", do_build=True,
@@ -327,17 +321,14 @@ class TemplatedPlatform(Platform):
         # expected_type parameter is used to assert the type of kwargs, passing `None` will disable
         # type checking.
         def _extract_override(var, *, expected_type):
-            deprecated_var_env = "NMIGEN_{}".format(var)
             var_env = "AMARANTH_{}".format(var)
-            if deprecated_var_env in os.environ or var_env in os.environ:
+            if var_env in os.environ:
                 # On Windows, there is no way to define an "empty but set" variable; it is tempting
                 # to use a quoted empty string, but it doesn't do what one would expect. Recognize
                 # this as a useful pattern anyway, and treat `set VAR=""` on Windows the same way
                 # `export VAR=` is treated on Linux.
                 if var_env in os.environ:
                     var_env_value = os.environ[var_env]
-                elif deprecated_var_env in os.environ:
-                    var_env_value = os.environ[deprecated_var_env]
                 return re.sub(r'^\"\"$', "", var_env_value)
             elif var in kwargs:
                 if not isinstance(kwargs[var], expected_type) and not expected_type is None:

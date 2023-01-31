@@ -9,14 +9,18 @@ Next version
 
 Support for Python 3.6 has been dropped, and support for Python 3.11 has been added.
 
-Features deprecated in version 0.3 have been removed.
+Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
+
 
 Migrating from version 0.3
 --------------------------
 
 Apply the following changes to code written against Amaranth 0.2 to migrate it to version 0.3:
 
+* Update shell environment to use ``AMARANTH_*`` environment variables instead of ``NMIGEN_*`` environment variables.
 * Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>``name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
+
+While code that uses the features listed as deprecated below will work in Amaranth 0.3, they will be removed in the next version.
 
 
 Language changes
@@ -89,6 +93,7 @@ Language changes
 * Added: :class:`ValueCastable`.
 * Deprecated: :class:`ast.UserValue`; use :class:`ValueCastable` instead.
 * Added: Division and modulo operators can be used with a negative divisor.
+* Deprecated: ``# nmigen:`` linter instructions at the beginning of file; use ``# amaranth:`` instead.
 
 
 Standard library changes
@@ -121,6 +126,7 @@ Toolchain changes
 * Deprecated: :class:`test.utils.FHDLTestCase`, with no replacement.
 * Deprecated: :func:`back.rtlil.convert()` and :func:`back.verilog.convert()` without an explicit `ports=` argument.
 * Changed: VCD output now uses a top-level "bench" module that contains testbench only signals.
+* Deprecated: ``NMIGEN_*`` environment variables; use ``AMARANTH_*`` environment variables instead.
 
 
 Platform integration changes
