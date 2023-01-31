@@ -53,17 +53,18 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_compare_tuple_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Shapes may be compared with other Shapes and \(int, bool\) tuples, not \(2, 3\)$"):
+                r"^Shapes may be compared with other Shapes and \(int, bool\) tuples, "
+                r"not \(2, 3\)$"):
             Shape(1, True) == (2, 3)
 
     def test_repr(self):
         self.assertEqual(repr(Shape()), "unsigned(1)")
         self.assertEqual(repr(Shape(2, True)), "signed(2)")
 
-    def test_tuple(self):
-        width, signed = Shape()
-        self.assertEqual(width, 1)
-        self.assertEqual(signed, False)
+    def test_convert_tuple_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^cannot unpack non-iterable Shape object$"):
+            width, signed = Shape()
 
     def test_unsigned(self):
         s1 = unsigned(2)
@@ -95,19 +96,10 @@ class ShapeTestCase(FHDLTestCase):
                 r"^Width must be a non-negative integer, not -1$"):
             Shape.cast(-1)
 
-    def test_cast_tuple(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            s1 = Shape.cast((1, True))
-            self.assertEqual(s1.width, 1)
-            self.assertEqual(s1.signed, True)
-
     def test_cast_tuple_wrong(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            with self.assertRaisesRegex(TypeError,
-                    r"^Width must be a non-negative integer, not -1$"):
-                Shape.cast((-1, True))
+        with self.assertRaisesRegex(TypeError,
+                r"^Object \(1, True\) cannot be converted to an Amaranth shape$"):
+            Shape.cast((1, True))
 
     def test_cast_range(self):
         s1 = Shape.cast(range(0, 8))

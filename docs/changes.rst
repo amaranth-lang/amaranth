@@ -24,6 +24,7 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
+* Removed: casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.

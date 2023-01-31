@@ -210,8 +210,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
     def _check_signed_cond(self, cond):
         cond = Value.cast(cond)
-        width, signed = cond.shape()
-        if signed:
+        if cond.shape().signed:
             warnings.warn("Signed values in If/Elif conditions usually result from inverting "
                           "Python booleans with ~, which leads to unexpected results. "
                           "Replace `~flag` with `not flag`. (If this is a false positive, "

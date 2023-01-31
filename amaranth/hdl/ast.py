@@ -78,10 +78,6 @@ class Shape:
         self.width = width
         self.signed = signed
 
-    # TODO(nmigen-0.4): remove
-    def __iter__(self):
-        return iter((self.width, self.signed))
-
     @staticmethod
     def cast(obj, *, src_loc_at=0):
         while True:
@@ -89,14 +85,6 @@ class Shape:
                 return obj
             elif isinstance(obj, int):
                 return Shape(obj)
-            # TODO(nmigen-0.4): remove
-            elif isinstance(obj, tuple):
-                width, signed = obj
-                warnings.warn("instead of `{tuple}`, use `{constructor}({width})`"
-                              .format(constructor="signed" if signed else "unsigned", width=width,
-                                      tuple=obj),
-                              DeprecationWarning, stacklevel=2 + src_loc_at)
-                return Shape(width, signed)
             elif isinstance(obj, range):
                 if len(obj) == 0:
                     return Shape(0, obj.start < 0)
@@ -216,8 +204,7 @@ class Value(metaclass=ABCMeta):
         return Operator("//", [other, self])
 
     def __check_shamt(self):
-        width, signed = self.shape()
-        if signed:
+        if self.shape().signed:
             # Neither Python nor HDLs implement shifts by negative values; prohibit any shifts
             # by a signed value to make sure the shift amount can always be interpreted as
             # an unsigned value.
@@ -264,8 +251,7 @@ class Value(metaclass=ABCMeta):
         return Operator(">=", [self, other])
 
     def __abs__(self):
-        width, signed = self.shape()
-        if signed:
+        if self.shape().signed:
             return Mux(self >= 0, self, -self)
         else:
             return self
@@ -607,10 +593,9 @@ class Const(Value):
 
     @staticmethod
     def normalize(value, shape):
-        width, signed = shape
-        mask = (1 << width) - 1
+        mask = (1 << shape.width) - 1
         value &= mask
-        if signed and value >> (width - 1):
+        if shape.signed and value >> (shape.width - 1):
             value |= ~mask
         return value
 
@@ -623,8 +608,9 @@ class Const(Value):
             shape = Shape(shape, signed=self.value < 0)
         else:
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
-        self.width, self.signed = shape
-        self.value = self.normalize(self.value, shape)
+        self.width  = shape.width
+        self.signed = shape.signed
+        self.value  = self.normalize(self.value, shape)
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -645,10 +631,9 @@ C = Const  # shorthand
 class AnyValue(Value, DUID):
     def __init__(self, shape, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        self.width, self.signed = Shape.cast(shape, src_loc_at=1 + src_loc_at)
-        if not isinstance(self.width, int) or self.width < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}"
-                            .format(self.width))
+        shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
+        self.width  = shape.width
+        self.signed = shape.signed
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -678,55 +663,53 @@ class Operator(Value):
 
     def shape(self):
         def _bitwise_binary_shape(a_shape, b_shape):
-            a_bits, a_sign = a_shape
-            b_bits, b_sign = b_shape
-            if not a_sign and not b_sign:
+            if not a_shape.signed and not b_shape.signed:
                 # both operands unsigned
-                return Shape(max(a_bits, b_bits), False)
-            elif a_sign and b_sign:
+                return unsigned(max(a_shape.width, b_shape.width))
+            elif a_shape.signed and b_shape.signed:
                 # both operands signed
-                return Shape(max(a_bits, b_bits), True)
-            elif not a_sign and b_sign:
+                return signed(max(a_shape.width, b_shape.width))
+            elif not a_shape.signed and b_shape.signed:
                 # first operand unsigned (add sign bit), second operand signed
-                return Shape(max(a_bits + 1, b_bits), True)
+                return signed(max(a_shape.width + 1, b_shape.width))
             else:
                 # first signed, second operand unsigned (add sign bit)
-                return Shape(max(a_bits, b_bits + 1), True)
+                return signed(max(a_shape.width, b_shape.width + 1))
 
         op_shapes = list(map(lambda x: x.shape(), self.operands))
         if len(op_shapes) == 1:
-            (a_width, a_signed), = op_shapes
+            a_shape, = op_shapes
             if self.operator in ("+", "~"):
-                return Shape(a_width, a_signed)
+                return Shape(a_shape.width, a_shape.signed)
             if self.operator == "-":
-                return Shape(a_width + 1, True)
+                return Shape(a_shape.width + 1, True)
             if self.operator in ("b", "r|", "r&", "r^"):
                 return Shape(1, False)
             if self.operator == "u":
-                return Shape(a_width, False)
+                return Shape(a_shape.width, False)
             if self.operator == "s":
-                return Shape(a_width, True)
+                return Shape(a_shape.width, True)
         elif len(op_shapes) == 2:
-            (a_width, a_signed), (b_width, b_signed) = op_shapes
+            a_shape, b_shape = op_shapes
             if self.operator in ("+", "-"):
-                width, signed = _bitwise_binary_shape(*op_shapes)
-                return Shape(width + 1, signed)
+                o_shape = _bitwise_binary_shape(*op_shapes)
+                return Shape(o_shape.width + 1, o_shape.signed)
             if self.operator == "*":
-                return Shape(a_width + b_width, a_signed or b_signed)
+                return Shape(a_shape.width + b_shape.width, a_shape.signed or b_shape.signed)
             if self.operator == "//":
-                return Shape(a_width + b_signed, a_signed or b_signed)
+                return Shape(a_shape.width + b_shape.signed, a_shape.signed or b_shape.signed)
             if self.operator == "%":
-                return Shape(b_width, b_signed)
+                return Shape(b_shape.width, b_shape.signed)
             if self.operator in ("<", "<=", "==", "!=", ">", ">="):
                 return Shape(1, False)
             if self.operator in ("&", "^", "|"):
                 return _bitwise_binary_shape(*op_shapes)
             if self.operator == "<<":
-                assert not b_signed
-                return Shape(a_width + 2 ** b_width - 1, a_signed)
+                assert not b_shape.signed
+                return Shape(a_shape.width + 2 ** b_shape.width - 1, a_shape.signed)
             if self.operator == ">>":
-                assert not b_signed
-                return Shape(a_width, a_signed)
+                assert not b_shape.signed
+                return Shape(a_shape.width, a_shape.signed)
         elif len(op_shapes) == 3:
             if self.operator == "m":
                 s_shape, a_shape, b_shape = op_shapes
@@ -982,9 +965,13 @@ class Signal(Value, DUID):
             raise TypeError("Name must be a string, not {!r}".format(name))
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
 
+        orig_shape = shape
         if shape is None:
             shape = unsigned(1)
-        self.width, self.signed = Shape.cast(shape, src_loc_at=1 + src_loc_at)
+        else:
+            shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
+        self.width  = shape.width
+        self.signed = shape.signed
 
         if isinstance(reset, Enum):
             reset = reset.value
@@ -1003,8 +990,8 @@ class Signal(Value, DUID):
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
-        if decoder is None and isinstance(shape, type) and issubclass(shape, Enum):
-            decoder = shape
+        if decoder is None and isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+            decoder = orig_shape
         if isinstance(decoder, type) and issubclass(decoder, Enum):
             def enum_decoder(value):
                 try:
@@ -1231,13 +1218,13 @@ class ArrayProxy(Value):
     def shape(self):
         unsigned_width = signed_width = 0
         has_unsigned = has_signed = False
-        for elem_width, elem_signed in (elem.shape() for elem in self._iter_as_values()):
-            if elem_signed:
+        for elem_shape in (elem.shape() for elem in self._iter_as_values()):
+            if elem_shape.signed:
                 has_signed = True
-                signed_width = max(signed_width, elem_width)
+                signed_width = max(signed_width, elem_shape.width)
             else:
                 has_unsigned = True
-                unsigned_width = max(unsigned_width, elem_width)
+                unsigned_width = max(unsigned_width, elem_shape.width)
         # The shape of the proxy must be such that it preserves the mathematical value of the array
         # elements. I.e., shape-wise, an array proxy must be identical to an equivalent mux tree.
         # To ensure this holds, if the array contains both signed and unsigned values, make sure

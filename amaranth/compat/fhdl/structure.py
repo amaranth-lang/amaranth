@@ -51,7 +51,10 @@ class CompatSignal(NativeSignal):
         else:
             if not (min is None and max is None):
                 raise ValueError("Only one of bits/signedness or bounds may be specified")
-            shape = bits_sign
+            if isinstance(bits_sign, tuple):
+                shape = Shape(*bits_sign)
+            else:
+                shape = Shape.cast(bits_sign)
 
         super().__init__(shape=shape, name=name_override or name,
                          reset=reset, reset_less=reset_less,

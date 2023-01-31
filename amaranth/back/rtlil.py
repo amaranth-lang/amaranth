@@ -430,7 +430,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
                 elem = value.elems[index.value]
             else:
                 elem = value.elems[-1]
-            return self.match_shape(elem, *value.shape())
+            return self.match_shape(elem, value.shape())
         else:
             max_index = 1 << len(value.index)
             max_elem  = len(value.elems)
@@ -475,12 +475,12 @@ class _RHSValueCompiler(_ValueCompiler):
         if value in self.s.anys:
             return self.s.anys[value]
 
-        res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+        res_shape = value.shape()
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell("$anyconst", ports={
             "\\Y": res,
         }, params={
-            "WIDTH": res_bits,
+            "WIDTH": res_shape.width,
         }, src=_src(value.src_loc))
         self.s.anys[value] = res
         return res
@@ -489,12 +489,12 @@ class _RHSValueCompiler(_ValueCompiler):
         if value in self.s.anys:
             return self.s.anys[value]
 
-        res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+        res_shape = value.shape()
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell("$anyseq", ports={
             "\\Y": res,
         }, params={
-            "WIDTH": res_bits,
+            "WIDTH": res_shape.width,
         }, src=_src(value.src_loc))
         self.s.anys[value] = res
         return res
@@ -509,74 +509,71 @@ class _RHSValueCompiler(_ValueCompiler):
             # These operators don't change the bit pattern, only its interpretation.
             return self(arg)
 
-        arg_bits, arg_sign = arg.shape()
-        res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+        arg_shape, res_shape = arg.shape(), value.shape()
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(1, value.operator)], ports={
             "\\A": self(arg),
             "\\Y": res,
         }, params={
-            "A_SIGNED": arg_sign,
-            "A_WIDTH": arg_bits,
-            "Y_WIDTH": res_bits,
+            "A_SIGNED": arg_shape.signed,
+            "A_WIDTH":  arg_shape.width,
+            "Y_WIDTH":  res_shape.width,
         }, src=_src(value.src_loc))
         return res
 
-    def match_shape(self, value, new_bits, new_sign):
+    def match_shape(self, value, new_shape):
         if isinstance(value, ast.Const):
-            return self(ast.Const(value.value, ast.Shape(new_bits, new_sign)))
+            return self(ast.Const(value.value, new_shape))
 
-        value_bits, value_sign = value.shape()
-        if new_bits <= value_bits:
-            return self(ast.Slice(value, 0, new_bits))
+        value_shape = value.shape()
+        if new_shape.width <= value_shape.width:
+            return self(ast.Slice(value, 0, new_shape.width))
 
-        res = self.s.rtlil.wire(width=new_bits, src=_src(value.src_loc))
+        res = self.s.rtlil.wire(width=new_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell("$pos", ports={
             "\\A": self(value),
             "\\Y": res,
         }, params={
-            "A_SIGNED": value_sign,
-            "A_WIDTH": value_bits,
-            "Y_WIDTH": new_bits,
+            "A_SIGNED": value_shape.signed,
+            "A_WIDTH":  value_shape.width,
+            "Y_WIDTH":  new_shape.width,
         }, src=_src(value.src_loc))
         return res
 
     def on_Operator_binary(self, value):
         lhs, rhs = value.operands
-        lhs_bits, lhs_sign = lhs.shape()
-        rhs_bits, rhs_sign = rhs.shape()
-        if lhs_sign == rhs_sign or value.operator in ("<<", ">>", "**"):
+        lhs_shape, rhs_shape, res_shape = lhs.shape(), rhs.shape(), value.shape()
+        if lhs_shape.signed == rhs_shape.signed or value.operator in ("<<", ">>", "**"):
             lhs_wire = self(lhs)
             rhs_wire = self(rhs)
         else:
-            lhs_bits = rhs_bits = max(lhs_bits + rhs_sign, rhs_bits + lhs_sign)
-            lhs_sign = rhs_sign = True
-            lhs_wire = self.match_shape(lhs, lhs_bits, lhs_sign)
-            rhs_wire = self.match_shape(rhs, rhs_bits, rhs_sign)
-        res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+            lhs_shape = rhs_shape = ast.signed(max(lhs_shape.width + rhs_shape.signed,
+                                                   rhs_shape.width + lhs_shape.signed))
+            lhs_wire = self.match_shape(lhs, lhs_shape)
+            rhs_wire = self.match_shape(rhs, rhs_shape)
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell(self.operator_map[(2, value.operator)], ports={
             "\\A": lhs_wire,
             "\\B": rhs_wire,
             "\\Y": res,
         }, params={
-            "A_SIGNED": lhs_sign,
-            "A_WIDTH": lhs_bits,
-            "B_SIGNED": rhs_sign,
-            "B_WIDTH": rhs_bits,
-            "Y_WIDTH": res_bits,
+            "A_SIGNED": lhs_shape.signed,
+            "A_WIDTH":  lhs_shape.width,
+            "B_SIGNED": rhs_shape.signed,
+            "B_WIDTH":  rhs_shape.width,
+            "Y_WIDTH":  res_shape.width,
         }, src=_src(value.src_loc))
         if value.operator in ("//", "%"):
             # RTLIL leaves division by zero undefined, but we require it to return zero.
             divmod_res = res
-            res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+            res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
             self.s.rtlil.cell("$mux", ports={
                 "\\A": divmod_res,
-                "\\B": self(ast.Const(0, ast.Shape(res_bits, res_sign))),
+                "\\B": self(ast.Const(0, res_shape)),
                 "\\S": self(rhs == 0),
                 "\\Y": res,
             }, params={
-                "WIDTH": res_bits
+                "WIDTH": res_shape.width
             }, src=_src(value.src_loc))
         return res
 
@@ -584,20 +581,17 @@ class _RHSValueCompiler(_ValueCompiler):
         sel, val1, val0 = value.operands
         if len(sel) != 1:
             sel = sel.bool()
-        val1_bits, val1_sign = val1.shape()
-        val0_bits, val0_sign = val0.shape()
-        res_bits, res_sign = value.shape()
-        val1_bits = val0_bits = res_bits = max(val1_bits, val0_bits, res_bits)
-        val1_wire = self.match_shape(val1, val1_bits, val1_sign)
-        val0_wire = self.match_shape(val0, val0_bits, val0_sign)
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+        res_shape = value.shape()
+        val1_wire = self.match_shape(val1, res_shape)
+        val0_wire = self.match_shape(val0, res_shape)
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell("$mux", ports={
             "\\A": val0_wire,
             "\\B": val1_wire,
             "\\S": self(sel),
             "\\Y": res,
         }, params={
-            "WIDTH": res_bits
+            "WIDTH": res_shape.width
         }, src=_src(value.src_loc))
         return res
 
@@ -624,10 +618,8 @@ class _RHSValueCompiler(_ValueCompiler):
         lhs, rhs = value.value, value.offset
         if value.stride != 1:
             rhs *= value.stride
-        lhs_bits, lhs_sign = lhs.shape()
-        rhs_bits, rhs_sign = rhs.shape()
-        res_bits, res_sign = value.shape()
-        res = self.s.rtlil.wire(width=res_bits, src=_src(value.src_loc))
+        lhs_shape, rhs_shape, res_shape = lhs.shape(), rhs.shape(), value.shape()
+        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
         # Note: Verilog's x[o+:w] construct produces a $shiftx cell, not a $shift cell.
         # However, Amaranth's semantics defines the out-of-range bits to be zero, so it is correct
         # to use a $shift cell here instead, even though it produces less idiomatic Verilog.
@@ -636,11 +628,11 @@ class _RHSValueCompiler(_ValueCompiler):
             "\\B": self(rhs),
             "\\Y": res,
         }, params={
-            "A_SIGNED": lhs_sign,
-            "A_WIDTH": lhs_bits,
-            "B_SIGNED": rhs_sign,
-            "B_WIDTH": rhs_bits,
-            "Y_WIDTH": res_bits,
+            "A_SIGNED": lhs_shape.signed,
+            "A_WIDTH":  lhs_shape.width,
+            "B_SIGNED": rhs_shape.signed,
+            "B_WIDTH":  rhs_shape.width,
+            "Y_WIDTH":  res_shape.width,
         }, src=_src(value.src_loc))
         return res
 
@@ -666,14 +658,14 @@ class _LHSValueCompiler(_ValueCompiler):
 
         raise TypeError # :nocov:
 
-    def match_shape(self, value, new_bits, new_sign):
-        value_bits, value_sign = value.shape()
-        if new_bits == value_bits:
+    def match_shape(self, value, new_shape):
+        value_shape = value.shape()
+        if new_shape.width == value_shape.width:
             return self(value)
-        elif new_bits < value_bits:
-            return self(ast.Slice(value, 0, new_bits))
-        else: # new_bits > value_bits
-            dummy_bits = new_bits - value_bits
+        elif new_shape.width < value_shape.width:
+            return self(ast.Slice(value, 0, new_shape.width))
+        else: # new_shape.width > value_shape.width
+            dummy_bits = new_shape.width - value_shape.width
             dummy_wire = self.s.rtlil.wire(dummy_bits)
             return "{{ {} {} }}".format(dummy_wire, self(value))
 
@@ -738,14 +730,12 @@ class _StatementCompiler(xfrm.StatementVisitor):
     def on_Assign(self, stmt):
         self._check_rhs(stmt.rhs)
 
-        lhs_bits, lhs_sign = stmt.lhs.shape()
-        rhs_bits, rhs_sign = stmt.rhs.shape()
-        if lhs_bits == rhs_bits:
+        lhs_shape, rhs_shape = stmt.lhs.shape(), stmt.rhs.shape()
+        if lhs_shape.width == rhs_shape.width:
             rhs_sigspec = self.rhs_compiler(stmt.rhs)
         else:
             # In RTLIL, LHS and RHS of assignment must have exactly same width.
-            rhs_sigspec = self.rhs_compiler.match_shape(
-                stmt.rhs, lhs_bits, lhs_sign)
+            rhs_sigspec = self.rhs_compiler.match_shape(stmt.rhs, lhs_shape)
         if self._wrap_assign:
             # In RTLIL, all assigns are logically sequenced before all switches, even if they are
             # interleaved in the source. In Amaranth, the source ordering is used. To handle this
