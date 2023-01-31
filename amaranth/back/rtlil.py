@@ -779,8 +779,9 @@ class _StatementCompiler(xfrm.StatementVisitor):
         with self._case.switch(test_sigspec, src=_src(stmt.src_loc)) as switch:
             for values, stmts in stmt.cases.items():
                 case_attrs = {}
+                case_src = None
                 if values in stmt.case_src_locs:
-                    case_attrs["src"] = _src(stmt.case_src_locs[values])
+                    case_src = _src(stmt.case_src_locs[values])
                 if isinstance(stmt.test, ast.Signal) and stmt.test.decoder:
                     decoded_values = []
                     for value in values:
@@ -789,7 +790,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
                         else:
                             decoded_values.append(stmt.test.decoder(int(value, 2)))
                     case_attrs["amaranth.decoding"] = "|".join(decoded_values)
-                with self.case(switch, values, attrs=case_attrs):
+                with self.case(switch, values, attrs=case_attrs, src=case_src):
                     self._wrap_assign = False
                     self.on_statements(stmts)
         self._wrap_assign = True
