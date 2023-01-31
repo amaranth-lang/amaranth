@@ -7,12 +7,12 @@ The Amaranth toolchain consists of the Amaranth hardware definition language, th
 [amaranth-boards]: https://github.com/amaranth-lang/amaranth-boards
 [amaranth-soc]: https://github.com/amaranth-lang/amaranth-soc
 
-The development of Amaranth has been supported by [SymbioticEDA][], [LambdaConcept][], and [ChipEleven][].
+The development of Amaranth has been supported by [LambdaConcept][], [ChipEleven][], and [Chipflow][].
 
 [yosys]: https://yosyshq.net/yosys/
-[symbioticeda]: https://www.symbioticeda.com/
 [lambdaconcept]: http://lambdaconcept.com/
 [chipeleven]: https://chipeleven.com/
+[chipflow]: https://chipflow.io/
 
 ## Introduction
 
@@ -38,18 +38,6 @@ Amaranth can be used to target any FPGA or ASIC process that accepts behavioral 
   * Quicklogic EOS S3 (toolchains: **Yosys+VPR**).
 
 FOSS toolchains are listed in **bold**.
-
-## Migration from Migen
-
-If you have existing Migen code, you can use a comprehensive Migen compatibility layer provided in Amaranth. An existing Migen design can be synthesized and simulated with Amaranth in three steps:
-
-  1. Replace all `from migen import <...>` statements with `from amaranth.compat import <...>`.
-  2. Replace every explicit mention of the default `sys` clock domain with the new default `sync` clock domain. E.g. `ClockSignal("sys")` is changed to `ClockSignal("sync")`.
-  3. Migrate from Migen build/platform system to Amaranth build/platform system. Amaranth does not provide a build/platform compatibility layer because both the board definition files and the platform abstraction differ too much.
-
-Note that Amaranth will **not** produce the exact same RTL as Migen did. Amaranth has been built to allow you to take advantage of the new and improved functionality it has (such as producing hierarchical RTL) while making migration as painless as possible.
-
-Once your design passes verification with Amaranth, you can migrate it to the Amaranth syntax one module at a time. Migen modules can be added to Amaranth modules and vice versa, so there is no restriction on the order of migration, either.
 
 ## Community
 
