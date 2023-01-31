@@ -203,7 +203,7 @@ Editable development snapshot
 
 .. |develop:first-time| replace:: To install an editable development snapshot of Amaranth for the first time, run:
 .. |develop:update| replace:: Any changes made to the ``amaranth`` directory will immediately affect any code that uses Amaranth. To update the snapshot, run:
-.. |develop:reinstall| replace:: each time the editable development snapshot is updated in case package dependencies have been added or changed. Otherwise, code using Amaranth may misbehave or crash with an ``ImportError``.
+.. |develop:reinstall| replace:: any time package dependencies may have been added or changed (notably after updating the snapshot with ``git``). Otherwise, code using Amaranth may crash because of a dependency version mismatch.
 
 .. platform-picker::
 
