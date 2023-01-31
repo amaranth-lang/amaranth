@@ -30,28 +30,28 @@ class LayoutTestCase(FHDLTestCase):
             ])
         ])
 
-        self.assertFieldEqual(layout["cyc"], ((1, False), DIR_NONE))
-        self.assertFieldEqual(layout["data"], ((32, True), DIR_NONE))
-        self.assertFieldEqual(layout["stb"], ((1, False), DIR_FANOUT))
-        self.assertFieldEqual(layout["ack"], ((1, False), DIR_FANIN))
+        self.assertFieldEqual(layout["cyc"], (unsigned(1), DIR_NONE))
+        self.assertFieldEqual(layout["data"], (signed(32), DIR_NONE))
+        self.assertFieldEqual(layout["stb"], (unsigned(1), DIR_FANOUT))
+        self.assertFieldEqual(layout["ack"], (unsigned(1), DIR_FANIN))
         sublayout = layout["info"][0]
         self.assertEqual(layout["info"][1], DIR_NONE)
-        self.assertFieldEqual(sublayout["a"], ((1, False), DIR_NONE))
-        self.assertFieldEqual(sublayout["b"], ((1, False), DIR_NONE))
+        self.assertFieldEqual(sublayout["a"], (unsigned(1), DIR_NONE))
+        self.assertFieldEqual(sublayout["b"], (unsigned(1), DIR_NONE))
 
     def test_enum_field(self):
         layout = Layout.cast([
             ("enum", UnsignedEnum),
             ("enum_dir", UnsignedEnum, DIR_FANOUT),
         ])
-        self.assertFieldEqual(layout["enum"], ((2, False), DIR_NONE))
-        self.assertFieldEqual(layout["enum_dir"], ((2, False), DIR_FANOUT))
+        self.assertFieldEqual(layout["enum"], (unsigned(2), DIR_NONE))
+        self.assertFieldEqual(layout["enum_dir"], (unsigned(2), DIR_FANOUT))
 
     def test_range_field(self):
         layout = Layout.cast([
             ("range", range(0, 7)),
         ])
-        self.assertFieldEqual(layout["range"], ((3, False), DIR_NONE))
+        self.assertFieldEqual(layout["range"], (unsigned(3), DIR_NONE))
 
     def test_slice_tuple(self):
         layout = Layout.cast([

@@ -19,51 +19,51 @@ class PinLayoutCombTestCase(PinLayoutTestCase):
     def test_pin_layout_i(self):
         layout_1 = pin_layout(1, dir="i")
         self.assertLayoutEqual(layout_1.fields, {
-            "i": ((1, False), DIR_NONE),
+            "i": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="i")
         self.assertLayoutEqual(layout_2.fields, {
-            "i": ((2, False), DIR_NONE),
+            "i": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_o(self):
         layout_1 = pin_layout(1, dir="o")
         self.assertLayoutEqual(layout_1.fields, {
-            "o": ((1, False), DIR_NONE),
+            "o": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="o")
         self.assertLayoutEqual(layout_2.fields, {
-            "o": ((2, False), DIR_NONE),
+            "o": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_oe(self):
         layout_1 = pin_layout(1, dir="oe")
         self.assertLayoutEqual(layout_1.fields, {
-            "o":  ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o":  (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="oe")
         self.assertLayoutEqual(layout_2.fields, {
-            "o":  ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o":  (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
     def test_pin_layout_io(self):
         layout_1 = pin_layout(1, dir="io")
         self.assertLayoutEqual(layout_1.fields, {
-            "i":  ((1, False), DIR_NONE),
-            "o":  ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i":  (unsigned(1), DIR_NONE),
+            "o":  (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="io")
         self.assertLayoutEqual(layout_2.fields, {
-            "i":  ((2, False), DIR_NONE),
-            "o":  ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i":  (unsigned(2), DIR_NONE),
+            "o":  (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
 
@@ -71,61 +71,61 @@ class PinLayoutSDRTestCase(PinLayoutTestCase):
     def test_pin_layout_i(self):
         layout_1 = pin_layout(1, dir="i", xdr=1)
         self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="i", xdr=1)
         self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i": ((2, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_o(self):
         layout_1 = pin_layout(1, dir="o", xdr=1)
         self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="o", xdr=1)
         self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o": ((2, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_oe(self):
         layout_1 = pin_layout(1, dir="oe", xdr=1)
         self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o":  ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o":  (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="oe", xdr=1)
         self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o":  ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o":  (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
     def test_pin_layout_io(self):
         layout_1 = pin_layout(1, dir="io", xdr=1)
         self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i":  ((1, False), DIR_NONE),
-            "o_clk": ((1, False), DIR_NONE),
-            "o":  ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i":  (unsigned(1), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o":  (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="io", xdr=1)
         self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i":  ((2, False), DIR_NONE),
-            "o_clk": ((1, False), DIR_NONE),
-            "o":  ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i":  (unsigned(2), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o":  (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
 
@@ -133,71 +133,71 @@ class PinLayoutDDRTestCase(PinLayoutTestCase):
     def test_pin_layout_i(self):
         layout_1 = pin_layout(1, dir="i", xdr=2)
         self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i0": ((1, False), DIR_NONE),
-            "i1": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i0": (unsigned(1), DIR_NONE),
+            "i1": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="i", xdr=2)
         self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i0": ((2, False), DIR_NONE),
-            "i1": ((2, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i0": (unsigned(2), DIR_NONE),
+            "i1": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_o(self):
         layout_1 = pin_layout(1, dir="o", xdr=2)
         self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((1, False), DIR_NONE),
-            "o1": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(1), DIR_NONE),
+            "o1": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="o", xdr=2)
         self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((2, False), DIR_NONE),
-            "o1": ((2, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(2), DIR_NONE),
+            "o1": (unsigned(2), DIR_NONE),
         })
 
     def test_pin_layout_oe(self):
         layout_1 = pin_layout(1, dir="oe", xdr=2)
         self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((1, False), DIR_NONE),
-            "o1": ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(1), DIR_NONE),
+            "o1": (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="oe", xdr=2)
         self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((2, False), DIR_NONE),
-            "o1": ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(2), DIR_NONE),
+            "o1": (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
     def test_pin_layout_io(self):
         layout_1 = pin_layout(1, dir="io", xdr=2)
         self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i0": ((1, False), DIR_NONE),
-            "i1": ((1, False), DIR_NONE),
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((1, False), DIR_NONE),
-            "o1": ((1, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i0": (unsigned(1), DIR_NONE),
+            "i1": (unsigned(1), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(1), DIR_NONE),
+            "o1": (unsigned(1), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
         layout_2 = pin_layout(2, dir="io", xdr=2)
         self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": ((1, False), DIR_NONE),
-            "i0": ((2, False), DIR_NONE),
-            "i1": ((2, False), DIR_NONE),
-            "o_clk": ((1, False), DIR_NONE),
-            "o0": ((2, False), DIR_NONE),
-            "o1": ((2, False), DIR_NONE),
-            "oe": ((1, False), DIR_NONE),
+            "i_clk": (unsigned(1), DIR_NONE),
+            "i0": (unsigned(2), DIR_NONE),
+            "i1": (unsigned(2), DIR_NONE),
+            "o_clk": (unsigned(1), DIR_NONE),
+            "o0": (unsigned(2), DIR_NONE),
+            "o1": (unsigned(2), DIR_NONE),
+            "oe": (unsigned(1), DIR_NONE),
         })
 
 
