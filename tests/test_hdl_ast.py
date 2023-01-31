@@ -1083,39 +1083,6 @@ class ResetSignalTestCase(FHDLTestCase):
             ResetSignal("comb")
 
 
-class MockUserValue(UserValue):
-    def __init__(self, lowered):
-        super().__init__()
-        self.lower_count = 0
-        self.lowered     = lowered
-
-    def lower(self):
-        self.lower_count += 1
-        return self.lowered
-
-
-class UserValueTestCase(FHDLTestCase):
-    def test_shape(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            uv = MockUserValue(1)
-            self.assertEqual(uv.shape(), unsigned(1))
-            self.assertIsInstance(uv.shape(), Shape)
-            uv.lowered = 2
-            self.assertEqual(uv.shape(), unsigned(1))
-            self.assertEqual(uv.lower_count, 1)
-
-    def test_lower_to_user_value(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            uv = MockUserValue(MockUserValue(1))
-            self.assertEqual(uv.shape(), unsigned(1))
-            self.assertIsInstance(uv.shape(), Shape)
-            uv.lowered = MockUserValue(2)
-            self.assertEqual(uv.shape(), unsigned(1))
-            self.assertEqual(uv.lower_count, 1)
-
-
 class MockValueCastable(ValueCastable):
     def __init__(self, dest):
         self.dest = dest

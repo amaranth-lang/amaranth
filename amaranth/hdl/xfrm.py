@@ -114,9 +114,6 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Sample(value)
         elif type(value) is Initial:
             new_value = self.on_Initial(value)
-        elif isinstance(value, UserValue):
-            # Uses `isinstance()` and not `type() is` to allow inheriting.
-            new_value = self.on_value(value._lazy_lower())
         else:
             new_value = self.on_unknown_value(value)
         if isinstance(new_value, Value) and self.replace_value_src_loc(value, new_value):

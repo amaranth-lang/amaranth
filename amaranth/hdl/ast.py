@@ -16,7 +16,7 @@ __all__ = [
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
-    "UserValue", "ValueCastable",
+    "ValueCastable",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
@@ -1241,55 +1241,6 @@ class ArrayProxy(Value):
 
     def __repr__(self):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
-
-
-# TODO(amaranth-0.4): remove
-class UserValue(Value):
-    """Value with custom lowering.
-
-    A ``UserValue`` is a value whose precise representation does not have to be immediately known,
-    which is useful in certain metaprogramming scenarios. Instead of providing fixed semantics
-    upfront, it is kept abstract for as long as possible, only being lowered to a concrete Amaranth
-    value when required.
-
-    Note that the ``lower`` method will only be called once; this is necessary to ensure that
-    Amaranth's view of representation of all values stays internally consistent. If the class
-    deriving from  ``UserValue`` is mutable, then it must ensure that after ``lower`` is called,
-    it is not mutated in a way that changes its representation.
-
-    The following is an incomplete list of actions that, when applied to an ``UserValue`` directly
-    or indirectly, will cause it to be lowered, provided as an illustrative reference:
-        * Querying the shape using ``.shape()`` or ``len()``;
-        * Creating a similarly shaped signal using ``Signal.like``;
-        * Indexing or iterating through individual bits;
-        * Adding an assignment to the value to a ``Module`` using ``m.d.<domain> +=``.
-    """
-    @deprecated("instead of `UserValue`, use `ValueCastable`", stacklevel=3)
-    def __init__(self, *, src_loc_at=0):
-        super().__init__(src_loc_at=1 + src_loc_at)
-        self.__lowered = None
-
-    @abstractmethod
-    def lower(self):
-        """Conversion to a concrete representation."""
-        pass # :nocov:
-
-    def _lazy_lower(self):
-        if self.__lowered is None:
-            lowered = self.lower()
-            if isinstance(lowered, UserValue):
-                lowered = lowered._lazy_lower()
-            self.__lowered = Value.cast(lowered)
-        return self.__lowered
-
-    def shape(self):
-        return self._lazy_lower().shape()
-
-    def _lhs_signals(self):
-        return self._lazy_lower()._lhs_signals()
-
-    def _rhs_signals(self):
-        return self._lazy_lower()._rhs_signals()
 
 
 class ValueCastable:

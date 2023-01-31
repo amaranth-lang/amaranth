@@ -411,11 +411,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
         if value.start == 0 and value.stop == len(value.value):
             return self(value.value)
 
-        if isinstance(value.value, ast.UserValue):
-            sigspec = self._prepare_value_for_Slice(value.value._lazy_lower())
-        else:
-            sigspec = self._prepare_value_for_Slice(value.value)
-
+        sigspec = self._prepare_value_for_Slice(value.value)
         if value.start == value.stop:
             return "{}"
         elif value.start + 1 == value.stop:
@@ -1041,11 +1037,7 @@ def convert_fragment(fragment, name="top", *, emit_src=True):
     return str(builder), name_map
 
 
-def convert(elaboratable, name="top", platform=None, ports=None, *, emit_src=True, **kwargs):
-    # TODO(amaranth-0.4): remove
-    if ports is None:
-        warnings.warn("Implicit port determination is deprecated, specify ports explicitly",
-                      DeprecationWarning, stacklevel=2)
+def convert(elaboratable, name="top", platform=None, *, ports, emit_src=True, **kwargs):
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
     return il_text

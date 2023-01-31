@@ -4,10 +4,10 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
-Next version
-============
+Version 0.4 (unreleased)
+========================
 
-Support for Python 3.6 has been dropped, and support for Python 3.11 has been added.
+Support for Python 3.6 has been removed, and support for Python 3.11 has been added.
 
 Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
 
@@ -15,12 +15,12 @@ Features deprecated in version 0.3 have been removed. In particular, the ``nmige
 Migrating from version 0.3
 --------------------------
 
-Apply the following changes to code written against Amaranth 0.2 to migrate it to version 0.3:
+Apply the following changes to code written against Amaranth 0.3 to migrate it to version 0.4:
 
 * Update shell environment to use ``AMARANTH_*`` environment variables instead of ``NMIGEN_*`` environment variables.
-* Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>``name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
+* Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>`` name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
 
-While code that uses the features listed as deprecated below will work in Amaranth 0.3, they will be removed in the next version.
+While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
 
 Language changes
@@ -28,12 +28,14 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
-* Removed: casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :class:`Cat` accepts instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) without warning.
+* Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
+* Removed: (deprecated in 0.3) :class:`ast.UserValue`.
+* Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.
 
 
 Toolchain changes
@@ -43,6 +45,10 @@ Toolchain changes
 
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
 * Deprecated: use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
+* Removed: (deprecated in 0.3) :meth:`sim.Simulator.step`.
+* Removed: (deprecated in 0.3) :mod:`back.pysim`.
+* Removed: (deprecated in 0.3) support for invoking :func:`back.rtlil.convert()` and :func:`back.verilog.convert()` without an explicit `ports=` argument.
+* Removed: (deprecated in 0.3) :mod:`test`.
 
 
 Platform integration changes
@@ -52,6 +58,9 @@ Platform integration changes
 
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform`.
 * Added: Xray toolchain support in :class:`vendor.xilinx.XilinxPlatform`.
+* Removed: (deprecated in 0.3) :mod:`lattice_machxo2`
+* Removed: (deprecated in 0.3) :class:`lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform` SVF programming vector ``{{name}}.svf``.
+* Removed: (deprecated in 0.3) :class:`xilinx_spartan_3_6.XilinxSpartan3APlatform`, :class:`xilinx_spartan_3_6.XilinxSpartan6Platform`, :class:`xilinx_7series.Xilinx7SeriesPlatform`, :class:`xilinx_ultrascale.XilinxUltrascalePlatform`.
 
 
 Version 0.3

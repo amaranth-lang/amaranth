@@ -151,11 +151,6 @@ class Simulator:
         """
         self._engine.reset()
 
-    # TODO(amaranth-0.4): replace with _real_step
-    @deprecated("instead of `sim.step()`, use `sim.advance()`")
-    def step(self):
-        return self.advance()
-
     def advance(self):
         """Advance the simulation.
 

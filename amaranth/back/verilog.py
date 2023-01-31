@@ -42,11 +42,8 @@ def convert_fragment(*args, strip_internal_attrs=False, **kwargs):
     return _convert_rtlil_text(rtlil_text, strip_internal_attrs=strip_internal_attrs), name_map
 
 
-def convert(elaboratable, name="top", platform=None, ports=None, *, emit_src=True, strip_internal_attrs=False, **kwargs):
-    # TODO(amaranth-0.4): remove
-    if ports is None:
-        warnings.warn("Implicit port determination is deprecated, specify ports explicitly",
-                      DeprecationWarning, stacklevel=2)
+def convert(elaboratable, name="top", platform=None, *, ports, emit_src=True,
+            strip_internal_attrs=False, **kwargs):
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs)
     return verilog_text
