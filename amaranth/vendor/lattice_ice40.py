@@ -18,7 +18,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``icepack``
 
     The environment is populated by running the script specified in the environment variable
-    ``AMARANTH_ENV_IceStorm``, if present.
+    ``AMARANTH_ENV_ICESTORM``, if present.
 
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
@@ -47,7 +47,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         * ``tclsh``
 
     The environment is populated by setting the necessary environment variables based on
-    ``AMARANTH_ENV_iCECube2``, which must point to the root of the iCECube2 installation, and
+    ``AMARANTH_ENV_ICECUBE2``, which must point to the root of the iCECube2 installation, and
     is required.
 
     Available overrides:
@@ -306,7 +306,7 @@ class LatticeICE40Platform(TemplatedPlatform):
         if self.toolchain == "IceStorm":
             return f"AMARANTH_ENV_{self.toolchain}"
         if self.toolchain in ("LSE-iCECube2", "Synplify-iCECube2"):
-            return f"AMARANTH_ENV_iCECube2"
+            return f"AMARANTH_ENV_ICECUBE2"
         assert False
 
     @property

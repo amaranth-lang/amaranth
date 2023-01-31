@@ -21,7 +21,7 @@ class QuicklogicPlatform(TemplatedPlatform):
         * ``symbiflow_write_bitstream``
 
     The environment is populated by running the script specified in the environment variable
-    ``AMARANTH_ENV_QLSymbiflow``, if present.
+    ``AMARANTH_ENV_QLSYMBIFLOW``, if present.
 
     Available overrides:
         * ``add_constraints``: inserts commands in XDC file.

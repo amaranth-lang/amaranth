@@ -7,7 +7,28 @@ This document describes changes to the public interfaces in the Amaranth languag
 Next version
 ============
 
-Support for Python 3.6 has been dropped.
+Support for Python 3.6 has been dropped, and support for Python 3.11 has been added.
+
+Features deprecated in version 0.3 have been removed.
+
+Migrating from version 0.3
+--------------------------
+
+Apply the following changes to code written against Amaranth 0.2 to migrate it to version 0.3:
+
+* Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>``name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
+
+
+Language changes
+----------------
+
+.. currentmodule:: amaranth.hdl
+
+* Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
+* Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
+* Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
+* Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
+* Changed: :class:`Cat` accepts instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) without warning.
 
 
 Toolchain changes
@@ -16,6 +37,7 @@ Toolchain changes
 .. currentmodule:: amaranth
 
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
+* Deprecated: use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
 Platform integration changes
@@ -24,6 +46,7 @@ Platform integration changes
 .. currentmodule:: amaranth.vendor
 
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform`.
+* Added: Xray toolchain support in :class:`vendor.xilinx.XilinxPlatform`.
 
 
 Version 0.3
@@ -109,7 +132,7 @@ Platform integration changes
 * Added: :class:`lattice_machxo_2_3l.LatticeMachXO3LPlatform`.
 * Deprecated: :mod:`lattice_machxo2`; use :class:`lattice_machxo_2_3l.LatticeMachXO2Platform` instead.
 * Removed: :class:`xilinx_7series.Xilinx7SeriesPlatform.grade`; this family has no temperature grades.
-* Removed: and :class:`xilinx_ultrascale.XilinxUltrascalePlatform.grade`; this family has temperature grade as part of speed grade.
+* Removed: :class:`xilinx_ultrascale.XilinxUltrascalePlatform.grade`; this family has temperature grade as part of speed grade.
 * Added: Symbiflow toolchain support for :class:`xilinx_7series.Xilinx7SeriesPlatform`.
 * Added: :class:`lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform` generates separate Flash and SRAM SVF programming vectors, ``{{name}}_flash.svf`` and ``{{name}}_sram.svf``.
 * Deprecated: :class:`lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform` SVF programming vector ``{{name}}.svf``; use ``{{name}}_flash.svf`` instead.

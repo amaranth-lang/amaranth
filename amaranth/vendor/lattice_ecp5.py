@@ -17,7 +17,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``ecppack``
 
     The environment is populated by running the script specified in the environment variable
-    ``AMARANTH_ENV_Trellis``, if present.
+    ``AMARANTH_ENV_TRELLIS``, if present.
 
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
@@ -45,7 +45,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``ddtcmd``
 
     The environment is populated by running the script specified in the environment variable
-    ``AMARANTH_ENV_Diamond``, if present. On Linux, diamond_env as provided by Diamond
+    ``AMARANTH_ENV_DIAMOND``, if present. On Linux, diamond_env as provided by Diamond
     itself is a good candidate. On Windows, the following script (named ``diamond_env.bat``,
     for instance) is known to work::
 
