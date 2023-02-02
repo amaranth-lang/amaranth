@@ -1,3 +1,32 @@
 [build-system]
-requires = ["wheel", "setuptools~=62.0", "setuptools_scm"]
+requires = ["wheel", "setuptools~=67.0", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version", "urls"]
+
+name = "amaranth"
+description = "Amaranth hardware definition language"
+authors = [{name = "Amaranth HDL contributors"}]
+license = {file = "LICENSE.txt"}
+
+requires-python = "~=3.7"
+dependencies = [
+  "importlib_metadata;  python_version<'3.8'", # for __version__ and amaranth._toolchain.yosys
+  "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
+  "pyvcd>=0.2.2,<0.4", # for amaranth.sim.pysim
+  "Jinja2~=3.0", # for amaranth.build
+]
+
+[project.optional-dependencies]
+# this version requirement needs to be synchronized with the one in amaranth.back.verilog!
+# due to the issue described in https://github.com/pypa/setuptools/issues/3807, this is
+# temporarily pinned to a specific amaranth-yosys version.
+builtin-yosys = ["amaranth-yosys==0.10.0.dev47"]
+remote-build  = ["paramiko~=2.7"]
+
+[project.scripts]
+amaranth-rpc = "amaranth.rpc:main"
+
+[tool.setuptools_scm]
+local_scheme = "node-and-timestamp"
