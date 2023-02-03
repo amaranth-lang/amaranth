@@ -18,11 +18,11 @@ jobs:
         - 'pypy-3.7-v7.3.3'
     steps:
     - name: Check out source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -35,7 +35,7 @@ jobs:
         pip install 'yowasp-yosys==0.20.dev398' # latest version that works on Python 3.7
         pip install -e .[builtin-yosys]
     - name: Preserve Wasm cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cache/wasmtime
@@ -52,15 +52,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           pip install -r docs/requirements.txt
-          pip install -e .
+          pip install .
       - name: Build documentation
         run: |
           sphinx-build docs docs/_build
