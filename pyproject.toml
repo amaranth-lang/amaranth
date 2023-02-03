@@ -20,9 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
-# due to the issue described in https://github.com/pypa/setuptools/issues/3807, this is
-# temporarily pinned to a specific amaranth-yosys version.
-builtin-yosys = ["amaranth-yosys==0.10.0.dev47"]
+builtin-yosys = ["amaranth-yosys>=0.10"]
 remote-build  = ["paramiko~=2.7"]
 
 [project.scripts]
