@@ -103,7 +103,7 @@ class BuildPlan:
         finally:
             os.chdir(cwd)
 
-    def execute_remote_ssh(self, *, connect_to = {}, root, run_script=True):
+    def execute_remote_ssh(self, *, connect_to={}, root, run_script=True):
         """
         Execute build plan using the remote SSH strategy. Files from the build
         plan are transferred via SFTP to the directory ``root`` on a  remote
@@ -169,8 +169,9 @@ class BuildPlan:
                 channel = transport.open_session()
                 channel.set_combine_stderr(True)
 
-                cmd = "if [ -f ~/.profile ]; then . ~/.profile; fi && cd {} && sh {}.sh".format(root, self.script)
-                channel.exec_command(cmd)
+                cmd = (f"if [ -f ~/.profile ]; then . ~/.profile; fi && "
+                       f"cd {root} && exec $0 {self.script}.sh")
+                channel.exec_command(f"sh -c '{cmd}'")
 
                 # Show the output from the server while products are built.
                 buf = channel.recv(1024)
