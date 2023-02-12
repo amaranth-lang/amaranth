@@ -751,7 +751,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
         self.state.rtlil.cell("$" + stmt._kind, ports={
             "\\A": check_wire,
             "\\EN": en_wire,
-        }, src=_src(stmt.src_loc))
+        }, src=_src(stmt.src_loc), name=stmt.name)
 
     on_Assert = on_property
     on_Assume = on_property

@@ -1405,11 +1405,15 @@ class UnusedProperty(UnusedMustUse):
 class Property(Statement, MustUse):
     _MustUse__warning = UnusedProperty
 
-    def __init__(self, test, *, _check=None, _en=None, src_loc_at=0):
+    def __init__(self, test, *, _check=None, _en=None, name=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         self.test   = Value.cast(test)
         self._check = _check
         self._en    = _en
+        self.name   = name
+        if not isinstance(self.name, str) and self.name is not None:
+            raise TypeError("Property name must be a string or None, not {!r}"
+                            .format(self.name))
         if self._check is None:
             self._check = Signal(reset_less=True, name="${}$check".format(self._kind))
             self._check.src_loc = self.src_loc
@@ -1424,6 +1428,8 @@ class Property(Statement, MustUse):
         return self.test._rhs_signals()
 
     def __repr__(self):
+        if self.name is not None:
+            return "({}: {} {!r})".format(self.name, self._kind, self.test)    
         return "({} {!r})".format(self._kind, self.test)
 
 
