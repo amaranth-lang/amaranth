@@ -237,13 +237,13 @@ class StatementTransformer(StatementVisitor):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
     def on_Assert(self, stmt):
-        return Assert(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en)
+        return Assert(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
 
     def on_Assume(self, stmt):
-        return Assume(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en)
+        return Assume(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
 
     def on_Cover(self, stmt):
-        return Cover(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en)
+        return Cover(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
