@@ -169,7 +169,7 @@ Development snapshot
 
       .. code-block:: doscon
 
-         > pip install git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]
+         > pip install "amaranth[builtin-yosys] @ git+https://github.com/amaranth-lang/amaranth.git"
 
    .. platform-choice:: macos
       :title: macOS
@@ -178,7 +178,7 @@ Development snapshot
 
       .. code-block:: console
 
-         $ pip install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]'
+         $ pip install --user 'amaranth[builtin-yosys] @ git+https://github.com/amaranth-lang/amaranth.git'
 
    .. platform-choice:: linux
       :title: Linux
@@ -187,13 +187,13 @@ Development snapshot
 
       .. code-block:: console
 
-         $ pip3 install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]'
+         $ pip3 install --user 'amaranth[builtin-yosys] @ git+https://github.com/amaranth-lang/amaranth.git'
 
       If you **did** install Yosys manually in the previous step, run:
 
       .. code-block:: console
 
-         $ pip3 install --user 'git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth'
+         $ pip3 install --user 'amaranth @ git+https://github.com/amaranth-lang/amaranth.git'
 
 
 .. _install-develop:
