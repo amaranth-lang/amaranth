@@ -6,7 +6,7 @@ System requirements
 
 .. |yosys-version| replace:: 0.10 (or newer)
 
-Amaranth HDL requires Python 3.7; it works on CPython_ 3.7 (or newer), and works faster on PyPy3.7_ 7.3.3 (or newer).
+Amaranth HDL requires Python 3.7; it works on CPython_ 3.7 (or newer), and works faster on PyPy3.7_ 7.3.3 (or newer). Installation requires pip_ 23.0 (or newer).
 
 For most workflows, Amaranth requires Yosys_ |yosys-version|. A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
 
@@ -18,6 +18,7 @@ Synthesizing, placing and routing an Amaranth design for an FPGA requires the FP
 
 .. _CPython: https://www.python.org/
 .. _PyPy3.7: https://www.pypy.org/
+.. _pip: https://pip.pypa.io/
 .. _Yosys: https://yosyshq.net/yosys/
 .. _PyPI: https://pypi.org/
 .. _GTKWave: http://gtkwave.sourceforge.net/
@@ -29,6 +30,7 @@ Installing prerequisites
 ========================
 
 .. |builtin-yosys-architectures| replace:: x86_64 and AArch64
+.. |upgrade-pip| replace:: Before continuing, make sure you have the latest version of pip_ installed by running:
 
 .. platform-picker::
 
@@ -41,6 +43,12 @@ Installing prerequisites
 
       .. _Download GTKWave: https://sourceforge.net/projects/gtkwave/files/
 
+      |upgrade-pip|
+
+      .. code-block:: doscon
+
+         > pip install --upgrade pip
+
    .. platform-choice:: macos
       :title: macOS
 
@@ -51,6 +59,12 @@ Installing prerequisites
          $ brew install python gtkwave
 
       .. _Homebrew: https://brew.sh
+
+      |upgrade-pip|
+
+      .. code-block:: console
+
+         $ pip install --upgrade pip
 
    .. platform-choice:: debian
       :altname: linux
@@ -69,6 +83,12 @@ Installing prerequisites
          $ sudo apt-get install yosys
 
       If Yosys |yosys-version| is not available, `build Yosys from source`_.
+
+      |upgrade-pip|
+
+      .. code-block:: console
+
+         $ pip3 install --user --upgrade pip
 
    .. platform-choice:: arch
       :altname: linux
@@ -91,6 +111,11 @@ Installing prerequisites
 
       .. _build Yosys from source: https://github.com/YosysHQ/yosys/#setup
 
+      |upgrade-pip|
+
+      .. code-block:: console
+
+         $ pip3 install --user --upgrade pip
 
 .. _install:
 
