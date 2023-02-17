@@ -6,7 +6,7 @@ import amaranth
 project = "Amaranth HDL toolchain"
 version = amaranth.__version__
 release = version.split("+")[0]
-copyright = "2020—2021, Amaranth HDL developers"
+copyright = "2020—2023, Amaranth HDL developers"
 
 extensions = [
 	"sphinx.ext.intersphinx",
