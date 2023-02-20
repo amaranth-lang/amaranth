@@ -414,6 +414,14 @@ Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected b
    True
 
 
+.. _lang-data:
+
+Data structures
+===============
+
+Amaranth provides aggregate data structures in the standard library module :mod:`amaranth.lib.data`.
+
+
 .. _lang-operators:
 
 Operators

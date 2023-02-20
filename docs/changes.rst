@@ -25,10 +25,12 @@ While code that uses the features listed as deprecated below will work in Amaran
 Implemented RFCs
 ----------------
 
+.. _RFC 1: https://amaranth-lang.org/rfcs/0001-aggregate-data-structures.html
 .. _RFC 3: https://amaranth-lang.org/rfcs/0003-enumeration-shapes.html
 .. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
 .. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
 
+* `RFC 1`_: Aggregate data structure library
 * `RFC 3`_: Enumeration shapes
 * `RFC 4`_: Constant-castable expressions
 * `RFC 5`_: Remove Const.normalize
@@ -46,7 +48,7 @@ Language changes
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
-* Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used.
+* Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
 * Deprecated: :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
@@ -58,7 +60,8 @@ Standard library changes
 
 .. currentmodule:: amaranth.lib
 
-* Added: :mod:`amaranth.lib.enum`.
+* Added: :mod:`amaranth.lib.enum`. (`RFC 3`_)
+* Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
 
 
 Toolchain changes
