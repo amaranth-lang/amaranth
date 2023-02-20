@@ -27,9 +27,17 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 todo_include_todos = True
 
+autodoc_member_order = "bysource"
+autodoc_default_options = {
+    "members": True
+}
+autodoc_preserve_defaults = True
+
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_use_ivar = True
+napoleon_include_init_with_doc = True
+napoleon_include_special_with_doc = True
 napoleon_custom_sections = ["Platform overrides"]
 
 html_theme = "sphinx_rtd_theme"

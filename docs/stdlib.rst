@@ -8,6 +8,7 @@ Standard library
 .. toctree::
    :maxdepth: 2
 
+   stdlib/enum
    stdlib/coding
    stdlib/cdc
    stdlib/fifo

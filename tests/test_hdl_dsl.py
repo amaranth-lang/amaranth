@@ -1,11 +1,11 @@
 # amaranth: UnusedElaboratable=no
 
 from collections import OrderedDict
-from enum import Enum
 
 from amaranth.hdl.ast import *
 from amaranth.hdl.cd import *
 from amaranth.hdl.dsl import *
+from amaranth.lib.enum import Enum
 
 from .utils import *
 
@@ -447,7 +447,7 @@ class DSLTestCase(FHDLTestCase):
         """)
 
     def test_Switch_const_castable(self):
-        class Color(Enum):
+        class Color(Enum, shape=1):
             RED  = 0
             BLUE = 1
         m = Module()

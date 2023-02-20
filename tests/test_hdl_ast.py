@@ -798,28 +798,34 @@ class CatTestCase(FHDLTestCase):
             warnings.filterwarnings(action="error", category=SyntaxWarning)
             Cat(0, 1, 1, 0)
 
-    def test_enum(self):
+    def test_enum_wrong(self):
         class Color(Enum):
             RED  = 1
             BLUE = 2
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="error", category=SyntaxWarning)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Argument #1 of Cat\(\) is an enumerated value <Color\.RED: 1> without "
+                r"a defined shape used in bit vector context; define the enumeration by "
+                r"inheriting from the class in amaranth\.lib\.enum and specifying "
+                r"the 'shape=' keyword argument$"):
             c = Cat(Color.RED, Color.BLUE)
         self.assertEqual(repr(c), "(cat (const 2'd1) (const 2'd2))")
 
-    def test_intenum(self):
+    def test_intenum_wrong(self):
         class Color(int, Enum):
             RED  = 1
             BLUE = 2
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="error", category=SyntaxWarning)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Argument #1 of Cat\(\) is an enumerated value <Color\.RED: 1> without "
+                r"a defined shape used in bit vector context; define the enumeration by "
+                r"inheriting from the class in amaranth\.lib\.enum and specifying "
+                r"the 'shape=' keyword argument$"):
             c = Cat(Color.RED, Color.BLUE)
         self.assertEqual(repr(c), "(cat (const 2'd1) (const 2'd2))")
 
     def test_int_wrong(self):
         with self.assertWarnsRegex(SyntaxWarning,
                 r"^Argument #1 of Cat\(\) is a bare integer 2 used in bit vector context; "
-                r"consider specifying explicit width using C\(2, 2\) instead$"):
+                r"specify the width explicitly using C\(2, 2\)$"):
             Cat(2)
 
 

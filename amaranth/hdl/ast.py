@@ -78,11 +78,34 @@ class Shape:
         self.width = width
         self.signed = signed
 
+    # The algorithm for inferring shape for standard Python enumerations is factored out so that
+    # `Shape.cast()` and Amaranth's `EnumMeta.as_shape()` can both use it.
+    @staticmethod
+    def _cast_plain_enum(obj):
+        signed = False
+        width  = 0
+        for member in obj:
+            try:
+                member_shape = Const.cast(member.value).shape()
+            except TypeError as e:
+                raise TypeError("Only enumerations whose members have constant-castable "
+                                "values can be used in Amaranth code")
+            if not signed and member_shape.signed:
+                signed = True
+                width  = max(width + 1, member_shape.width)
+            elif signed and not member_shape.signed:
+                width  = max(width, member_shape.width + 1)
+            else:
+                width  = max(width, member_shape.width)
+        return Shape(width, signed)
+
     @staticmethod
     def cast(obj, *, src_loc_at=0):
         while True:
             if isinstance(obj, Shape):
                 return obj
+            elif isinstance(obj, ShapeCastable):
+                new_obj = obj.as_shape()
             elif isinstance(obj, int):
                 return Shape(obj)
             elif isinstance(obj, range):
@@ -93,24 +116,9 @@ class Shape:
                              bits_for(obj.stop - obj.step, signed))
                 return Shape(width, signed)
             elif isinstance(obj, type) and issubclass(obj, Enum):
-                signed = False
-                width  = 0
-                for member in obj:
-                    try:
-                        member_shape = Const.cast(member.value).shape()
-                    except TypeError as e:
-                        raise TypeError("Only enumerations whose members have constant-castable "
-                                        "values can be used in Amaranth code")
-                    if not signed and member_shape.signed:
-                        signed = True
-                        width  = max(width + 1, member_shape.width)
-                    elif signed and not member_shape.signed:
-                        width  = max(width, member_shape.width + 1)
-                    else:
-                        width  = max(width, member_shape.width)
-                return Shape(width, signed)
-            elif isinstance(obj, ShapeCastable):
-                new_obj = obj.as_shape()
+                # For compatibility with third party enumerations, handle them as if they were
+                # defined as subclasses of lib.enum.Enum with no explicitly specified shape.
+                return Shape._cast_plain_enum(obj)
             else:
                 raise TypeError("Object {!r} cannot be converted to an Amaranth shape".format(obj))
             if new_obj is obj:
@@ -866,9 +874,17 @@ class Cat(Value):
         super().__init__(src_loc_at=src_loc_at)
         self.parts = []
         for index, arg in enumerate(flatten(args)):
+            if isinstance(arg, Enum) and (not isinstance(type(arg), ShapeCastable) or
+                                          not hasattr(arg, "_amaranth_shape_")):
+                warnings.warn("Argument #{} of Cat() is an enumerated value {!r} without "
+                              "a defined shape used in bit vector context; define the enumeration "
+                              "by inheriting from the class in amaranth.lib.enum and specifying "
+                              "the 'shape=' keyword argument"
+                              .format(index + 1, arg),
+                              SyntaxWarning, stacklevel=2 + src_loc_at)
             if isinstance(arg, int) and not isinstance(arg, Enum) and arg not in [0, 1]:
                 warnings.warn("Argument #{} of Cat() is a bare integer {} used in bit vector "
-                              "context; consider specifying explicit width using C({}, {}) instead"
+                              "context; specify the width explicitly using C({}, {})"
                               .format(index + 1, arg, arg, bits_for(arg)),
                               SyntaxWarning, stacklevel=2 + src_loc_at)
             self.parts.append(Value.cast(arg))

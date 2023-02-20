@@ -22,6 +22,17 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
+Implemented RFCs
+----------------
+
+.. _RFC 3: https://amaranth-lang.org/rfcs/0003-enumeration-shapes.html
+.. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
+.. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
+
+* `RFC 3`_: Enumeration shapes
+* `RFC 4`_: Constant-castable expressions
+* `RFC 5`_: Remove Const.normalize
+
 
 Language changes
 ----------------
@@ -30,19 +41,24 @@ Language changes
 
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
-* Added: :meth:`Const.cast`, evaluating constant-castable values and returning a :class:`Const`. (`RFC 4`_)
+* Added: :meth:`Const.cast`. (`RFC 4`_)
 * Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
-* Changed: ``Value.matches()`` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match ``with m.Case():``.
-* Changed: :class:`Cat` accepts instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) without warning.
+* Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
+* Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used.
 * Deprecated: :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
 * Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.
 
-.. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
-.. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Added: :mod:`amaranth.lib.enum`.
 
 
 Toolchain changes

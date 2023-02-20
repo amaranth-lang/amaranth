@@ -183,11 +183,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 Shapes from enumerations
 ------------------------
 
-Casting a shape from an :class:`enum.Enum` subclass ``E``:
-
-  * fails if any of the enumeration members have non-integer values,
-  * has a width large enough to represent both ``min(m.value for m in E)`` and ``max(m.value for m in E)``, and
-  * is signed if either ``min(m.value for m in E)`` or ``max(m.value for m in E)`` are negative, unsigned otherwise.
+Casting a shape from an :class:`enum.Enum` subclass requires all of the enumeration members to have :ref:`constant-castable <lang-constcasting>` values. The shape has a width large enough to represent the value of every member, and is signed only if there is a member with a negative value.
 
 Specifying a shape with an enumeration is convenient for finite state machines, multiplexers, complex control signals, and all other values whose width is derived from a few distinct choices they must be able to fit:
 
@@ -208,9 +204,27 @@ Specifying a shape with an enumeration is convenient for finite state machines, 
    >>> Shape.cast(Direction)
    unsigned(2)
 
+The :mod:`amaranth.lib.enum` module extends the standard enumerations such that their shape can be specified explicitly when they are defined:
+
+.. testsetup::
+
+   import amaranth.lib.enum
+
+.. testcode::
+
+   class Funct4(amaranth.lib.enum.Enum, shape=unsigned(4)):
+       ADD = 0
+       SUB = 1
+       MUL = 2
+
+.. doctest::
+
+   >>> Shape.cast(Funct4)
+   unsigned(4)
+
 .. note::
 
-   The enumeration does not have to subclass :class:`enum.IntEnum`; it only needs to have integers as values of every member. Using enumerations based on :class:`enum.Enum` rather than :class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
+   The enumeration does not have to subclass :class:`enum.IntEnum` or have :class:`int` as one of its base classes; it only needs to have integers as values of every member. Using enumerations based on :class:`enum.Enum` rather than :class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
 
 
 .. _lang-valuecasting:
