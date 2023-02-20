@@ -1,0 +1,21 @@
+<!--
+Render the following with wavedrom-bitfield:
+
+  {
+    "reg": [
+      {"name": "[0]",  "bits": 4},
+      {"name": "[1]",  "bits": 4},
+      {"name": "[2]",  "bits": 4},
+      {"name": "[3]",  "bits": 4},
+    ],
+    "config": {
+      "lanes": 1,
+      "compact": true,
+      "vflip": true,
+      "hspace": 650
+    }
+  }
+
+Then add 14 to height and viewBox.height.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="650" height="70" viewBox="0 0 650 70" class="WaveDrom"><g transform="translate(0.5,0.5)" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="normal"><g transform="translate(4,21)"><g stroke="black" stroke-width="1" stroke-linecap="round"><line x2="641"></line><line x1="641" x2="641" y2="31"></line><line x2="641" y1="31" y2="31"></line><line y2="31"></line><line x1="40" x2="40" y2="3"></line><line x1="40" x2="40" y1="31" y2="28"></line><line x1="80" x2="80" y2="3"></line><line x1="80" x2="80" y1="31" y2="28"></line><line x1="120" x2="120" y2="3"></line><line x1="120" x2="120" y1="31" y2="28"></line><line x1="160" x2="160" y2="31"></line><line x1="200" x2="200" y2="3"></line><line x1="200" x2="200" y1="31" y2="28"></line><line x1="240" x2="240" y2="3"></line><line x1="240" x2="240" y1="31" y2="28"></line><line x1="280" x2="280" y2="3"></line><line x1="280" x2="280" y1="31" y2="28"></line><line x1="321" x2="321" y2="31"></line><line x1="361" x2="361" y2="3"></line><line x1="361" x2="361" y1="31" y2="28"></line><line x1="401" x2="401" y2="3"></line><line x1="401" x2="401" y1="31" y2="28"></line><line x1="441" x2="441" y2="3"></line><line x1="441" x2="441" y1="31" y2="28"></line><line x1="481" x2="481" y2="31"></line><line x1="521" x2="521" y2="3"></line><line x1="521" x2="521" y1="31" y2="28"></line><line x1="561" x2="561" y2="3"></line><line x1="561" x2="561" y1="31" y2="28"></line><line x1="601" x2="601" y2="3"></line><line x1="601" x2="601" y1="31" y2="28"></line></g><g><g></g><g transform="translate(20,-11)"></g><g transform="translate(20,15)"><g transform="translate(60)"><text y="6"><tspan>[0]</tspan></text></g><g transform="translate(220)"><text y="6"><tspan>[1]</tspan></text></g><g transform="translate(381)"><text y="6"><tspan>[2]</tspan></text></g><g transform="translate(541)"><text y="6"><tspan>[3]</tspan></text></g></g><g transform="translate(20,39)"></g></g></g><g transform="translate(4,-3)"><g transform="translate(20,11)"><text y="6">0</text></g><g transform="translate(140,11)"><text y="6">3</text></g><g transform="translate(180,11)"><text y="6">4</text></g><g transform="translate(300,11)"><text y="6">7</text></g><g transform="translate(341,11)"><text y="6">8</text></g><g transform="translate(461,11)"><text y="6">11</text></g><g transform="translate(501,11)"><text y="6">12</text></g><g transform="translate(621,11)"><text y="6">15</text></g></g></g></svg>

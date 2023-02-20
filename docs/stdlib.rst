@@ -9,6 +9,7 @@ Standard library
    :maxdepth: 2
 
    stdlib/enum
+   stdlib/data
    stdlib/coding
    stdlib/cdc
    stdlib/fifo
