@@ -13,32 +13,24 @@ __all__ = [
 
 class Field:
     def __init__(self, shape, offset):
-        self.shape  = shape
-        self.offset = offset
-
-    @property
-    def shape(self):
-        return self._shape
-
-    @shape.setter
-    def shape(self, shape):
         try:
             Shape.cast(shape)
         except TypeError as e:
             raise TypeError("Field shape must be a shape-castable object, not {!r}"
                             .format(shape)) from e
-        self._shape = shape
+        if not isinstance(offset, int) or offset < 0:
+            raise TypeError("Field offset must be a non-negative integer, not {!r}"
+                            .format(offset))
+        self._shape  = shape
+        self._offset = offset
+
+    @property
+    def shape(self):
+        return self._shape
 
     @property
     def offset(self):
         return self._offset
-
-    @offset.setter
-    def offset(self, offset):
-        if not isinstance(offset, int) or offset < 0:
-            raise TypeError("Field offset must be a non-negative integer, not {!r}"
-                            .format(offset))
-        self._offset = offset
 
     @property
     def width(self):

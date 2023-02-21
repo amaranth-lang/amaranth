@@ -59,6 +59,12 @@ class FieldTestCase(TestCase):
                 r"^Field offset must be a non-negative integer, not -1$"):
             Field(unsigned(2), -1)
 
+    def test_immutable(self):
+        with self.assertRaises(AttributeError):
+            Field(1, 0).shape = unsigned(2)
+        with self.assertRaises(AttributeError):
+            Field(1, 0).offset = 1
+
 
 class StructLayoutTestCase(TestCase):
     def test_construct(self):
