@@ -34,6 +34,43 @@ All of the examples below assume that a glob import is used.
    from amaranth import *
 
 
+.. _lang-shapes:
+
+Shapes
+======
+
+A ``Shape`` is an object with two attributes, ``.width`` and ``.signed``. It can be constructed directly:
+
+.. doctest::
+
+   >>> Shape(width=5, signed=False)
+   unsigned(5)
+   >>> Shape(width=12, signed=True)
+   signed(12)
+
+However, in most cases, the shape is always constructed with the same signedness, and the aliases ``signed`` and ``unsigned`` are more convenient:
+
+.. doctest::
+
+   >>> unsigned(5) == Shape(width=5, signed=False)
+   True
+   >>> signed(12) == Shape(width=12, signed=True)
+   True
+
+
+Shapes of values
+----------------
+
+All values have a ``.shape()`` method that computes their shape. The width of a value ``v``, ``v.shape().width``, can also be retrieved with ``len(v)``.
+
+.. doctest::
+
+   >>> Const(5).shape()
+   unsigned(3)
+   >>> len(Const(5))
+   3
+
+
 .. _lang-values:
 
 Values
@@ -77,43 +114,6 @@ The shape of the constant can be specified explicitly, in which case the number'
    -127
    >>> Const(1, unsigned(0)).value
    0
-
-
-.. _lang-shapes:
-
-Shapes
-======
-
-A ``Shape`` is an object with two attributes, ``.width`` and ``.signed``. It can be constructed directly:
-
-.. doctest::
-
-   >>> Shape(width=5, signed=False)
-   unsigned(5)
-   >>> Shape(width=12, signed=True)
-   signed(12)
-
-However, in most cases, the shape is always constructed with the same signedness, and the aliases ``signed`` and ``unsigned`` are more convenient:
-
-.. doctest::
-
-   >>> unsigned(5) == Shape(width=5, signed=False)
-   True
-   >>> signed(12) == Shape(width=12, signed=True)
-   True
-
-
-Shapes of values
-----------------
-
-All values have a ``.shape()`` method that computes their shape. The width of a value ``v``, ``v.shape().width``, can also be retrieved with ``len(v)``.
-
-.. doctest::
-
-   >>> Const(5).shape()
-   unsigned(3)
-   >>> len(Const(5))
-   3
 
 
 .. _lang-shapecasting:
@@ -218,7 +218,7 @@ Specifying a shape with an enumeration is convenient for finite state machines, 
 Value casting
 =============
 
-Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
+Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
 
 .. TODO: link to ValueCastable
 
@@ -228,7 +228,7 @@ Casting to a value can be done explicitly with ``Value.cast``, but is usually im
 Values from integers
 --------------------
 
-Casting a value from an integer ``i`` is a shorthand for ``Const(i)``:
+Casting a value from an integer ``i`` is equivalent to ``Const(i)``:
 
 .. doctest::
 
@@ -242,7 +242,7 @@ Casting a value from an integer ``i`` is a shorthand for ``Const(i)``:
 Values from enumeration members
 -------------------------------
 
-Casting a value from an enumeration member ``m`` is a shorthand for ``Const(m.value, type(m))``:
+Casting a value from an enumeration member ``m`` is equivalent to ``Const(m.value, type(m))``:
 
 .. doctest::
 
@@ -253,6 +253,55 @@ Casting a value from an enumeration member ``m`` is a shorthand for ``Const(m.va
 .. note::
 
    If a value subclasses :class:`enum.IntEnum` or its class otherwise inherits from both :class:`int` and :class:`Enum`, it is treated as an enumeration.
+
+
+.. _lang-constcasting:
+
+Constant casting
+================
+
+A subset of :ref:`values <lang-values>` are *constant-castable*. If a value is constant-castable and all of its operands are also constant-castable, it can be converted to a :class:`Const`, the numeric value of which can then be read by Python code. This provides a way to perform computation on Amaranth values while constructing the design.
+
+.. TODO: link to m.Case and v.matches() below
+
+Constant-castable objects are accepted anywhere a constant integer is accepted. Casting to a constant can also be done explicitly with :meth:`Const.cast`:
+
+.. doctest::
+
+   >>> Const.cast(Cat(Direction.TOP, Direction.LEFT))
+   (const 4'd4)
+
+.. TODO: uncomment when this actually works
+
+.. comment::
+
+   They may be used in enumeration members:
+
+   .. testcode::
+
+      class Funct(enum.Enum):
+          ADD = 0
+          ...
+
+      class Op(enum.Enum):
+          REG = 0
+          IMM = 1
+
+      class Instr(enum.Enum):
+          ADD  = Cat(Funct.ADD, Op.REG)
+          ADDI = Cat(Funct.ADD, Op.IMM)
+          ...
+
+
+.. note::
+
+   At the moment, only the following expressions are constant-castable:
+
+   * :class:`Const`
+   * :class:`Cat`
+
+   This list will be expanded in the future.
+
 
 .. _lang-signals:
 

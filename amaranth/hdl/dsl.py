@@ -305,11 +305,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
+        # This code should accept exactly the same patterns as `v.matches(...)`.
         for pattern in patterns:
-            if not isinstance(pattern, (int, str, Enum)):
-                raise SyntaxError("Case pattern must be an integer, a string, or an enumeration, "
-                                  "not {!r}"
-                                  .format(pattern))
             if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
                 raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) "
                                   "bits, and may include whitespace"
@@ -319,20 +316,24 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 raise SyntaxError("Case pattern '{}' must have the same width as switch value "
                                   "(which is {})"
                                   .format(pattern, len(switch_data["test"])))
-            if isinstance(pattern, int) and bits_for(pattern) > len(switch_data["test"]):
-                warnings.warn("Case pattern '{:b}' is wider than switch value "
-                              "(which has width {}); comparison will never be true"
-                              .format(pattern, len(switch_data["test"])),
-                              SyntaxWarning, stacklevel=3)
-                continue
-            if isinstance(pattern, Enum) and bits_for(pattern.value) > len(switch_data["test"]):
-                warnings.warn("Case pattern '{:b}' ({}.{}) is wider than switch value "
-                              "(which has width {}); comparison will never be true"
-                              .format(pattern.value, pattern.__class__.__name__, pattern.name,
-                                      len(switch_data["test"])),
-                              SyntaxWarning, stacklevel=3)
-                continue
-            new_patterns = (*new_patterns, pattern)
+            if isinstance(pattern, str):
+                new_patterns = (*new_patterns, pattern)
+            else:
+                try:
+                    orig_pattern, pattern = pattern, Const.cast(pattern)
+                except TypeError as e:
+                    raise SyntaxError("Case pattern must be a string or a constant-castable "
+                                      "expression, not {!r}"
+                                      .format(pattern)) from e
+                pattern_len = bits_for(pattern.value)
+                if pattern_len > len(switch_data["test"]):
+                    warnings.warn("Case pattern '{!r}' ({}'{:b}) is wider than switch value "
+                                  "(which has width {}); comparison will never be true"
+                                  .format(orig_pattern, pattern_len, pattern.value,
+                                          len(switch_data["test"])),
+                                  SyntaxWarning, stacklevel=3)
+                    continue
+                new_patterns = (*new_patterns, pattern.value)
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None

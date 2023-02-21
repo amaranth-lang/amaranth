@@ -133,7 +133,8 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_cast_enum_bad(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Only enumerations with integer values can be used as value shapes$"):
+                r"^Only enumerations whose members have constant-castable values can be used "
+                r"in Amaranth code$"):
             Shape.cast(StringEnum)
 
     def test_cast_bad(self):
@@ -203,7 +204,8 @@ class ValueTestCase(FHDLTestCase):
 
     def test_cast_enum_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Only enumerations with integer values can be used as value shapes$"):
+                r"^Only enumerations whose members have constant-castable values can be used "
+                r"in Amaranth code$"):
             Value.cast(StringEnum.FOO)
 
     def test_bool(self):
@@ -614,7 +616,13 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_enum(self):
         s = Signal(SignedEnum)
         self.assertRepr(s.matches(SignedEnum.FOO), """
-        (== (sig s) (const 1'sd-1))
+        (== (sig s) (const 2'sd-1))
+        """)
+
+    def test_matches_const_castable(self):
+        s = Signal(4)
+        self.assertRepr(s.matches(Cat(C(0b10, 2), C(0b11, 2))), """
+        (== (sig s) (const 4'd14))
         """)
 
     def test_matches_width_wrong(self):
@@ -623,21 +631,25 @@ class OperatorTestCase(FHDLTestCase):
                 r"^Match pattern '--' must have the same width as match value \(which is 4\)$"):
             s.matches("--")
         with self.assertWarnsRegex(SyntaxWarning,
-                (r"^Match pattern '10110' is wider than match value \(which has width 4\); "
-                    r"comparison will never be true$")):
+                r"^Match pattern '22' \(5'10110\) is wider than match value \(which has "
+                r"width 4\); comparison will never be true$"):
             s.matches(0b10110)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Match pattern '\(cat \(const 1'd0\) \(const 4'd11\)\)' \(5'10110\) is wider "
+                r"than match value \(which has width 4\); comparison will never be true$"):
+            s.matches(Cat(0, C(0b1011, 4)))
 
     def test_matches_bits_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                (r"^Match pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
-                    r"and may include whitespace$")):
+                r"^Match pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
+                r"and may include whitespace$"):
             s.matches("abc")
 
     def test_matches_pattern_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern must be an integer, a string, or an enumeration, not 1\.0$"):
+                r"^Match pattern must be a string or a constant-castable expression, not 1\.0$"):
             s.matches(1.0)
 
     def test_hash(self):
