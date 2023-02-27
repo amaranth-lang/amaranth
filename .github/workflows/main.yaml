@@ -1,7 +1,4 @@
-on:
-  push: {}
-  pull_request:
-    types: [opened, reopened, synchronize]
+on: [push, pull_request]
 name: CI
 jobs:
   test:
@@ -14,8 +11,14 @@ jobs:
         - '3.9'
         - '3.10'
         - '3.11'
-        - '3.12-dev'
         - 'pypy-3.7-v7.3.3'
+        allow-failure:
+        - false
+        include:
+        - python-version: '3.12-dev'
+          allow-failure: true
+    continue-on-error: '${{ matrix.allow-failure }}'
+    name: 'test (${{ matrix.python-version }})'
     steps:
     - name: Check out source code
       uses: actions/checkout@v3
@@ -32,8 +35,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install yices2
         pip install coverage codecov
-        pip install 'yowasp-yosys==0.20.dev398' # latest version that works on Python 3.7
+        pip install yowasp-yosys==0.20.* # last version compatible with Python 3.7
         pip install -e .[builtin-yosys]
+        pip install -r docs/requirements.txt
     - name: Preserve Wasm cache
       uses: actions/cache@v3
       with:
@@ -47,6 +51,7 @@ jobs:
         export PYTHONWARNINGS=error
         python -m coverage run -m unittest discover -t . -s tests
         unset PYTHONWARNINGS
+        sphinx-build -b doctest docs/ docs/_build
         codecov
   document:
     runs-on: ubuntu-latest

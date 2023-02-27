@@ -800,7 +800,7 @@ Every signal included in the target of an assignment becomes a part of the domai
 
    Clearly, Amaranth code that drives a single bit of a signal from two different domains does not describe a meaningful circuit. However, driving two different bits of a signal from two different domains does not inherently cause such a conflict. Would Amaranth accept the following code?
 
-   .. testcode::
+   .. code-block::
 
       e = Signal(2)
       m.d.comb += e[0].eq(0)
@@ -945,6 +945,7 @@ Signals in the combinatorial :ref:`control domain <lang-domains>` change wheneve
 Consider the following code:
 
 .. testsetup::
+
    en = Signal()
    b = Signal(8)
 
