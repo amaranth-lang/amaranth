@@ -100,9 +100,10 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         """Convert ``value``, which may be a dict or an array of field values, to an integer using
         the representation defined by this layout.
 
-        This method is roughly equivalent to :meth:`Const.normalize`. It is private because
-        Amaranth does not currently have a concept of a constant initializer; this requires
-        an RFC. It will be renamed or removed in a future version."""
+        This method is private because Amaranth does not currently have a concept of
+        a constant initializer; this requires an RFC. It will be renamed or removed
+        in a future version.
+        """
         if isinstance(value, Mapping):
             iterator = value.items()
         elif isinstance(value, Sequence):
@@ -116,7 +117,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             field = self[key]
             if isinstance(field.shape, Layout):
                 key_value = field.shape._convert_to_int(key_value)
-            int_value |= Const.normalize(key_value, Shape.cast(field.shape)) << field.offset
+            int_value |= Const(key_value, Shape.cast(field.shape)).value << field.offset
         return int_value
 
 

@@ -33,6 +33,7 @@ Language changes
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :class:`Cat` accepts instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) without warning.
+* Deprecated: :meth:`Const.normalize`.
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
 * Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.

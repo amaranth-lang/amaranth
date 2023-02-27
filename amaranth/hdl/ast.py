@@ -582,7 +582,9 @@ class Const(Value):
     """
     src_loc = None
 
+    # TODO(amaranth-0.5): remove
     @staticmethod
+    @deprecated("instead of `Const.normalize(value, shape)`, use `Const(value, shape).value`")
     def normalize(value, shape):
         mask = (1 << shape.width) - 1
         value &= mask
@@ -601,7 +603,10 @@ class Const(Value):
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
-        self.value  = self.normalize(self.value, shape)
+        if self.signed and self.value >> (self.width - 1):
+            self.value |= -(1 << self.width)
+        else:
+            self.value &= (1 << self.width) - 1
 
     def shape(self):
         return Shape(self.width, self.signed)

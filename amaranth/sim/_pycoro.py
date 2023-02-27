@@ -69,7 +69,7 @@ class PyCoroProcess(BaseProcess):
                 if isinstance(command, Value):
                     exec(_RHSValueCompiler.compile(self.state, command, mode="curr"),
                         self.exec_locals)
-                    response = Const.normalize(self.exec_locals["result"], command.shape())
+                    response = Const(self.exec_locals["result"], command.shape()).value
 
                 elif isinstance(command, Statement):
                     exec(_StatementCompiler.compile(self.state, command),
