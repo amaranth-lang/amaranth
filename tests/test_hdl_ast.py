@@ -397,6 +397,9 @@ class OperatorTestCase(FHDLTestCase):
         self.assertEqual(repr(v), "(s (const 4'd1))")
         self.assertEqual(v.shape(), signed(4))
 
+    def test_pos(self):
+        self.assertRepr(+Const(10), "(const 4'd10)")
+
     def test_neg(self):
         v1 = -Const(0, unsigned(4))
         self.assertEqual(repr(v1), "(- (const 4'd0))")

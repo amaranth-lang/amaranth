@@ -166,6 +166,9 @@ class Value(metaclass=ABCMeta):
     def __bool__(self):
         raise TypeError("Attempted to convert Amaranth value to Python boolean")
 
+    def __pos__(self):
+        return self
+
     def __invert__(self):
         return Operator("~", [self])
     def __neg__(self):
