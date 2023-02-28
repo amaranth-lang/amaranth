@@ -2,7 +2,6 @@ import enum as py_enum
 import warnings
 
 from ..hdl.ast import Shape, ShapeCastable, Const
-from .._utils import bits_for
 
 
 __all__ = py_enum.__all__
@@ -38,20 +37,21 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
             cls._amaranth_shape_ = shape = Shape.cast(shape)
             for member in cls:
                 try:
-                    Const.cast(member.value)
+                    member_shape = Const.cast(member.value).shape()
                 except TypeError as e:
                     raise TypeError("Value of enumeration member {!r} must be "
                                     "a constant-castable expression"
                                     .format(member)) from e
-                width = bits_for(member.value, shape.signed)
-                if member.value < 0 and not shape.signed:
+                if member_shape.signed and not shape.signed:
                     warnings.warn(
                         message="Value of enumeration member {!r} is signed, but enumeration "
                                 "shape is {!r}" # the repr will be `unsigned(X)`
                                 .format(member, shape),
                         category=RuntimeWarning,
                         stacklevel=2)
-                elif width > shape.width:
+                elif (member_shape.width > shape.width or
+                      member_shape.width == shape.width and
+                        shape.signed and not member_shape.signed):
                     warnings.warn(
                         message="Value of enumeration member {!r} will be truncated to "
                                 "enumeration shape {!r}"
