@@ -30,13 +30,18 @@ Language changes
 
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
+* Added: :meth:`Const.cast`, evaluating constant-castable values and returning a :class:`Const`. (`RFC 4`_)
+* Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :class:`Cat` accepts instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) without warning.
-* Deprecated: :meth:`Const.normalize`. (`RFC 5 <https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html>`_)
+* Deprecated: :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
 * Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.
+
+.. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
+.. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
 
 
 Toolchain changes
