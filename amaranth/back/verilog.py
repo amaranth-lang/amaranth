@@ -15,7 +15,10 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
 
     script = []
     script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
-    script.append("proc -nomux")
+    if yosys_version >= (0, 17):
+        script.append("proc -nomux -norom")
+    else:
+        script.append("proc -nomux")
     script.append("memory_collect")
 
     if strip_internal_attrs:
