@@ -599,7 +599,7 @@ class OperatorTestCase(FHDLTestCase):
 
     def test_matches(self):
         s = Signal(4)
-        self.assertRepr(s.matches(), "(const 1'd0)")
+        self.assertRepr(s.matches(), "(const 1'd1)")
         self.assertRepr(s.matches(1), """
         (== (sig s) (const 1'd1))
         """)
