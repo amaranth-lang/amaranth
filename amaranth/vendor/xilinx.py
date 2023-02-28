@@ -347,9 +347,9 @@ class XilinxPlatform(TemplatedPlatform):
     @property
     def _symbiflow_part(self):
         # drop the trailing speed grade letter(s), if any
-        part = re.sub("[^\d]+$", "", self._part)
+        part = re.sub(r"[^\d]+$", "", self._part)
         # drop temp/speed grade letters after family name, if any
-        part = re.sub("(.{4}\d+t)[il]", r"\1", part)
+        part = re.sub(r"(.{4}\d+t)[il]", r"\1", part)
         return part
 
     # bitstream device name according to prjxray-db path
