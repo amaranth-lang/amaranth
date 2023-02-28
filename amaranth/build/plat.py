@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from collections.abc import Iterable
 from abc import ABCMeta, abstractmethod, abstractproperty
 import os
 import textwrap
@@ -331,10 +332,12 @@ class TemplatedPlatform(Platform):
                     var_env_value = os.environ[var_env]
                 return re.sub(r'^\"\"$', "", var_env_value)
             elif var in kwargs:
-                if not isinstance(kwargs[var], expected_type) and not expected_type is None:
-                    raise TypeError("Override '{}' must be a {}, not {!r}".format(var, expected_type.__name__, kwargs[var]))
-                else:
-                    return kwargs[var]
+                kwarg = kwargs[var]
+                if issubclass(expected_type, str) and isinstance(var, Iterable):
+                    kwarg = " ".join(kwarg)
+                if not isinstance(kwarg, expected_type) and not expected_type is None:
+                    raise TypeError("Override '{}' must be a {}, not {!r}".format(var, expected_type.__name__, kwarg))
+                return kwarg
             else:
                 return jinja2.Undefined(name=var)
 
