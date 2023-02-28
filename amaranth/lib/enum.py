@@ -24,6 +24,12 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     :meth:`as_shape` is never called, it places no restrictions on the enumeration class
     or the values of its members.
     """
+
+    # TODO: remove this shim once py3.8 support is dropped
+    @classmethod
+    def __prepare__(metacls, name, bases, shape=None, **kwargs):
+        return super().__prepare__(name, bases, **kwargs)
+
     def __new__(metacls, name, bases, namespace, shape=None, **kwargs):
         cls = py_enum.EnumMeta.__new__(metacls, name, bases, namespace, **kwargs)
         if shape is not None:
