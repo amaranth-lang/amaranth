@@ -38,7 +38,8 @@ class Field:
 
     def __eq__(self, other):
         return (isinstance(other, Field) and
-                self._shape == other.shape and self._offset == other.offset)
+                Shape.cast(self._shape) == Shape.cast(other.shape) and
+                self._offset == other.offset)
 
     def __repr__(self):
         return f"Field({self._shape!r}, {self._offset})"

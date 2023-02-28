@@ -133,13 +133,8 @@ class Shape:
             return "unsigned({})".format(self.width)
 
     def __eq__(self, other):
-        if not isinstance(other, Shape):
-            try:
-                other = self.__class__.cast(other)
-            except TypeError as e:
-                raise TypeError("Shapes may be compared with shape-castable objects, not {!r}"
-                                .format(other)) from e
-        return self.width == other.width and self.signed == other.signed
+        return (isinstance(other, Shape) and
+                self.width == other.width and self.signed == other.signed)
 
 
 def unsigned(width):

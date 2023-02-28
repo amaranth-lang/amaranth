@@ -47,15 +47,8 @@ class ShapeTestCase(FHDLTestCase):
                 r"^Width must be a non-negative integer, not -1$"):
             Shape(-1)
 
-    def test_compare_wrong(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Shapes may be compared with shape-castable objects, not 'hi'$"):
-            Shape(1, True) == 'hi'
-
-    def test_compare_tuple_wrong(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Shapes may be compared with shape-castable objects, not \(2, 3\)$"):
-            Shape(1, True) == (2, 3)
+    def test_compare_non_shape(self):
+        self.assertNotEqual(Shape(1, True), "hi")
 
     def test_repr(self):
         self.assertEqual(repr(Shape()), "unsigned(1)")

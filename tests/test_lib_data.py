@@ -534,7 +534,7 @@ class StructTestCase(FHDLTestCase):
 
         v = S()
         self.assertEqual(Layout.of(v), S)
-        self.assertEqual(Value.cast(v).shape(), S)
+        self.assertEqual(Value.cast(v).shape(), Shape.cast(S))
         self.assertEqual(Value.cast(v).name, "v")
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
         self.assertRepr(v.b, "(s (slice (sig v) 1:4))")
@@ -550,7 +550,7 @@ class StructTestCase(FHDLTestCase):
             a: unsigned(1)
             b: R
 
-        self.assertEqual(S, unsigned(9))
+        self.assertEqual(Shape.cast(S), unsigned(9))
 
         v = S()
         self.assertIs(Layout.of(v), S)
@@ -654,7 +654,7 @@ class UnionTestCase(FHDLTestCase):
 
         v = U()
         self.assertEqual(Layout.of(v), U)
-        self.assertEqual(Value.cast(v).shape(), U)
+        self.assertEqual(Value.cast(v).shape(), Shape.cast(U))
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
         self.assertRepr(v.b, "(s (slice (sig v) 0:3))")
 
@@ -803,7 +803,7 @@ class RFCExamplesTestCase(TestCase):
             kind: Kind
             value: Value
 
-        self.assertEqual(SomeVariant, unsigned(3))
+        self.assertEqual(Shape.cast(SomeVariant), unsigned(3))
 
         view3 = SomeVariant()
         self.assertIsInstance(Value.cast(view3), Signal)
