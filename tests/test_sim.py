@@ -11,6 +11,7 @@ from amaranth.hdl.ir import *
 from amaranth.sim import *
 
 from .utils import *
+from amaranth._utils import _ignore_deprecated
 
 
 class SimulatorUnitTestCase(FHDLTestCase):
@@ -811,6 +812,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
 
+    @_ignore_deprecated
     def test_sample_helpers(self):
         m = Module()
         s = Signal(2)

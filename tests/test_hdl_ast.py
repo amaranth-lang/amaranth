@@ -4,6 +4,7 @@ from enum import Enum
 from amaranth.hdl.ast import *
 
 from .utils import *
+from amaranth._utils import _ignore_deprecated
 
 
 class UnsignedEnum(Enum):
@@ -1187,27 +1188,32 @@ class ValueCastableTestCase(FHDLTestCase):
 
 
 class SampleTestCase(FHDLTestCase):
+    @_ignore_deprecated
     def test_const(self):
         s = Sample(1, 1, "sync")
         self.assertEqual(s.shape(), unsigned(1))
 
+    @_ignore_deprecated
     def test_signal(self):
         s1 = Sample(Signal(2), 1, "sync")
         self.assertEqual(s1.shape(), unsigned(2))
         s2 = Sample(ClockSignal(), 1, "sync")
         s3 = Sample(ResetSignal(), 1, "sync")
 
+    @_ignore_deprecated
     def test_wrong_value_operator(self):
         with self.assertRaisesRegex(TypeError,
                 (r"^Sampled value must be a signal or a constant, not "
                 r"\(\+ \(sig \$signal\) \(const 1'd1\)\)$")):
             Sample(Signal() + 1, 1, "sync")
 
+    @_ignore_deprecated
     def test_wrong_clocks_neg(self):
         with self.assertRaisesRegex(ValueError,
                 r"^Cannot sample a value 1 cycles in the future$"):
             Sample(Signal(), -1, "sync")
 
+    @_ignore_deprecated
     def test_wrong_domain(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Domain name must be a string or None, not 0$"):

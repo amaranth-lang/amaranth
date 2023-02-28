@@ -6,6 +6,7 @@ from amaranth.sim import *
 from amaranth.lib.fifo import *
 
 from .utils import *
+from amaranth._utils import _ignore_deprecated
 
 
 class FIFOTestCase(FHDLTestCase):
@@ -59,6 +60,7 @@ class FIFOTestCase(FHDLTestCase):
                 (r"^AsyncFIFOBuffered only supports depths that are one higher than powers of 2; "
                     r"requested exact depth 16 is not$")):
             AsyncFIFOBuffered(width=8, depth=16, exact_depth=True)
+
 
 class FIFOModel(Elaboratable, FIFOInterface):
     """
@@ -128,6 +130,7 @@ class FIFOModelEquivalenceSpec(Elaboratable):
         self.r_domain = r_domain
         self.w_domain = w_domain
 
+    @_ignore_deprecated
     def elaborate(self, platform):
         m = Module()
         m.submodules.dut  = dut  = self.fifo
@@ -168,6 +171,7 @@ class FIFOContractSpec(Elaboratable):
         self.w_domain = w_domain
         self.bound    = bound
 
+    @_ignore_deprecated
     def elaborate(self, platform):
         m = Module()
         m.submodules.dut = fifo = self.fifo

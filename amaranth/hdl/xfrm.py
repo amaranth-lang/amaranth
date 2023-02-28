@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
 
-from .._utils import flatten
+from .._utils import flatten, _ignore_deprecated
 from .. import tracer
 from .ast import *
 from .ast import _StatementList
@@ -526,6 +526,7 @@ class SampleDomainInjector(ValueTransformer, StatementTransformer):
     def __init__(self, domain):
         self.domain = domain
 
+    @_ignore_deprecated
     def on_Sample(self, value):
         if value.domain is not None:
             return value
@@ -555,6 +556,7 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         else:
             raise NotImplementedError # :nocov:
 
+    @_ignore_deprecated
     def on_Sample(self, value):
         if value in self.sample_cache:
             return self.sample_cache[value]

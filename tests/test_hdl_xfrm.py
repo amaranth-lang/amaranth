@@ -9,6 +9,7 @@ from amaranth.hdl.xfrm import *
 from amaranth.hdl.mem import *
 
 from .utils import *
+from amaranth._utils import _ignore_deprecated
 
 
 class DomainRenamerTestCase(FHDLTestCase):
@@ -216,6 +217,7 @@ class SampleLowererTestCase(FHDLTestCase):
         self.o2 = Signal()
         self.o3 = Signal()
 
+    @_ignore_deprecated
     def test_lower_signal(self):
         f = Fragment()
         f.add_statements(
@@ -238,6 +240,7 @@ class SampleLowererTestCase(FHDLTestCase):
         self.assertEqual(len(f.drivers["sync"]), 2)
         self.assertEqual(len(f.drivers["pix"]), 1)
 
+    @_ignore_deprecated
     def test_lower_const(self):
         f = Fragment()
         f.add_statements(

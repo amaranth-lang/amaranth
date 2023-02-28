@@ -8,6 +8,7 @@ from amaranth.hdl.dsl import *
 from amaranth.lib.enum import Enum
 
 from .utils import *
+from amaranth._utils import _ignore_deprecated
 
 
 class DSLTestCase(FHDLTestCase):
@@ -131,6 +132,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    @_ignore_deprecated
     def test_sample_domain(self):
         m = Module()
         i = Signal()

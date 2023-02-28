@@ -72,7 +72,7 @@ def _ignore_deprecated(f=None):
         def decorator_like(*args, **kwargs):
             with warnings.catch_warnings():
                 warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-                f(*args, **kwargs)
+                return f(*args, **kwargs)
         return decorator_like
 
 

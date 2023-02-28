@@ -8,6 +8,7 @@ from itertools import chain
 
 from .. import tracer
 from .._utils import *
+from .._utils import _ignore_deprecated
 from .._unused import *
 
 
@@ -1333,6 +1334,7 @@ class ValueCastable:
         return wrapper_memoized
 
 
+# TODO(amaranth-0.5): remove
 @final
 class Sample(Value):
     """Value from the past.
@@ -1341,6 +1343,7 @@ class Sample(Value):
     of the ``domain`` clock back. If that moment is before the beginning of time, it is equal
     to the value of the expression calculated as if each signal had its reset value.
     """
+    @deprecated("instead of using `Sample`, create a register explicitly")
     def __init__(self, expr, clocks, domain, *, src_loc_at=0):
         super().__init__(src_loc_at=1 + src_loc_at)
         self.value  = Value.cast(expr)
@@ -1367,20 +1370,32 @@ class Sample(Value):
             self.value, "<default>" if self.domain is None else self.domain, self.clocks)
 
 
+# TODO(amaranth-0.5): remove
+@deprecated("instead of using `Past`, create a register explicitly")
 def Past(expr, clocks=1, domain=None):
-    return Sample(expr, clocks, domain)
+    with _ignore_deprecated():
+        return Sample(expr, clocks, domain)
 
 
+# TODO(amaranth-0.5): remove
+@deprecated("instead of using `Stable`, create registers and comparisons explicitly")
 def Stable(expr, clocks=0, domain=None):
-    return Sample(expr, clocks + 1, domain) == Sample(expr, clocks, domain)
+    with _ignore_deprecated():
+        return Sample(expr, clocks + 1, domain) == Sample(expr, clocks, domain)
 
 
+# TODO(amaranth-0.5): remove
+@deprecated("instead of using `Rose`, create registers and comparisons explicitly")
 def Rose(expr, clocks=0, domain=None):
-    return ~Sample(expr, clocks + 1, domain) & Sample(expr, clocks, domain)
+    with _ignore_deprecated():
+        return ~Sample(expr, clocks + 1, domain) & Sample(expr, clocks, domain)
 
 
+# TODO(amaranth-0.5): remove
+@deprecated("instead of using `Fell`, create registers and comparisons explicitly")
 def Fell(expr, clocks=0, domain=None):
-    return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
+    with _ignore_deprecated():
+        return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
 
 
 @final
