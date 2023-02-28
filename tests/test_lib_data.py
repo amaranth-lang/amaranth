@@ -411,7 +411,7 @@ class ViewTestCase(FHDLTestCase):
 
     def test_layout_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^View layout must be a Layout instance, not <.+?>$"):
+                r"^View layout must be a layout, not <.+?>$"):
             View(object(), Signal(1))
 
     def test_target_wrong_type(self):
@@ -574,6 +574,70 @@ class StructTestCase(FHDLTestCase):
         self.assertEqual(s.reset_less, True)
         self.assertEqual(s.attrs, {"debug": 1})
         self.assertEqual(s.decoder, decoder)
+
+    def test_construct_reset(self):
+        class S(Struct):
+            p: 4
+            q: 2 = 1
+
+        with self.assertRaises(AttributeError):
+            S.q
+
+        v1 = S()
+        self.assertEqual(v1.as_value().reset, 0b010000)
+        v2 = S(reset=dict(p=0b0011))
+        self.assertEqual(v2.as_value().reset, 0b010011)
+        v3 = S(reset=dict(p=0b0011, q=0b00))
+        self.assertEqual(v3.as_value().reset, 0b000011)
+
+    def test_shape_undefined_wrong(self):
+        class S(Struct):
+            pass
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Aggregate class '.+?\.S' does not have a defined shape$"):
+            Shape.cast(S)
+
+    def test_base_class_1(self):
+        class Sb(Struct):
+            def add(self):
+                return self.a + self.b
+
+        class Sb1(Sb):
+            a: 1
+            b: 1
+
+        class Sb2(Sb):
+            a: 2
+            b: 2
+
+        self.assertEqual(Sb1().add().shape(), unsigned(2))
+        self.assertEqual(Sb2().add().shape(), unsigned(3))
+
+    def test_base_class_2(self):
+        class Sb(Struct):
+            a: 2
+            b: 2
+
+        class Sb1(Sb):
+            def do(self):
+                return Cat(self.a, self.b)
+
+        class Sb2(Sb):
+            def do(self):
+                return self.a + self.b
+
+        self.assertEqual(Sb1().do().shape(), unsigned(4))
+        self.assertEqual(Sb2().do().shape(), unsigned(3))
+
+    def test_layout_redefined_wrong(self):
+        class Sb(Struct):
+            a: 1
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Aggregate class 'Sd' must either inherits or specify a layout, not both$"):
+            class Sd(Sb):
+                b: 1
 
 
 class UnionTestCase(FHDLTestCase):
