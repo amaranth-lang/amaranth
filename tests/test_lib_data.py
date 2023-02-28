@@ -669,6 +669,24 @@ class UnionTestCase(FHDLTestCase):
         self.assertEqual(s.attrs, {"debug": 1})
         self.assertEqual(s.decoder, decoder)
 
+    def test_construct_reset_two_wrong(self):
+        class U(Union):
+            a: unsigned(1)
+            b: unsigned(2)
+
+        with self.assertRaisesRegex(ValueError,
+                r"^Reset value for at most one field can be provided for a union class "
+                r"\(specified: a, b\)$"):
+            U(reset=dict(a=1, b=2))
+
+    def test_construct_reset_override(self):
+        class U(Union):
+            a: unsigned(1) = 1
+            b: unsigned(2)
+
+        self.assertEqual(U().as_value().reset, 0b01)
+        self.assertEqual(U(reset=dict(b=0b10)).as_value().reset, 0b10)
+
 
 # Examples from https://github.com/amaranth-lang/amaranth/issues/693
 class RFCExamplesTestCase(TestCase):

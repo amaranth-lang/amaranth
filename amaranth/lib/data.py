@@ -431,10 +431,15 @@ class _AggregateMeta(ShapeCastable, type):
 class _Aggregate(View, metaclass=_AggregateMeta):
     def __init__(self, target=None, *, name=None, reset=None, reset_less=None,
             attrs=None, decoder=None, src_loc_at=0):
+        if self.__class__._AggregateMeta__layout_cls is UnionLayout:
+            if reset is not None and len(reset) > 1:
+                raise ValueError("Reset value for at most one field can be provided for "
+                                 "a union class (specified: {})"
+                                 .format(", ".join(reset.keys())))
         if target is None and hasattr(self.__class__, "_AggregateMeta__reset"):
             if reset is None:
                 reset = self.__class__._AggregateMeta__reset
-            else:
+            elif self.__class__._AggregateMeta__layout_cls is not UnionLayout:
                 reset = {**self.__class__._AggregateMeta__reset, **reset}
         super().__init__(self.__class__, target, name=name, reset=reset, reset_less=reset_less,
             attrs=attrs, decoder=decoder, src_loc_at=src_loc_at + 1)
