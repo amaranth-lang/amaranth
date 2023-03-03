@@ -123,6 +123,20 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
             raise TypeError("Enumeration '{}.{}' does not have a defined shape"
                             .format(cls.__module__, cls.__qualname__))
 
+    def __call__(cls, value):
+        # :class:`py_enum.Enum` uses ``__call__()`` for type casting: ``E(x)`` returns
+        # the enumeration member whose value equals ``x``. In this case, ``x`` must be a concrete
+        # value.
+        # Amaranth extends this to indefinite values, but conceptually the operation is the same:
+        # :class:`View` calls :meth:`Enum.__call__` to go from a :class:`Value` to something
+        # representing this enumeration with that value.
+        # At the moment however, for historical reasons, this is just the value itself. This works
+        # and is backwards-compatible but is limiting in that it does not allow us to e.g. catch
+        # comparisons with enum members of the wrong type.
+        if isinstance(value, Value):
+            return value
+        return super().__call__(value)
+
 
 class Enum(py_enum.Enum, metaclass=EnumMeta):
     """Subclass of the standard :class:`enum.Enum` that has :class:`EnumMeta` as
