@@ -407,12 +407,19 @@ class _AggregateMeta(ShapeCastable, type):
         elif all(not hasattr(base, "_AggregateMeta__layout") for base in bases):
             # This is a leaf class with its own layout. It is shape-castable and can
             # be instantiated. It can also be subclassed, and used to share layout and behavior.
-            reset = dict()
-            for name in namespace["__annotations__"]:
+            layout = dict()
+            reset  = dict()
+            for name in {**namespace["__annotations__"]}:
+                try:
+                    Shape.cast(namespace["__annotations__"][name])
+                except TypeError:
+                    # Not a shape-castable annotation; leave as-is.
+                    continue
+                layout[name] = namespace["__annotations__"].pop(name)
                 if name in namespace:
                     reset[name] = namespace.pop(name)
             cls = type.__new__(metacls, name, bases, namespace)
-            cls.__layout = cls.__layout_cls(namespace["__annotations__"])
+            cls.__layout = cls.__layout_cls(layout)
             cls.__reset  = reset
             return cls
         else:

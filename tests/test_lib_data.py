@@ -639,6 +639,16 @@ class StructTestCase(FHDLTestCase):
             class Sd(Sb):
                 b: 1
 
+    def test_typing_annotation_coexistence(self):
+        class S(Struct):
+            a: unsigned(1)
+            b: int
+            c: str = "x"
+
+        self.assertEqual(Layout.of(S()), StructLayout({"a": unsigned(1)}))
+        self.assertEqual(S.__annotations__, {"b": int, "c": str})
+        self.assertEqual(S.c, "x")
+
 
 class UnionTestCase(FHDLTestCase):
     def test_construct(self):
