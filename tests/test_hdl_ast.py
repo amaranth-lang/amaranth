@@ -986,20 +986,25 @@ class SignalTestCase(FHDLTestCase):
         s1 = Signal(2, reset=UnsignedEnum.BAR)
         self.assertEqual(s1.reset, 2)
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value has to be an int or an integral Enum$"
-        ):
+                r"^Reset value must be a constant-castable expression, "
+                r"not <StringEnum\.FOO: 'a'>$"):
             Signal(1, reset=StringEnum.FOO)
 
-    def test_reset_narrow(self):
+    def test_reset_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 8 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(3, reset=8)
+                r"^Reset value -2 is signed, but the signal shape is unsigned\(2\)$"):
+            Signal(unsigned(2), reset=-2)
+
+    def test_reset_wrong_too_wide(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 4 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(signed(3), reset=4)
+                r"^Reset value 2 will be truncated to the signal shape unsigned\(1\)$"):
+            Signal(unsigned(1), reset=2)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -5 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(signed(3), reset=-5)
+                r"^Reset value 1 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), reset=1)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Reset value -2 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), reset=-2)
 
     def test_attrs(self):
         s1 = Signal()

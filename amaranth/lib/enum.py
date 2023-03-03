@@ -44,7 +44,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
                                     .format(member)) from e
                 if member_shape.signed and not shape.signed:
                     warnings.warn(
-                        message="Value of enumeration member {!r} is signed, but enumeration "
+                        message="Value of enumeration member {!r} is signed, but the enumeration "
                                 "shape is {!r}" # the repr will be `unsigned(X)`
                                 .format(member, shape),
                         category=SyntaxWarning,
@@ -54,7 +54,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
                         shape.signed and not member_shape.signed):
                     warnings.warn(
                         message="Value of enumeration member {!r} will be truncated to "
-                                "enumeration shape {!r}"
+                                "the enumeration shape {!r}"
                                 .format(member, shape),
                         category=SyntaxWarning,
                         stacklevel=2)
