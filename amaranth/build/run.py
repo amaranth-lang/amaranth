@@ -176,7 +176,7 @@ class BuildPlan:
                 # Show the output from the server while products are built.
                 buf = channel.recv(1024)
                 while buf:
-                    print(buf.decode("utf-8"), end="")
+                    print(buf.decode("utf-8", errors="replace"), end="")
                     buf = channel.recv(1024)
 
         return RemoteSSHBuildProducts(connect_to, root)
