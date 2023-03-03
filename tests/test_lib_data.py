@@ -364,6 +364,13 @@ class LayoutTestCase(TestCase):
         sc.shape = sc
         self.assertNotEqual(StructLayout({}), sc)
 
+    def test_call(self):
+        sl = StructLayout({"f": unsigned(1)})
+        s = Signal(1)
+        v = sl(s)
+        self.assertIs(Layout.of(v), sl)
+        self.assertIs(v.as_value(), s)
+
 
 class ViewTestCase(FHDLTestCase):
     def test_construct(self):
@@ -467,6 +474,37 @@ class ViewTestCase(FHDLTestCase):
         self.assertRepr(v["r"][i], "(part (slice (sig v) 0:4) (sig i) 2 2)")
         self.assertRepr(v["t"][0]["u"], "(slice (slice (slice (sig v) 0:4) 0:2) 0:1)")
         self.assertRepr(v["t"][1]["v"], "(slice (slice (slice (sig v) 0:4) 2:4) 1:2)")
+
+    def test_getitem_custom_call(self):
+        class Reverser(ShapeCastable):
+            def as_shape(self):
+                return unsigned(2)
+
+            def __call__(self, value):
+                return value[::-1]
+
+        v = View(StructLayout({
+            "f": Reverser()
+        }))
+        self.assertRepr(v.f, "(cat (slice (slice (sig v) 0:2) 1:2) "
+                             "     (slice (slice (sig v) 0:2) 0:1))")
+
+    def test_getitem_custom_call_wrong(self):
+        class WrongCastable(ShapeCastable):
+            def as_shape(self):
+                return unsigned(2)
+
+            def __call__(self, value):
+                pass
+
+        v = View(StructLayout({
+            "f": WrongCastable()
+        }))
+        with self.assertRaisesRegex(TypeError,
+                r"^<tests\.test_lib_data\.ViewTestCase\.test_getitem_custom_call_wrong\.<locals>"
+                r"\.WrongCastable object at 0x.+?>\.__call__\(\) must return a value or "
+                r"a value-castable object, not None$"):
+            v.f
 
     def test_index_wrong_missing(self):
         with self.assertRaisesRegex(KeyError,

@@ -187,6 +187,20 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         return (isinstance(other, Layout) and self.size == other.size and
                 dict(iter(self)) == dict(iter(other)))
 
+    def __call__(self, target):
+        """Create a view into a target.
+
+        When a :class:`Layout` is used as the shape of a :class:`Field` and accessed through
+        a :class:`View`, this method is used to wrap the slice of the underlying value into
+        another view with this layout.
+
+        Returns
+        -------
+        View
+            ``View(self, target)``
+        """
+        return View(self, target)
+
     def _convert_to_int(self, value):
         """Convert ``value``, which may be a dict or an array of field values, to an integer using
         the representation defined by this layout.
@@ -560,10 +574,12 @@ class View(ValueCastable):
     ################
 
     Slicing a view or accessing its attributes returns a part of the underlying value
-    corresponding to the field with that index or name, which is always an Amaranth value, but
-    it could also be a :class:`View` if the shape of the field is a :class:`Layout`, or
-    an instance of the data class if the shape of the field is a class deriving from
-    :class:`Struct` or :class:`Union`.
+    corresponding to the field with that index or name, which is itself either a value or
+    a value-castable object. If the shape of the field is a :class:`Layout`, it will be
+    a :class:`View`; if it is a class deriving from :class:`Struct` or :class:`Union`, it
+    will be an instance of that data class; if it is another
+    :ref:`shape-castable <lang-shapecasting>` object implementing ``__call__``, it will be
+    the result of calling that method.
 
     Slicing a view whose layout is an :class:`ArrayLayout` can be done with an index that is
     an Amaranth value instead of a constant integer. The returned element is chosen dynamically
@@ -639,9 +655,10 @@ class View(ValueCastable):
         """Slice the underlying value.
 
         A field corresponding to ``key`` is looked up in the layout. If the field's shape is
-        a :class:`Layout`, returns a :class:`View`. If it is a subclass of :class:`Struct` or
-        :class:`Union`, returns an instance of that class. Otherwise, returns an unspecified
-        Amaranth expression with the right shape.
+        a shape-castable object that has a ``__call__`` method, it is called and the result is
+        returned. Otherwise, ``as_shape`` is called repeatedly on the shape until either an object
+        with a ``__call__`` method is reached, or a ``Shape`` is returned. In the latter case,
+        returns an unspecified Amaranth expression with the right shape.
 
         Arguments
         ---------
@@ -650,7 +667,7 @@ class View(ValueCastable):
 
         Returns
         -------
-        :class:`Value`, inout
+        :class:`Value` or :class:`ValueCastable`, inout
             A slice of the underlying value defined by the field.
 
         Raises
@@ -660,6 +677,8 @@ class View(ValueCastable):
         TypeError
             If ``key`` is a value-castable object, but the layout of the view is not
             a :class:`ArrayLayout`.
+        TypeError
+            If ``ShapeCastable.__call__`` does not return a value or a value-castable object.
         """
         if isinstance(self.__layout, ArrayLayout):
             shape = self.__layout.elem_shape
@@ -672,10 +691,16 @@ class View(ValueCastable):
             field = self.__layout[key]
             shape = field.shape
             value = self.__target[field.offset:field.offset + field.width]
-        if isinstance(shape, _AggregateMeta):
-            return shape(value)
-        if isinstance(shape, Layout):
-            return View(shape, value)
+        # Field guarantees that the shape-castable object is well-formed, so there is no need
+        # to handle erroneous cases here.
+        while isinstance(shape, ShapeCastable):
+            if hasattr(shape, "__call__"):
+                value = shape(value)
+                if not isinstance(value, (Value, ValueCastable)):
+                    raise TypeError("{!r}.__call__() must return a value or "
+                                    "a value-castable object, not {!r}"
+                                    .format(shape, value))
+                return value
         if Shape.cast(shape).signed:
             return value.as_signed()
         else:
