@@ -635,7 +635,7 @@ class StructTestCase(FHDLTestCase):
             a: 1
 
         with self.assertRaisesRegex(TypeError,
-                r"^Aggregate class 'Sd' must either inherits or specify a layout, not both$"):
+                r"^Aggregate class 'Sd' must either inherit or specify a layout, not both$"):
             class Sd(Sb):
                 b: 1
 

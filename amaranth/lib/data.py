@@ -425,7 +425,7 @@ class _AggregateMeta(ShapeCastable, type):
         else:
             # This is a class that has a base class with a layout and annotations. Such a class
             # is not well-formed.
-            raise TypeError("Aggregate class '{}' must either inherits or specify a layout, "
+            raise TypeError("Aggregate class '{}' must either inherit or specify a layout, "
                             "not both"
                             .format(name))
 
