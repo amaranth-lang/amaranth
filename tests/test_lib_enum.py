@@ -53,24 +53,24 @@ class EnumTestCase(FHDLTestCase):
         self.assertEqual(Shape.cast(EnumD), signed(4))
 
     def test_shape_explicit_wrong_signed_mismatch(self):
-        with self.assertWarnsRegex(RuntimeWarning,
+        with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value of enumeration member <EnumA\.A: -1> is signed, but enumeration "
                 r"shape is unsigned\(1\)$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = -1
 
     def test_shape_explicit_wrong_too_wide(self):
-        with self.assertWarnsRegex(RuntimeWarning,
+        with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value of enumeration member <EnumA\.A: 2> will be truncated to enumeration "
                 r"shape unsigned\(1\)$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = 2
-        with self.assertWarnsRegex(RuntimeWarning,
+        with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value of enumeration member <EnumB\.A: 1> will be truncated to enumeration "
                 r"shape signed\(1\)$"):
             class EnumB(Enum, shape=signed(1)):
                 A = 1
-        with self.assertWarnsRegex(RuntimeWarning,
+        with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value of enumeration member <EnumC\.A: -2> will be truncated to enumeration "
                 r"shape signed\(1\)$"):
             class EnumC(Enum, shape=signed(1)):
