@@ -419,6 +419,11 @@ class _AggregateMeta(ShapeCastable, type):
                 if name in namespace:
                     reset[name] = namespace.pop(name)
             cls = type.__new__(metacls, name, bases, namespace)
+            if cls.__layout_cls is UnionLayout:
+                if len(reset) > 1:
+                    raise ValueError("Reset value for at most one field can be provided for "
+                                     "a union class (specified: {})"
+                                     .format(", ".join(reset.keys())))
             cls.__layout = cls.__layout_cls(layout)
             cls.__reset  = reset
             return cls

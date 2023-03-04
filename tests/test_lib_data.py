@@ -679,6 +679,14 @@ class UnionTestCase(FHDLTestCase):
         self.assertEqual(s.attrs, {"debug": 1})
         self.assertEqual(s.decoder, decoder)
 
+    def test_define_reset_two_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Reset value for at most one field can be provided for a union class "
+                r"\(specified: a, b\)$"):
+            class U(Union):
+                a: unsigned(1) = 1
+                b: unsigned(2) = 1
+
     def test_construct_reset_two_wrong(self):
         class U(Union):
             a: unsigned(1)
