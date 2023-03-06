@@ -572,8 +572,6 @@ class Value(metaclass=ABCMeta):
     def _rhs_signals(self):
         pass # :nocov:
 
-    __hash__ = None
-
 
 @final
 class Const(Value):
