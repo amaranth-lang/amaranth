@@ -357,6 +357,12 @@ class ConstTestCase(FHDLTestCase):
                 r"^Width must be a non-negative integer, not -1$"):
             Const(1, -1)
 
+    def test_wrong_fencepost(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Value 10 equals the non-inclusive end of the constant shape "
+                r"range\(0, 10\); this is likely an off-by-one error$"):
+            Const(10, range(10))
+
     def test_normalization(self):
         self.assertEqual(Const(0b10110, signed(5)).value, -10)
 
@@ -961,8 +967,10 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s8.shape(), signed(5))
         s9 = Signal(range(-20, 16))
         self.assertEqual(s9.shape(), signed(6))
-        s10 = Signal(range(0))
-        self.assertEqual(s10.shape(), unsigned(0))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=SyntaxWarning)
+            s10 = Signal(range(0))
+            self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
         self.assertEqual(s11.shape(), unsigned(1))
 
@@ -1005,6 +1013,12 @@ class SignalTestCase(FHDLTestCase):
         with self.assertWarnsRegex(SyntaxWarning,
                 r"^Reset value -2 will be truncated to the signal shape signed\(1\)$"):
             Signal(signed(1), reset=-2)
+
+    def test_reset_wrong_fencepost(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Reset value 10 equals the non-inclusive end of the signal shape "
+                r"range\(0, 10\); this is likely an off-by-one error$"):
+            Signal(range(0, 10), reset=10)
 
     def test_attrs(self):
         s1 = Signal()

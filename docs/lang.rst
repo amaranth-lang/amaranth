@@ -163,7 +163,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 
 .. _lang-exclrange:
 
-.. warning::
+.. note::
 
    Python ranges are *exclusive* or *half-open*, meaning they do not contain their ``.stop`` element. Because of this, values with shapes cast from a ``range(stop)`` where ``stop`` is a power of 2 are not wide enough to represent ``stop`` itself:
 
@@ -175,7 +175,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
       >>> fencepost.value
       0
 
-   Be mindful of this edge case!
+   Amaranth detects uses of :class:`Const` and :class:`Signal` that invoke such an off-by-one error, and emits a diagnostic message.
 
 
 .. _lang-shapeenum:
