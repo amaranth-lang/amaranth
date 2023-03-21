@@ -145,17 +145,14 @@ class MockShapeCastable(ShapeCastable):
         return self.dest
 
 
-class MockShapeCastableNoOverride(ShapeCastable):
-    def __init__(self):
-        pass
-
-
 class ShapeCastableTestCase(FHDLTestCase):
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
                 r"override the `as_shape` method$"):
-            sc = MockShapeCastableNoOverride()
+            class MockShapeCastableNoOverride(ShapeCastable):
+                def __init__(self):
+                    pass
 
     def test_cast(self):
         sc = MockShapeCastable(unsigned(2))
@@ -1135,19 +1132,6 @@ class MockValueCastableChanges(ValueCastable):
         return Signal(self.width)
 
 
-class MockValueCastableNotDecorated(ValueCastable):
-    def __init__(self):
-        pass
-
-    def as_value(self):
-        return Signal()
-
-
-class MockValueCastableNoOverride(ValueCastable):
-    def __init__(self):
-        pass
-
-
 class MockValueCastableCustomGetattr(ValueCastable):
     def __init__(self):
         pass
@@ -1165,13 +1149,20 @@ class ValueCastableTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must "
                 r"decorate the `as_value` method with the `ValueCastable.lowermethod` decorator$"):
-            vc = MockValueCastableNotDecorated()
+            class MockValueCastableNotDecorated(ValueCastable):
+                def __init__(self):
+                    pass
+
+                def as_value(self):
+                    return Signal()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must "
                 r"override the `as_value` method$"):
-            vc = MockValueCastableNoOverride()
+            class MockValueCastableNoOverride(ValueCastable):
+                def __init__(self):
+                    pass
 
     def test_memoized(self):
         vc = MockValueCastableChanges(1)
