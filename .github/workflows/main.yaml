@@ -84,6 +84,10 @@ jobs:
     if: github.repository == 'amaranth-lang/amaranth'
     runs-on: ubuntu-latest
     steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Download documentation archive
         uses: actions/download-artifact@v3
         with:
