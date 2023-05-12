@@ -201,29 +201,44 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         """
         return View(self, target)
 
-    def _convert_to_int(self, value):
-        """Convert ``value``, which may be a dict or an array of field values, to an integer using
-        the representation defined by this layout.
+    def const(self, init):
+        """Convert a constant initializer to a constant.
 
-        This method is private because Amaranth does not currently have a concept of
-        a constant initializer; this requires an RFC. It will be renamed or removed
-        in a future version.
+        Converts ``init``, which may be a sequence or a mapping of field values, to a constant.
+
+        Returns
+        -------
+        :class:`Const`
+            A constant that has the same value as a view with this layout that was initialized with
+            an all-zero value and had every field assigned to the corresponding value in the order
+            in which they appear in ``init``.
         """
-        if isinstance(value, Mapping):
-            iterator = value.items()
-        elif isinstance(value, Sequence):
-            iterator = enumerate(value)
+        if init is None:
+            iterator = iter(())
+        elif isinstance(init, Mapping):
+            iterator = init.items()
+        elif isinstance(init, Sequence):
+            iterator = enumerate(init)
         else:
-            raise TypeError("Layout initializer must be a mapping or a sequence, not {!r}"
-                            .format(value))
+            raise TypeError("Layout constant initializer must be a mapping or a sequence, not {!r}"
+                            .format(init))
 
         int_value = 0
         for key, key_value in iterator:
             field = self[key]
-            if isinstance(field.shape, Layout):
-                key_value = field.shape._convert_to_int(key_value)
-            int_value |= Const(key_value, Shape.cast(field.shape)).value << field.offset
-        return int_value
+            cast_field_shape = Shape.cast(field.shape)
+            if isinstance(field.shape, ShapeCastable):
+                key_value = Const.cast(field.shape.const(key_value))
+                if key_value.shape() != cast_field_shape:
+                    raise ValueError("Constant returned by {!r}.const() must have the shape that "
+                                     "it casts to, {!r}, and not {!r}"
+                                     .format(field.shape, cast_field_shape,
+                                             key_value.shape()))
+            else:
+                key_value = Const(key_value, cast_field_shape)
+            int_value &= ~(((1 << cast_field_shape.width) - 1) << field.offset)
+            int_value |= key_value.value << field.offset
+        return Const(int_value, self.as_shape())
 
 
 class StructLayout(Layout):
@@ -617,13 +632,9 @@ class View(ValueCastable):
                                  "the {} bit(s) wide view layout"
                                  .format(len(cast_target), cast_layout.size))
         else:
-            if reset is None:
-                reset = 0
-            else:
-                reset = cast_layout._convert_to_int(reset)
             if reset_less is None:
                 reset_less = False
-            cast_target = Signal(cast_layout, name=name, reset=reset, reset_less=reset_less,
+            cast_target = Signal(layout, name=name, reset=reset, reset_less=reset_less,
                 attrs=attrs, decoder=decoder, src_loc_at=src_loc_at + 1)
         self.__orig_layout = layout
         self.__layout = cast_layout
@@ -773,6 +784,9 @@ class _AggregateMeta(ShapeCastable, type):
             raise TypeError("Aggregate class '{}.{}' does not have a defined shape"
                             .format(cls.__module__, cls.__qualname__))
         return cls.__layout
+
+    def const(cls, init):
+        return cls.as_shape().const(init)
 
 
 class _Aggregate(View, metaclass=_AggregateMeta):

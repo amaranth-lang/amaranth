@@ -2,6 +2,7 @@ import warnings
 from enum import Enum
 
 from amaranth.hdl.ast import *
+from amaranth.lib.enum import Enum as AmaranthEnum
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -143,6 +144,9 @@ class MockShapeCastable(ShapeCastable):
 
     def as_shape(self):
         return self.dest
+
+    def const(self, obj):
+        return Const(obj, self.dest)
 
 
 class ShapeCastableTestCase(FHDLTestCase):
@@ -994,6 +998,29 @@ class SignalTestCase(FHDLTestCase):
                 r"^Reset value must be a constant-castable expression, "
                 r"not <StringEnum\.FOO: 'a'>$"):
             Signal(1, reset=StringEnum.FOO)
+
+    def test_reset_shape_castable_const(self):
+        class CastableFromHex(ShapeCastable):
+            def as_shape(self):
+                return unsigned(8)
+
+            def const(self, init):
+                return int(init, 16)
+
+        s1 = Signal(CastableFromHex(), reset="aa")
+        self.assertEqual(s1.reset, 0xaa)
+
+        with self.assertRaisesRegex(ValueError,
+                r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
+                r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
+            Signal(CastableFromHex(), reset="01")
+
+    def test_reset_shape_castable_enum_wrong(self):
+        class EnumA(AmaranthEnum):
+            X = 1
+        with self.assertRaisesRegex(TypeError,
+                r"^Reset value must be a constant initializer of <enum 'EnumA'>$"):
+            Signal(EnumA) # implied reset=0
 
     def test_reset_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,

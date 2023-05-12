@@ -16,6 +16,9 @@ class MockShapeCastable(ShapeCastable):
     def as_shape(self):
         return self.shape
 
+    def const(self, init):
+        return Const(init, self.shape)
+
 
 class FieldTestCase(TestCase):
     def test_construct(self):
@@ -332,7 +335,7 @@ class FlexibleLayoutTestCase(TestCase):
             il[object()]
 
 
-class LayoutTestCase(TestCase):
+class LayoutTestCase(FHDLTestCase):
     def test_cast(self):
         sl = StructLayout({})
         self.assertIs(Layout.cast(sl), sl)
@@ -370,6 +373,53 @@ class LayoutTestCase(TestCase):
         v = sl(s)
         self.assertIs(Layout.of(v), sl)
         self.assertIs(v.as_value(), s)
+
+    def test_const(self):
+        sl = StructLayout({
+            "a": unsigned(1),
+            "b": unsigned(2)
+        })
+        self.assertRepr(sl.const(None), "(const 3'd0)")
+        self.assertRepr(sl.const({"a": 0b1, "b": 0b10}), "(const 3'd5)")
+
+        ul = UnionLayout({
+            "a": unsigned(1),
+            "b": unsigned(2)
+        })
+        self.assertRepr(ul.const({"a": 0b11}), "(const 2'd1)")
+        self.assertRepr(ul.const({"b": 0b10}), "(const 2'd2)")
+        self.assertRepr(ul.const({"a": 0b1, "b": 0b10}), "(const 2'd2)")
+
+    def test_const_wrong(self):
+        sl = StructLayout({"f": unsigned(1)})
+        with self.assertRaisesRegex(TypeError,
+                r"^Layout constant initializer must be a mapping or a sequence, not "
+                r"<.+?object.+?>$"):
+            sl.const(object())
+
+    def test_const_field_shape_castable(self):
+        class CastableFromHex(ShapeCastable):
+            def as_shape(self):
+                return unsigned(8)
+
+            def const(self, init):
+                return int(init, 16)
+
+        sl = StructLayout({"f": CastableFromHex()})
+        self.assertRepr(sl.const({"f": "aa"}), "(const 8'd170)")
+
+        with self.assertRaisesRegex(ValueError,
+                r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
+                r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
+            sl.const({"f": "01"})
+
+    def test_signal_reset(self):
+        sl = StructLayout({
+            "a": unsigned(1),
+            "b": unsigned(2)
+        })
+        self.assertEqual(Signal(sl).reset, 0)
+        self.assertEqual(Signal(sl, reset={"a": 0b1, "b": 0b10}).reset, 5)
 
 
 class ViewTestCase(FHDLTestCase):
@@ -434,7 +484,7 @@ class ViewTestCase(FHDLTestCase):
 
     def test_signal_reset_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Layout initializer must be a mapping or a sequence, not 1$"):
+                r"^Reset value must be a constant initializer of StructLayout\({}\)$"):
             View(StructLayout({}), reset=0b1)
 
     def test_target_signal_wrong(self):
@@ -483,6 +533,9 @@ class ViewTestCase(FHDLTestCase):
             def __call__(self, value):
                 return value[::-1]
 
+            def const(self, init):
+                return Const(init, 2)
+
         v = View(StructLayout({
             "f": Reverser()
         }))
@@ -497,13 +550,15 @@ class ViewTestCase(FHDLTestCase):
             def __call__(self, value):
                 pass
 
+            def const(self, init):
+                return Const(init, 2)
+
         v = View(StructLayout({
             "f": WrongCastable()
         }))
         with self.assertRaisesRegex(TypeError,
-                r"^<tests\.test_lib_data\.ViewTestCase\.test_getitem_custom_call_wrong\.<locals>"
-                r"\.WrongCastable object at 0x.+?>\.__call__\(\) must return a value or "
-                r"a value-castable object, not None$"):
+                r"^<.+?\.WrongCastable.+?>\.__call__\(\) must return a value or a value-castable "
+                r"object, not None$"):
             v.f
 
     def test_index_wrong_missing(self):

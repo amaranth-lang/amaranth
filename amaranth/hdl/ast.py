@@ -45,6 +45,9 @@ class ShapeCastable:
         if not hasattr(cls, "as_shape"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `as_shape` method")
+        if not hasattr(cls, "const"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `const` method")
 
 
 class Shape:
@@ -988,7 +991,7 @@ class Signal(Value, DUID):
     decoder : function
     """
 
-    def __init__(self, shape=None, *, name=None, reset=0, reset_less=False,
+    def __init__(self, shape=None, *, name=None, reset=None, reset_less=False,
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
@@ -1005,12 +1008,24 @@ class Signal(Value, DUID):
         self.signed = shape.signed
 
         orig_reset = reset
-        try:
-            reset = Const.cast(reset)
-        except TypeError:
-            raise TypeError("Reset value must be a constant-castable expression, not {!r}"
-                            .format(orig_reset))
-        if orig_reset not in (0, -1): # Avoid false positives for all-zeroes and all-ones
+        if isinstance(orig_shape, ShapeCastable):
+            try:
+                reset = Const.cast(orig_shape.const(reset))
+            except Exception:
+                raise TypeError("Reset value must be a constant initializer of {!r}"
+                                .format(orig_shape))
+            if reset.shape() != Shape.cast(orig_shape):
+                raise ValueError("Constant returned by {!r}.const() must have the shape that "
+                                 "it casts to, {!r}, and not {!r}"
+                                 .format(orig_shape, Shape.cast(orig_shape),
+                                         reset.shape()))
+        else:
+            try:
+                reset = Const.cast(reset or 0)
+            except TypeError:
+                raise TypeError("Reset value must be a constant-castable expression, not {!r}"
+                                .format(orig_reset))
+        if orig_reset not in (None, 0, -1): # Avoid false positives for all-zeroes and all-ones
             if reset.shape().signed and not self.signed:
                 warnings.warn(
                     message="Reset value {!r} is signed, but the signal shape is {!r}"
