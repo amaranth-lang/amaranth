@@ -98,9 +98,6 @@ jobs:
           branch: main
           folder: docs/
           target-folder: docs/amaranth/latest/
-      - name: Extract release version
-        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-        run: echo "VERSION=$(python setup.py --version)" >>$GITHUB_ENV
       - name: Publish release documentation
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v4
@@ -109,7 +106,7 @@ jobs:
           ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
           branch: main
           folder: docs/
-          target-folder: docs/amaranth/v${{ env.VERSION }}/
+          target-folder: docs/amaranth/${{ github.ref_name }}/
   publish-docs-dev:
     needs: document
     if: github.repository != 'amaranth-lang/amaranth'
