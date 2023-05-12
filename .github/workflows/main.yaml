@@ -60,6 +60,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Pull tags from upstream repository
+        run: |
+          git pull --tags https://github.com/amaranth-lang/amaranth.git
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -107,3 +110,25 @@ jobs:
           branch: main
           folder: docs/
           target-folder: docs/amaranth/v${{ env.VERSION }}/
+  publish-docs-dev:
+    needs: document
+    if: github.repository != 'amaranth-lang/amaranth'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Download documentation archive
+        uses: actions/download-artifact@v3
+        with:
+          name: docs
+          path: pages/docs/${{ github.ref_name }}/
+      - name: Disable Jekyll
+        run: |
+          touch pages/.nojekyll
+      - name: Publish documentation for a branch
+        uses: JamesIves/github-pages-deploy-action@releases/v4
+        with:
+          folder: pages/
+          clean: false
