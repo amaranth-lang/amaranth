@@ -10,11 +10,19 @@ class EnumTestCase(FHDLTestCase):
         class EnumA(Enum):
             A = "str"
 
-    def test_non_int_members_wrong(self):
+    def test_non_const_non_int_members_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Value 'str' of enumeration member 'A' must be a constant-castable expression$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = "str"
+
+    def test_const_non_int_members(self):
+        class EnumA(Enum):
+            A = C(0)
+            B = C(1)
+        self.assertIs(EnumA.A.value, 0)
+        self.assertIs(EnumA.B.value, 1)
+        self.assertEqual(Shape.cast(EnumA), unsigned(1))
 
     def test_shape_no_members(self):
         class EnumA(Enum):
