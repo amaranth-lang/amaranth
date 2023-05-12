@@ -137,6 +137,17 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
             return value
         return super().__call__(value)
 
+    def const(cls, init):
+        # Same considerations apply as above.
+        if init is None:
+            # Signal with unspecified reset value passes ``None`` to :meth:`const`.
+            # Before RFC 9 was implemented, the unspecified reset value was 0, so this keeps
+            # the old behavior intact.
+            member = cls(0)
+        else:
+            member = cls(init)
+        return Const(member.value, cls.as_shape())
+
 
 class Enum(py_enum.Enum, metaclass=EnumMeta):
     """Subclass of the standard :class:`enum.Enum` that has :class:`EnumMeta` as
