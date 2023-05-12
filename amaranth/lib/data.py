@@ -196,7 +196,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
 
         Returns
         -------
-        View
+        :class:`View`
             ``View(self, target)``
         """
         return View(self, target)
@@ -297,7 +297,7 @@ class StructLayout(Layout):
 
         Returns
         -------
-        int
+        :class:`int`
             Index of the most significant bit of the *last* field plus one; or zero if there are
             no fields.
         """
@@ -369,7 +369,7 @@ class UnionLayout(Layout):
 
         Returns
         -------
-        int
+        :class:`int`
             Index of the most significant bit of the *largest* field plus one; or zero if there are
             no fields.
         """
@@ -389,7 +389,7 @@ class ArrayLayout(Layout):
 
     .. image:: _images/data/array_layout.svg
 
-    can be described with::
+    can be described with:
 
     .. testcode::
 
@@ -403,7 +403,7 @@ class ArrayLayout(Layout):
     ----------
     elem_shape : :ref:`shape-castable <lang-shapecasting>`
         Shape of an individual element.
-    length : int
+    length : :class:`int`
         Amount of elements.
     """
     def __init__(self, elem_shape, length):
@@ -457,7 +457,7 @@ class ArrayLayout(Layout):
 
         Returns
         -------
-        int
+        :class:`int`
             Size of an individual element multiplied by their amount.
         """
         return Shape.cast(self._elem_shape).width * self.length
@@ -491,7 +491,7 @@ class FlexibleLayout(Layout):
 
     Attributes
     ----------
-    size : int
+    size : :class:`int`
         Size of the layout.
     fields : mapping of :class:`str` or :class:`int` to :class:`Field`
         Fields defined in the layout.
