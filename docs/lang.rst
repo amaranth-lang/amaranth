@@ -282,30 +282,25 @@ Constant-castable objects are accepted anywhere a constant integer is accepted. 
 
 .. doctest::
 
-   >>> Const.cast(Cat(Direction.TOP, Direction.LEFT))
-   (const 4'd4)
+   >>> Const.cast(Cat(C(10, 4), C(1, 2)))
+   (const 6'd26)
 
-.. TODO: uncomment when this actually works
+They may be used in enumeration members, provided the enumeration inherits from :class:`amaranth.lib.enum.Enum`:
 
-.. comment::
+.. testcode::
 
-   They may be used in enumeration members:
+   class Funct(amaranth.lib.enum.Enum, shape=4):
+       ADD = 0
+       ...
 
-   .. testcode::
+   class Op(amaranth.lib.enum.Enum, shape=1):
+       REG = 0
+       IMM = 1
 
-      class Funct(enum.Enum):
-          ADD = 0
-          ...
-
-      class Op(enum.Enum):
-          REG = 0
-          IMM = 1
-
-      class Instr(enum.Enum):
-          ADD  = Cat(Funct.ADD, Op.REG)
-          ADDI = Cat(Funct.ADD, Op.IMM)
-          ...
-
+   class Instr(amaranth.lib.enum.Enum, shape=5):
+       ADD  = Cat(Funct.ADD, Op.REG)
+       ADDI = Cat(Funct.ADD, Op.IMM)
+       ...
 
 .. note::
 

@@ -1,7 +1,7 @@
 import enum as py_enum
 import warnings
 
-from ..hdl.ast import Shape, ShapeCastable, Const
+from ..hdl.ast import Value, Shape, ShapeCastable, Const
 
 
 __all__ = py_enum.__all__
@@ -32,11 +32,18 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     def __new__(metacls, name, bases, namespace, shape=None, **kwargs):
         if shape is not None:
             shape = Shape.cast(shape)
+        # Prepare enumeration members for instantiation. This logic is unfortunately very
+        # convoluted because it supports two very different code paths that need to share
+        # the emitted warnings.
         for member_name, member_value in namespace.items():
             if py_enum._is_sunder(member_name) or py_enum._is_dunder(member_name):
                 continue
+            # If a shape is specified ("Amaranth mode" of amaranth.lib.enum.Enum), then every
+            # member value must be a constant-castable expression. Otherwise ("Python mode" of
+            # amaranth.lib.enum.Enum) any value goes, since all enumerations accepted by
+            # the built-in Enum class must be also accepted by amaranth.lib.enum.Enum.
             try:
-                member_shape = Const.cast(member_value).shape()
+                member_const = Const.cast(member_value)
             except TypeError as e:
                 if shape is not None:
                     raise TypeError("Value {!r} of enumeration member {!r} must be "
@@ -44,7 +51,21 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
                                     .format(member_value, member_name)) from e
                 else:
                     continue
+            if isinstance(member_value, Value):
+                # The member value is an Amaranth value that is also constant-castable.
+                # It cannot be used in an enumeration as-is (since it doesn't return a boolean
+                # from comparison operators, and this is required by py_enum).
+                # Replace the member value with the integer value of the constant, per RFC 4.
+                # Note that we do this even if no shape is provided (and this class is emulating
+                # a Python enumeration); this is OK because we only need to accept everything that
+                # the built-in class accepts to be a drop-in replacement, but the built-in class
+                # does not accept Amaranth values.
+                # We use dict.__setitem__ since namespace is a py_enum._EnumDict that overrides
+                # __setitem__ to check if the name has been already used.
+                dict.__setitem__(namespace, member_name, member_const.value)
+            # If a shape was specified, check whether the member value is compatible with it.
             if shape is not None:
+                member_shape = member_const.shape()
                 if member_shape.signed and not shape.signed:
                     warnings.warn(
                         message="Value {!r} of enumeration member {!r} is signed, but "
@@ -61,6 +82,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
                                 .format(member_value, member_name, shape),
                         category=SyntaxWarning,
                         stacklevel=2)
+        # Actually instantiate the enumeration class.
         cls = py_enum.EnumMeta.__new__(metacls, name, bases, namespace, **kwargs)
         if shape is not None:
             # Shape is provided explicitly. Set the `_amaranth_shape_` attribute, and check that
