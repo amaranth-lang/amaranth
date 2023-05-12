@@ -12,8 +12,7 @@ class EnumTestCase(FHDLTestCase):
 
     def test_non_int_members_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Value of enumeration member <EnumA\.A: 'str'> must be "
-                r"a constant-castable expression$"):
+                r"^Value 'str' of enumeration member 'A' must be a constant-castable expression$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = "str"
 
@@ -54,24 +53,24 @@ class EnumTestCase(FHDLTestCase):
 
     def test_shape_explicit_wrong_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Value of enumeration member <EnumA\.A: -1> is signed, but the enumeration "
+                r"^Value -1 of enumeration member 'A' is signed, but the enumeration "
                 r"shape is unsigned\(1\)$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = -1
 
     def test_shape_explicit_wrong_too_wide(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Value of enumeration member <EnumA\.A: 2> will be truncated to the enumeration "
+                r"^Value 2 of enumeration member 'A' will be truncated to the enumeration "
                 r"shape unsigned\(1\)$"):
             class EnumA(Enum, shape=unsigned(1)):
                 A = 2
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Value of enumeration member <EnumB\.A: 1> will be truncated to the enumeration "
+                r"^Value 1 of enumeration member 'A' will be truncated to the enumeration "
                 r"shape signed\(1\)$"):
             class EnumB(Enum, shape=signed(1)):
                 A = 1
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Value of enumeration member <EnumC\.A: -2> will be truncated to the "
+                r"^Value -2 of enumeration member 'A' will be truncated to the "
                 r"enumeration shape signed\(1\)$"):
             class EnumC(Enum, shape=signed(1)):
                 A = -2
