@@ -587,10 +587,7 @@ class View(ValueCastable):
     Creating a view
     ###############
 
-    When creating a view, either only the ``target`` argument, or any of the ``name``, ``reset``,
-    ``reset_less``, ``attrs``, or ``decoder`` arguments may be provided. If a target is provided,
-    it is used as the underlying value. Otherwise, a new :class:`Signal` is created, and the rest
-    of the arguments are passed to its constructor.
+    A view must be created using an explicitly provided layout and target. To create a new :class:`Signal` that is wrapped in a :class:`View` with a given ``layout``, use ``Signal(layout, ...)``, which for a :class:`Layout` is equivalent to ``View(layout, Signal(...))``.
 
     Accessing a view
     ################
