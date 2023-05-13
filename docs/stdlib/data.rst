@@ -56,7 +56,7 @@ While this implementation works, it is repetitive, error-prone, hard to read, an
         "blue":  5
     })
 
-    i_color = data.View(rgb565_layout)
+    i_color = Signal(rgb565_layout)
     o_gray  = Signal(8)
 
     m.d.comb += o_gray.eq((i_color.red + i_color.green + i_color.blue) << 1)
@@ -82,7 +82,7 @@ For example, consider a module that processes RGB pixels in groups of up to four
         "valid":  4
     })
 
-    i_stream = data.View(input_layout)
+    i_stream = Signal(input_layout)
     r_accum  = Signal(32)
 
     m.d.sync += r_accum.eq(
@@ -120,7 +120,7 @@ In case the data has related operations or transformations, :class:`View` can be
 
 .. testcode::
 
-    class RGBPixelLayout(data.StructLayout):
+    class RGBLayout(data.StructLayout):
         def __init__(self, r_bits, g_bits, b_bits):
             super().__init__({
                 "red":   unsigned(r_bits),
@@ -129,20 +129,20 @@ In case the data has related operations or transformations, :class:`View` can be
             })
 
         def __call__(self, value):
-            return RGBPixelView(self, value)
+            return RGBView(self, value)
 
-    class RGBPixelView(data.View):
+    class RGBView(data.View):
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted:
+Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
 
 .. doctest::
 
-   >>> pixel = Signal(RGBPixelLayout(5, 6, 5))
-   >>> len(pixel)
+   >>> pixel = Signal(RGBLayout(5, 6, 5))
+   >>> len(pixel.as_value())
    16
-   >>> RGBPixelView(RGBPixelLayout(5, 6, 5), pixel).red
+   >>> pixel.red
    (slice (sig pixel) 0:5)
 
 In case the data format is static, :class:`Struct` (or :class:`Union`) can be subclassed instead of :class:`View`, to reduce the amount of boilerplate needed:
@@ -189,7 +189,7 @@ One module could submit a command with:
 
 .. testcode::
 
-    cmd = Command()
+    cmd = Signal(Command)
 
     m.d.comb += [
         cmd.valid.eq(1),
