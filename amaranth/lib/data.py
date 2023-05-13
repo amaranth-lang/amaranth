@@ -390,6 +390,13 @@ class UnionLayout(Layout):
         """
         return max((field.width for field in self._fields.values()), default=0)
 
+    def const(self, init):
+        if init is not None and len(init) > 1:
+            raise ValueError("Initializer for at most one field can be provided for "
+                             "a union layout (specified: {})"
+                             .format(", ".join(init.keys())))
+        return super().const(init)
+
     def __repr__(self):
         return f"UnionLayout({self.members!r})"
 
@@ -609,33 +616,21 @@ class View(ValueCastable):
     classes provided in this module are subclasses of :class:`View` that also provide a concise way
     to define a layout.
     """
-    def __init__(self, layout, target=None, *, name=None, reset=None, reset_less=None,
-            attrs=None, decoder=None, src_loc_at=0):
+    def __init__(self, layout, target):
         try:
             cast_layout = Layout.cast(layout)
         except TypeError as e:
             raise TypeError("View layout must be a layout, not {!r}"
                             .format(layout)) from e
-        if target is not None:
-            if (name is not None or reset is not None or reset_less is not None or
-                    attrs is not None or decoder is not None):
-                raise ValueError("View target cannot be provided at the same time as any of "
-                                 "the Signal constructor arguments (name, reset, reset_less, "
-                                 "attrs, decoder)")
-            try:
-                cast_target = Value.cast(target)
-            except TypeError as e:
-                raise TypeError("View target must be a value-castable object, not {!r}"
-                                .format(target)) from e
-            if len(cast_target) != cast_layout.size:
-                raise ValueError("View target is {} bit(s) wide, which is not compatible with "
-                                 "the {} bit(s) wide view layout"
-                                 .format(len(cast_target), cast_layout.size))
-        else:
-            if reset_less is None:
-                reset_less = False
-            cast_target = Signal(layout, name=name, reset=reset, reset_less=reset_less,
-                attrs=attrs, decoder=decoder, src_loc_at=src_loc_at + 1)
+        try:
+            cast_target = Value.cast(target)
+        except TypeError as e:
+            raise TypeError("View target must be a value-castable object, not {!r}"
+                            .format(target)) from e
+        if len(cast_target) != cast_layout.size:
+            raise ValueError("View target is {} bit(s) wide, which is not compatible with "
+                             "the {} bit(s) wide view layout"
+                             .format(len(cast_target), cast_layout.size))
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
@@ -752,8 +747,8 @@ class _AggregateMeta(ShapeCastable, type):
         elif all(not hasattr(base, "_AggregateMeta__layout") for base in bases):
             # This is a leaf class with its own layout. It is shape-castable and can
             # be instantiated. It can also be subclassed, and used to share layout and behavior.
-            layout = dict()
-            reset  = dict()
+            layout  = dict()
+            default = dict()
             for name in {**namespace["__annotations__"]}:
                 try:
                     Shape.cast(namespace["__annotations__"][name])
@@ -762,15 +757,15 @@ class _AggregateMeta(ShapeCastable, type):
                     continue
                 layout[name] = namespace["__annotations__"].pop(name)
                 if name in namespace:
-                    reset[name] = namespace.pop(name)
+                    default[name] = namespace.pop(name)
             cls = type.__new__(metacls, name, bases, namespace)
             if cls.__layout_cls is UnionLayout:
-                if len(reset) > 1:
+                if len(default) > 1:
                     raise ValueError("Reset value for at most one field can be provided for "
                                      "a union class (specified: {})"
-                                     .format(", ".join(reset.keys())))
-            cls.__layout = cls.__layout_cls(layout)
-            cls.__reset  = reset
+                                     .format(", ".join(default.keys())))
+            cls.__layout  = cls.__layout_cls(layout)
+            cls.__default = default
             return cls
         else:
             # This is a class that has a base class with a layout and annotations. Such a class
@@ -785,28 +780,24 @@ class _AggregateMeta(ShapeCastable, type):
                             .format(cls.__module__, cls.__qualname__))
         return cls.__layout
 
+    def __call__(cls, target):
+        # This method exists to pass the override check done by ShapeCastable.
+        return super().__call__(cls, target)
+
     def const(cls, init):
-        return cls.as_shape().const(init)
-
-
-class _Aggregate(View, metaclass=_AggregateMeta):
-    def __init__(self, target=None, *, name=None, reset=None, reset_less=None,
-            attrs=None, decoder=None, src_loc_at=0):
-        if self.__class__._AggregateMeta__layout_cls is UnionLayout:
-            if reset is not None and len(reset) > 1:
-                raise ValueError("Reset value for at most one field can be provided for "
+        if cls.__layout_cls is UnionLayout:
+            if init is not None and len(init) > 1:
+                raise ValueError("Initializer for at most one field can be provided for "
                                  "a union class (specified: {})"
-                                 .format(", ".join(reset.keys())))
-        if target is None and hasattr(self.__class__, "_AggregateMeta__reset"):
-            if reset is None:
-                reset = self.__class__._AggregateMeta__reset
-            elif self.__class__._AggregateMeta__layout_cls is not UnionLayout:
-                reset = {**self.__class__._AggregateMeta__reset, **reset}
-        super().__init__(self.__class__, target, name=name, reset=reset, reset_less=reset_less,
-            attrs=attrs, decoder=decoder, src_loc_at=src_loc_at + 1)
+                                 .format(", ".join(init.keys())))
+            return cls.as_shape().const(init or cls.__default)
+        else:
+            fields = cls.__default.copy()
+            fields.update(init or {})
+            return cls.as_shape().const(fields)
 
 
-class Struct(_Aggregate):
+class Struct(View, metaclass=_AggregateMeta):
     """Structures defined with annotations.
 
     The :class:`Struct` base class is a subclass of :class:`View` that provides a concise way
@@ -842,14 +833,14 @@ class Struct(_Aggregate):
 
         >>> IEEE754Single.as_shape()
         StructLayout({'fraction': 23, 'exponent': 8, 'sign': 1})
-        >>> Signal(IEEE754Single).width
+        >>> Signal(IEEE754Single).as_value().width
         32
 
     Instances of this class can be used where :ref:`values <lang-values>` are expected:
 
     .. doctest::
 
-        >>> flt = IEEE754Single()
+        >>> flt = Signal(IEEE754Single)
         >>> Signal(32).eq(flt)
         (eq (sig $signal) (sig flt))
 
@@ -866,11 +857,11 @@ class Struct(_Aggregate):
 
     .. doctest::
 
-        >>> hex(IEEE754Single().as_value().reset)
+        >>> hex(Signal(IEEE754Single).as_value().reset)
         '0x3f800000'
-        >>> hex(IEEE754Single(reset={'sign': 1}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, reset={'sign': 1}).as_value().reset)
         '0xbf800000'
-        >>> hex(IEEE754Single(reset={'exponent': 0}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, reset={'exponent': 0}).as_value().reset)
         '0x0'
 
     Classes inheriting from :class:`Struct` can be used as base classes. The only restrictions
@@ -903,15 +894,15 @@ class Struct(_Aggregate):
         Traceback (most recent call last):
           ...
         TypeError: Aggregate class 'HasChecksum' does not have a defined shape
-        >>> bare = BareHeader(); bare.checksum()
+        >>> bare = Signal(BareHeader); bare.checksum()
         (+ (+ (+ (const 1'd0) (slice (sig bare) 0:8)) (slice (sig bare) 8:16)) (slice (sig bare) 16:24))
-        >>> param = HeaderWithParam(); param.checksum()
+        >>> param = Signal(HeaderWithParam); param.checksum()
         (+ (+ (+ (+ (const 1'd0) (slice (sig param) 0:8)) (slice (sig param) 8:16)) (slice (sig param) 16:24)) (slice (sig param) 24:32))
     """
     _AggregateMeta__layout_cls = StructLayout
 
 
-class Union(_Aggregate):
+class Union(View, metaclass=_AggregateMeta):
     """Unions defined with annotations.
 
     The :class:`Union` base class is a subclass of :class:`View` that provides a concise way
@@ -931,9 +922,9 @@ class Union(_Aggregate):
 
     .. doctest::
 
-        >>> VarInt().as_value().reset
+        >>> Signal(VarInt).as_value().reset
         256
-        >>> VarInt(reset={'int8': 10}).as_value().reset
+        >>> Signal(VarInt, reset={'int8': 10}).as_value().reset
         10
     """
     _AggregateMeta__layout_cls = UnionLayout

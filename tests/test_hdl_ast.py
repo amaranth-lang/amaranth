@@ -145,8 +145,11 @@ class MockShapeCastable(ShapeCastable):
     def as_shape(self):
         return self.dest
 
-    def const(self, obj):
-        return Const(obj, self.dest)
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.dest)
 
 
 class ShapeCastableTestCase(FHDLTestCase):
@@ -1003,6 +1006,9 @@ class SignalTestCase(FHDLTestCase):
         class CastableFromHex(ShapeCastable):
             def as_shape(self):
                 return unsigned(8)
+
+            def __call__(self, value):
+                return value
 
             def const(self, init):
                 return int(init, 16)

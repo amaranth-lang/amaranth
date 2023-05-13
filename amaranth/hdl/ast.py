@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import inspect
 import warnings
 import functools
 from collections import OrderedDict
@@ -45,6 +46,9 @@ class ShapeCastable:
         if not hasattr(cls, "as_shape"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `as_shape` method")
+        if not (hasattr(cls, "__call__") and inspect.isfunction(cls.__call__)):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `__call__` method")
         if not hasattr(cls, "const"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `const` method")
@@ -949,8 +953,16 @@ class Repl(Value):
         return "(repl {!r} {})".format(self.value, self.count)
 
 
+class _SignalMeta(ABCMeta):
+    def __call__(cls, shape=None, src_loc_at=0, **kwargs):
+        signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
+        if isinstance(shape, ShapeCastable):
+            return shape(signal)
+        return signal
+
+
 # @final
-class Signal(Value, DUID):
+class Signal(Value, DUID, metaclass=_SignalMeta):
     """A varying integer value.
 
     Parameters
