@@ -76,7 +76,10 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     # TODO(amaranth-0.5): remove
     @property
     def _all_toolchain_env_vars(self):
-        return (f"AMARANTH_ENV_{self.toolchain}", self._toolchain_env_var,)
+        return (
+            f"AMARANTH_ENV_{self.toolchain.replace('-', '_').replace('+', 'X')}",
+            self._toolchain_env_var,
+        )
 
     def build(self, elaboratable, name="top",
               build_dir="build", do_build=True,
