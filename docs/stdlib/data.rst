@@ -120,18 +120,30 @@ In case the data has related operations or transformations, :class:`View` can be
 
 .. testcode::
 
-    class RGBLayout(data.View):
-        def __init__(self, target=None, *, r_bits, g_bits, b_bits, **kwargs):
-            super().__init__(layout=data.StructLayout({
+    class RGBPixelLayout(data.StructLayout):
+        def __init__(self, r_bits, g_bits, b_bits):
+            super().__init__({
                 "red":   unsigned(r_bits),
                 "green": unsigned(g_bits),
                 "blue":  unsigned(b_bits)
-            }, target=target, **kwargs))
+            })
 
+        def __call__(self, value):
+            return RGBPixelView(self, value)
+
+    class RGBPixelView(data.View):
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted.
+Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted:
+
+.. doctest::
+
+   >>> pixel = Signal(RGBPixelLayout(5, 6, 5))
+   >>> len(pixel)
+   16
+   >>> RGBPixelView(RGBPixelLayout(5, 6, 5), pixel).red
+   (slice (sig pixel) 0:5)
 
 In case the data format is static, :class:`Struct` (or :class:`Union`) can be subclassed instead of :class:`View`, to reduce the amount of boilerplate needed:
 
