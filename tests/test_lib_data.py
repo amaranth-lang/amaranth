@@ -263,6 +263,11 @@ class FlexibleLayoutTestCase(TestCase):
         self.assertEqual(il["b"], Field(unsigned(3), 0))
         self.assertEqual(il[0], Field(unsigned(2), 5))
 
+    def test_is_not_mutated(self):
+        il = FlexibleLayout(8, {"a": Field(unsigned(1), 0)})
+        del il.fields["a"]
+        self.assertIn("a", il.fields)
+
     def test_eq(self):
         self.assertEqual(FlexibleLayout(3, {"a": Field(unsigned(1), 0)}),
                          FlexibleLayout(3, {"a": Field(unsigned(1), 0)}))
@@ -324,12 +329,6 @@ class FlexibleLayoutTestCase(TestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Flexible layout field 'a' ends at bit 5, exceeding the size of 4 bit\(s\)$"):
             FlexibleLayout(4, {"a": Field(unsigned(2), 3)})
-
-    def test_size_wrong_shrink(self):
-        il = FlexibleLayout(8, {"a": Field(unsigned(2), 3)})
-        with self.assertRaisesRegex(ValueError,
-                r"^Flexible layout size 4 does not cover the field 'a', which ends at bit 5$"):
-            il.size = 4
 
     def test_key_wrong_missing(self):
         il = FlexibleLayout(8, {"a": Field(unsigned(2), 3)})

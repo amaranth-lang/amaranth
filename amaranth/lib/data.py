@@ -84,6 +84,9 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
     It is an abstract base class; :class:`StructLayout`, :class:`UnionLayout`,
     :class:`ArrayLayout`, and :class:`FlexibleLayout` implement concrete layout rules.
     New layout rules can be defined by inheriting from this class.
+
+    Like all other shape-castable objects, all layouts are immutable. New classes deriving from
+    :class:`Layout` must preserve this invariant.
     """
 
     @staticmethod
@@ -274,14 +277,6 @@ class StructLayout(Layout):
     """
 
     def __init__(self, members):
-        self.members = members
-
-    @property
-    def members(self):
-        return {key: field.shape for key, field in self._fields.items()}
-
-    @members.setter
-    def members(self, members):
         offset = 0
         self._fields = {}
         if not isinstance(members, Mapping):
@@ -299,6 +294,10 @@ class StructLayout(Layout):
                                 .format(shape)) from e
             self._fields[key] = Field(shape, offset)
             offset += cast_shape.width
+
+    @property
+    def members(self):
+        return {key: field.shape for key, field in self._fields.items()}
 
     def __iter__(self):
         return iter(self._fields.items())
@@ -348,14 +347,6 @@ class UnionLayout(Layout):
         Dictionary of union members.
     """
     def __init__(self, members):
-        self.members = members
-
-    @property
-    def members(self):
-        return {key: field.shape for key, field in self._fields.items()}
-
-    @members.setter
-    def members(self, members):
         self._fields = {}
         if not isinstance(members, Mapping):
             raise TypeError("Union layout members must be provided as a mapping, not {!r}"
@@ -371,6 +362,10 @@ class UnionLayout(Layout):
                                 "not {!r}"
                                 .format(shape)) from e
             self._fields[key] = Field(shape, 0)
+
+    @property
+    def members(self):
+        return {key: field.shape for key, field in self._fields.items()}
 
     def __iter__(self):
         return iter(self._fields.items())
@@ -429,33 +424,25 @@ class ArrayLayout(Layout):
         Amount of elements.
     """
     def __init__(self, elem_shape, length):
-        self.elem_shape = elem_shape
-        self.length     = length
-
-    @property
-    def elem_shape(self):
-        return self._elem_shape
-
-    @elem_shape.setter
-    def elem_shape(self, elem_shape):
         try:
             Shape.cast(elem_shape)
         except TypeError as e:
             raise TypeError("Array layout element shape must be a shape-castable object, "
                             "not {!r}"
                             .format(elem_shape)) from e
+        if not isinstance(length, int) or length < 0:
+            raise TypeError("Array layout length must be a non-negative integer, not {!r}"
+                            .format(length))
         self._elem_shape = elem_shape
+        self._length     = length
+
+    @property
+    def elem_shape(self):
+        return self._elem_shape
 
     @property
     def length(self):
         return self._length
-
-    @length.setter
-    def length(self, length):
-        if not isinstance(length, int) or length < 0:
-            raise TypeError("Array layout length must be a non-negative integer, not {!r}"
-                            .format(length))
-        self._length = length
 
     def __iter__(self):
         offset = 0
@@ -519,39 +506,14 @@ class FlexibleLayout(Layout):
         Fields defined in the layout.
     """
     def __init__(self, size, fields):
-        self.size   = size
-        self.fields = fields
-
-    @property
-    def size(self):
-        """:meta private:""" # work around Sphinx bug
-        return self._size
-
-    @size.setter
-    def size(self, size):
         if not isinstance(size, int) or size < 0:
             raise TypeError("Flexible layout size must be a non-negative integer, not {!r}"
                             .format(size))
-        if hasattr(self, "_fields") and self._fields:
-            endmost_name, endmost_field = max(self._fields.items(),
-                key=lambda pair: pair[1].offset + pair[1].width)
-            if endmost_field.offset + endmost_field.width > size:
-                raise ValueError("Flexible layout size {} does not cover the field '{}', which "
-                                 "ends at bit {}"
-                                 .format(size, endmost_name,
-                                         endmost_field.offset + endmost_field.width))
-        self._size = size
-
-    @property
-    def fields(self):
-        return {**self._fields}
-
-    @fields.setter
-    def fields(self, fields):
-        self._fields = {}
         if not isinstance(fields, Mapping):
             raise TypeError("Flexible layout fields must be provided as a mapping, not {!r}"
                             .format(fields))
+        self._size = size
+        self._fields = {}
         for key, field in fields.items():
             if not isinstance(key, (int, str)) or (isinstance(key, int) and key < 0):
                 raise TypeError("Flexible layout field name must be a non-negative integer or "
@@ -560,11 +522,20 @@ class FlexibleLayout(Layout):
             if not isinstance(field, Field):
                 raise TypeError("Flexible layout field value must be a Field instance, not {!r}"
                                 .format(field))
-            if field.offset + field.width > self._size:
+            if field.offset + field.width > size:
                 raise ValueError("Flexible layout field '{}' ends at bit {}, exceeding "
                                  "the size of {} bit(s)"
-                                 .format(key, field.offset + field.width, self._size))
+                                 .format(key, field.offset + field.width, size))
             self._fields[key] = field
+
+    @property
+    def size(self):
+        """:meta private:""" # work around Sphinx bug
+        return self._size
+
+    @property
+    def fields(self):
+        return {**self._fields}
 
     def __iter__(self):
         return iter(self._fields.items())
