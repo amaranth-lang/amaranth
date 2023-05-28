@@ -16,6 +16,12 @@ class MockShapeCastable(ShapeCastable):
     def as_shape(self):
         return self.shape
 
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.shape)
+
 
 class FieldTestCase(TestCase):
     def test_construct(self):
@@ -169,6 +175,12 @@ class UnionLayoutTestCase(TestCase):
                 r"^Union layout member shape must be a shape-castable object, not 1\.0$"):
             UnionLayout({"a": 1.0})
 
+    def test_const_two_members_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Initializer for at most one field can be provided for a union layout "
+                r"\(specified: a, b\)$"):
+            UnionLayout({"a": 1, "b": 2}).const(dict(a=1, b=2))
+
 
 class ArrayLayoutTestCase(TestCase):
     def test_construct(self):
@@ -251,6 +263,11 @@ class FlexibleLayoutTestCase(TestCase):
         self.assertEqual(il["b"], Field(unsigned(3), 0))
         self.assertEqual(il[0], Field(unsigned(2), 5))
 
+    def test_is_not_mutated(self):
+        il = FlexibleLayout(8, {"a": Field(unsigned(1), 0)})
+        del il.fields["a"]
+        self.assertIn("a", il.fields)
+
     def test_eq(self):
         self.assertEqual(FlexibleLayout(3, {"a": Field(unsigned(1), 0)}),
                          FlexibleLayout(3, {"a": Field(unsigned(1), 0)}))
@@ -313,12 +330,6 @@ class FlexibleLayoutTestCase(TestCase):
                 r"^Flexible layout field 'a' ends at bit 5, exceeding the size of 4 bit\(s\)$"):
             FlexibleLayout(4, {"a": Field(unsigned(2), 3)})
 
-    def test_size_wrong_shrink(self):
-        il = FlexibleLayout(8, {"a": Field(unsigned(2), 3)})
-        with self.assertRaisesRegex(ValueError,
-                r"^Flexible layout size 4 does not cover the field 'a', which ends at bit 5$"):
-            il.size = 4
-
     def test_key_wrong_missing(self):
         il = FlexibleLayout(8, {"a": Field(unsigned(2), 3)})
         with self.assertRaisesRegex(KeyError,
@@ -332,7 +343,7 @@ class FlexibleLayoutTestCase(TestCase):
             il[object()]
 
 
-class LayoutTestCase(TestCase):
+class LayoutTestCase(FHDLTestCase):
     def test_cast(self):
         sl = StructLayout({})
         self.assertIs(Layout.cast(sl), sl)
@@ -364,6 +375,63 @@ class LayoutTestCase(TestCase):
         sc.shape = sc
         self.assertNotEqual(StructLayout({}), sc)
 
+    def test_call(self):
+        sl = StructLayout({"f": unsigned(1)})
+        s = Signal(1)
+        v = sl(s)
+        self.assertIs(Layout.of(v), sl)
+        self.assertIs(v.as_value(), s)
+
+    def test_const(self):
+        sl = StructLayout({
+            "a": unsigned(1),
+            "b": unsigned(2)
+        })
+        self.assertRepr(sl.const(None), "(const 3'd0)")
+        self.assertRepr(sl.const({"a": 0b1, "b": 0b10}), "(const 3'd5)")
+
+        fl = FlexibleLayout(2, {
+            "a": Field(unsigned(1), 0),
+            "b": Field(unsigned(2), 0)
+        })
+        self.assertRepr(fl.const({"a": 0b11}), "(const 2'd1)")
+        self.assertRepr(fl.const({"b": 0b10}), "(const 2'd2)")
+        self.assertRepr(fl.const({"a": 0b1, "b": 0b10}), "(const 2'd2)")
+
+    def test_const_wrong(self):
+        sl = StructLayout({"f": unsigned(1)})
+        with self.assertRaisesRegex(TypeError,
+                r"^Layout constant initializer must be a mapping or a sequence, not "
+                r"<.+?object.+?>$"):
+            sl.const(object())
+
+    def test_const_field_shape_castable(self):
+        class CastableFromHex(ShapeCastable):
+            def as_shape(self):
+                return unsigned(8)
+
+            def __call__(self, value):
+                return value
+
+            def const(self, init):
+                return int(init, 16)
+
+        sl = StructLayout({"f": CastableFromHex()})
+        self.assertRepr(sl.const({"f": "aa"}), "(const 8'd170)")
+
+        with self.assertRaisesRegex(ValueError,
+                r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
+                r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
+            sl.const({"f": "01"})
+
+    def test_signal_reset(self):
+        sl = StructLayout({
+            "a": unsigned(1),
+            "b": unsigned(2)
+        })
+        self.assertEqual(Signal(sl).as_value().reset, 0)
+        self.assertEqual(Signal(sl, reset={"a": 0b1, "b": 0b10}).as_value().reset, 5)
+
 
 class ViewTestCase(FHDLTestCase):
     def test_construct(self):
@@ -374,40 +442,23 @@ class ViewTestCase(FHDLTestCase):
         self.assertRepr(v["b"], "(slice (sig s) 1:3)")
 
     def test_construct_signal(self):
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}))
+        v = Signal(StructLayout({"a": unsigned(1), "b": unsigned(2)}))
         cv = Value.cast(v)
         self.assertIsInstance(cv, Signal)
         self.assertEqual(cv.shape(), unsigned(3))
         self.assertEqual(cv.name, "v")
 
-    def test_construct_signal_name(self):
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}), name="named")
-        self.assertEqual(Value.cast(v).name, "named")
-
     def test_construct_signal_reset(self):
-        v1 = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}),
-                  reset={"a": 0b1, "b": 0b10})
+        v1 = Signal(StructLayout({"a": unsigned(1), "b": unsigned(2)}),
+                   reset={"a": 0b1, "b": 0b10})
         self.assertEqual(Value.cast(v1).reset, 0b101)
-        v2 = View(StructLayout({"a": unsigned(1),
+        v2 = Signal(StructLayout({"a": unsigned(1),
                                 "b": StructLayout({"x": unsigned(1), "y": unsigned(1)})}),
-                  reset={"a": 0b1, "b": {"x": 0b0, "y": 0b1}})
+                   reset={"a": 0b1, "b": {"x": 0b0, "y": 0b1}})
         self.assertEqual(Value.cast(v2).reset, 0b101)
-        v3 = View(ArrayLayout(unsigned(2), 2),
-                  reset=[0b01, 0b10])
+        v3 = Signal(ArrayLayout(unsigned(2), 2),
+                   reset=[0b01, 0b10])
         self.assertEqual(Value.cast(v3).reset, 0b1001)
-
-    def test_construct_signal_reset_less(self):
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}), reset_less=True)
-        self.assertEqual(Value.cast(v).reset_less, True)
-
-    def test_construct_signal_attrs(self):
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}), attrs={"debug": 1})
-        self.assertEqual(Value.cast(v).attrs, {"debug": 1})
-
-    def test_construct_signal_decoder(self):
-        decoder = lambda x: f"{x}"
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}), decoder=decoder)
-        self.assertEqual(Value.cast(v).decoder, decoder)
 
     def test_layout_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -425,19 +476,8 @@ class ViewTestCase(FHDLTestCase):
                 r"wide view layout$"):
             View(StructLayout({"a": unsigned(1)}), Signal(2))
 
-    def test_signal_reset_wrong(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Layout initializer must be a mapping or a sequence, not 1$"):
-            View(StructLayout({}), reset=0b1)
-
-    def test_target_signal_wrong(self):
-        with self.assertRaisesRegex(ValueError,
-                r"^View target cannot be provided at the same time as any of the Signal "
-                r"constructor arguments \(name, reset, reset_less, attrs, decoder\)$"):
-            View(StructLayout({}), Signal(), reset=0b1)
-
     def test_getitem(self):
-        v = View(UnionLayout({
+        v = Signal(UnionLayout({
             "a": unsigned(2),
             "s": StructLayout({
                 "b": unsigned(1),
@@ -468,19 +508,55 @@ class ViewTestCase(FHDLTestCase):
         self.assertRepr(v["t"][0]["u"], "(slice (slice (slice (sig v) 0:4) 0:2) 0:1)")
         self.assertRepr(v["t"][1]["v"], "(slice (slice (slice (sig v) 0:4) 2:4) 1:2)")
 
+    def test_getitem_custom_call(self):
+        class Reverser(ShapeCastable):
+            def as_shape(self):
+                return unsigned(2)
+
+            def __call__(self, value):
+                return value[::-1]
+
+            def const(self, init):
+                return Const(init, 2)
+
+        v = Signal(StructLayout({
+            "f": Reverser()
+        }))
+        self.assertRepr(v.f, "(cat (slice (slice (sig v) 0:2) 1:2) "
+                             "     (slice (slice (sig v) 0:2) 0:1))")
+
+    def test_getitem_custom_call_wrong(self):
+        class WrongCastable(ShapeCastable):
+            def as_shape(self):
+                return unsigned(2)
+
+            def __call__(self, value):
+                pass
+
+            def const(self, init):
+                return Const(init, 2)
+
+        v = Signal(StructLayout({
+            "f": WrongCastable()
+        }))
+        with self.assertRaisesRegex(TypeError,
+                r"^<.+?\.WrongCastable.+?>\.__call__\(\) must return a value or a value-castable "
+                r"object, not None$"):
+            v.f
+
     def test_index_wrong_missing(self):
         with self.assertRaisesRegex(KeyError,
                 r"^'a'$"):
-            View(StructLayout({}))["a"]
+            Signal(StructLayout({}))["a"]
 
     def test_index_wrong_struct_dynamic(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Only views with array layout, not StructLayout\(\{\}\), may be indexed "
                 r"with a value$"):
-            View(StructLayout({}))[Signal(1)]
+            Signal(StructLayout({}))[Signal(1)]
 
     def test_getattr(self):
-        v = View(UnionLayout({
+        v = Signal(UnionLayout({
             "a": unsigned(2),
             "s": StructLayout({
                 "b": unsigned(1),
@@ -502,7 +578,7 @@ class ViewTestCase(FHDLTestCase):
         self.assertEqual(v.q.shape(), signed(1))
 
     def test_getattr_reserved(self):
-        v = View(UnionLayout({
+        v = Signal(UnionLayout({
             "_a": unsigned(2)
         }))
         self.assertRepr(v["_a"], "(slice (sig v) 0:2)")
@@ -511,13 +587,13 @@ class ViewTestCase(FHDLTestCase):
         with self.assertRaisesRegex(AttributeError,
                 r"^View of \(sig \$signal\) does not have a field 'a'; "
                 r"did you mean one of: 'b', 'c'\?$"):
-            View(StructLayout({"b": unsigned(1), "c": signed(1)})).a
+            Signal(StructLayout({"b": unsigned(1), "c": signed(1)})).a
 
     def test_attr_wrong_reserved(self):
         with self.assertRaisesRegex(AttributeError,
                 r"^View of \(sig \$signal\) field '_c' has a reserved name "
                 r"and may only be accessed by indexing$"):
-            View(StructLayout({"_c": signed(1)}))._c
+            Signal(StructLayout({"_c": signed(1)}))._c
 
 
 class StructTestCase(FHDLTestCase):
@@ -532,7 +608,7 @@ class StructTestCase(FHDLTestCase):
             "b": signed(3)
         }))
 
-        v = S()
+        v = Signal(S)
         self.assertEqual(Layout.of(v), S)
         self.assertEqual(Value.cast(v).shape(), Shape.cast(S))
         self.assertEqual(Value.cast(v).name, "v")
@@ -552,7 +628,7 @@ class StructTestCase(FHDLTestCase):
 
         self.assertEqual(Shape.cast(S), unsigned(9))
 
-        v = S()
+        v = Signal(S)
         self.assertIs(Layout.of(v), S)
         self.assertIsInstance(v, S)
         self.assertIs(Layout.of(v.b), R)
@@ -564,17 +640,6 @@ class StructTestCase(FHDLTestCase):
         self.assertRepr(v.b.q.r, "(s (slice (slice (slice (sig v) 1:9) 4:8) 0:2))")
         self.assertRepr(v.b.q.s, "(s (slice (slice (slice (sig v) 1:9) 4:8) 2:4))")
 
-    def test_construct_signal_kwargs(self):
-        decoder = lambda x: f"{x}"
-        v = View(StructLayout({"a": unsigned(1), "b": unsigned(2)}),
-            name="named", reset={"b": 0b1}, reset_less=True, attrs={"debug": 1}, decoder=decoder)
-        s = Value.cast(v)
-        self.assertEqual(s.name, "named")
-        self.assertEqual(s.reset, 0b010)
-        self.assertEqual(s.reset_less, True)
-        self.assertEqual(s.attrs, {"debug": 1})
-        self.assertEqual(s.decoder, decoder)
-
     def test_construct_reset(self):
         class S(Struct):
             p: 4
@@ -583,11 +648,11 @@ class StructTestCase(FHDLTestCase):
         with self.assertRaises(AttributeError):
             S.q
 
-        v1 = S()
+        v1 = Signal(S)
         self.assertEqual(v1.as_value().reset, 0b010000)
-        v2 = S(reset=dict(p=0b0011))
+        v2 = Signal(S, reset=dict(p=0b0011))
         self.assertEqual(v2.as_value().reset, 0b010011)
-        v3 = S(reset=dict(p=0b0011, q=0b00))
+        v3 = Signal(S, reset=dict(p=0b0011, q=0b00))
         self.assertEqual(v3.as_value().reset, 0b000011)
 
     def test_shape_undefined_wrong(self):
@@ -611,8 +676,8 @@ class StructTestCase(FHDLTestCase):
             a: 2
             b: 2
 
-        self.assertEqual(Sb1().add().shape(), unsigned(2))
-        self.assertEqual(Sb2().add().shape(), unsigned(3))
+        self.assertEqual(Signal(Sb1).add().shape(), unsigned(2))
+        self.assertEqual(Signal(Sb2).add().shape(), unsigned(3))
 
     def test_base_class_2(self):
         class Sb(Struct):
@@ -627,17 +692,27 @@ class StructTestCase(FHDLTestCase):
             def do(self):
                 return self.a + self.b
 
-        self.assertEqual(Sb1().do().shape(), unsigned(4))
-        self.assertEqual(Sb2().do().shape(), unsigned(3))
+        self.assertEqual(Signal(Sb1).do().shape(), unsigned(4))
+        self.assertEqual(Signal(Sb2).do().shape(), unsigned(3))
 
     def test_layout_redefined_wrong(self):
         class Sb(Struct):
             a: 1
 
         with self.assertRaisesRegex(TypeError,
-                r"^Aggregate class 'Sd' must either inherits or specify a layout, not both$"):
+                r"^Aggregate class 'Sd' must either inherit or specify a layout, not both$"):
             class Sd(Sb):
                 b: 1
+
+    def test_typing_annotation_coexistence(self):
+        class S(Struct):
+            a: unsigned(1)
+            b: int
+            c: str = "x"
+
+        self.assertEqual(Layout.of(Signal(S)), StructLayout({"a": unsigned(1)}))
+        self.assertEqual(S.__annotations__, {"b": int, "c": str})
+        self.assertEqual(S.c, "x")
 
 
 class UnionTestCase(FHDLTestCase):
@@ -652,40 +727,39 @@ class UnionTestCase(FHDLTestCase):
             "b": signed(3)
         }))
 
-        v = U()
+        v = Signal(U)
         self.assertEqual(Layout.of(v), U)
         self.assertEqual(Value.cast(v).shape(), Shape.cast(U))
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
         self.assertRepr(v.b, "(s (slice (sig v) 0:3))")
 
-    def test_construct_signal_kwargs(self):
-        decoder = lambda x: f"{x}"
-        v = View(UnionLayout({"a": unsigned(1), "b": unsigned(2)}),
-            name="named", reset={"b": 0b1}, reset_less=True, attrs={"debug": 1}, decoder=decoder)
-        s = Value.cast(v)
-        self.assertEqual(s.name, "named")
-        self.assertEqual(s.reset, 0b01)
-        self.assertEqual(s.reset_less, True)
-        self.assertEqual(s.attrs, {"debug": 1})
-        self.assertEqual(s.decoder, decoder)
+    def test_define_reset_two_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Reset value for at most one field can be provided for a union class "
+                r"\(specified: a, b\)$"):
+            class U(Union):
+                a: unsigned(1) = 1
+                b: unsigned(2) = 1
 
     def test_construct_reset_two_wrong(self):
         class U(Union):
             a: unsigned(1)
             b: unsigned(2)
 
-        with self.assertRaisesRegex(ValueError,
-                r"^Reset value for at most one field can be provided for a union class "
-                r"\(specified: a, b\)$"):
-            U(reset=dict(a=1, b=2))
+        with self.assertRaisesRegex(TypeError,
+                r"^Reset value must be a constant initializer of <class '.+?\.U'>$") as cm:
+            Signal(U, reset=dict(a=1, b=2))
+            self.assertRegex(cm.exception.__cause__.message,
+                             r"^Initializer for at most one field can be provided for a union "
+                             r"class \(specified: a, b\)$")
 
     def test_construct_reset_override(self):
         class U(Union):
             a: unsigned(1) = 1
             b: unsigned(2)
 
-        self.assertEqual(U().as_value().reset, 0b01)
-        self.assertEqual(U(reset=dict(b=0b10)).as_value().reset, 0b10)
+        self.assertEqual(Signal(U).as_value().reset, 0b01)
+        self.assertEqual(Signal(U, reset=dict(b=0b10)).as_value().reset, 0b10)
 
 
 # Examples from https://github.com/amaranth-lang/amaranth/issues/693
@@ -706,7 +780,7 @@ class RFCExamplesTestCase(TestCase):
 
         self.assertEqual(Float32.as_shape().size, 32)
 
-        flt_a = Float32()
+        flt_a = Float32(Signal(32))
         flt_b = Float32(Const(0b00111110001000000000000000000000, 32))
 
         m1 = Module()
@@ -724,7 +798,7 @@ class RFCExamplesTestCase(TestCase):
             float: Float32
             int: signed(32)
 
-        f_or_i = FloatOrInt32()
+        f_or_i = Signal(FloatOrInt32)
         is_gt_1 = Signal()
         m2 = Module()
         m2.d.comb += [
@@ -746,10 +820,9 @@ class RFCExamplesTestCase(TestCase):
             "b": Float32
         })
 
-        adder_op_storage = Signal(adder_op_layout)
-        self.assertEqual(len(adder_op_storage), 65)
+        adder_op = Signal(adder_op_layout)
+        self.assertEqual(len(adder_op.as_value()), 65)
 
-        adder_op = View(adder_op_layout, adder_op_storage)
         m3 = Module()
         m3.d.comb += [
             adder_op.eq(Op.SUB),
@@ -775,15 +848,10 @@ class RFCExamplesTestCase(TestCase):
         })
         self.assertEqual(layout1.size, 3)
 
-        sig1 = Signal(layout1)
-        self.assertEqual(sig1.shape(), unsigned(3))
-
-        view1 = View(layout1, sig1)
-        self.assertIs(Value.cast(view1), sig1)
-
-        view2 = View(layout1)
-        self.assertIsInstance(Value.cast(view2), Signal)
-        self.assertEqual(Value.cast(view2).shape(), unsigned(3))
+        view1 = Signal(layout1)
+        self.assertIsInstance(view1, View)
+        self.assertEqual(Layout.of(view1), layout1)
+        self.assertEqual(view1.as_value().shape(), unsigned(3))
 
         m1 = Module()
         m1.d.comb += [
@@ -805,23 +873,20 @@ class RFCExamplesTestCase(TestCase):
 
         self.assertEqual(Shape.cast(SomeVariant), unsigned(3))
 
-        view3 = SomeVariant()
-        self.assertIsInstance(Value.cast(view3), Signal)
-        self.assertEqual(Value.cast(view3).shape(), unsigned(3))
+        view2 = Signal(SomeVariant)
+        self.assertIsInstance(Value.cast(view2), Signal)
+        self.assertEqual(Value.cast(view2).shape(), unsigned(3))
 
         m2 = Module()
         m2.submodules += m1
         m2.d.comb += [
-            view3.kind.eq(Kind.ONE_SIGNED),
-            view3.value.eq(view1.value)
+            view2.kind.eq(Kind.ONE_SIGNED),
+            view2.value.eq(view1.value)
         ]
 
         @self.simulate(m2)
         def check_m2():
-            self.assertEqual((yield view3.as_value()), 0b010)
-
-        sig2 = Signal(SomeVariant)
-        self.assertEqual(sig2.shape(), unsigned(3))
+            self.assertEqual((yield view2.as_value()), 0b010)
 
         layout2 = StructLayout({
             "ready": unsigned(1),
@@ -831,18 +896,4 @@ class RFCExamplesTestCase(TestCase):
 
         self.assertEqual(layout1, Layout.cast(SomeVariant))
 
-        self.assertIs(SomeVariant, Layout.of(view3))
-
-    def test_rfc_example_3(self):
-        class Stream8b10b(View):
-            data: Signal
-            ctrl: Signal
-
-            def __init__(self, value=None, *, width: int):
-                super().__init__(StructLayout({
-                    "data": unsigned(8 * width),
-                    "ctrl": unsigned(width)
-                }), value)
-
-        self.assertEqual(len(Stream8b10b(width=1).data), 8)
-        self.assertEqual(len(Stream8b10b(width=4).data), 32)
+        self.assertIs(SomeVariant, Layout.of(view2))

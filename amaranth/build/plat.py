@@ -76,7 +76,10 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     # TODO(amaranth-0.5): remove
     @property
     def _all_toolchain_env_vars(self):
-        return (f"AMARANTH_ENV_{self.toolchain}", self._toolchain_env_var,)
+        return (
+            f"AMARANTH_ENV_{self.toolchain.replace('-', '_').replace('+', 'X')}",
+            self._toolchain_env_var,
+        )
 
     def build(self, elaboratable, name="top",
               build_dir="build", do_build=True,
@@ -333,7 +336,7 @@ class TemplatedPlatform(Platform):
                 return re.sub(r'^\"\"$', "", var_env_value)
             elif var in kwargs:
                 kwarg = kwargs[var]
-                if issubclass(expected_type, str) and isinstance(var, Iterable):
+                if issubclass(expected_type, str) and not isinstance(kwarg, str) and isinstance(kwarg, Iterable):
                     kwarg = " ".join(kwarg)
                 if not isinstance(kwarg, expected_type) and not expected_type is None:
                     raise TypeError("Override '{}' must be a {}, not {!r}".format(var, expected_type.__name__, kwarg))

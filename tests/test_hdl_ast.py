@@ -2,6 +2,7 @@ import warnings
 from enum import Enum
 
 from amaranth.hdl.ast import *
+from amaranth.lib.enum import Enum as AmaranthEnum
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -144,10 +145,11 @@ class MockShapeCastable(ShapeCastable):
     def as_shape(self):
         return self.dest
 
+    def __call__(self, value):
+        return value
 
-class MockShapeCastableNoOverride(ShapeCastable):
-    def __init__(self):
-        pass
+    def const(self, init):
+        return Const(init, self.dest)
 
 
 class ShapeCastableTestCase(FHDLTestCase):
@@ -155,7 +157,9 @@ class ShapeCastableTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
                 r"override the `as_shape` method$"):
-            sc = MockShapeCastableNoOverride()
+            class MockShapeCastableNoOverride(ShapeCastable):
+                def __init__(self):
+                    pass
 
     def test_cast(self):
         sc = MockShapeCastable(unsigned(2))
@@ -356,6 +360,12 @@ class ConstTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Width must be a non-negative integer, not -1$"):
             Const(1, -1)
+
+    def test_wrong_fencepost(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Value 10 equals the non-inclusive end of the constant shape "
+                r"range\(0, 10\); this is likely an off-by-one error$"):
+            Const(10, range(10))
 
     def test_normalization(self):
         self.assertEqual(Const(0b10110, signed(5)).value, -10)
@@ -961,8 +971,10 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s8.shape(), signed(5))
         s9 = Signal(range(-20, 16))
         self.assertEqual(s9.shape(), signed(6))
-        s10 = Signal(range(0))
-        self.assertEqual(s10.shape(), unsigned(0))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=SyntaxWarning)
+            s10 = Signal(range(0))
+            self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
         self.assertEqual(s11.shape(), unsigned(1))
 
@@ -986,20 +998,57 @@ class SignalTestCase(FHDLTestCase):
         s1 = Signal(2, reset=UnsignedEnum.BAR)
         self.assertEqual(s1.reset, 2)
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value has to be an int or an integral Enum$"
-        ):
+                r"^Reset value must be a constant-castable expression, "
+                r"not <StringEnum\.FOO: 'a'>$"):
             Signal(1, reset=StringEnum.FOO)
 
-    def test_reset_narrow(self):
+    def test_reset_shape_castable_const(self):
+        class CastableFromHex(ShapeCastable):
+            def as_shape(self):
+                return unsigned(8)
+
+            def __call__(self, value):
+                return value
+
+            def const(self, init):
+                return int(init, 16)
+
+        s1 = Signal(CastableFromHex(), reset="aa")
+        self.assertEqual(s1.reset, 0xaa)
+
+        with self.assertRaisesRegex(ValueError,
+                r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
+                r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
+            Signal(CastableFromHex(), reset="01")
+
+    def test_reset_shape_castable_enum_wrong(self):
+        class EnumA(AmaranthEnum):
+            X = 1
+        with self.assertRaisesRegex(TypeError,
+                r"^Reset value must be a constant initializer of <enum 'EnumA'>$"):
+            Signal(EnumA) # implied reset=0
+
+    def test_reset_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 8 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(3, reset=8)
+                r"^Reset value -2 is signed, but the signal shape is unsigned\(2\)$"):
+            Signal(unsigned(2), reset=-2)
+
+    def test_reset_wrong_too_wide(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 4 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(signed(3), reset=4)
+                r"^Reset value 2 will be truncated to the signal shape unsigned\(1\)$"):
+            Signal(unsigned(1), reset=2)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -5 requires 4 bits to represent, but the signal only has 3 bits$"):
-            Signal(signed(3), reset=-5)
+                r"^Reset value 1 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), reset=1)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Reset value -2 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), reset=-2)
+
+    def test_reset_wrong_fencepost(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Reset value 10 equals the non-inclusive end of the signal shape "
+                r"range\(0, 10\); this is likely an off-by-one error$"):
+            Signal(range(0, 10), reset=10)
 
     def test_attrs(self):
         s1 = Signal()
@@ -1116,19 +1165,6 @@ class MockValueCastableChanges(ValueCastable):
         return Signal(self.width)
 
 
-class MockValueCastableNotDecorated(ValueCastable):
-    def __init__(self):
-        pass
-
-    def as_value(self):
-        return Signal()
-
-
-class MockValueCastableNoOverride(ValueCastable):
-    def __init__(self):
-        pass
-
-
 class MockValueCastableCustomGetattr(ValueCastable):
     def __init__(self):
         pass
@@ -1146,13 +1182,20 @@ class ValueCastableTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must "
                 r"decorate the `as_value` method with the `ValueCastable.lowermethod` decorator$"):
-            vc = MockValueCastableNotDecorated()
+            class MockValueCastableNotDecorated(ValueCastable):
+                def __init__(self):
+                    pass
+
+                def as_value(self):
+                    return Signal()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must "
                 r"override the `as_value` method$"):
-            vc = MockValueCastableNoOverride()
+            class MockValueCastableNoOverride(ValueCastable):
+                def __init__(self):
+                    pass
 
     def test_memoized(self):
         vc = MockValueCastableChanges(1)

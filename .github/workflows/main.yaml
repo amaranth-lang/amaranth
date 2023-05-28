@@ -60,6 +60,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Fetch tags from upstream repository
+        run: |
+          git fetch --tags https://github.com/amaranth-lang/amaranth.git
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -71,6 +74,25 @@ jobs:
       - name: Build documentation
         run: |
           sphinx-build docs docs/_build
+      - name: Upload documentation archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: docs/_build
+  publish-docs:
+    needs: document
+    if: github.repository == 'amaranth-lang/amaranth'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Download documentation archive
+        uses: actions/download-artifact@v3
+        with:
+          name: docs
+          path: docs/
       - name: Publish development documentation
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@releases/v4
@@ -78,11 +100,8 @@ jobs:
           repository-name: amaranth-lang/amaranth-lang.github.io
           ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
           branch: main
-          folder: docs/_build
+          folder: docs/
           target-folder: docs/amaranth/latest/
-      - name: Extract release version
-        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-        run: echo "VERSION=$(python setup.py --version)" >>$GITHUB_ENV
       - name: Publish release documentation
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v4
@@ -90,5 +109,27 @@ jobs:
           repository-name: amaranth-lang/amaranth-lang.github.io
           ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
           branch: main
-          folder: docs/_build
-          target-folder: docs/amaranth/v${{ env.VERSION }}/
+          folder: docs/
+          target-folder: docs/amaranth/${{ github.ref_name }}/
+  publish-docs-dev:
+    needs: document
+    if: github.repository != 'amaranth-lang/amaranth'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Download documentation archive
+        uses: actions/download-artifact@v3
+        with:
+          name: docs
+          path: pages/docs/${{ github.ref_name }}/
+      - name: Disable Jekyll
+        run: |
+          touch pages/.nojekyll
+      - name: Publish documentation for a branch
+        uses: JamesIves/github-pages-deploy-action@releases/v4
+        with:
+          folder: pages/
+          clean: false

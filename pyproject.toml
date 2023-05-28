@@ -26,5 +26,12 @@ remote-build  = ["paramiko~=2.7"]
 [project.scripts]
 amaranth-rpc = "amaranth.rpc:main"
 
+[tool.setuptools]
+# If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
+# a git worktree cached by tools like poetry), it can have an empty `nmigen` directory left over,
+# which causes a hard error because setuptools cannot determine the top-level package.
+# Add a workaround to improve experience for people upgrading from old checkouts.
+packages = ["amaranth"]
+
 [tool.setuptools_scm]
 local_scheme = "node-and-timestamp"

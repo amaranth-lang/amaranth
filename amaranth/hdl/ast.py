@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import inspect
 import warnings
 import functools
 from collections import OrderedDict
@@ -41,12 +42,16 @@ class ShapeCastable:
     a richer description of the shape than what is supported by the core Amaranth language, yet
     still be transparently used with it.
     """
-    def __new__(cls, *args, **kwargs):
-        self = super().__new__(cls)
-        if not hasattr(self, "as_shape"):
+    def __init_subclass__(cls, **kwargs):
+        if not hasattr(cls, "as_shape"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `as_shape` method")
-        return self
+        if not (hasattr(cls, "__call__") and inspect.isfunction(cls.__call__)):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `__call__` method")
+        if not hasattr(cls, "const"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `const` method")
 
 
 class Shape:
@@ -572,8 +577,6 @@ class Value(metaclass=ABCMeta):
     def _rhs_signals(self):
         pass # :nocov:
 
-    __hash__ = None
-
 
 @final
 class Const(Value):
@@ -634,6 +637,13 @@ class Const(Value):
         elif isinstance(shape, int):
             shape = Shape(shape, signed=self.value < 0)
         else:
+            if isinstance(shape, range) and self.value == shape.stop:
+                warnings.warn(
+                    message="Value {!r} equals the non-inclusive end of the constant "
+                            "shape {!r}; this is likely an off-by-one error"
+                            .format(self.value, shape),
+                    category=SyntaxWarning,
+                    stacklevel=2)
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
@@ -943,8 +953,16 @@ class Repl(Value):
         return "(repl {!r} {})".format(self.value, self.count)
 
 
+class _SignalMeta(ABCMeta):
+    def __call__(cls, shape=None, src_loc_at=0, **kwargs):
+        signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
+        if isinstance(shape, ShapeCastable):
+            return shape(signal)
+        return signal
+
+
 # @final
-class Signal(Value, DUID):
+class Signal(Value, DUID, metaclass=_SignalMeta):
     """A varying integer value.
 
     Parameters
@@ -985,7 +1003,7 @@ class Signal(Value, DUID):
     decoder : function
     """
 
-    def __init__(self, shape=None, *, name=None, reset=0, reset_less=False,
+    def __init__(self, shape=None, *, name=None, reset=None, reset_less=False,
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
@@ -1001,20 +1019,49 @@ class Signal(Value, DUID):
         self.width  = shape.width
         self.signed = shape.signed
 
-        if isinstance(reset, Enum):
-            reset = reset.value
-        if not isinstance(reset, int):
-            raise TypeError("Reset value has to be an int or an integral Enum")
-
-        reset_width = bits_for(reset, self.signed)
-        if reset != 0 and reset_width > self.width:
-            warnings.warn("Reset value {!r} requires {} bits to represent, but the signal "
-                          "only has {} bits"
-                          .format(reset, reset_width, self.width),
-                          SyntaxWarning, stacklevel=2 + src_loc_at)
-
-        self.reset = reset
+        orig_reset = reset
+        if isinstance(orig_shape, ShapeCastable):
+            try:
+                reset = Const.cast(orig_shape.const(reset))
+            except Exception:
+                raise TypeError("Reset value must be a constant initializer of {!r}"
+                                .format(orig_shape))
+            if reset.shape() != Shape.cast(orig_shape):
+                raise ValueError("Constant returned by {!r}.const() must have the shape that "
+                                 "it casts to, {!r}, and not {!r}"
+                                 .format(orig_shape, Shape.cast(orig_shape),
+                                         reset.shape()))
+        else:
+            try:
+                reset = Const.cast(reset or 0)
+            except TypeError:
+                raise TypeError("Reset value must be a constant-castable expression, not {!r}"
+                                .format(orig_reset))
+        if orig_reset not in (None, 0, -1): # Avoid false positives for all-zeroes and all-ones
+            if reset.shape().signed and not self.signed:
+                warnings.warn(
+                    message="Reset value {!r} is signed, but the signal shape is {!r}"
+                            .format(orig_reset, shape),
+                    category=SyntaxWarning,
+                    stacklevel=2)
+            elif (reset.shape().width > self.width or
+                  reset.shape().width == self.width and
+                    self.signed and not reset.shape().signed):
+                warnings.warn(
+                    message="Reset value {!r} will be truncated to the signal shape {!r}"
+                            .format(orig_reset, shape),
+                    category=SyntaxWarning,
+                    stacklevel=2)
+        self.reset = reset.value
         self.reset_less = bool(reset_less)
+
+        if isinstance(orig_shape, range) and self.reset == orig_shape.stop:
+            warnings.warn(
+                message="Reset value {!r} equals the non-inclusive end of the signal "
+                        "shape {!r}; this is likely an off-by-one error"
+                        .format(self.reset, orig_shape),
+                category=SyntaxWarning,
+                stacklevel=2)
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
@@ -1297,15 +1344,13 @@ class ValueCastable:
     from :class:`ValueCastable` is mutable, it is up to the user to ensure that it is not mutated
     in a way that changes its representation after the first call to :meth:`as_value`.
     """
-    def __new__(cls, *args, **kwargs):
-        self = super().__new__(cls)
-        if not hasattr(self, "as_value"):
+    def __init_subclass__(cls, **kwargs):
+        if not hasattr(cls, "as_value"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
                             "the `as_value` method")
-        if not hasattr(self.as_value, "_ValueCastable__memoized"):
+        if not hasattr(cls.as_value, "_ValueCastable__memoized"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate "
                             "the `as_value` method with the `ValueCastable.lowermethod` decorator")
-        return self
 
     @staticmethod
     def lowermethod(func):

@@ -163,7 +163,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 
 .. _lang-exclrange:
 
-.. warning::
+.. note::
 
    Python ranges are *exclusive* or *half-open*, meaning they do not contain their ``.stop`` element. Because of this, values with shapes cast from a ``range(stop)`` where ``stop`` is a power of 2 are not wide enough to represent ``stop`` itself:
 
@@ -175,7 +175,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
       >>> fencepost.value
       0
 
-   Be mindful of this edge case!
+   Amaranth detects uses of :class:`Const` and :class:`Signal` that invoke such an off-by-one error, and emits a diagnostic message.
 
 
 .. _lang-shapeenum:
@@ -282,30 +282,25 @@ Constant-castable objects are accepted anywhere a constant integer is accepted. 
 
 .. doctest::
 
-   >>> Const.cast(Cat(Direction.TOP, Direction.LEFT))
-   (const 4'd4)
+   >>> Const.cast(Cat(C(10, 4), C(1, 2)))
+   (const 6'd26)
 
-.. TODO: uncomment when this actually works
+They may be used in enumeration members, provided the enumeration inherits from :class:`amaranth.lib.enum.Enum`:
 
-.. comment::
+.. testcode::
 
-   They may be used in enumeration members:
+   class Funct(amaranth.lib.enum.Enum, shape=4):
+       ADD = 0
+       ...
 
-   .. testcode::
+   class Op(amaranth.lib.enum.Enum, shape=1):
+       REG = 0
+       IMM = 1
 
-      class Funct(enum.Enum):
-          ADD = 0
-          ...
-
-      class Op(enum.Enum):
-          REG = 0
-          IMM = 1
-
-      class Instr(enum.Enum):
-          ADD  = Cat(Funct.ADD, Op.REG)
-          ADDI = Cat(Funct.ADD, Op.IMM)
-          ...
-
+   class Instr(amaranth.lib.enum.Enum, shape=5):
+       ADD  = Cat(Funct.ADD, Op.REG)
+       ADDI = Cat(Funct.ADD, Op.IMM)
+       ...
 
 .. note::
 
@@ -417,6 +412,14 @@ Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected b
    False
    >>> Signal(reset_less=True).reset_less
    True
+
+
+.. _lang-data:
+
+Data structures
+===============
+
+Amaranth provides aggregate data structures in the standard library module :mod:`amaranth.lib.data`.
 
 
 .. _lang-operators:
@@ -707,7 +710,7 @@ Operation               Description                                      Notes
 
 .. [#opS1] Words "length" and "width" have the same meaning when talking about Amaranth values. Conventionally, "width" is used.
 .. [#opS2] All variations of the Python slice notation are supported, including "extended slicing". E.g. all of ``a[0]``, ``a[1:9]``, ``a[2:]``, ``a[:-2]``, ``a[::-1]``, ``a[0:8:2]`` select bits in the same way as other Python sequence types select their elements.
-.. [#opS3] In the concatenated value, ``a`` occupies the least significant bits, and ``b`` the most significant bits.
+.. [#opS3] In the concatenated value, ``a`` occupies the least significant bits, and ``b`` the most significant bits. Any number of arguments (zero, one, two, or more) are supported.
 
 For the operators introduced by Amaranth, the following table explains them in terms of Python code operating on tuples of bits rather than Amaranth values:
 
