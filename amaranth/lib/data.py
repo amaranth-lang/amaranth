@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections.abc import Mapping, Sequence
+import warnings
 
 from amaranth.hdl import *
 from amaranth.hdl.ast import ShapeCastable, ValueCastable
@@ -599,6 +600,12 @@ class View(ValueCastable):
             raise ValueError("View target is {} bit(s) wide, which is not compatible with "
                              "the {} bit(s) wide view layout"
                              .format(len(cast_target), cast_layout.size))
+        for name, field in cast_layout:
+            if isinstance(name, str) and name[0] != "_" and hasattr(type(self), name):
+                warnings.warn("View layout includes a field {!r} that will be shadowed by "
+                              "the view attribute '{}.{}.{}'"
+                              .format(name, type(self).__module__, type(self).__qualname__, name),
+                              SyntaxWarning, stacklevel=1)
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
