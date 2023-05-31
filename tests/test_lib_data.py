@@ -465,6 +465,22 @@ class ViewTestCase(FHDLTestCase):
                 r"^View layout must be a layout, not <.+?>$"):
             View(object(), Signal(1))
 
+    def test_layout_conflict_with_attr(self):
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^View layout includes a field 'as_value' that will be shadowed by the view "
+                r"attribute 'amaranth\.lib\.data\.View\.as_value'$"):
+            View(StructLayout({"as_value": unsigned(1)}), Signal(1))
+
+    def test_layout_conflict_with_attr_derived(self):
+        class DerivedView(View):
+            def foo(self):
+                pass
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^View layout includes a field 'foo' that will be shadowed by the view "
+                r"attribute 'tests\.test_lib_data\.ViewTestCase\."
+                r"test_layout_conflict_with_attr_derived\.<locals>.DerivedView\.foo'$"):
+            DerivedView(StructLayout({"foo": unsigned(1)}), Signal(1))
+
     def test_target_wrong_type(self):
         with self.assertRaisesRegex(TypeError,
                 r"^View target must be a value-castable object, not <.+?>$"):
