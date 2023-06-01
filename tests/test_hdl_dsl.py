@@ -1,5 +1,6 @@
 # amaranth: UnusedElaboratable=no
 
+import sys
 from collections import OrderedDict
 
 from amaranth.hdl.ast import *
@@ -324,27 +325,28 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
-    def test_If_signed_suspicious(self):
-        m = Module()
-        with self.assertWarnsRegex(SyntaxWarning,
-                (r"^Signed values in If\/Elif conditions usually result from inverting Python "
+    if sys.version_info < (3, 12): # upstream warning in 3.12!
+        def test_If_signed_suspicious(self):
+            m = Module()
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^Signed values in If\/Elif conditions usually result from inverting Python "
                     r"booleans with ~, which leads to unexpected results\. Replace `~flag` with "
                     r"`not flag`\. \(If this is a false positive, silence this warning with "
-                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$")):
-            with m.If(~True):
-                pass
+                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$"):
+                with m.If(~True):
+                    pass
 
-    def test_Elif_signed_suspicious(self):
-        m = Module()
-        with m.If(0):
-            pass
-        with self.assertWarnsRegex(SyntaxWarning,
-                (r"^Signed values in If\/Elif conditions usually result from inverting Python "
+        def test_Elif_signed_suspicious(self):
+            m = Module()
+            with m.If(0):
+                pass
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^Signed values in If\/Elif conditions usually result from inverting Python "
                     r"booleans with ~, which leads to unexpected results\. Replace `~flag` with "
                     r"`not flag`\. \(If this is a false positive, silence this warning with "
-                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$")):
-            with m.Elif(~True):
-                pass
+                    r"`m\.If\(x\)` → `m\.If\(x\.bool\(\)\)`\.\)$"):
+                with m.Elif(~True):
+                    pass
 
     def test_if_If_Elif_Else(self):
         m = Module()
