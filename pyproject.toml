@@ -14,7 +14,7 @@ requires-python = "~=3.7"
 dependencies = [
   "importlib_metadata;  python_version<'3.8'", # for __version__ and amaranth._toolchain.yosys
   "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
-  "pyvcd>=0.2.2,<0.4", # for amaranth.sim.pysim
+  "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
 ]
 
