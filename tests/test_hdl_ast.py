@@ -714,6 +714,9 @@ class SliceTestCase(FHDLTestCase):
         with self.assertRaisesRegex(IndexError,
                 r"^Slice start 4 must be less than slice stop 2$"):
             Slice(c, 4, 2)
+        with self.assertRaisesRegex(IndexError,
+                r"^Cannot start slice -9 bits into 8-bit value$"):
+            Slice(c, -9, -5)
 
     def test_repr(self):
         s1 = Const(10)[2]
