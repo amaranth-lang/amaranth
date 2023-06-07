@@ -516,7 +516,8 @@ class Value(metaclass=ABCMeta):
         """
         if not isinstance(amount, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
-        amount %= len(self)
+        if len(self) != 0:
+            amount %= len(self)
         return Cat(self[-amount:], self[:-amount]) # meow :3
 
     def rotate_right(self, amount):
@@ -534,7 +535,8 @@ class Value(metaclass=ABCMeta):
         """
         if not isinstance(amount, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
-        amount %= len(self)
+        if len(self) != 0:
+            amount %= len(self)
         return Cat(self[amount:], self[:amount])
 
     def eq(self, value):
@@ -647,7 +649,7 @@ class Const(Value):
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
-        if self.signed and self.value >> (self.width - 1):
+        if self.signed and self.value >> (self.width - 1) & 1:
             self.value |= -(1 << self.width)
         else:
             self.value &= (1 << self.width) - 1
