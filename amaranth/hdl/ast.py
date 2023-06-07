@@ -795,6 +795,7 @@ class Slice(Value):
         if not isinstance(stop, int):
             raise TypeError("Slice stop must be an integer, not {!r}".format(stop))
 
+        value = Value.cast(value)
         n = len(value)
         if start not in range(-n, n+1):
             raise IndexError("Cannot start slice {} bits into {}-bit value".format(start, n))
@@ -808,7 +809,7 @@ class Slice(Value):
             raise IndexError("Slice start {} must be less than slice stop {}".format(start, stop))
 
         super().__init__(src_loc_at=src_loc_at)
-        self.value = Value.cast(value)
+        self.value = value
         self.start = int(start)
         self.stop  = int(stop)
 
@@ -834,7 +835,7 @@ class Part(Value):
             raise TypeError("Part stride must be a positive integer, not {!r}".format(stride))
 
         super().__init__(src_loc_at=src_loc_at)
-        self.value  = value
+        self.value  = Value.cast(value)
         self.offset = Value.cast(offset)
         self.width  = width
         self.stride = stride
