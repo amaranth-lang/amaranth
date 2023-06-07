@@ -1745,7 +1745,7 @@ class ValueKey:
             return False
 
         if isinstance(self.value, Const):
-            return self.value.value == other.value.value
+            return self.value.value == other.value.value and self.value.width == other.value.width
         elif isinstance(self.value, (Signal, AnyValue)):
             return self.value is other.value
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
@@ -1765,8 +1765,9 @@ class ValueKey:
                     self.value.width == other.value.width and
                     self.value.stride == other.value.stride)
         elif isinstance(self.value, Cat):
-            return all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.parts, other.value.parts))
+            return (len(self.value.parts) == len(other.value.parts) and
+                    all(ValueKey(a) == ValueKey(b)
+                        for a, b in zip(self.value.parts, other.value.parts)))
         elif isinstance(self.value, Repl):
             return (ValueKey(self.value.value) == ValueKey(other.value.value) and
                     self.value.count == other.value.count)
