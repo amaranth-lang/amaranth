@@ -369,6 +369,8 @@ class ConstTestCase(FHDLTestCase):
 
     def test_normalization(self):
         self.assertEqual(Const(0b10110, signed(5)).value, -10)
+        self.assertEqual(Const(0b10000, signed(4)).value, 0)
+        self.assertEqual(Const(-16, 4).value, 0)
 
     def test_value(self):
         self.assertEqual(Const(10).value, 10)

@@ -647,7 +647,7 @@ class Const(Value):
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
-        if self.signed and self.value >> (self.width - 1):
+        if self.signed and self.value >> (self.width - 1) & 1:
             self.value |= -(1 << self.width)
         else:
             self.value &= (1 << self.width) - 1
