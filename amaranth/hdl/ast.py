@@ -794,11 +794,11 @@ class Slice(Value):
             raise TypeError("Slice stop must be an integer, not {!r}".format(stop))
 
         n = len(value)
-        if start not in range(-(n+1), n+1):
+        if start not in range(-n, n+1):
             raise IndexError("Cannot start slice {} bits into {}-bit value".format(start, n))
         if start < 0:
             start += n
-        if stop not in range(-(n+1), n+1):
+        if stop not in range(-n, n+1):
             raise IndexError("Cannot stop slice {} bits into {}-bit value".format(stop, n))
         if stop < 0:
             stop += n
