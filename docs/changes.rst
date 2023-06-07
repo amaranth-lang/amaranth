@@ -7,7 +7,13 @@ This document describes changes to the public interfaces in the Amaranth languag
 Version 0.4 (unreleased)
 ========================
 
-Support for Python 3.6 has been removed, and support for Python 3.11 has been added.
+Support for enumerations has been extended. A shape for enumeration members can be provided for an enumeration class, as defined in `RFC 3`_.
+
+The language includes several new extension points for integration with :class:`Value` based data structures defined outside of the core language. In particular, ``Signal(shape)`` may now return a :class:`Signal` object wrapped in another if ``shape`` implements the call protocol, as defined in `RFC 15`_.
+
+Several issues with shape inference have been resolved. Notably, ``a - b`` where both ``a`` and ``b`` are unsigned now returns a signed value.
+
+Support for Python 3.6 has been removed, and support for Python 3.11 and 3.12 has been added.
 
 Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
 
@@ -29,11 +35,17 @@ Implemented RFCs
 .. _RFC 3: https://amaranth-lang.org/rfcs/0003-enumeration-shapes.html
 .. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
 .. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
+.. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
+.. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
+.. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
 
 * `RFC 1`_: Aggregate data structure library
 * `RFC 3`_: Enumeration shapes
 * `RFC 4`_: Constant-castable expressions
 * `RFC 5`_: Remove Const.normalize
+* `RFC 8`_: Aggregate extensibility
+* `RFC 9`_: Constant initialization for shape-castable objects
+* `RFC 15`_: Lifting shape-castable objects
 
 
 Language changes
@@ -45,6 +57,7 @@ Language changes
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Added: :meth:`Const.cast`. (`RFC 4`_)
 * Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
+* Changed: creating a :class:`Signal` with a shape that is a :class:`ShapeCastable` implementing :meth:`ShapeCastable.__call__` wraps the returned object using that method. (`RFC 15`_)
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
