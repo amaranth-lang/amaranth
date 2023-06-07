@@ -117,6 +117,9 @@ class ShapeTestCase(FHDLTestCase):
         s7 = Shape.cast(range(-1, -1))
         self.assertEqual(s7.width, 0)
         self.assertEqual(s7.signed, True)
+        s8 = Shape.cast(range(0, 10, 3))
+        self.assertEqual(s8.width, 4)
+        self.assertEqual(s8.signed, False)
 
     def test_cast_enum(self):
         s1 = Shape.cast(UnsignedEnum)

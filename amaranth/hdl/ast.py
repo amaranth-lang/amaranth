@@ -117,9 +117,9 @@ class Shape:
             elif isinstance(obj, range):
                 if len(obj) == 0:
                     return Shape(0, obj.start < 0)
-                signed = obj.start < 0 or (obj.stop - obj.step) < 0
-                width  = max(bits_for(obj.start, signed),
-                             bits_for(obj.stop - obj.step, signed))
+                signed = obj[0] < 0 or obj[-1] < 0
+                width  = max(bits_for(obj[0], signed),
+                             bits_for(obj[-1], signed))
                 return Shape(width, signed)
             elif isinstance(obj, type) and issubclass(obj, Enum):
                 # For compatibility with third party enumerations, handle them as if they were
