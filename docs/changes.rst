@@ -13,7 +13,7 @@ The language includes several new extension points for integration with :class:`
 
 Several issues with shape inference have been resolved. Notably, ``a - b`` where both ``a`` and ``b`` are unsigned now returns a signed value.
 
-Support for Python 3.6 has been removed, and support for Python 3.11 and 3.12 has been added.
+Support for Python 3.6 and 3.7 has been removed, and support for Python 3.11 and 3.12 has been added.
 
 Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
 

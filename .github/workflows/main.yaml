@@ -6,12 +6,10 @@ jobs:
     strategy:
       matrix:
         python-version:
-        - '3.7'
         - '3.8'
         - '3.9'
         - '3.10'
         - '3.11'
-        - 'pypy-3.7'
         - 'pypy-3.8'
         - 'pypy-3.9'
         allow-failure:
@@ -37,7 +35,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install yices2
         pip install coverage codecov
-        pip install yowasp-yosys==0.20.* # last version compatible with Python 3.7
+        pip install yowasp-yosys
         pip install -e .[builtin-yosys]
         pip install -r docs/requirements.txt
     - name: Preserve Wasm cache
