@@ -56,6 +56,7 @@ class FHDLTestCase(unittest.TestCase):
         mode {mode}
         depth {depth}
         wait on
+        multiclock on
 
         [engines]
         smtbmc

@@ -4,13 +4,7 @@ import re
 import subprocess
 import warnings
 import pathlib
-try:
-    from importlib import metadata as importlib_metadata # py3.8+ stdlib
-except ImportError:
-    try:
-        import importlib_metadata # py3.7- shim
-    except ImportError:
-        importlib_metadata = None # not installed
+from importlib import metadata as importlib_metadata
 try:
     from importlib import resources as importlib_resources
     try:
