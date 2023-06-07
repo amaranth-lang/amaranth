@@ -263,7 +263,7 @@ class Value(metaclass=ABCMeta):
 
     def __abs__(self):
         if self.shape().signed:
-            return Mux(self >= 0, self, -self)
+            return Mux(self >= 0, self, -self)[:len(self)]
         else:
             return self
 

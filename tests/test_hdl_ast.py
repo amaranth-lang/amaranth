@@ -675,6 +675,17 @@ class OperatorTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             hash(Const(0) + Const(0))
 
+    def test_abs(self):
+        s = Signal(4)
+        self.assertRepr(abs(s), """
+        (sig s)
+        """)
+        s = Signal(signed(4))
+        self.assertRepr(abs(s), """
+        (slice (m (>= (sig s) (const 1'd0)) (sig s) (- (sig s))) 0:4)
+        """)
+        self.assertEqual(abs(s).shape(), unsigned(4))
+
 
 class SliceTestCase(FHDLTestCase):
     def test_shape(self):
