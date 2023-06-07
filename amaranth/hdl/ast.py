@@ -277,12 +277,12 @@ class Value(metaclass=ABCMeta):
                 raise IndexError(f"Index {key} is out of bounds for a {n}-bit value")
             if key < 0:
                 key += n
-            return Slice(self, key, key + 1)
+            return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
             start, stop, step = key.indices(n)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
-            return Slice(self, start, stop)
+            return Slice(self, start, stop, src_loc_at=1)
         else:
             raise TypeError("Cannot index value with {}".format(repr(key)))
 
