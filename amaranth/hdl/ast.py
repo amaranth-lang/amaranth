@@ -730,9 +730,12 @@ class Operator(Value):
                 return Shape(a_shape.width, True)
         elif len(op_shapes) == 2:
             a_shape, b_shape = op_shapes
-            if self.operator in ("+", "-"):
+            if self.operator == "+":
                 o_shape = _bitwise_binary_shape(*op_shapes)
                 return Shape(o_shape.width + 1, o_shape.signed)
+            if self.operator == "-":
+                o_shape = _bitwise_binary_shape(*op_shapes)
+                return Shape(o_shape.width + 1, True)
             if self.operator == "*":
                 return Shape(a_shape.width + b_shape.width, a_shape.signed or b_shape.signed)
             if self.operator == "//":
