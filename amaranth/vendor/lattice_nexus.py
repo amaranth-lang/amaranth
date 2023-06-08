@@ -360,7 +360,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             m.d.comb += ClockSignal("sync").eq(clk_i)
             return m
 
-    # pg. 59 family datasheet
+    # pg. 17 of FPGA-TN-02067-1-8-sysIO-User-Guide-Nexus-Platform.pdf
     _single_ended_io_types = [
         "LVCMOS33", "LVTTL33", 
         "LVCMOS25", 
@@ -368,13 +368,21 @@ class LatticeNexusPlatform(TemplatedPlatform):
         "LVCMOS15", "LVCMOS15H",  
         "LVCMOS12", "LVCMOS12H", 
         "LVCMOS10", "LVCMOS10H", "LVCMOS10R", 
-        "SSTL135_I", "SSTL135_II", "SSTL15_I", "SSTL15_II",
-        "HSUL12", "MIPI D-PHY LP Input (try using LVCMOS12)"
+        "SSTL15_I", "SSTL15_II",
+        "SSTL135_I", "SSTL135_II", 
+        "HSTL15_I", 
+        "HSUL12",
     ]
     _differential_io_types = [
-        "LVDS", "LVDSE", "subLVDS", "subLVDSEH", "SLVS", "MIPI D-PHY", "LVCMOS33D",
-        "LVTTL33D", "LVCMOS25D", "SSTLD_I", "SSTL135D_I", "SSTL15D_I", "SSTL15D_II",
-        "HSUL15D_I", "HSUL12D", 
+        "LVCMOS33D", "LVTTL33D",
+        "LVCMOS25D", 
+        "SSTL15D_I", "SSTL15D_II",
+        "SSTL135D_I", "SSTL135D_II", 
+        "HSTL15D_I", 
+        "HSUL12D",
+        "LVDS", "LVDSE", "SUBLVDS", "SUBLVDSEH", 
+        "SLVS", 
+        "MIPI_DPHY", 
     ]
 
     def should_skip_port_component(self, port, attrs, component):
