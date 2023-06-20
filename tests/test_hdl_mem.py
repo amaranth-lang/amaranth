@@ -43,6 +43,14 @@ class MemoryTestCase(FHDLTestCase):
                     r"'str' object cannot be interpreted as an integer$")):
             m = Memory(width=8, depth=4, init=[1, "0"])
 
+    def test_init_default(self):
+        m = Memory(width=8, depth=4)
+        self.assertIsNone(m.init)
+
+    def test_init_empty(self):
+        m = Memory(width=8, depth=4, init=[])
+        self.assertEqual(m.init, [])
+
     def test_attrs(self):
         m1 = Memory(width=8, depth=4)
         self.assertEqual(m1.attrs, {})

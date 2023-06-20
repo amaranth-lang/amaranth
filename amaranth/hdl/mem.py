@@ -18,10 +18,10 @@ class Memory:
         Access granularity. Each storage element of this memory is ``width`` bits in size.
     depth : int
         Word count. This memory contains ``depth`` storage elements.
-    init : list of int
+    init : list of int or None
         Initial values. At power on, each storage element in this memory is initialized to
-        the corresponding element of ``init``, if any, or to zero otherwise.
-        Uninitialized memories are not currently supported.
+        the corresponding element of ``init``, if any, or to zero otherwise. If ``None``
+        (default), no explicit initialization is performed.
     name : str
         Name hint for this memory. If ``None`` (default) the name is inferred from the variable
         name this ``Signal`` is assigned to.
@@ -32,7 +32,7 @@ class Memory:
     ----------
     width : int
     depth : int
-    init : list of int
+    init : list of int or None
     attrs : dict
     """
     def __init__(self, *, width, depth, init=None, name=None, attrs=None, simulate=True):
@@ -65,14 +65,14 @@ class Memory:
 
     @init.setter
     def init(self, new_init):
-        self._init = [] if new_init is None else list(new_init)
-        if len(self.init) > self.depth:
+        self._init = None if new_init is None else list(new_init)
+        if self.init is not None and len(self.init) > self.depth:
             raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
                              .format(len(self.init), self.depth))
 
         try:
             for addr in range(len(self._array)):
-                if addr < len(self._init):
+                if self.init is not None and addr < len(self._init):
                     self._array[addr].reset = operator.index(self._init[addr])
                 else:
                     self._array[addr].reset = 0
@@ -202,7 +202,7 @@ class ReadPort(Elaboratable):
             # the address input to achieve the correct address-to-data latency. Also, the reset
             # value of the data output is forcibly set to the 0th initial value, if any--note that
             # many FPGAs do not guarantee this behavior!
-            if len(self.memory.init) > 0:
+            if self.memory.init is not None and len(self.memory.init) > 0:
                 self.data.reset = operator.index(self.memory.init[0])
             latch_addr = Signal.like(self.addr)
             f.add_statements(
