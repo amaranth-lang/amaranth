@@ -877,26 +877,27 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         if memory not in memories:
                             memories[memory] = module.memory(width=memory.width, size=memory.depth,
                                                              name=memory.name, attrs=memory.attrs)
-                            addr_bits = bits_for(memory.depth)
-                            data_parts = []
-                            data_mask = (1 << memory.width) - 1
-                            for addr in range(memory.depth):
-                                if addr < len(memory.init):
-                                    data = memory.init[addr] & data_mask
-                                else:
-                                    data = 0
-                                data_parts.append("{:0{}b}".format(data, memory.width))
-                            module.cell("$meminit", ports={
-                                "\\ADDR": rhs_compiler(ast.Const(0, addr_bits)),
-                                "\\DATA": "{}'".format(memory.width * memory.depth) +
-                                          "".join(reversed(data_parts)),
-                            }, params={
-                                "MEMID": memories[memory],
-                                "ABITS": addr_bits,
-                                "WIDTH": memory.width,
-                                "WORDS": memory.depth,
-                                "PRIORITY": 0,
-                            })
+                            if memory.init:
+                                addr_bits = bits_for(memory.depth)
+                                data_parts = []
+                                data_mask = (1 << memory.width) - 1
+                                for addr in range(memory.depth):
+                                    if addr < len(memory.init):
+                                        data = memory.init[addr] & data_mask
+                                    else:
+                                        data = 0
+                                    data_parts.append("{:0{}b}".format(data, memory.width))
+                                module.cell("$meminit", ports={
+                                    "\\ADDR": rhs_compiler(ast.Const(0, addr_bits)),
+                                    "\\DATA": "{}'".format(memory.width * memory.depth) +
+                                            "".join(reversed(data_parts)),
+                                }, params={
+                                    "MEMID": memories[memory],
+                                    "ABITS": addr_bits,
+                                    "WIDTH": memory.width,
+                                    "WORDS": memory.depth,
+                                    "PRIORITY": 0,
+                                })
 
                         param_value = memories[memory]
 
