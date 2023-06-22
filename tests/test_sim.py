@@ -905,7 +905,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         z = Signal(32)
         dut.d.comb += z.eq(a << b)
         with self.assertRaisesRegex(OverflowError,
-                r"^Value defined at .+?/test_sim\.py:\d+ is 4294967327 bits wide, "
+                r"^Value defined at .+?[\\/]test_sim\.py:\d+ is 4294967327 bits wide, "
                 r"which is unlikely to simulate in reasonable time$"):
             Simulator(dut)
 
