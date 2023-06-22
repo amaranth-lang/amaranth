@@ -632,9 +632,6 @@ class _RHSValueCompiler(_ValueCompiler):
         }, src=_src(value.src_loc))
         return res
 
-    def on_Repl(self, value):
-        return "{{ {} }}".format(" ".join(self(value.value) for _ in range(value.count)))
-
 
 class _LHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
@@ -694,9 +691,6 @@ class _LHSValueCompiler(_ValueCompiler):
             raise _LegalizeValue(value.offset,
                                  range(1 << len(value.offset))[:max_branches],
                                  value.src_loc)
-
-    def on_Repl(self, value):
-        raise TypeError # :nocov:
 
 
 class _StatementCompiler(xfrm.StatementVisitor):

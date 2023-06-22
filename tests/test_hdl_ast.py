@@ -353,6 +353,23 @@ class ValueTestCase(FHDLTestCase):
                 r"^Rotate amount must be an integer, not 'str'$"):
             Const(31).rotate_right("str")
 
+    def test_replicate_shape(self):
+        s1 = Const(10).replicate(3)
+        self.assertEqual(s1.shape(), unsigned(12))
+        self.assertIsInstance(s1.shape(), Shape)
+        s2 = Const(10).replicate(0)
+        self.assertEqual(s2.shape(), unsigned(0))
+
+    def test_replicate_count_wrong(self):
+        with self.assertRaises(TypeError):
+            Const(10).replicate(-1)
+        with self.assertRaises(TypeError):
+            Const(10).replicate("str")
+
+    def test_replicate_repr(self):
+        s = Const(10).replicate(3)
+        self.assertEqual(repr(s), "(cat (const 4'd10) (const 4'd10) (const 4'd10))")
+
 
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):
@@ -863,33 +880,19 @@ class CatTestCase(FHDLTestCase):
 
 
 class ReplTestCase(FHDLTestCase):
-    def test_shape(self):
-        s1 = Repl(Const(10), 3)
-        self.assertEqual(s1.shape(), unsigned(12))
-        self.assertIsInstance(s1.shape(), Shape)
-        s2 = Repl(Const(10), 0)
-        self.assertEqual(s2.shape(), unsigned(0))
-
-    def test_count_wrong(self):
-        with self.assertRaises(TypeError):
-            Repl(Const(10), -1)
-        with self.assertRaises(TypeError):
-            Repl(Const(10), "str")
-
-    def test_repr(self):
-        s = Repl(Const(10), 3)
-        self.assertEqual(repr(s), "(repl (const 4'd10) 3)")
-
+    @_ignore_deprecated
     def test_cast(self):
         r = Repl(0, 3)
-        self.assertEqual(repr(r), "(repl (const 1'd0) 3)")
+        self.assertEqual(repr(r), "(cat (const 1'd0) (const 1'd0) (const 1'd0))")
 
+    @_ignore_deprecated
     def test_int_01(self):
         with warnings.catch_warnings():
             warnings.filterwarnings(action="error", category=SyntaxWarning)
             Repl(0, 3)
             Repl(1, 3)
 
+    @_ignore_deprecated
     def test_int_wrong(self):
         with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value argument of Repl\(\) is a bare integer 2 used in bit vector context; "

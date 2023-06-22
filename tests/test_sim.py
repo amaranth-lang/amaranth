@@ -289,8 +289,8 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a: [rec.eq(a), y.eq(rec)]
         self.assertStatement(stmt, [C(0b101, 3)], C(0b101, 3))
 
-    def test_repl(self):
-        stmt = lambda y, a: y.eq(Repl(a, 3))
+    def test_replicate(self):
+        stmt = lambda y, a: y.eq(a.replicate(3))
         self.assertStatement(stmt, [C(0b10, 2)], C(0b101010, 6))
 
     def test_array(self):
@@ -877,11 +877,6 @@ class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):
         dut = Module()
         dut.d.comb += Signal().eq(Cat())
-        Simulator(dut).run()
-
-    def test_bug_325_bis(self):
-        dut = Module()
-        dut.d.comb += Signal().eq(Repl(Const(1), 0))
         Simulator(dut).run()
 
     def test_bug_473(self):

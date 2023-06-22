@@ -539,6 +539,29 @@ class Value(metaclass=ABCMeta):
             amount %= len(self)
         return Cat(self[amount:], self[:amount])
 
+    def replicate(self, count):
+        """Replication.
+
+        A ``Value`` is replicated (repeated) several times to be used
+        on the RHS of assignments::
+
+            len(v.replicate(n)) == len(v) * n
+
+        Parameters
+        ----------
+        count : int
+            Number of replications.
+
+        Returns
+        -------
+        Value, out
+            Replicated value.
+        """
+        if not isinstance(count, int) or count < 0:
+            raise TypeError("Replication count must be a non-negative integer, not {!r}"
+                            .format(count))
+        return Cat(self for _ in range(count))
+
     def eq(self, value):
         """Assignment.
 
@@ -914,8 +937,9 @@ class Cat(Value):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
 
 
-@final
-class Repl(Value):
+# TODO(amaranth-0.5): remove
+@deprecated("instead of `Repl(value, count)`, use `value.replicate(count)`")
+def Repl(value, count):
     """Replicate a value
 
     An input value is replicated (repeated) several times
@@ -932,31 +956,16 @@ class Repl(Value):
 
     Returns
     -------
-    Repl, out
+    Value, out
         Replicated value.
     """
-    def __init__(self, value, count, *, src_loc_at=0):
-        if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a non-negative integer, not {!r}"
-                            .format(count))
+    if isinstance(value, int) and value not in [0, 1]:
+        warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
+                        "context; consider specifying explicit width using C({}, {}) instead"
+                        .format(value, value, bits_for(value)),
+                        SyntaxWarning, stacklevel=3)
 
-        super().__init__(src_loc_at=src_loc_at)
-        if isinstance(value, int) and value not in [0, 1]:
-            warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
-                          "context; consider specifying explicit width using C({}, {}) instead"
-                          .format(value, value, bits_for(value)),
-                          SyntaxWarning, stacklevel=2 + src_loc_at)
-        self.value = Value.cast(value)
-        self.count = count
-
-    def shape(self):
-        return Shape(len(self.value) * self.count)
-
-    def _rhs_signals(self):
-        return self.value._rhs_signals()
-
-    def __repr__(self):
-        return "(repl {!r} {})".format(self.value, self.count)
+    return Value.cast(value).replicate(count)
 
 
 class _SignalMeta(ABCMeta):
@@ -1728,8 +1737,6 @@ class ValueKey:
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
         elif isinstance(self.value, Sample):
             self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
-        elif isinstance(self.value, Repl):
-            self._hash = hash((ValueKey(self.value.value), self.value.count))
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
@@ -1769,9 +1776,6 @@ class ValueKey:
             return (len(self.value.parts) == len(other.value.parts) and
                     all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value.parts, other.value.parts)))
-        elif isinstance(self.value, Repl):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.count == other.value.count)
         elif isinstance(self.value, ArrayProxy):
             return (ValueKey(self.value.index) == ValueKey(other.value.index) and
                     len(self.value.elems) == len(other.value.elems) and

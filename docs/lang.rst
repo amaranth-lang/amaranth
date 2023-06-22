@@ -705,7 +705,7 @@ Operation               Description                                      Notes
 ``a.bit_select(b, w)``  overlapping part select with variable offset
 ``a.word_select(b, w)`` non-overlapping part select with variable offset
 ``Cat(a, b)``           concatenation                                    [#opS3]_
-``Repl(a, n)``          replication
+``a.replicate(n)``      replication
 ======================= ================================================ ======
 
 .. [#opS1] Words "length" and "width" have the same meaning when talking about Amaranth values. Conventionally, "width" is used.
@@ -718,7 +718,7 @@ For the operators introduced by Amaranth, the following table explains them in t
 Amaranth operation        Equivalent Python code
 ======================= ======================
 ``Cat(a, b)``           ``a + b``
-``Repl(a, n)``          ``a * n``
+``a.replicate(n)``      ``a * n``
 ``a.bit_select(b, w)``  ``a[b:b+w]``
 ``a.word_select(b, w)`` ``a[b*w:b*w+w]``
 ======================= ======================

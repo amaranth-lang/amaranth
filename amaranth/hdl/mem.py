@@ -281,7 +281,7 @@ class WritePort(Elaboratable):
             p_CLK_POLARITY=1,
             p_PRIORITY=0,
             i_CLK=ClockSignal(self.domain),
-            i_EN=Cat(Repl(en_bit, self.granularity) for en_bit in self.en),
+            i_EN=Cat(en_bit.replicate(self.granularity) for en_bit in self.en),
             i_ADDR=self.addr,
             i_DATA=self.data,
         )
