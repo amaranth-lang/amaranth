@@ -69,9 +69,9 @@ def Constant(value, bits_sign=None):
     return Const(value, bits_sign)
 
 
-@deprecated("instead of `Replicate`, use `Repl`")
+@deprecated("instead of `Replicate(v, n)`, use `v.replicate(n)`")
 def Replicate(v, n):
-    return Repl(v, n)
+    return v.replicate(n)
 
 
 @extend(Const)

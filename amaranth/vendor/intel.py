@@ -375,7 +375,7 @@ class IntelPlatform(TemplatedPlatform):
     def _get_oereg(m, pin):
         # altiobuf_ requires an output enable signal for each pin, but pin.oe is 1 bit wide.
         if pin.xdr == 0:
-            return Repl(pin.oe, pin.width)
+            return pin.oe.replicate(pin.width)
         elif pin.xdr in (1, 2):
             oe_reg = Signal(pin.width, name="{}_oe_reg".format(pin.name))
             oe_reg.attrs["useioff"] = "1"

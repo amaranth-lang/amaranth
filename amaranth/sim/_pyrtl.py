@@ -213,18 +213,6 @@ class _RHSValueCompiler(_ValueCompiler):
             return f"({' | '.join(gen_parts)})"
         return f"0"
 
-    def on_Repl(self, value):
-        part_mask = (1 << len(value.value)) - 1
-        gen_part = self.emitter.def_var("repl", f"{part_mask:#x} & {self(value.value)}")
-        gen_parts = []
-        offset = 0
-        for _ in range(value.count):
-            gen_parts.append(f"({gen_part} << {offset})")
-            offset += len(value.value)
-        if gen_parts:
-            return f"({' | '.join(gen_parts)})"
-        return f"0"
-
     def on_ArrayProxy(self, value):
         index_mask = (1 << len(value.index)) - 1
         gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
@@ -324,9 +312,6 @@ class _LHSValueCompiler(_ValueCompiler):
                 self(part)(f"({part_mask:#x} & ({gen_arg} >> {offset}))")
                 offset += len(part)
         return gen
-
-    def on_Repl(self, value):
-        raise TypeError # :nocov:
 
     def on_ArrayProxy(self, value):
         def gen(arg):

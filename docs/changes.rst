@@ -37,6 +37,7 @@ Implemented RFCs
 .. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
 .. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
 .. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
+.. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
 
 * `RFC 1`_: Aggregate data structure library
@@ -45,6 +46,7 @@ Implemented RFCs
 * `RFC 5`_: Remove Const.normalize
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
+* `RFC 10`_: Move Repl to Value.replicate
 * `RFC 15`_: Lifting shape-castable objects
 
 
@@ -57,12 +59,14 @@ Language changes
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Added: :meth:`Const.cast`. (`RFC 4`_)
 * Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
+* Added: :meth:`Value.replicate`, superseding :class:`Repl`. (`RFC 10`_)
 * Changed: creating a :class:`Signal` with a shape that is a :class:`ShapeCastable` implementing :meth:`ShapeCastable.__call__` wraps the returned object using that method. (`RFC 15`_)
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
 * Deprecated: :meth:`Const.normalize`. (`RFC 5`_)
+* Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
 * Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.
