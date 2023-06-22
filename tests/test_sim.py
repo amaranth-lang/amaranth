@@ -1,4 +1,5 @@
 import os
+import warnings
 from contextlib import contextmanager
 
 from amaranth._utils import flatten
@@ -871,6 +872,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             with open(os.path.devnull, "w") as f:
                 with sim.write_vcd(f):
                     pass
+
+    def test_no_negated_boolean_warning(self):
+        m = Module()
+        a = Signal()
+        b = Signal()
+        m.d.comb += a.eq(~(b == b))
+        with warnings.catch_warnings(record=True) as warns:
+            Simulator(m).run()
+            self.assertEqual(warns, [])
 
 
 class SimulatorRegressionTestCase(FHDLTestCase):
