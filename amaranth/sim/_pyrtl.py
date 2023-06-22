@@ -138,7 +138,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if len(value.operands) == 1:
             arg, = value.operands
             if value.operator == "~":
-                return f"(~{self(arg)})"
+                return f"(~{mask(arg)})"
             if value.operator == "-":
                 return f"(-{sign(arg)})"
             if value.operator == "b":
