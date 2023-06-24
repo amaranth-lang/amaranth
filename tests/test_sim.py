@@ -927,3 +927,12 @@ class SimulatorRegressionTestCase(FHDLTestCase):
                 r"^Adding a clock process that drives a clock domain object named 'sync', "
                 r"which is distinct from an identically named domain in the simulated design$"):
             sim.add_clock(1e-6, domain=ClockDomain("sync"))
+
+    def test_bug_826(self):
+        sim = Simulator(Module())
+        def process():
+            self.assertEqual((yield C(0b0000, 4) | ~C(1, 1)), 0b0000)
+            self.assertEqual((yield C(0b1111, 4) & ~C(1, 1)), 0b0000)
+            self.assertEqual((yield C(0b1111, 4) ^ ~C(1, 1)), 0b1111)
+        sim.add_process(process)
+        sim.run()
