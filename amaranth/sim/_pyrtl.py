@@ -166,11 +166,11 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "%":
                 return f"zmod({sign(lhs)}, {sign(rhs)})"
             if value.operator == "&":
-                return f"({self(lhs)} & {self(rhs)})"
+                return f"({mask(lhs)} & {mask(rhs)})"
             if value.operator == "|":
-                return f"({self(lhs)} | {self(rhs)})"
+                return f"({mask(lhs)} | {mask(rhs)})"
             if value.operator == "^":
-                return f"({self(lhs)} ^ {self(rhs)})"
+                return f"({mask(lhs)} ^ {mask(rhs)})"
             if value.operator == "<<":
                 return f"({sign(lhs)} << {sign(rhs)})"
             if value.operator == ">>":
