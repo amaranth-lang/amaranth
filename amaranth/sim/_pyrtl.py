@@ -83,7 +83,11 @@ class _ValueCompiler(ValueVisitor, _Compiler):
                                 "simulate in reasonable time"
                                 .format(src, len(value)))
 
-        return super().on_value(value)
+        v = super().on_value(value)
+        if isinstance(v, str) and len(v) > 1000:
+            # Avoid parser stack overflow on older Pythons.
+            return self.emitter.def_var("intermediate", v)
+        return v
 
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
