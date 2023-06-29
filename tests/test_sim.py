@@ -882,6 +882,19 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             Simulator(m).run()
             self.assertEqual(warns, [])
 
+    def test_large_expr_parser_overflow(self):
+        m = Module()
+        a = Signal()
+
+        op = a
+        for _ in range(50):
+            op = (op ^ 1)
+
+        op = op & op
+
+        m.d.comb += a.eq(op)
+        Simulator(m)
+
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):
