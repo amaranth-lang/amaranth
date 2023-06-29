@@ -7,9 +7,9 @@ from ..hdl.ast import Value, Shape, ShapeCastable, Const
 __all__ = py_enum.__all__
 
 
-for member in py_enum.__all__:
-    globals()[member] = getattr(py_enum, member)
-del member
+for _member in py_enum.__all__:
+    globals()[_member] = getattr(py_enum, _member)
+del _member
 
 
 class EnumMeta(ShapeCastable, py_enum.EnumMeta):
