@@ -1,7 +1,7 @@
 import enum as py_enum
 
 from amaranth import *
-from amaranth.lib.enum import Enum
+from amaranth.lib.enum import Enum, EnumMeta
 
 from .utils import *
 
@@ -116,3 +116,22 @@ class EnumTestCase(FHDLTestCase):
                 r"shape used in bit vector context; define the enumeration by inheriting from "
                 r"the class in amaranth\.lib\.enum and specifying the 'shape=' keyword argument$"):
             Cat(EnumA.A)
+
+    def test_subclasscheck_patch(self):
+        # These properties hold true when EnumMeta doesn't have a superclass
+        # with metaclass=ABCMeta, but when it does (i.e. ShapeCastable), the
+        # failing checks against EnumMeta raise due to
+        # https://github.com/python/cpython/issues/81062. This tests the
+        # fidelity of our patch.
+        class EnumA(Enum):
+            X = 1
+        self.assertIsInstance(Enum, EnumMeta)
+        self.assertIsInstance(EnumA, EnumMeta)
+        self.assertNotIsInstance(1, EnumMeta)  # isinstance() raises without patch
+        self.assertNotIsInstance(int, EnumMeta)  # isinstance() raises without patch
+
+        self.assertIsInstance(EnumA.X, Enum)
+        self.assertNotIsInstance(1, Enum)
+
+        self.assertIsInstance(EnumA.X, EnumA)
+        self.assertNotIsInstance(1, EnumA)

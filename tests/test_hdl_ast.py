@@ -2,7 +2,7 @@ import warnings
 from enum import Enum
 
 from amaranth.hdl.ast import *
-from amaranth.lib.enum import Enum as AmaranthEnum
+from amaranth.lib.enum import Enum as AmaranthEnum, EnumMeta as AmaranthEnumMeta
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -188,6 +188,56 @@ class ShapeCastableTestCase(FHDLTestCase):
         sc = MockShapeCastable(MockShapeCastable(unsigned(1)))
         self.assertEqual(Shape.cast(sc), unsigned(1))
 
+    def test_isinstance(self):
+        class EnumA(AmaranthEnum):
+            X = 1
+        class PyEnumA(Enum):
+            X = 1
+        self.assertShapeCastable(1)
+        self.assertShapeCastable(unsigned(1))
+        self.assertShapeCastable(MockShapeCastable(unsigned(2)))
+        self.assertShapeCastable(EnumA)
+        self.assertShapeCastable(PyEnumA)
+        self.assertShapeCastable(True)
+        self.assertShapeCastable(range(10))
+        self.assertShapeCastable(Enum)  # We allow empty py_enum.Enum.
+
+        self.assertNotShapeCastable('x')
+        self.assertNotShapeCastable(int)
+        self.assertNotShapeCastable(EnumA.X)
+        self.assertNotShapeCastable(PyEnumA.X)
+        self.assertNotShapeCastable(AmaranthEnumMeta)
+        self.assertNotShapeCastable(bool)
+        self.assertNotShapeCastable(range)
+        self.assertNotShapeCastable(ShapeCastable)
+        self.assertNotShapeCastable(MockShapeCastable)
+
+        # ShapeCastable.__subclasshook__ doesn't get enough information to
+        # reject these:
+        class EnumEmpty(AmaranthEnum):
+            pass
+        class EnumNonConstCast(AmaranthEnum):
+            X = Signal()
+        self.assertShapeCastableButFails(AmaranthEnum)
+        self.assertShapeCastableButFails(EnumEmpty)
+        self.assertShapeCastableButFails(EnumNonConstCast)
+
+    def assertShapeCastable(self, obj):
+        self.assertIsInstance(obj, ShapeCastable)
+        try:
+            Shape.cast(obj)
+        except TypeError:
+            raise AssertionError(f"{obj} failed Shape.cast")
+
+    def assertNotShapeCastable(self, obj):
+        self.assertNotIsInstance(obj, ShapeCastable)
+        with self.assertRaises(TypeError):
+            Shape.cast(obj)
+
+    def assertShapeCastableButFails(self, obj):
+        self.assertIsInstance(obj, ShapeCastable)
+        with self.assertRaises(TypeError):
+            Shape.cast(obj)
 
 class ValueTestCase(FHDLTestCase):
     def test_cast(self):

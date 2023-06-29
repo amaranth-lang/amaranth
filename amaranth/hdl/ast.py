@@ -4,7 +4,7 @@ import warnings
 import functools
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
-from enum import Enum
+from enum import Enum, EnumType
 from itertools import chain
 
 from .. import tracer
@@ -34,7 +34,7 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class ShapeCastable:
+class ShapeCastable(metaclass=ABCMeta):
     """Interface of user-defined objects that can be cast to :class:`Shape` s.
 
     An object deriving from :class:`ShapeCastable` is automatically converted to a :class:`Shape`
@@ -52,6 +52,41 @@ class ShapeCastable:
         if not hasattr(cls, "const"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `const` method")
+
+    @classmethod
+    def __subclasshook__(cls, subclass):
+        # Workaround for https://github.com/python/cpython/issues/81062.
+        #
+        # (tl;dr: if you have `class C(metaclass=ABCMeta)`, and `class SC(C,
+        # type)`, then `isinstance(obj, C)` for any obj that isn't `C()` will
+        # raise a TypeError in the middle of _py_abc.)
+        #
+        # We cannot return NotImplemented when cls is a metaclass, otherwise the
+        # above issue will lead to a raise.
+        #
+        # Being called with a metaclass for cls at some point is unavoidable,
+        # precisely because ABCMeta.__subclasscheck__ will, in a
+        # non-early-returning case, end up recursing on every subclass of
+        # ShapeCastable, including lib.enum.EnumMeta and
+        # lib.data._AggregateMeta.
+
+        if type in cls.__mro__:
+            # In an ideal world, we wouldn't need this branch (and could return
+            # NotImplemented) immediately below.
+            return False
+
+        if cls is not ShapeCastable:
+            # Use default behaviour where called on non-metaclass other than
+            # ShapeCastable, e.g. `isinstance(x, Layout)`.
+            return NotImplemented
+        elif issubclass(subclass, (Shape, int, range)):
+            return True
+        elif issubclass(subclass, EnumType):
+            # We don't have further information to determine whether this enum
+            # should be admitted.
+            return True
+        else:
+            return NotImplemented
 
 
 class Shape:
@@ -114,7 +149,7 @@ class Shape:
         while True:
             if isinstance(obj, Shape):
                 return obj
-            elif isinstance(obj, ShapeCastable):
+            elif ShapeCastable in obj.__class__.__mro__:
                 new_obj = obj.as_shape()
             elif isinstance(obj, int):
                 return Shape(obj)
@@ -918,7 +953,7 @@ class Cat(Value):
         super().__init__(src_loc_at=src_loc_at)
         self.parts = []
         for index, arg in enumerate(flatten(args)):
-            if isinstance(arg, Enum) and (not isinstance(type(arg), ShapeCastable) or
+            if isinstance(arg, Enum) and (ShapeCastable not in type(arg).__class__.__mro__ or
                                           not hasattr(arg, "_amaranth_shape_")):
                 warnings.warn("Argument #{} of Cat() is an enumerated value {!r} without "
                               "a defined shape used in bit vector context; define the enumeration "
@@ -980,7 +1015,7 @@ def Repl(value, count):
 class _SignalMeta(ABCMeta):
     def __call__(cls, shape=None, src_loc_at=0, **kwargs):
         signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
-        if isinstance(shape, ShapeCastable):
+        if ShapeCastable in shape.__class__.__mro__:
             return shape(signal)
         return signal
 
@@ -1044,7 +1079,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.signed = shape.signed
 
         orig_reset = reset
-        if isinstance(orig_shape, ShapeCastable):
+        if ShapeCastable in orig_shape.__class__.__mro__:
             try:
                 reset = Const.cast(orig_shape.const(reset))
             except Exception:
