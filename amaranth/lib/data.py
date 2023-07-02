@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence
 import warnings
 
+from .._utils import *
 from amaranth.hdl import *
 from amaranth.hdl.ast import ShapeCastable, ValueCastable
 
@@ -716,7 +717,7 @@ class View(ValueCastable):
         return item
 
 
-class _AggregateMeta(ShapeCastable, type):
+class _AggregateMeta(ShapeCastable, TypePatched):
     def __new__(metacls, name, bases, namespace):
         if "__annotations__" not in namespace:
             # This is a base class without its own layout. It is not shape-castable, and cannot
@@ -759,7 +760,7 @@ class _AggregateMeta(ShapeCastable, type):
         return cls.__layout
 
     def __call__(cls, target):
-        # This method exists to pass the override check done by ShapeCastable.
+        # Pass cls as layout.
         return super().__call__(cls, target)
 
     def const(cls, init):

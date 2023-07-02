@@ -165,13 +165,31 @@ class MockShapeCastable(ShapeCastable):
 
 
 class ShapeCastableTestCase(FHDLTestCase):
+    def assertShapeCastable(self, obj):
+        self.assertIsInstance(obj, ShapeCastable)
+        try:
+            Shape.cast(obj)
+        except TypeError:
+            raise AssertionError(f"{obj} failed Shape.cast")
+
+    def assertNotShapeCastable(self, obj):
+        self.assertNotIsInstance(obj, ShapeCastable)
+        with self.assertRaises(TypeError):
+            Shape.cast(obj)
+
+    def assertShapeCastableButFailsCast(self, obj):
+        self.assertIsInstance(obj, ShapeCastable)
+        with self.assertRaises(TypeError):
+            Shape.cast(obj)
+
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
-                r"override the `as_shape` method$"):
+                r"^Can't instantiate abstract class MockShapeCastableNoOverride without an "
+                r"implementation for abstract methods '__call__', 'as_shape', 'const'$"):
             class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
                     pass
+            MockShapeCastableNoOverride()
 
     def test_cast(self):
         sc = MockShapeCastable(unsigned(2))
@@ -218,26 +236,24 @@ class ShapeCastableTestCase(FHDLTestCase):
             pass
         class EnumNonConstCast(AmaranthEnum):
             X = Signal()
-        self.assertShapeCastableButFails(AmaranthEnum)
-        self.assertShapeCastableButFails(EnumEmpty)
-        self.assertShapeCastableButFails(EnumNonConstCast)
+        self.assertShapeCastableButFailsCast(AmaranthEnum)
+        self.assertShapeCastableButFailsCast(EnumEmpty)
+        self.assertShapeCastableButFailsCast(EnumNonConstCast)
 
-    def assertShapeCastable(self, obj):
-        self.assertIsInstance(obj, ShapeCastable)
-        try:
-            Shape.cast(obj)
-        except TypeError:
-            raise AssertionError(f"{obj} failed Shape.cast")
+    def test_shapecastable_subclasses(self):
+        # Make sure our __subclasses__ patch works.
+        self.assertNotIsInstance(1, AmaranthEnum)
 
-    def assertNotShapeCastable(self, obj):
-        self.assertNotIsInstance(obj, ShapeCastable)
-        with self.assertRaises(TypeError):
-            Shape.cast(obj)
+        class ShapeCastableSubclass(ShapeCastable):
+            pass
+        self.assertIn(ShapeCastableSubclass, ShapeCastable.__subclasses__())
 
-    def assertShapeCastableButFails(self, obj):
-        self.assertIsInstance(obj, ShapeCastable)
-        with self.assertRaises(TypeError):
-            Shape.cast(obj)
+    def test_shapecastable_subclass_subclasses(self):
+        # Make sure our __subclasses__ patch equally works on subclasses
+        # of ShapeCastable, such as EnumMeta.
+        class EnumMetaSubclass(AmaranthEnumMeta):
+            pass
+        self.assertIn(EnumMetaSubclass, AmaranthEnumMeta.__subclasses__())
 
 class ValueTestCase(FHDLTestCase):
     def test_cast(self):

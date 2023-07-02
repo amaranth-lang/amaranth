@@ -1,6 +1,7 @@
 import enum as py_enum
 import warnings
 
+from .._utils import *
 from ..hdl.ast import Value, Shape, ShapeCastable, Const
 
 
@@ -12,7 +13,7 @@ for _member in py_enum.__all__:
 del _member
 
 
-class EnumMeta(ShapeCastable, py_enum.EnumMeta):
+class EnumMeta(ShapeCastable, TypePatched, py_enum.EnumMeta):
     """Subclass of the standard :class:`enum.EnumMeta` that implements the :class:`ShapeCastable`
     protocol.
 
@@ -142,18 +143,6 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         else:
             member = cls(init)
         return Const(member.value, cls.as_shape())
-
-    @classmethod
-    def __subclasscheck__(cls, subclass):
-        # EnumMeta has a superclass with metaclass=ABCMeta (ShapeCastable),
-        # which causes its __subclasscheck__ to be faulty per
-        # https://github.com/python/cpython/issues/81062.
-        # We patch it to unbreak `isinstance(x, EnumMeta)`.
-        subclasscheck = super().__subclasscheck__
-        if hasattr(subclasscheck, "__self__"):
-            return subclasscheck(subclass)
-        else:
-            return subclasscheck(cls, subclass)
 
 
 class Enum(py_enum.Enum, metaclass=EnumMeta):

@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-import inspect
 import warnings
 import functools
 from collections import OrderedDict
@@ -34,7 +33,7 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class ShapeCastable(metaclass=ABCMeta):
+class ShapeCastable(metaclass=ABCMetaPatched):
     """Interface of user-defined objects that can be cast to :class:`Shape` s.
 
     An object deriving from :class:`ShapeCastable` is automatically converted to a :class:`Shape`
@@ -42,42 +41,12 @@ class ShapeCastable(metaclass=ABCMeta):
     a richer description of the shape than what is supported by the core Amaranth language, yet
     still be transparently used with it.
     """
-    def __init_subclass__(cls, **kwargs):
-        if not hasattr(cls, "as_shape"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `as_shape` method")
-        if not (hasattr(cls, "__call__") and inspect.isfunction(cls.__call__)):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `__call__` method")
-        if not hasattr(cls, "const"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `const` method")
 
     @classmethod
     def __subclasshook__(cls, subclass):
-        # Workaround for https://github.com/python/cpython/issues/81062.
-        #
-        # (tl;dr: if you have `class C(metaclass=ABCMeta)`, and `class SC(C,
-        # type)`, then `isinstance(obj, C)` for any obj that isn't `C()` will
-        # raise a TypeError in the middle of _py_abc.)
-        #
-        # We cannot return NotImplemented when cls is a metaclass, otherwise the
-        # above issue will lead to a raise.
-        #
-        # Being called with a metaclass for cls at some point is unavoidable,
-        # precisely because ABCMeta.__subclasscheck__ will, in a
-        # non-early-returning case, end up recursing on every subclass of
-        # ShapeCastable, including lib.enum.EnumMeta and
-        # lib.data._AggregateMeta.
-
-        if type in cls.__mro__:
-            # In an ideal world, we wouldn't need this branch (and could return
-            # NotImplemented) immediately below.
-            return False
-
         if cls is not ShapeCastable:
-            # Use default behaviour where called on non-metaclass other than
-            # ShapeCastable, e.g. `isinstance(x, Layout)`.
+            # Use default behaviour where called with ShapeCastable subclasses,
+            # e.g. `isinstance(x, Layout)`.
             return NotImplemented
         elif issubclass(subclass, (Shape, int, range)):
             return True
@@ -87,6 +56,18 @@ class ShapeCastable(metaclass=ABCMeta):
             return True
         else:
             return NotImplemented
+
+    @abstractmethod
+    def as_shape(self):
+        return super().as_shape()
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    @abstractmethod
+    def const(self, value):
+        return super().const(value)
 
 
 class Shape:
