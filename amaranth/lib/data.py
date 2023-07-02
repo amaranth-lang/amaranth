@@ -104,7 +104,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         RecursionError
             If ``obj.as_shape()`` returns ``obj``.
         """
-        while ShapeCastable in obj.__class__.__mro__:
+        while ShapeCastable in type(obj).__mro__:
             if isinstance(obj, Layout):
                 return obj
             new_obj = obj.as_shape()
@@ -169,7 +169,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         Two layouts are equal if they have the same size and the same fields under the same names.
         The order of the fields is not considered.
         """
-        while ShapeCastable in other.__class__.__mro__ and not isinstance(other, Layout):
+        while ShapeCastable in type(other).__mro__ and not isinstance(other, Layout):
             new_other = other.as_shape()
             if new_other is other:
                 break
@@ -217,7 +217,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         for key, key_value in iterator:
             field = self[key]
             cast_field_shape = Shape.cast(field.shape)
-            if ShapeCastable in field.shape.__class__.__mro__:
+            if ShapeCastable in type(field.shape).__mro__:
                 key_value = Const.cast(field.shape.const(key_value))
                 if key_value.shape() != cast_field_shape:
                     raise ValueError("Constant returned by {!r}.const() must have the shape that "
@@ -675,7 +675,7 @@ class View(ValueCastable):
             value = self.__target[field.offset:field.offset + field.width]
         # Field guarantees that the shape-castable object is well-formed, so there is no need
         # to handle erroneous cases here.
-        if ShapeCastable in shape.__class__.__mro__:
+        if ShapeCastable in type(shape).__mro__:
             value = shape(value)
             if not isinstance(value, (Value, ValueCastable)):
                 raise TypeError("{!r}.__call__() must return a value or "

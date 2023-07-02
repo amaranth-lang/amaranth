@@ -149,7 +149,7 @@ class Shape:
         while True:
             if isinstance(obj, Shape):
                 return obj
-            elif ShapeCastable in obj.__class__.__mro__:
+            elif ShapeCastable in type(obj).__mro__:
                 new_obj = obj.as_shape()
             elif isinstance(obj, int):
                 return Shape(obj)
@@ -953,7 +953,7 @@ class Cat(Value):
         super().__init__(src_loc_at=src_loc_at)
         self.parts = []
         for index, arg in enumerate(flatten(args)):
-            if isinstance(arg, Enum) and (ShapeCastable not in type(arg).__class__.__mro__ or
+            if isinstance(arg, Enum) and (not isinstance(type(arg), ShapeCastable) or
                                           not hasattr(arg, "_amaranth_shape_")):
                 warnings.warn("Argument #{} of Cat() is an enumerated value {!r} without "
                               "a defined shape used in bit vector context; define the enumeration "
@@ -1015,7 +1015,7 @@ def Repl(value, count):
 class _SignalMeta(ABCMeta):
     def __call__(cls, shape=None, src_loc_at=0, **kwargs):
         signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
-        if ShapeCastable in shape.__class__.__mro__:
+        if ShapeCastable in type(shape).__mro__:
             return shape(signal)
         return signal
 
@@ -1079,7 +1079,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.signed = shape.signed
 
         orig_reset = reset
-        if ShapeCastable in orig_shape.__class__.__mro__:
+        if ShapeCastable in type(orig_shape).__mro__:
             try:
                 reset = Const.cast(orig_shape.const(reset))
             except Exception:
