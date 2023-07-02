@@ -674,14 +674,13 @@ class View(ValueCastable):
             value = self.__target[field.offset:field.offset + field.width]
         # Field guarantees that the shape-castable object is well-formed, so there is no need
         # to handle erroneous cases here.
-        while isinstance(shape, ShapeCastable):
-            if hasattr(shape, "__call__"):
-                value = shape(value)
-                if not isinstance(value, (Value, ValueCastable)):
-                    raise TypeError("{!r}.__call__() must return a value or "
-                                    "a value-castable object, not {!r}"
-                                    .format(shape, value))
-                return value
+        if isinstance(shape, ShapeCastable):
+            value = shape(value)
+            if not isinstance(value, (Value, ValueCastable)):
+                raise TypeError("{!r}.__call__() must return a value or "
+                                "a value-castable object, not {!r}"
+                                .format(shape, value))
+            return value
         if Shape.cast(shape).signed:
             return value.as_signed()
         else:
