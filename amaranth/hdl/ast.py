@@ -3,7 +3,7 @@ import warnings
 import functools
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
-from enum import Enum, EnumType
+from enum import Enum, EnumMeta
 from itertools import chain
 
 from .. import tracer
@@ -50,7 +50,7 @@ class ShapeCastable(metaclass=ABCMetaPatched):
             return NotImplemented
         elif issubclass(subclass, (Shape, int, range)):
             return True
-        elif issubclass(subclass, EnumType):
+        elif issubclass(subclass, EnumMeta):
             # We don't have further information to determine whether this enum
             # should be admitted.
             return True

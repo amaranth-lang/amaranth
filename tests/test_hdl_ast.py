@@ -184,8 +184,9 @@ class ShapeCastableTestCase(FHDLTestCase):
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Can't instantiate abstract class MockShapeCastableNoOverride without an "
-                r"implementation for abstract methods '__call__', 'as_shape', 'const'$"):
+                r"^Can't instantiate abstract class MockShapeCastableNoOverride "
+                r"(?:without an implementation for|with) "
+                r"abstract methods '?__call__'?, '?as_shape'?, '?const'?$"):
             class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
                     pass
