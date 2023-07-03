@@ -92,9 +92,14 @@ class Layout(CustomShapeCastable):
     def __init_subclass__(cls):
         """Ensure subclasses override all abstract methods."""
         for absmeth in ["__iter__", "__getitem__", "size"]:
-            if absmeth not in vars(cls):
-                raise TypeError(f"Class '{cls.__name__}' deriving from `Layout` must override "
-                                f"the `{absmeth}` method")
+            for target in cls.mro():
+                if target is Layout:
+                    raise TypeError(f"Class '{cls.__name__}' deriving from `Layout` must override "
+                                    f"the `{absmeth}` method")
+                if absmeth in vars(target):
+                    break
+            else:
+                assert False, "didn't encounter self in mro"
 
     @staticmethod
     def cast(obj):
