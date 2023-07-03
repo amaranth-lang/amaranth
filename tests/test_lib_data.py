@@ -2,14 +2,14 @@ from enum import Enum
 from unittest import TestCase
 
 from amaranth.hdl import *
-from amaranth.hdl.ast import ShapeCastable
+from amaranth.hdl.ast import CustomShapeCastable
 from amaranth.lib.data import *
 from amaranth.sim import Simulator
 
 from .utils import *
 
 
-class MockShapeCastable(ShapeCastable):
+class MockShapeCastable(CustomShapeCastable):
     def __init__(self, shape):
         self.shape = shape
 
@@ -407,7 +407,7 @@ class LayoutTestCase(FHDLTestCase):
             sl.const(object())
 
     def test_const_field_shape_castable(self):
-        class CastableFromHex(ShapeCastable):
+        class CastableFromHex(CustomShapeCastable):
             def as_shape(self):
                 return unsigned(8)
 
@@ -530,7 +530,7 @@ class ViewTestCase(FHDLTestCase):
         self.assertRepr(v["t"][1]["v"], "(slice (slice (slice (sig v) 0:4) 2:4) 1:2)")
 
     def test_getitem_custom_call(self):
-        class Reverser(ShapeCastable):
+        class Reverser(CustomShapeCastable):
             def as_shape(self):
                 return unsigned(2)
 
@@ -547,7 +547,7 @@ class ViewTestCase(FHDLTestCase):
                              "     (slice (slice (sig v) 0:2) 0:1))")
 
     def test_getitem_custom_call_wrong(self):
-        class WrongCastable(ShapeCastable):
+        class WrongCastable(CustomShapeCastable):
             def as_shape(self):
                 return unsigned(2)
 

@@ -13,7 +13,7 @@ from .._unused import *
 
 
 __all__ = [
-    "Shape", "signed", "unsigned", "ShapeCastable",
+    "Shape", "signed", "unsigned", "ShapeCastable", "CustomShapeCastable",
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
@@ -57,6 +57,11 @@ class ShapeCastable(metaclass=ABCMetaPatched):
         else:
             return NotImplemented
 
+class CustomShapeCastable(ShapeCastable):
+    def __init_subclass__(cls):
+        # Override ShapeCastable's finality.
+        pass
+
     @abstractmethod
     def as_shape(self):
         return super().as_shape()
@@ -68,6 +73,9 @@ class ShapeCastable(metaclass=ABCMetaPatched):
     @abstractmethod
     def const(self, value):
         return super().const(value)
+
+
+ShapeCastable = final(ShapeCastable)
 
 
 class Shape:
@@ -130,7 +138,7 @@ class Shape:
         while True:
             if isinstance(obj, Shape):
                 return obj
-            elif ShapeCastable in type(obj).__mro__:
+            elif isinstance(obj, CustomShapeCastable):
                 new_obj = obj.as_shape()
             elif isinstance(obj, int):
                 return Shape(obj)
@@ -996,7 +1004,7 @@ def Repl(value, count):
 class _SignalMeta(ABCMeta):
     def __call__(cls, shape=None, src_loc_at=0, **kwargs):
         signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
-        if ShapeCastable in type(shape).__mro__:
+        if isinstance(shape, CustomShapeCastable):
             return shape(signal)
         return signal
 
@@ -1060,7 +1068,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.signed = shape.signed
 
         orig_reset = reset
-        if ShapeCastable in type(orig_shape).__mro__:
+        if isinstance(orig_shape, CustomShapeCastable):
             try:
                 reset = Const.cast(orig_shape.const(reset))
             except Exception:

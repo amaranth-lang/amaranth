@@ -150,7 +150,7 @@ class ShapeTestCase(FHDLTestCase):
             Shape.cast("foo")
 
 
-class MockShapeCastable(ShapeCastable):
+class MockShapeCastable(CustomShapeCastable):
     def __init__(self, dest):
         self.dest = dest
 
@@ -182,12 +182,19 @@ class ShapeCastableTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             Shape.cast(obj)
 
+    def test_no_direct_subclass(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Subclassing .*\.ShapeCastable is not supported$"):
+            class DirectShapeCastableSubclass(ShapeCastable):
+                def __init__(self):
+                    pass
+
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Can't instantiate abstract class MockShapeCastableNoOverride "
                 r"(?:without an implementation for|with) "
                 r"abstract methods '?__call__'?, '?as_shape'?, '?const'?$"):
-            class MockShapeCastableNoOverride(ShapeCastable):
+            class MockShapeCastableNoOverride(CustomShapeCastable):
                 def __init__(self):
                     pass
             MockShapeCastableNoOverride()
@@ -243,15 +250,14 @@ class ShapeCastableTestCase(FHDLTestCase):
 
     def test_shapecastable_subclasses(self):
         # Make sure our __subclasses__ patch works.
-        self.assertNotIsInstance(1, AmaranthEnum)
-
-        class ShapeCastableSubclass(ShapeCastable):
-            pass
-        self.assertIn(ShapeCastableSubclass, ShapeCastable.__subclasses__())
+        self.assertIn(CustomShapeCastable, ShapeCastable.__subclasses__())
 
     def test_shapecastable_subclass_subclasses(self):
         # Make sure our __subclasses__ patch equally works on subclasses
-        # of ShapeCastable, such as EnumMeta.
+        # of ShapeCastable, such as CustomShapeCastable and EnumMeta.
+        class CustomShapeCastableSubclass(CustomShapeCastable):
+            pass
+        self.assertIn(CustomShapeCastableSubclass, CustomShapeCastable.__subclasses__())
         class EnumMetaSubclass(AmaranthEnumMeta):
             pass
         self.assertIn(EnumMetaSubclass, AmaranthEnumMeta.__subclasses__())
@@ -1121,7 +1127,7 @@ class SignalTestCase(FHDLTestCase):
             Signal(1, reset=StringEnum.FOO)
 
     def test_reset_shape_castable_const(self):
-        class CastableFromHex(ShapeCastable):
+        class CastableFromHex(CustomShapeCastable):
             def as_shape(self):
                 return unsigned(8)
 
