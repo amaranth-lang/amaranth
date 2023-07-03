@@ -437,6 +437,13 @@ class LayoutTestCase(FHDLTestCase):
         self.assertEqual(Signal(sl).as_value().reset, 0)
         self.assertEqual(Signal(sl, reset={"a": 0b1, "b": 0b10}).as_value().reset, 5)
 
+    def test_layout_abstract(self):
+        with self.assertRaisesRegex(TypeError,
+        r"^Class 'MockLayoutSubclassNoOverride' deriving from `Layout` must "
+            r"override the `__iter__` method$"):
+            class MockLayoutSubclassNoOverride(Layout):
+                pass
+
 
 class ViewTestCase(FHDLTestCase):
     def test_construct(self):

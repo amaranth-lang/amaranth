@@ -3,7 +3,6 @@ import functools
 import warnings
 import linecache
 import re
-from abc import ABCMeta
 from collections import OrderedDict
 from collections.abc import Iterable
 
@@ -11,7 +10,7 @@ from .utils import *
 
 
 __all__ = ["flatten", "union" , "log2_int", "bits_for", "memoize", "final", "deprecated",
-           "get_linter_options", "get_linter_option", "TypePatched", "ABCMetaPatched"]
+           "get_linter_options", "get_linter_option"]
 
 
 def flatten(i):
@@ -114,76 +113,3 @@ def get_linter_option(filename, name, type, default):
         except ValueError:
             return default
     assert False
-
-
-class BindToReceiverMethod:
-    """
-    A descriptor which binds to a given method on its receiver, even if the
-    receiver is the defining class for that method.
-
-    This is a workaround for https://github.com/python/cpython/issues/81062;
-    namely, given these classes::
-
-        class C(metaclass=ABCMeta): pass
-        class SC(C, type): pass
-
-    then ``isinstance(obj, C)`` for any obj that isn't ``C()`` will raise a
-    TypeError in the middle of :meth:`ABCMeta.__subclasscheck__`.
-
-    :meth:`ABCMeta.__subclasscheck__` calls ``cls.__subclasses__()`` towards the
-    end, but if ``cls`` ends up being a metaclass, such as ``SC`` here, then
-    we're calling the inherited instance method :meth:`type.__subclasses__`
-    without an instance.
-
-    Similarly, ``isinstance(obj, SC)`` for anything that isn't an ``SC``
-    instance will fail in :meth:`ABCMeta.__instancecheck__` when it tries to
-    call ``cls.__subclasscheck__()`` and invokes the inherited instance method
-    :meth:`ABCMeta.__subclasscheck__` without an instance.
-
-    This descriptor gives the instance-bound variant when accessed through an
-    instance, and the class-bound variant when accessed without, and can be used
-    for such methods called by ABCMeta.  We must search the MRO ourselves to
-    avoid calling ourselves.
-
-    ABCMeta works hard to cache its results, which includes calls to the methods
-    we use this descriptor with, so cost of lookup is rendered negligible.  We
-    cannot meaningfully cache the results ourselves without loss of generality
-    and possible surprise later.
-    """
-    __slots__ = ("name",)
-
-    def __set_name__(self, owner, name):
-        self.name = name
-
-    def __get__(self, obj, objtype=None):
-        objtype = objtype or type(obj)
-        for target in objtype.__mro__:
-            fn = vars(target).get(self.name)
-            if fn is not None and not isinstance(fn, BindToReceiverMethod):
-                break
-        else:
-            descr = f"'{objtype.__name__}' object" if obj is not None else f"type object '{objtype.__name__}'"
-            raise AttributeError(f"{descr} has no attribute '{self.name}'")
-
-        if obj is not None:
-            return fn.__get__(obj, objtype)
-        else:
-            return fn.__get__(objtype)
-
-
-class TypePatched(type):
-    # Metaclass which patches ``__subclasses__`` and ``__subclasscheck__`` to
-    # address ``ABCMeta.__subclasscheck__`` issue described in
-    # :class:`BindToReceiverMethod`.
-    #
-    # Use with metaclasses that don't want all of :class:`ABCMeta`, but do have
-    # a superclass that itself uses :class:`ABCMeta` (or a subclass of it).
-    __subclasses__ = BindToReceiverMethod()
-    __subclasscheck__ = BindToReceiverMethod()
-
-
-class ABCMetaPatched(TypePatched, ABCMeta):
-    # :class:`ABCMeta` subclass which includes :class:`TypePatched`. This should
-    # be used instead of :class:`ABCMeta` whenever a subclass may also be a
-    # metaclass.
-    pass

@@ -13,7 +13,7 @@ for _member in py_enum.__all__:
 del _member
 
 
-class EnumMeta(CustomShapeCastable, TypePatched, py_enum.EnumMeta):
+class EnumMeta(CustomShapeCastable, py_enum.EnumMeta):
     """Subclass of the standard :class:`enum.EnumMeta` that implements the :class:`ShapeCastable`
     protocol.
 

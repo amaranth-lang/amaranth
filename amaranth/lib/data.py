@@ -1,4 +1,3 @@
-from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence
 import warnings
 
@@ -76,7 +75,7 @@ class Field:
         return f"Field({self._shape!r}, {self._offset})"
 
 
-class Layout(CustomShapeCastable, metaclass=ABCMeta):
+class Layout(CustomShapeCastable):
     """Description of a data layout.
 
     The :ref:`shape-castable <lang-shapecasting>` :class:`Layout` interface associates keys
@@ -90,6 +89,12 @@ class Layout(CustomShapeCastable, metaclass=ABCMeta):
     Like all other shape-castable objects, all layouts are immutable. New classes deriving from
     :class:`Layout` must preserve this invariant.
     """
+    def __init_subclass__(cls):
+        """Ensure subclasses override all abstract methods."""
+        for absmeth in ["__iter__", "__getitem__", "size"]:
+            if absmeth not in vars(cls):
+                raise TypeError(f"Class '{cls.__name__}' deriving from `Layout` must override "
+                                f"the `{absmeth}` method")
 
     @staticmethod
     def cast(obj):
@@ -116,7 +121,6 @@ class Layout(CustomShapeCastable, metaclass=ABCMeta):
         raise TypeError("Object {!r} cannot be converted to a data layout"
                         .format(obj))
 
-    @abstractmethod
     def __iter__(self):
         """Iterate fields in the layout.
 
@@ -127,8 +131,8 @@ class Layout(CustomShapeCastable, metaclass=ABCMeta):
         :class:`Field`
             Description of the field.
         """
+        raise NotImplementedError
 
-    @abstractmethod
     def __getitem__(self, key):
         """Retrieve a field from the layout.
 
@@ -142,9 +146,9 @@ class Layout(CustomShapeCastable, metaclass=ABCMeta):
         KeyError
             If there is no field associated with ``key``.
         """
+        raise NotImplementedError
 
     @property
-    @abstractmethod
     def size(self):
         """Size of the layout.
 
@@ -153,6 +157,7 @@ class Layout(CustomShapeCastable, metaclass=ABCMeta):
         :class:`int`
             The amount of bits required to store every field in the layout.
         """
+        raise NotImplementedError
 
     def as_shape(self):
         """Shape of the layout.
@@ -717,7 +722,7 @@ class View(ValueCastable):
         return item
 
 
-class _AggregateMeta(CustomShapeCastable, TypePatched):
+class _AggregateMeta(CustomShapeCastable, type):
     def __new__(metacls, name, bases, namespace):
         if "__annotations__" not in namespace:
             # This is a base class without its own layout. It is not shape-castable, and cannot

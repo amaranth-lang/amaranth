@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import inspect
 import warnings
 import functools
 from collections import OrderedDict
@@ -33,21 +34,50 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class ShapeCastable(metaclass=ABCMetaPatched):
-    """Interface of user-defined objects that can be cast to :class:`Shape` s.
-
-    An object deriving from :class:`ShapeCastable` is automatically converted to a :class:`Shape`
-    when it is used in a context where a :class:`Shape` is expected. Such objects can contain
-    a richer description of the shape than what is supported by the core Amaranth language, yet
-    still be transparently used with it.
+class ShapeCastableMeta(type):
     """
+    Metaclass for :class:`ShapeCastable` which gives it its properties in the
+    Python type system.
+    """
+    def __instancecheck__(cls, instance):
+        """
+        ``isinstance`` hook for :class:`ShapeCastable`.
 
-    @classmethod
-    def __subclasshook__(cls, subclass):
+        Defers to :meth:`__subclasscheck__` with ``type(instance)`` for all
+        cases we can. This excludes :class:`Enum`s, as ``type(enum)`` is always
+        :class:`EnumMeta` and so leaves us unable to distinguish
+        shape-castability based on the enum members.
+        """
         if cls is not ShapeCastable:
             # Use default behaviour where called with ShapeCastable subclasses,
-            # e.g. `isinstance(x, Layout)`.
-            return NotImplemented
+            # e.g. ``isinstance(x, Layout)``.
+            return super().__instancecheck__(instance)
+        elif isinstance(instance, EnumMeta):
+            try:
+                Shape._cast_plain_enum(instance)
+            except TypeError:
+                return False
+            else:
+                return True
+
+        if type in cls.__mro__:
+            # ``__subclasscheck__`` is an instance method on :class:`type`, so
+            # we need to bind the method explicitly on metaclasses.
+            return cls.__subclasscheck__(cls, type(instance))
+        else:
+            return cls.__subclasscheck__(type(instance))
+
+    def __subclasscheck__(cls, subclass):
+        """
+        ``issubclass`` hook for :class:`ShapeCastable`.
+
+        Defensively admits all :class:`Enum`s.  See :meth:`__instancecheck__`
+        for more details.
+        """
+        if cls is not ShapeCastable:
+            # Use default behaviour where called with ShapeCastable subclasses,
+            # e.g. ``issubclass(x, Layout)``.
+            return super().__subclasscheck__(subclass)
         elif issubclass(subclass, (Shape, int, range)):
             return True
         elif issubclass(subclass, EnumMeta):
@@ -55,24 +85,42 @@ class ShapeCastable(metaclass=ABCMetaPatched):
             # should be admitted.
             return True
         else:
-            return NotImplemented
+            return super().__subclasscheck__(subclass)
+
+
+class ShapeCastable(metaclass=ShapeCastableMeta):
+    """
+    The type populated by all objects that can be cast to a :class:`Shape`.
+
+    If ``isinstance(x, ShapeCastable) is True``, the operation ``Shape.cast(x)``
+    will succeed, and ``x`` can be used anywhere a :class:`Shape` is expected.
+
+    Examples include instances of built-in Python types, e.g. ``1`` (which
+    shape-casts to ``unsigned(1)``), as well as subclasses of
+    :class:`CustomShapeCastable` (which shape-casts to the result of
+    ``obj.as_shape()``).
+    """
+    pass
+
 
 class CustomShapeCastable(ShapeCastable):
+    """Interface of user-defined objects that can be cast to :class:`Shape` s.
+
+    An object deriving from :class:`CustomShapeCastable` is automatically converted to a :class:`Shape`
+    when it is used in a context where a :class:`Shape` is expected. Such objects can contain
+    a richer description of the shape than what is supported by the core Amaranth language, yet
+    still be transparently used with it.
+    """
     def __init_subclass__(cls):
-        # Override ShapeCastable's finality.
-        pass
-
-    @abstractmethod
-    def as_shape(self):
-        return super().as_shape()
-
-    @abstractmethod
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    @abstractmethod
-    def const(self, value):
-        return super().const(value)
+        if not hasattr(cls, "as_shape"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `as_shape` method")
+        if not (hasattr(cls, "__call__") and inspect.isfunction(cls.__call__)):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `__call__` method")
+        if not hasattr(cls, "const"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
+                            f"the `const` method")
 
 
 ShapeCastable = final(ShapeCastable)
