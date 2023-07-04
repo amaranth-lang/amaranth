@@ -36,9 +36,13 @@ class DUID:
 
 class ShapeCastableMeta(type):
     """
-    Metaclass for :class:`ShapeCastable` which gives it its properties in the
-    Python type system.
+    Metaclass for :class:`ShapeCastable` which gives it its protocol properties
+    in the Python type system, and redirects subclassing of
+    :class:`ShapeCastable` to :class:`CustomShapeCastable`.
     """
+
+    # We override __new__ after defining ShapeCastable and CustomShapeCastable.
+
     def __instancecheck__(cls, instance):
         """
         ``isinstance`` hook for :class:`ShapeCastable`.
@@ -97,8 +101,12 @@ class ShapeCastable(metaclass=ShapeCastableMeta):
 
     Examples include instances of built-in Python types, e.g. ``1`` (which
     shape-casts to ``unsigned(1)``), as well as subclasses of
-    :class:`CustomShapeCastable` (which shape-casts to the result of
+    :class:`ShapeCastable` (which shape-cast to the result of
     ``obj.as_shape()``).
+
+    Subclasses of :class:`ShapeCastable` are turned into subclasses of
+    :class:`CustomShapeCastable`, which defines the interface for user-defined
+    shape-castable objects.
     """
     pass
 
@@ -106,10 +114,16 @@ class ShapeCastable(metaclass=ShapeCastableMeta):
 class CustomShapeCastable(ShapeCastable):
     """Interface of user-defined objects that can be cast to :class:`Shape` s.
 
-    An object deriving from :class:`CustomShapeCastable` is automatically converted to a :class:`Shape`
-    when it is used in a context where a :class:`Shape` is expected. Such objects can contain
-    a richer description of the shape than what is supported by the core Amaranth language, yet
-    still be transparently used with it.
+    An object deriving from :class:`CustomShapeCastable` is automatically
+    converted to a :class:`Shape` when it is used in a context where a
+    :class:`Shape` is expected. Such objects can contain a richer description of
+    the shape than what is supported by the core Amaranth language, yet still be
+    transparently used with it.
+
+    :class:`CustomShapeCastable` is separated from :class:`ShapeCastable` to
+    make it easy to determine whether the interface it defines
+    (``obj.as_shape()``, ``obj()``, ``obj.const()``) is available on a given
+    object, via ``isinstance(obj, CustomShapeCastable)``.
     """
     def __init_subclass__(cls):
         if not hasattr(cls, "as_shape"):
@@ -123,7 +137,16 @@ class CustomShapeCastable(ShapeCastable):
                             f"the `const` method")
 
 
-ShapeCastable = final(ShapeCastable)
+def _ShapeCastableMeta_new(mcls, name, bases, namespace, /, **kwargs):
+    # Redirect further subclassing of ShapeCastable to CustomShapeCastable.
+    bases = tuple(
+        (CustomShapeCastable if base is ShapeCastable else base)
+        for base in bases
+    )
+    return super(ShapeCastableMeta, mcls).__new__(mcls, name, bases, namespace, **kwargs)
+
+ShapeCastableMeta.__new__ = _ShapeCastableMeta_new
+del _ShapeCastableMeta_new
 
 
 class Shape:

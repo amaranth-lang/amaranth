@@ -3,7 +3,7 @@ import warnings
 
 from .._utils import *
 from amaranth.hdl import *
-from amaranth.hdl.ast import CustomShapeCastable, ValueCastable
+from amaranth.hdl.ast import ShapeCastable, CustomShapeCastable, ValueCastable
 
 
 __all__ = [
@@ -75,7 +75,7 @@ class Field:
         return f"Field({self._shape!r}, {self._offset})"
 
 
-class Layout(CustomShapeCastable):
+class Layout(ShapeCastable):
     """Description of a data layout.
 
     The :ref:`shape-castable <lang-shapecasting>` :class:`Layout` interface associates keys
@@ -727,7 +727,7 @@ class View(ValueCastable):
         return item
 
 
-class _AggregateMeta(CustomShapeCastable, type):
+class _AggregateMeta(ShapeCastable, type):
     def __new__(metacls, name, bases, namespace):
         if "__annotations__" not in namespace:
             # This is a base class without its own layout. It is not shape-castable, and cannot

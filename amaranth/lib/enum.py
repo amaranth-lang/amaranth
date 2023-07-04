@@ -2,7 +2,7 @@ import enum as py_enum
 import warnings
 
 from .._utils import *
-from ..hdl.ast import Value, Shape, CustomShapeCastable, Const
+from ..hdl.ast import Value, Shape, ShapeCastable, Const
 
 
 __all__ = py_enum.__all__
@@ -13,7 +13,7 @@ for _member in py_enum.__all__:
 del _member
 
 
-class EnumMeta(CustomShapeCastable, py_enum.EnumMeta):
+class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     """Subclass of the standard :class:`enum.EnumMeta` that implements the :class:`ShapeCastable`
     protocol.
 

@@ -150,7 +150,7 @@ class ShapeTestCase(FHDLTestCase):
             Shape.cast("foo")
 
 
-class MockShapeCastable(CustomShapeCastable):
+class MockShapeCastable(ShapeCastable):
     def __init__(self, dest):
         self.dest = dest
 
@@ -182,18 +182,11 @@ class ShapeCastableTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             Shape.cast(obj)
 
-    def test_no_direct_subclass(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Subclassing .*\.ShapeCastable is not supported$"):
-            class DirectShapeCastableSubclass(ShapeCastable):
-                def __init__(self):
-                    pass
-
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
                 r"override the `as_shape` method$"):
-            class MockShapeCastableNoOverride(CustomShapeCastable):
+            class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
                     pass
 
@@ -242,9 +235,8 @@ class ShapeCastableTestCase(FHDLTestCase):
             X = Signal()
         self.assertNotShapeCastable(PyEnumNonConstCast)
 
-        # ShapeCastableMeta.__instancecheck__ doesn't reject these yet, but will
-        # when we reject empty Enums per
-        # https://github.com/amaranth-lang/amaranth/pull/832 or similar.
+        # These casts currently fail, but will succeed if we merge
+        # https://github.com/amaranth-lang/amaranth/pull/832.
         class EnumEmpty(AmaranthEnum):
             pass
         self.assertShapeCastableButFailsCast(AmaranthEnum)
@@ -1116,7 +1108,7 @@ class SignalTestCase(FHDLTestCase):
             Signal(1, reset=StringEnum.FOO)
 
     def test_reset_shape_castable_const(self):
-        class CastableFromHex(CustomShapeCastable):
+        class CastableFromHex(ShapeCastable):
             def as_shape(self):
                 return unsigned(8)
 
