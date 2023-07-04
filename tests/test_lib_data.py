@@ -439,11 +439,18 @@ class LayoutTestCase(FHDLTestCase):
 
     def test_layout_abstract(self):
         with self.assertRaisesRegex(TypeError,
-        r"^Class 'MockLayoutSubclassNoOverride' deriving from `Layout` must "
-            r"override the `__iter__` method$"):
+                r"^Class 'MockLayoutSubclassNoOverride' deriving from `Layout` must "
+                r"override the `__iter__` method$"):
             class MockLayoutSubclassNoOverride(Layout):
                 pass
 
+    def test_layout_instance_subclass_checks(self):
+        sl = StructLayout({})
+        self.assertShapeCastable(sl)
+        self.assertIsInstance(sl, StructLayout)
+        self.assertIsSubclass(StructLayout, Layout)
+        self.assertIsSubclass(StructLayout, ShapeCastable)
+        self.assertNotIsSubclass(StructLayout, ArrayLayout)
 
 class ViewTestCase(FHDLTestCase):
     def test_construct(self):

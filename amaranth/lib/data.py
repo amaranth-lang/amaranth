@@ -92,14 +92,13 @@ class Layout(ShapeCastable):
     def __init_subclass__(cls):
         """Ensure subclasses override all abstract methods."""
         for absmeth in ["__iter__", "__getitem__", "size"]:
+            assert Layout in cls.mro()
             for target in cls.mro():
                 if target is Layout:
                     raise TypeError(f"Class '{cls.__name__}' deriving from `Layout` must override "
                                     f"the `{absmeth}` method")
                 if absmeth in vars(target):
                     break
-            else:
-                assert False, "didn't encounter self in mro"
 
     @staticmethod
     def cast(obj):
@@ -136,7 +135,7 @@ class Layout(ShapeCastable):
         :class:`Field`
             Description of the field.
         """
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def __getitem__(self, key):
         """Retrieve a field from the layout.
@@ -151,7 +150,7 @@ class Layout(ShapeCastable):
         KeyError
             If there is no field associated with ``key``.
         """
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     @property
     def size(self):
@@ -162,7 +161,7 @@ class Layout(ShapeCastable):
         :class:`int`
             The amount of bits required to store every field in the layout.
         """
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def as_shape(self):
         """Shape of the layout.

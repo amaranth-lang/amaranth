@@ -5,6 +5,7 @@ import subprocess
 import textwrap
 import traceback
 import unittest
+from unittest.util import safe_repr
 
 from amaranth.hdl.ast import *
 from amaranth.hdl.ir import *
@@ -81,3 +82,40 @@ class FHDLTestCase(unittest.TestCase):
             stdout, stderr = proc.communicate(config)
             if proc.returncode != 0:
                 self.fail("Formal verification failed:\n" + stdout)
+
+    def assertIsSubclass(self, obj, cls, msg=None):
+        if not issubclass(obj, cls):
+            standardMsg = '%s is not a subclass of %r' % (safe_repr(obj), cls)
+            self.fail(self._formatMessage(msg, standardMsg))
+
+    def assertNotIsSubclass(self, obj, cls, msg=None):
+        if issubclass(obj, cls):
+            standardMsg = '%s is a subclass of %r' % (safe_repr(obj), cls)
+            self.fail(self._formatMessage(msg, standardMsg))
+
+    def assertShapeCastable(self, obj):
+        self.assertIsInstance(obj, ShapeCastable)
+        self.assertIsSubclass(type(obj), ShapeCastable)
+        try:
+            Shape.cast(obj)
+        except TypeError:
+            raise AssertionError(f"{obj} failed Shape.cast")
+
+    def assertNotShapeCastable(self, obj, *, but_is_subclass=False):
+        """
+        Ideally, for any object that is considered an instance of
+        :class:`ShapeCastable`, its type is also considered a subclass of
+        :class:`ShapeCastable`, such as the relationship between ``1``
+        (shape-castable) and ``int`` (subclass of :class:`ShapeCastable`).
+
+        This relationship is uneven because the reverse is not always true in
+        every cast: ``-1`` is not shape-castable. An enum with
+        non-constant-castable member values is not shape-castable.
+        """
+        self.assertNotIsInstance(obj, ShapeCastable)
+        if but_is_subclass:
+            self.assertIsSubclass(type(obj), ShapeCastable)
+        else:
+            self.assertNotIsSubclass(type(obj), ShapeCastable)
+        with self.assertRaises(TypeError):
+            Shape.cast(obj)

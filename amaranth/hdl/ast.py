@@ -47,46 +47,31 @@ class ShapeCastableMeta(type):
         """
         ``isinstance`` hook for :class:`ShapeCastable`.
 
-        Defers to :meth:`__subclasscheck__` with ``type(instance)`` for all
-        cases we can. This excludes :class:`Enum`s, as ``type(enum)`` is always
-        :class:`EnumMeta` and so leaves us unable to distinguish
-        shape-castability based on the enum members.
+        Returns whether a :meth:`Shape.cast` would succeed.
         """
         if cls is not ShapeCastable:
             # Use default behaviour where called with ShapeCastable subclasses,
             # e.g. ``isinstance(x, Layout)``.
             return super().__instancecheck__(instance)
-        elif isinstance(instance, EnumMeta):
-            try:
-                Shape._cast_plain_enum(instance)
-            except TypeError:
-                return False
-            else:
-                return True
 
-        if type in cls.__mro__:
-            # ``__subclasscheck__`` is an instance method on :class:`type`, so
-            # we need to bind the method explicitly on metaclasses.
-            return cls.__subclasscheck__(cls, type(instance))
+        try:
+            Shape.cast(instance)
+        except (TypeError, RecursionError):
+            return False
         else:
-            return cls.__subclasscheck__(type(instance))
+            return True
 
     def __subclasscheck__(cls, subclass):
         """
         ``issubclass`` hook for :class:`ShapeCastable`.
 
-        Defensively admits all :class:`Enum`s.  See :meth:`__instancecheck__`
-        for more details.
+        Type-generalized heuristic based on :meth:`Shape.cast`.
         """
         if cls is not ShapeCastable:
             # Use default behaviour where called with ShapeCastable subclasses,
             # e.g. ``issubclass(x, Layout)``.
             return super().__subclasscheck__(subclass)
-        elif issubclass(subclass, (Shape, int, range)):
-            return True
-        elif issubclass(subclass, EnumMeta):
-            # We don't have further information to determine whether this enum
-            # should be admitted.
+        elif issubclass(subclass, (Shape, int, range, EnumMeta)):
             return True
         else:
             return super().__subclasscheck__(subclass)

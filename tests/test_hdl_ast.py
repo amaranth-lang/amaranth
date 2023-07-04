@@ -165,20 +165,9 @@ class MockShapeCastable(ShapeCastable):
 
 
 class ShapeCastableTestCase(FHDLTestCase):
-    def assertShapeCastable(self, obj):
-        self.assertIsInstance(obj, ShapeCastable)
-        try:
-            Shape.cast(obj)
-        except TypeError:
-            raise AssertionError(f"{obj} failed Shape.cast")
-
-    def assertNotShapeCastable(self, obj):
-        self.assertNotIsInstance(obj, ShapeCastable)
-        with self.assertRaises(TypeError):
-            Shape.cast(obj)
-
     def assertShapeCastableButFailsCast(self, obj):
         self.assertIsInstance(obj, ShapeCastable)
+        self.assertIsSubclass(type(obj), ShapeCastable)
         with self.assertRaises(TypeError):
             Shape.cast(obj)
 
@@ -187,8 +176,12 @@ class ShapeCastableTestCase(FHDLTestCase):
                 r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
                 r"override the `as_shape` method$"):
             class MockShapeCastableNoOverride(ShapeCastable):
-                def __init__(self):
-                    pass
+                pass
+        with self.assertRaisesRegex(TypeError,
+                r"^Class 'MockShapeCastablePartialOverride' deriving from `ShapeCastable` must "
+                r"override the `__call__` method$"):
+            class MockShapeCastablePartialOverride(ShapeCastable):
+                def as_shape(self): ...
 
     def test_cast(self):
         sc = MockShapeCastable(unsigned(2))
@@ -217,7 +210,6 @@ class ShapeCastableTestCase(FHDLTestCase):
         self.assertShapeCastable(PyEnumA)
         self.assertShapeCastable(True)
         self.assertShapeCastable(range(10))
-        self.assertShapeCastable(Enum)  # We allow empty py_enum.Enum.
 
         self.assertNotShapeCastable('x')
         self.assertNotShapeCastable(int)
@@ -228,19 +220,41 @@ class ShapeCastableTestCase(FHDLTestCase):
         self.assertNotShapeCastable(range)
         self.assertNotShapeCastable(ShapeCastable)
         self.assertNotShapeCastable(MockShapeCastable)
+
+        # Non-shape-castable objects who belong to a type that subclasses
+        # ShapeCastable.
+        self.assertNotShapeCastable(-1, but_is_subclass=True)
+        self.assertNotShapeCastable(MockShapeCastable(-1), but_is_subclass=True)
         class EnumNonConstCast(AmaranthEnum):
             X = Signal()
-        self.assertNotShapeCastable(EnumNonConstCast)
+        self.assertNotShapeCastable(EnumNonConstCast, but_is_subclass=True)
         class PyEnumNonConstCast(Enum):
             X = Signal()
-        self.assertNotShapeCastable(PyEnumNonConstCast)
+        self.assertNotShapeCastable(PyEnumNonConstCast, but_is_subclass=True)
 
-        # These casts currently fail, but will succeed if we merge
-        # https://github.com/amaranth-lang/amaranth/pull/832.
-        class EnumEmpty(AmaranthEnum):
+    def test_isinstance_empty_enums(self):
+        class PyEnumEmpty(Enum):
             pass
-        self.assertShapeCastableButFailsCast(AmaranthEnum)
-        self.assertShapeCastableButFailsCast(EnumEmpty)
+        class AmaranthEnumEmpty(AmaranthEnum):
+            pass
+
+        # We allow empty py_enum.Enum.
+        self.assertShapeCastable(Enum)
+        self.assertShapeCastable(PyEnumEmpty)
+
+        # These currently do not cast, but will upon merge of
+        # https://github.com/amaranth-lang/amaranth/pull/832.
+        self.assertNotShapeCastable(AmaranthEnum, but_is_subclass=True)
+        self.assertNotShapeCastable(AmaranthEnumEmpty, but_is_subclass=True)
+
+    def test_checks_against_subclasses(self):
+        class EnumA(AmaranthEnum):
+            X = 1
+        self.assertIsInstance(EnumA.X, EnumA)
+        self.assertNotIsInstance(1, AmaranthEnum)
+        self.assertNotIsInstance(1, EnumA)
+        self.assertIsSubclass(EnumA, AmaranthEnum)
+        self.assertNotIsSubclass(int, AmaranthEnum)
 
 
 class ValueTestCase(FHDLTestCase):

@@ -1,7 +1,6 @@
 import enum as py_enum
 import warnings
 
-from .._utils import *
 from ..hdl.ast import Value, Shape, ShapeCastable, Const
 
 

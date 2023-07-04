@@ -1,7 +1,7 @@
 import enum as py_enum
 
 from amaranth import *
-from amaranth.lib.enum import Enum, EnumMeta
+from amaranth.lib.enum import Enum
 
 from .utils import *
 
