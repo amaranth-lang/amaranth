@@ -606,7 +606,7 @@ class XilinxPlatform(TemplatedPlatform):
                 self.family = "ultrascaleplus"
             else:
                 self.family = "ultrascale"
-        elif device.startswith(("zu", "u", "k26")):
+        elif device.startswith(("zu", "u", "k26", "au")):
             self.family = "ultrascaleplus"
         elif device.startswith(("v", "2s")):
             # Match last to avoid conflict with ultrascale.
