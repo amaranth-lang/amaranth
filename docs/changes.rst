@@ -7,6 +7,9 @@ This document describes changes to the public interfaces in the Amaranth languag
 Version 0.5 (unreleased)
 ========================
 
+The Migen compatibility layer has been removed.
+
+
 Language changes
 ----------------
 

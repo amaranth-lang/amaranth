@@ -86,8 +86,7 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_AnyConst(value)
         elif type(value) is AnySeq:
             new_value = self.on_AnySeq(value)
-        elif isinstance(value, Signal):
-            # Uses `isinstance()` and not `type() is` because amaranth.compat requires it.
+        elif type(value) is Signal:
             new_value = self.on_Signal(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
@@ -200,8 +199,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_Assume(stmt)
         elif type(stmt) is Cover:
             new_stmt = self.on_Cover(stmt)
-        elif isinstance(stmt, Switch):
-            # Uses `isinstance()` and not `type() is` because amaranth.compat requires it.
+        elif type(stmt) is Switch:
             new_stmt = self.on_Switch(stmt)
         elif isinstance(stmt, Iterable):
             new_stmt = self.on_statements(stmt)
