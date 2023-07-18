@@ -474,7 +474,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
                                                 for name in fsm_states}))
 
-    def _add_statement(self, assigns, domain, depth, compat_mode=False):
+    def _add_statement(self, assigns, domain, depth):
         def domain_name(domain):
             if domain is None:
                 return "comb"
@@ -485,7 +485,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not compat_mode and not isinstance(stmt, (Assign, Assert, Assume, Cover)):
+            if not isinstance(stmt, (Assign, Assert, Assume, Cover)):
                 raise SyntaxError(
                     "Only assignments and property checks may be appended to d.{}"
                     .format(domain_name(domain)))

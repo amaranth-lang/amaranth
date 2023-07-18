@@ -1060,7 +1060,7 @@ class _SignalMeta(ABCMeta):
         return signal
 
 
-# @final
+@final
 class Signal(Value, DUID, metaclass=_SignalMeta):
     """A varying integer value.
 
@@ -1213,9 +1213,8 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                     return str(value)
             self._decoder = enum_decoder
 
-    # Not a @classmethod because amaranth.compat requires it.
-    @staticmethod
-    def like(other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
+    @classmethod
+    def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
         """Create Signal based on another.
 
         Parameters
@@ -1238,7 +1237,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
         kw.update(kwargs)
-        return Signal(**kw, src_loc_at=1 + src_loc_at)
+        return cls(**kw, src_loc_at=1 + src_loc_at)
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -1655,7 +1654,7 @@ class Cover(Property):
     _kind = "cover"
 
 
-# @final
+@final
 class Switch(Statement):
     def __init__(self, test, cases, *, src_loc=None, src_loc_at=0, case_src_locs={}):
         if src_loc is None:
