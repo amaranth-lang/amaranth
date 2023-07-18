@@ -662,6 +662,10 @@ class View(ValueCastable):
             If ``ShapeCastable.__call__`` does not return a value or a value-castable object.
         """
         if isinstance(self.__layout, ArrayLayout):
+            if not isinstance(key, (int, Value, ValueCastable)):
+                raise TypeError("Views with array layout may only be indexed with an integer "
+                                "or a value, not {!r}"
+                                .format(key))
             shape = self.__layout.elem_shape
             value = self.__target.word_select(key, Shape.cast(self.__layout.elem_shape).width)
         else:
@@ -697,6 +701,9 @@ class View(ValueCastable):
             If the layout does not define a field called ``name``, or if ``name`` starts with
             an underscore.
         """
+        if isinstance(self.__layout, ArrayLayout):
+            raise AttributeError("View of {!r} with an array layout does not have fields"
+                                 .format(self.__target))
         try:
             item = self[name]
         except KeyError:
