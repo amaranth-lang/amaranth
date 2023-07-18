@@ -611,6 +611,17 @@ class ViewTestCase(FHDLTestCase):
                 r"and may only be accessed by indexing$"):
             Signal(StructLayout({"_c": signed(1)}))._c
 
+    def test_bug_837_array_layout_getitem_str(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Views with array layout may only be indexed with an integer or a value, "
+                r"not 'reset'$"):
+            Signal(ArrayLayout(unsigned(1), 1), reset=[0])["reset"]
+
+    def test_bug_837_array_layout_getattr(self):
+        with self.assertRaisesRegex(AttributeError,
+                r"^View of \(sig \$signal\) with an array layout does not have fields$"):
+            Signal(ArrayLayout(unsigned(1), 1), reset=[0]).reset
+
 
 class StructTestCase(FHDLTestCase):
     def test_construct(self):
