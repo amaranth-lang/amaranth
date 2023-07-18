@@ -424,6 +424,10 @@ class LayoutTestCase(FHDLTestCase):
                 r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
             sl.const({"f": "01"})
 
+    def test_const_field_const(self):
+        sl = StructLayout({"f": unsigned(1)})
+        self.assertRepr(sl.const({"f": Const(1)}), "(const 1'd1)")
+
     def test_signal_reset(self):
         sl = StructLayout({
             "a": unsigned(1),

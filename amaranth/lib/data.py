@@ -238,7 +238,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
                                      "it casts to, {!r}, and not {!r}"
                                      .format(field.shape, cast_field_shape,
                                              key_value.shape()))
-            else:
+            elif not isinstance(key_value, Const):
                 key_value = Const(key_value, cast_field_shape)
             int_value &= ~(((1 << cast_field_shape.width) - 1) << field.offset)
             int_value |= key_value.value << field.offset
