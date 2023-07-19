@@ -41,7 +41,9 @@ FOSS toolchains are listed in **bold**.
 
 ## Community
 
-Amaranth has a dedicated IRC channel, [#amaranth-lang at libera.chat](https://web.libera.chat/#amaranth-lang). Feel free to join to ask questions about using Amaranth or discuss ongoing development of Amaranth and its related projects.
+Amaranth has a dedicated IRC channel, [#amaranth-lang at libera.chat](https://web.libera.chat/#amaranth-lang), which is _bridged_[^1] to Matrix at [#amaranth-lang:matrix.org](https://matrix.to/#/#amaranth-lang:matrix.org). Feel free to join to ask questions about using Amaranth or discuss ongoing development of Amaranth and its related projects.
+
+[^1]: The same messages appear on IRC and on Matrix, and one can participate in the discussion equally using either communication system.
 
 ## License
 
