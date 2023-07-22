@@ -398,6 +398,12 @@ class LayoutTestCase(FHDLTestCase):
         self.assertRepr(fl.const({"b": 0b10}), "(const 2'd2)")
         self.assertRepr(fl.const({"a": 0b1, "b": 0b10}), "(const 2'd2)")
 
+        sls = StructLayout({
+            "a": signed(4),
+            "b": signed(4)
+        })
+        self.assertRepr(sls.const({"b": 0, "a": -1}), "(const 8'd15)")
+
     def test_const_wrong(self):
         sl = StructLayout({"f": unsigned(1)})
         with self.assertRaisesRegex(TypeError,
