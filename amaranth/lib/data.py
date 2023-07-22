@@ -240,8 +240,9 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
                                              key_value.shape()))
             elif not isinstance(key_value, Const):
                 key_value = Const(key_value, cast_field_shape)
-            int_value &= ~(((1 << cast_field_shape.width) - 1) << field.offset)
-            int_value |= key_value.value << field.offset
+            mask = ((1 << cast_field_shape.width) - 1) << field.offset
+            int_value &= ~mask
+            int_value |= (key_value.value << field.offset) & mask
         return Const(int_value, self.as_shape())
 
 
