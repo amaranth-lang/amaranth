@@ -95,6 +95,7 @@ Toolchain changes
 
 * Changed: text files are written with LF line endings on Windows, like on other platforms.
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
+* Added: ``env=`` argument to :meth:`build.run.BuildPlan.execute_local`.
 * Deprecated: use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 * Removed: (deprecated in 0.3) :meth:`sim.Simulator.step`.
 * Removed: (deprecated in 0.3) :mod:`back.pysim`.
