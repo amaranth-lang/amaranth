@@ -61,12 +61,13 @@ class BuildPlan:
             for filename in sorted(self.files):
                 archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
 
-    def execute_local(self, root="build", *, run_script=True):
+    def execute_local(self, root="build", *, run_script=True, env=None):
         """
         Execute build plan using the local strategy. Files from the build plan are placed in
         the build root directory ``root``, and, if ``run_script`` is ``True``, the script
         appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere) is
-        executed in the build root.
+        executed in the build root. If ``env`` is not ``None``, the environment is extended
+        (not replaced) with ``env``.
 
         Returns :class:`LocalBuildProducts`.
         """
@@ -90,13 +91,18 @@ class BuildPlan:
                     f.write(content)
 
             if run_script:
+                script_env = dict(os.environ)
+                if env is not None:
+                    script_env.update(env)
                 if sys.platform.startswith("win32"):
                     # Without "call", "cmd /c {}.bat" will return 0.
                     # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
                     # Running the script manually from a command prompt is unaffected.
-                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)])
+                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)],
+                                          env=script_env)
                 else:
-                    subprocess.check_call(["sh", "{}.sh".format(self.script)])
+                    subprocess.check_call(["sh", "{}.sh".format(self.script)],
+                                          env=script_env)
 
             return LocalBuildProducts(os.getcwd())
 
