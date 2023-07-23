@@ -13,7 +13,11 @@ __all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "
 
 
 class UnusedElaboratable(UnusedMustUse):
-    pass
+    # The warning is initially silenced. If everything that has been constructed remains unused,
+    # it means the application likely crashed (with an exception, or in another way that does not
+    # call `sys.excepthook`), and it's not necessary to show any warnings.
+    # Once elaboration starts, the warning is enabled.
+    _MustUse__silence = True
 
 
 class Elaboratable(MustUse, metaclass=ABCMeta):
@@ -33,6 +37,7 @@ class Fragment:
                 return obj
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
+                UnusedElaboratable._MustUse__silence = False
                 obj._MustUse__used = True
                 new_obj = obj.elaborate(platform)
             elif hasattr(obj, "elaborate"):
