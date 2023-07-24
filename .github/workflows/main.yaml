@@ -1,6 +1,11 @@
-on: [push, pull_request, merge_group]
+on:
+  push:
+  pull_request:
+  merge_group:
+
 name: CI
 jobs:
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -53,6 +58,7 @@ jobs:
         unset PYTHONWARNINGS
         sphinx-build -b doctest docs/ docs/_build
         codecov
+
   document:
     runs-on: ubuntu-latest
     steps:
@@ -79,6 +85,7 @@ jobs:
         with:
           name: docs
           path: docs/_build
+
   publish-docs:
     needs: document
     if: github.repository == 'amaranth-lang/amaranth'
@@ -111,6 +118,7 @@ jobs:
           branch: main
           folder: docs/
           target-folder: docs/amaranth/${{ github.ref_name }}/
+
   publish-docs-dev:
     needs: document
     if: github.repository != 'amaranth-lang/amaranth'
