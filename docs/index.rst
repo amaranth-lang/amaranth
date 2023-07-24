@@ -16,3 +16,4 @@ Language & toolchain
    stdlib
    platform
    changes
+   contrib
