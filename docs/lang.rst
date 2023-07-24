@@ -1,3 +1,8 @@
+.. testsetup::
+
+   # Required to capture warnings in doctests.
+   import sys; sys.stderr = sys.stdout
+
 Language guide
 ##############
 
@@ -170,6 +175,8 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
    .. doctest::
 
       >>> fencepost = C(256, range(256))
+      <...>:1: SyntaxWarning: Value 256 equals the non-inclusive end of the constant shape range(0, 256); this is likely an off-by-one error
+        fencepost = C(256, range(256))
       >>> fencepost.shape()
       unsigned(8)
       >>> fencepost.value
