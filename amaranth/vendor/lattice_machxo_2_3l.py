@@ -1,4 +1,4 @@
-from abc import abstractproperty
+from abc import abstractmethod
 
 from ..hdl import *
 from ..build import *
@@ -40,9 +40,9 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
 
     toolchain = "Diamond"
 
-    device  = abstractproperty()
-    package = abstractproperty()
-    speed   = abstractproperty()
+    device  = property(abstractmethod(lambda: None))
+    package = property(abstractmethod(lambda: None))
+    speed   = property(abstractmethod(lambda: None))
     grade   = "C" # [C]ommercial, [I]ndustrial
 
     required_tools = [

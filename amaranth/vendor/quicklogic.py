@@ -1,4 +1,4 @@
-from abc import abstractproperty
+from abc import abstractmethod
 
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
@@ -27,8 +27,8 @@ class QuicklogicPlatform(TemplatedPlatform):
         * ``add_constraints``: inserts commands in XDC file.
     """
 
-    device  = abstractproperty()
-    package = abstractproperty()
+    device  = property(abstractmethod(lambda: None))
+    package = property(abstractmethod(lambda: None))
 
     # Since the QuickLogic version of SymbiFlow toolchain is not upstreamed yet
     # we should distinguish the QuickLogic version from mainline one.

@@ -1,5 +1,5 @@
 import re
-from abc import abstractproperty
+from abc import abstractmethod
 
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
@@ -118,9 +118,9 @@ class XilinxPlatform(TemplatedPlatform):
 
     toolchain = None # selected when creating platform
 
-    device  = abstractproperty()
-    package = abstractproperty()
-    speed   = abstractproperty()
+    device  = property(abstractmethod(lambda: None))
+    package = property(abstractmethod(lambda: None))
+    speed   = property(abstractmethod(lambda: None))
 
     @property
     def _part(self):
