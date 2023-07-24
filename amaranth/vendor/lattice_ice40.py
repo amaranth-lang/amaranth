@@ -1,4 +1,4 @@
-from abc import abstractproperty
+from abc import abstractmethod
 
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
@@ -68,8 +68,8 @@ class LatticeICE40Platform(TemplatedPlatform):
 
     toolchain = None # selected when creating platform
 
-    device  = abstractproperty()
-    package = abstractproperty()
+    device  = property(abstractmethod(lambda: None))
+    package = property(abstractmethod(lambda: None))
 
     # IceStorm templates
 

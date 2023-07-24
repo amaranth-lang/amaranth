@@ -1,4 +1,4 @@
-from abc import abstractproperty
+from abc import abstractmethod
 
 from ..hdl import *
 from ..build import *
@@ -66,9 +66,9 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     toolchain = None # selected when creating platform
 
-    device  = abstractproperty()
-    package = abstractproperty()
-    speed   = abstractproperty()
+    device  = property(abstractmethod(lambda: None))
+    package = property(abstractmethod(lambda: None))
+    speed   = property(abstractmethod(lambda: None))
     grade   = "C" # [C]ommercial, [I]ndustrial
 
     # Trellis templates
