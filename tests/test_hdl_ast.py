@@ -241,11 +241,8 @@ class ShapeCastableTestCase(FHDLTestCase):
         # We allow empty py_enum.Enum.
         self.assertShapeCastable(Enum)
         self.assertShapeCastable(PyEnumEmpty)
-
-        # These currently do not cast, but will upon merge of
-        # https://github.com/amaranth-lang/amaranth/pull/832.
-        self.assertNotShapeCastable(AmaranthEnum, but_is_subclass=True)
-        self.assertNotShapeCastable(AmaranthEnumEmpty, but_is_subclass=True)
+        self.assertShapeCastable(AmaranthEnum)
+        self.assertShapeCastable(AmaranthEnumEmpty)
 
     def test_checks_against_subclasses(self):
         class EnumA(AmaranthEnum):
