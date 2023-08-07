@@ -1,0 +1,42 @@
+Glossary
+========
+
++-----------------------+----------------------------------------------+
+| .. rubric:: Term      | .. rubric:: Definition                       |
+|    :name: term        |    :name: definition                         |
++=======================+==============================================+
++-----------------------+----------------------------------------------+
+
++-------------------+--------------------------------------------------+
+| Amaranth          | An open-source toolchain for developing hardware |
+|                   | based on synchronous digital logic using the     |
+|                   | Python programming language                      |
++===================+==================================================+
+| ASIC              | Application-specific integrated circuit          |
++-------------------+--------------------------------------------------+
+| Domain            | A group of logic elements                        |
++-------------------+--------------------------------------------------+
+| DUT               | Device under test                                |
++-------------------+--------------------------------------------------+
+| Finite state      | A mathematical model for a system that has a     |
+| machine           | limited number of conditional states of being    |
++-------------------+--------------------------------------------------+
+| FPGA              | Field Programmable Gate Array — a design,        |
+|                   | blueprint, template                              |
++-------------------+--------------------------------------------------+
+| HDL               | Hardware definition language                     |
++-------------------+--------------------------------------------------+
+| IC                | Integrated circuit                               |
++-------------------+--------------------------------------------------+
+| Logic gate        | A basic circuit with at least one — usually more |
+|                   | — inputs and one output                          |
++-------------------+--------------------------------------------------+
+| LUT               | Look up table                                    |
++-------------------+--------------------------------------------------+
+| MCU               | Microcontroller unit                             |
++-------------------+--------------------------------------------------+
+| Propagation delay | The time it takes for a signal to move from      |
+|                   | source to destination                            |
++-------------------+--------------------------------------------------+
+| RTL               | Register transfer language                       |
++-------------------+--------------------------------------------------+
