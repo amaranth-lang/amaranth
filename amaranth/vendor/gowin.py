@@ -412,16 +412,26 @@ class GowinPlatform(TemplatedPlatform):
                     o_Q1=q1[bit]
                 )
 
-        def get_oddr(clk,d0,d1,tx,q0,q1):
+        def get_oddr(clk,d0,d1,q):
+            for bit in range(len(q)):
+                m.submodules += Instance("ODDR",
+                    p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
+                    i_CLK=clk,
+                    i_D0=d0[bit],
+                    i_D1=d1[bit],
+                    o_Q0=q[bit]
+                )
+
+        def get_oeddr(clk,d0,d1,tx,q0,q1):
             for bit in range(len(q0)):
                 m.submodules += Instance("ODDR",
                     p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
                     i_CLK=clk,
                     i_D0=d0[bit],
                     i_D1=d1[bit],
-                    i_TX=tx[bit],
+                    i_TX=tx,
                     o_Q0=q0[bit],
-                    o_Q1=q1[bit]
+                    o_Q1=q1
                 )
 
         def get_ineg(y, invert):
@@ -480,8 +490,10 @@ class GowinPlatform(TemplatedPlatform):
         elif pin.xdr == 2:
             if "i" in pin.dir:
                 get_iddr(pin.i_clk, i, pin_i0, pin_i1)
-            if pin.dir in ("o", "oe", "io"):
-                get_oddr(pin.o_clk, pin_o0, pin_o1, ~pin_oe, o, t)
+            if pin.dir in ("o",):
+                get_oddr(pin.o_clk, pin_o0, pin_o1, o)
+            if pin.dir in ("oe", "io"):
+                get_oeddr(pin.o_clk, pin_o0, pin_o1, ~pin.oe, o, t)
         else:
             assert False
 
