@@ -106,9 +106,9 @@ Occasionally, the documentation builder will persist in rendering an incorrect o
 Contributing your changes
 =========================
 
-.. todo::
+.. attention::
 
-   This section is unfinished
+   Our code style guidelines are evolving, and we will eventually have a formal document listing them.
 
 At the moment there is no formal style guide for source code. We ask that you do your best effort to keep the code that you add or modify similar in style as well as in spirit to the code surrounding it, and we may ask you to change it during review. When in doubt, submit your code as-is.
 
@@ -116,9 +116,9 @@ At the moment there is no formal style guide for source code. We ask that you do
 Weekly meetings
 ===============
 
-Every Monday at 17:00 UTC on our IRC channel `#amaranth-lang at libera.chat <irc>`_ or Matrix channel `#amaranth-lang@matrix.org <matrix>`_ (the channels are bridged together: the same messages appear on both), Amaranth maintainers meet with users and contributors to discuss newly submitted Requests for Comments and any other issues that warrant broad attention. These public meetings are the primary avenue of decision making.
+Every Monday at 17:00 UTC on our IRC channel `#amaranth-lang at libera.chat`_ or Matrix channel `#amaranth-lang:matrix.org`_ (the channels are bridged together: the same messages appear on both), Amaranth maintainers meet with users and contributors to discuss newly submitted Requests for Comments and any other issues that warrant broad attention. These public meetings are the primary avenue of decision making.
 
-.. _irc: https://web.libera.chat/#amaranth-lang
-.. _matrix: https://matrix.to/#/#amaranth-lang:matrix.org
+.. _#amaranth-lang at libera.chat: https://web.libera.chat/#amaranth-lang
+.. _#amaranth-lang:matrix.org: https://matrix.to/#/#amaranth-lang:matrix.org
 
 If you want to contribute, have interest in language evolution, or simply want to voice your view on proposed features, feel free to join these meetings; there is no formal attendance. If you are not able to make the time, the meetings are publicly recorded and the summaries are posted in the relevant GitHub thread after the meeting.
