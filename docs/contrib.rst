@@ -94,7 +94,7 @@ Working on documentation usually involves making many small, iterative changes, 
 
    $ pdm run document-live
 
-While it is running you can browse the documentation at `https://127.0.0.1:8000 <https://127.0.0.1:8000>`_. The edits you make are reflected on the document open in the browser after a short delay. It is useful to keep an eye on the terminal where this process is running, as the information about syntactic errors, missing references, and other issues will be printed there.
+While it is running you can browse the documentation at `http://127.0.0.1:8000 <http://127.0.0.1:8000>`_. The edits you make are reflected on the document open in the browser after a short delay. It is useful to keep an eye on the terminal where this process is running, as the information about syntactic errors, missing references, and other issues will be printed there.
 
 Occasionally, the documentation builder will persist in rendering an incorrect or outdated version of the contents of a Python source file. To fix this, run:
 
