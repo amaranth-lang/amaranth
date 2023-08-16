@@ -195,7 +195,7 @@ Glossary
   This increases performance, reduces power consumption, and requires a
   smaller semiconductor die area.
 
-**Wave form**
+**Waveform**
 
 | A visual representation of the variation of a voltage or current over
   time.
