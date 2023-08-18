@@ -60,3 +60,6 @@ test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
 
 document.cmd = "sphinx-build docs/ docs/_build/"
 document-live.cmd = "sphinx-autobuild docs/ docs/_build/ --watch amaranth"
+
+coverage-text.cmd = "python -m coverage report"
+coverage-html.cmd = "python -m coverage html"
