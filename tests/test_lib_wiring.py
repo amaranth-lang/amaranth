@@ -853,7 +853,8 @@ class ConnectTestCase(unittest.TestCase):
     def test_out_to_const_in(self):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
-                r"^Cannot connect to the input member 'q\.a' that has a constant value 0$"):
+                r"^Cannot connect input member 'q\.a' that has a constant value 0 to an output "
+                r"member 'p\.a' that has a varying value$"):
             connect(m,
                     p=NS(signature=Signature({"a": Out(1)}),
                          a=Signal()),
@@ -864,7 +865,7 @@ class ConnectTestCase(unittest.TestCase):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
                 r"^Cannot connect input member 'q\.a' that has a constant value 0 to an output "
-                r"member 'p\.a' that has a differing constant value 1$"):
+                r"member 'p\.a' that has a different constant value 1$"):
             connect(m,
                     p=NS(signature=Signature({"a": Out(1)}),
                          a=Const(1)),
@@ -986,7 +987,7 @@ class ComponentTestCase(unittest.TestCase):
         class C(Component):
             pass
 
-        with self.assertRaisesRegex(NotImplementedError,
+        with self.assertRaisesRegex(TypeError,
                 r"^Component '.+?\.C' does not have signature member annotations$"):
             C()
 
@@ -1023,7 +1024,7 @@ class ComponentTestCase(unittest.TestCase):
         class B(A):
             a: Out(1)
 
-        with self.assertRaisesRegex(SignatureError,
+        with self.assertRaisesRegex(NameError,
                 r"^Member 'a' is redefined in .*<locals>.B$"):
             B()
 
