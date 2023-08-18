@@ -10,6 +10,7 @@ Standard library
 
    stdlib/enum
    stdlib/data
+   stdlib/wiring
    stdlib/coding
    stdlib/cdc
    stdlib/crc

@@ -20,6 +20,12 @@ This module provides four related facilities:
 3. Data views via :class:`View` or its user-defined subclasses. This class is used to apply a layout description to a plain :class:`Value`, enabling structured access to its bits.
 4. Data classes :class:`Struct` and :class:`Union`. These classes are data views with a layout that is defined using Python :term:`variable annotations <python:variable annotation>` (also known as type annotations).
 
+To use this module, add the following imports to the beginning of the file:
+
+.. testcode::
+
+   from amaranth.lib import data
+
 
 Motivation
 ++++++++++
