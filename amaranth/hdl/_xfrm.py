@@ -16,7 +16,6 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
-           "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "EnableInserter", "AssignmentLegalizer"]
 
 
@@ -195,7 +194,7 @@ class StatementTransformer(StatementVisitor):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
     def on_Property(self, stmt):
-        return Property(stmt.kind, self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
+        return Property(stmt.kind, self.on_value(stmt.test), name=stmt.name)
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
@@ -533,97 +532,6 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         return new_fragment
 
 
-class SwitchCleaner(StatementVisitor):
-    def on_ignore(self, stmt):
-        return stmt
-
-    on_Assign   = on_ignore
-    on_Property = on_ignore
-
-    def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
-        if any(len(s) for s in cases.values()):
-            return Switch(stmt.test, cases)
-
-    def on_statements(self, stmts):
-        stmts = flatten(self.on_statement(stmt) for stmt in stmts)
-        return _StatementList(stmt for stmt in stmts if stmt is not None)
-
-
-class LHSGroupAnalyzer(StatementVisitor):
-    def __init__(self):
-        self.signals = SignalDict()
-        self.unions  = OrderedDict()
-
-    def find(self, signal):
-        if signal not in self.signals:
-            self.signals[signal] = len(self.signals)
-        group = self.signals[signal]
-        while group in self.unions:
-            group = self.unions[group]
-        self.signals[signal] = group
-        return group
-
-    def unify(self, root, *leaves):
-        root_group = self.find(root)
-        for leaf in leaves:
-            leaf_group = self.find(leaf)
-            if root_group == leaf_group:
-                continue
-            self.unions[leaf_group] = root_group
-
-    def groups(self):
-        groups = OrderedDict()
-        for signal in self.signals:
-            group = self.find(signal)
-            if group not in groups:
-                groups[group] = SignalSet()
-            groups[group].add(signal)
-        return groups
-
-    def on_Assign(self, stmt):
-        lhs_signals = stmt._lhs_signals()
-        if lhs_signals:
-            self.unify(*stmt._lhs_signals())
-
-    def on_Property(self, stmt):
-        lhs_signals = stmt._lhs_signals()
-        if lhs_signals:
-            self.unify(*stmt._lhs_signals())
-
-    def on_Switch(self, stmt):
-        for case_stmts in stmt.cases.values():
-            self.on_statements(case_stmts)
-
-    def on_statements(self, stmts):
-        assert not isinstance(stmts, str)
-        for stmt in stmts:
-            self.on_statement(stmt)
-
-    def __call__(self, stmts):
-        self.on_statements(stmts)
-        return self.groups()
-
-
-class LHSGroupFilter(SwitchCleaner):
-    def __init__(self, signals):
-        self.signals = signals
-
-    def on_Assign(self, stmt):
-        # The invariant provided by LHSGroupAnalyzer is that all signals that ever appear together
-        # on LHS are a part of the same group, so it is sufficient to check any of them.
-        lhs_signals = stmt.lhs._lhs_signals()
-        if lhs_signals:
-            any_lhs_signal = next(iter(lhs_signals))
-            if any_lhs_signal in self.signals:
-                return stmt
-
-    def on_Property(self, stmt):
-        any_lhs_signal = next(iter(stmt._lhs_signals()))
-        if any_lhs_signal in self.signals:
-            return stmt
-
-
 class _ControlInserter(FragmentTransformer):
     def __init__(self, controls):
         self.src_loc = None
@@ -655,10 +563,23 @@ class ResetInserter(_ControlInserter):
         fragment.add_statements(domain, Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 
+class _PropertyEnableInserter(StatementTransformer):
+    def __init__(self, en):
+        self.en = en
+
+    def on_Property(self, stmt):
+        return Switch(
+            self.en,
+            {1: [stmt]},
+            src_loc=stmt.src_loc,
+        )
+
+
 class EnableInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(s) for s in signals]
         fragment.add_statements(domain, Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
+        fragment.statements[domain] = _PropertyEnableInserter(self.controls[domain])(fragment.statements[domain])
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)

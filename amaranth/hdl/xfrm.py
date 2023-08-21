@@ -9,7 +9,6 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
-           "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "EnableInserter"]
 
 
