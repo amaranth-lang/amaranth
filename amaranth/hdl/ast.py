@@ -860,9 +860,14 @@ class Part(Value):
         if not isinstance(stride, int) or stride <= 0:
             raise TypeError("Part stride must be a positive integer, not {!r}".format(stride))
 
+        value = Value.cast(value)
+        offset = Value.cast(offset)
+        if offset.shape().signed:
+            raise TypeError("Part offset must be unsigned")
+
         super().__init__(src_loc_at=src_loc_at)
-        self.value  = Value.cast(value)
-        self.offset = Value.cast(offset)
+        self.value  = value
+        self.offset = offset
         self.width  = width
         self.stride = stride
 
