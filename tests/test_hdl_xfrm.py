@@ -547,6 +547,329 @@ class EnableInserterTestCase(FHDLTestCase):
         """)
 
 
+class AssignmentLegalizerTestCase(FHDLTestCase):
+    def test_simple(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1.eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((eq (sig s1) (sig s2)))
+        """)
+
+    def test_simple_slice(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1[2:6].eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((eq (slice (sig s1) 2:6) (sig s2)))
+        """)
+
+    def test_simple_part(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1.bit_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 0:4) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 1:5) (sig s2)))
+                (case 0010 (eq (slice (sig s1) 2:6) (sig s2)))
+                (case 0011 (eq (slice (sig s1) 3:7) (sig s2)))
+                (case 0100 (eq (slice (sig s1) 4:8) (sig s2)))
+                (case 0101 (eq (slice (sig s1) 5:8) (sig s2)))
+                (case 0110 (eq (slice (sig s1) 6:8) (sig s2)))
+                (case 0111 (eq (slice (sig s1) 7:8) (sig s2)))
+            ))
+        """)
+
+    def test_simple_part_word(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1.word_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 0:4) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 4:8) (sig s2)))
+            ))
+        """)
+
+    def test_simple_concat(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(12)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            Cat(s1, s2, s3).eq(s4)
+        )
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f.add_driver(s3, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            (
+                (eq (sig s1) (slice (sig s4) 0:12))
+                (eq (sig s2) (slice (sig s4) 4:12))
+                (eq (sig s3) (slice (sig s4) 8:12))
+            )
+        """)
+
+    def test_simple_concat_narrow(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(signed(6))
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            Cat(s1, s2, s3).eq(s4)
+        )
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f.add_driver(s3, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            (
+                (eq (sig s1) (slice (| (sig s4) (const 12'sd0)) 0:12))
+                (eq (sig s2) (slice (| (sig s4) (const 12'sd0)) 4:12))
+                (eq (sig s3) (slice (| (sig s4) (const 12'sd0)) 8:12))
+            )
+        """)
+
+    def test_simple_operator(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        f = Fragment()
+        f.add_statements("sync", [
+            s1.as_signed().eq(s3),
+            s2.as_unsigned().eq(s3),
+        ])
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            (
+                (eq (sig s1) (sig s3))
+                (eq (sig s2) (sig s3))
+            )
+        """)
+
+    def test_simple_array(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        s5 = Signal(8)
+        f = Fragment()
+        f.add_statements("sync", [
+            Array([s1, s2, s3])[s4].eq(s5),
+        ])
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f.add_driver(s3, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s4)
+                (case 00000000 (eq (sig s1) (sig s5)))
+                (case 00000001 (eq (sig s2) (sig s5)))
+                (case 00000010 (eq (sig s3) (sig s5)))
+            ))
+        """)
+
+    def test_sliced_slice(self):
+        s1 = Signal(12)
+        s2 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1[1:11][2:6].eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((eq (slice (sig s1) 3:7) (sig s2)))
+        """)
+
+    def test_sliced_concat(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(4)
+        s5 = Signal(4)
+        s6 = Signal(8)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            Cat(s1, s2, s3, s4, s5)[5:14].eq(s6)
+        )
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f.add_driver(s3, "sync")
+        f.add_driver(s4, "sync")
+        f.add_driver(s5, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            (
+                (eq (slice (sig s2) 1:4) (slice (| (sig s6) (const 9'd0)) 0:9))
+                (eq (sig s3)             (slice (| (sig s6) (const 9'd0)) 3:9))
+                (eq (slice (sig s4) 0:2) (slice (| (sig s6) (const 9'd0)) 7:9))
+            )
+        """)
+
+    def test_sliced_part(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1.bit_select(s3, 4)[1:3].eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 1:3) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 2:4) (sig s2)))
+                (case 0010 (eq (slice (sig s1) 3:5) (sig s2)))
+                (case 0011 (eq (slice (sig s1) 4:6) (sig s2)))
+                (case 0100 (eq (slice (sig s1) 5:7) (sig s2)))
+                (case 0101 (eq (slice (sig s1) 6:8) (sig s2)))
+                (case 0110 (eq (slice (sig s1) 7:8) (sig s2)))
+            ))
+        """)
+
+    def test_sliced_part_word(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1.word_select(s3, 4)[1:3].eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 1:3) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 5:7) (sig s2)))
+            ))
+        """)
+
+    def test_sliced_array(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        s5 = Signal(8)
+        f = Fragment()
+        f.add_statements("sync", [
+            Array([s1, s2, s3])[s4][2:7].eq(s5),
+        ])
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f.add_driver(s3, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s4)
+                (case 00000000 (eq (slice (sig s1) 2:7) (sig s5)))
+                (case 00000001 (eq (slice (sig s2) 2:7) (sig s5)))
+                (case 00000010 (eq (slice (sig s3) 2:7) (sig s5)))
+            ))
+        """)
+
+    def test_part_slice(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1[1:7].bit_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 1:5) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 2:6) (sig s2)))
+                (case 0010 (eq (slice (sig s1) 3:7) (sig s2)))
+                (case 0011 (eq (slice (sig s1) 4:7) (sig s2)))
+                (case 0100 (eq (slice (sig s1) 5:7) (sig s2)))
+                (case 0101 (eq (slice (sig s1) 6:7) (sig s2)))
+            ))
+        """)
+
+    def test_sliced_part_slice(self):
+        s1 = Signal(12)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "sync",
+            s1[3:9].bit_select(s3, 4)[1:3].eq(s2)
+        )
+        f.add_driver(s1, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            ((switch (sig s3)
+                (case 0000 (eq (slice (sig s1) 4:6) (sig s2)))
+                (case 0001 (eq (slice (sig s1) 5:7) (sig s2)))
+                (case 0010 (eq (slice (sig s1) 6:8) (sig s2)))
+                (case 0011 (eq (slice (sig s1) 7:9) (sig s2)))
+                (case 0100 (eq (slice (sig s1) 8:9) (sig s2)))
+            ))
+        """)
+
+
+    def test_sliced_operator(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        f = Fragment()
+        f.add_statements("sync", [
+            s1.as_signed()[2:7].eq(s3),
+            s2.as_unsigned()[2:7].eq(s3),
+        ])
+        f.add_driver(s1, "sync")
+        f.add_driver(s2, "sync")
+        f = AssignmentLegalizer()(f)
+        self.assertRepr(f.statements["sync"], """
+            (
+                (eq (slice (sig s1) 2:7) (sig s3))
+                (eq (slice (sig s2) 2:7) (sig s3))
+            )
+        """)
+
+
 class _MockElaboratable(Elaboratable):
     def __init__(self):
         self.s1 = Signal()
