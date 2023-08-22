@@ -33,6 +33,9 @@ class BuildPlan:
         forward slashes (``/``).
         """
         assert isinstance(filename, str) and filename not in self.files
+        if (pathlib.PurePosixPath(filename).is_absolute or
+                pathlib.PureWindowsPath(filename).is_absolute):
+            raise ValueError(f"Filename {filename!r} must not be an absolute path")
         self.files[filename] = content
 
     def digest(self, size=64):
@@ -78,9 +81,9 @@ class BuildPlan:
 
             for filename, content in self.files.items():
                 filename = pathlib.Path(filename)
-                # Forbid parent directory components completely to avoid the possibility
-                # of writing outside the build root.
-                assert ".." not in filename.parts
+                # Forbid parent directory components and absolute paths completely to avoid
+                # the possibility of writing outside the build root.
+                assert not filename.is_absolute and ".." not in filename.parts
                 dirname = os.path.dirname(filename)
                 if dirname:
                     os.makedirs(dirname, exist_ok=True)
