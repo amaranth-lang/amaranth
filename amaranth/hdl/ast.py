@@ -1576,6 +1576,60 @@ class _DisplayFormatter(string.Formatter):
             yield self.escape(literal_text), field_name, format_spec, conversion
 
 
+class _DisplayRtlilFormatter(_DisplayFormatter):
+    def format_field(self, value, format_spec):
+        if isinstance(value, (Value, ValueCastable)):
+            m = re.match(self._FORMAT_RE, format_spec)
+            if m is None:
+                raise SyntaxError("Invalid Display format specifier {!r}".format(format_spec))
+
+            # Reference for RTLIL format string syntax:
+            # https://github.com/YosysHQ/yosys/blob/6405bbab/docs/source/CHAPTER_CellLib.rst#debugging-cells
+            if m["align"] in ('>', '=', None):
+                justify = ">"
+            elif m["align"] == '<':
+                justify = "<"
+            else:
+                raise SyntaxError(f"{m['align']!r} alignment not supported by RTLIL backend")
+
+            if m["fill"] in (' ', None):
+                padding = ' '
+            elif m["fill"] == '0':
+                padding = '0'
+            else:
+                assert False
+
+            if m["width"] is not None:
+                width = m["width"]
+            else:
+                width = ''
+
+            if m["type"] in ('b', 'o', 'd'):
+                base = m["type"]
+            elif m["type"] == 'x':
+                base = 'h'
+            elif m["type"] is None:
+                base = 'd'
+
+            if m["sign"] == '+':
+                lplus = '+'
+            elif m["sign"] in ('-', None):
+                lplus = ''
+            else:
+                raise SyntaxError(f"{m['sign']!r} sign not supported by RTLIL backend")
+
+            v = Value.cast(value)
+
+            if v.shape().signed:
+                sign = 's'
+            else:
+                sign = 'u'
+
+            return f"{{{len(v)}:{justify}{padding}{width}{base}{lplus}{sign}}}"
+        else:
+            return super().format_field(value, format_spec)
+
+
 @final
 class Display(Statement):
     def __init__(self, format_string, *args, end="\n", src_loc_at=0, _en=None, **kwargs):
@@ -1584,6 +1638,10 @@ class Display(Statement):
         formatter = _DisplayFormatter()
         self.format = formatter.vformat(format_string, args, kwargs) + formatter.escape(end)
         self.args   = formatter.args
+
+        rtlil_formatter = _DisplayRtlilFormatter()
+        self.rtlil_format = rtlil_formatter.vformat(format_string, args, kwargs) + rtlil_formatter.escape(end)
+
         self._en    = _en
         if self._en is None:
             self._en = Signal(reset_less=True, name="$display$en")

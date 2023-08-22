@@ -738,7 +738,21 @@ class _StatementCompiler(xfrm.StatementVisitor):
             self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
     def on_Display(self, stmt):
-        raise NotImplementedError
+        self(stmt._en.eq(1))
+        en_wire = self.rhs_compiler(stmt._en)
+
+        self.state.rtlil.cell("$print", params={
+            "FORMAT": stmt.rtlil_format,
+            "ARGS_WIDTH": sum(len(arg) for arg in stmt.args),
+            "TRG_ENABLE": 0,
+            "TRG_WIDTH": 0,
+            "TRG_POLARITY": 0,
+            "PRIORITY": 0,
+        }, ports={
+            "\\TRG": "{}",
+            "\\EN": en_wire,
+            "\\ARGS": f"{{ {' '.join(self.rhs_compiler(arg) for arg in stmt.args)} }}",
+        }, src=_src(stmt.src_loc), name="display")
 
     def on_property(self, stmt):
         self(stmt._check.eq(stmt.test))
