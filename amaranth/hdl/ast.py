@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import inspect
+import re
+import string
 import warnings
 import functools
 from collections import OrderedDict
@@ -20,8 +22,8 @@ __all__ = [
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable",
     "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
-    "Statement", "Switch",
-    "Property", "Assign", "Assert", "Assume", "Cover",
+    "Statement", "Switch", "Assign",
+    "Display", "Property", "Assert", "Assume", "Cover",
     "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
 ]
 
@@ -1528,6 +1530,79 @@ class Assign(Statement):
         return "(eq {!r} {!r})".format(self.lhs, self.rhs)
 
 
+class _DisplayFormatter(string.Formatter):
+    _ESCAPE_TRANS = str.maketrans({"{": "{{", "}": "}}"})
+
+    @classmethod
+    def escape(cls, string):
+        return string.translate(cls._ESCAPE_TRANS)
+
+    _FORMAT_RE = re.compile(r"""
+        ^
+        (?: (?P<fill> [ 0])? (?P<align> [<>=]) )?
+        (?P<sign> [ +-])?
+        (?P<prefix> \#)?
+        (?P<zero> 0)?
+        (?P<width> \d+)?
+        (?P<type> [bodx])?
+        $
+    """, re.X)
+
+    @classmethod
+    def _process_spec(cls, format_spec):
+        m = re.match(cls._FORMAT_RE, format_spec)
+        if m is None:
+            raise SyntaxError("Invalid Display format specifier {!r}".format(format_spec))
+        return format_spec
+
+    def __init__(self):
+        self.args = []
+
+    def format_field(self, value, format_spec):
+        if isinstance(value, (Value, ValueCastable)):
+            index = len(self.args)
+            self.args.append(Value.cast(value))
+            return "{{{}:{}}}".format(index, self._process_spec(format_spec))
+        else:
+            return self.escape(format(value, format_spec))
+
+    def convert_field(self, value, conversion):
+        if conversion is None:
+            return value
+        raise SyntaxError("Conversion specifiers are not supported in Display")
+
+    def parse(self, format_string):
+        for literal_text, field_name, format_spec, conversion in super().parse(format_string):
+            yield self.escape(literal_text), field_name, format_spec, conversion
+
+
+@final
+class Display(Statement):
+    def __init__(self, format_string, *args, end="\n", src_loc_at=0, _en=None, **kwargs):
+        super().__init__(src_loc_at=src_loc_at)
+
+        formatter = _DisplayFormatter()
+        self.format = formatter.vformat(format_string, args, kwargs) + formatter.escape(end)
+        self.args   = formatter.args
+        self._en    = _en
+        if self._en is None:
+            self._en = Signal(reset_less=True, name="$display$en")
+            self._en.src_loc = self.src_loc
+
+    def __repr__(self):
+        if self.args:
+            return "(display {!r} {})".format(self.format, " ".join(map(repr, self.args)))
+        else:
+            return "(display {!r})".format(self.format)
+
+    def _lhs_signals(self):
+        return SignalSet((self._en,))
+
+    def _rhs_signals(self):
+        return union((arg._rhs_signals() for arg in self.args),
+                     start=SignalSet())
+
+
 class UnusedProperty(UnusedMustUse):
     pass
 
@@ -1547,7 +1622,7 @@ class Property(Statement, MustUse):
         if self._check is None:
             self._check = Signal(reset_less=True, name="${}$check".format(self._kind))
             self._check.src_loc = self.src_loc
-        if _en is None:
+        if self._en is None:
             self._en = Signal(reset_less=True, name="${}$en".format(self._kind))
             self._en.src_loc = self.src_loc
 

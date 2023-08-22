@@ -354,18 +354,28 @@ class _StatementCompiler(StatementVisitor, _Compiler):
         self.rhs = _RHSValueCompiler(state, emitter, mode="curr", inputs=inputs)
         self.lhs = _LHSValueCompiler(state, emitter, rhs=self.rhs, outputs=outputs)
 
-    def on_statements(self, stmts):
-        for stmt in stmts:
-            self(stmt)
-        if not stmts:
-            self.emitter.append("pass")
+    def _prepare_rhs(self, value):
+        value_mask = (1 << len(value)) - 1
+        if value.shape().signed:
+            return f"sign({value_mask:#x} & {self.rhs(value)}, {-1 << (len(value) - 1):#x})"
+        else: # unsigned
+            return f"({value_mask:#x} & {self.rhs(value)})"
 
     def on_Assign(self, stmt):
-        gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
-        gen_rhs = f"({(1 << len(stmt.rhs)) - 1:#x} & {gen_rhs_value})"
-        if stmt.rhs.shape().signed:
-            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1):#x})"
-        return self.lhs(stmt.lhs)(gen_rhs)
+        return self.lhs(stmt.lhs)(self._prepare_rhs(stmt.rhs))
+
+    def on_Display(self, stmt):
+        gen_args = [self._prepare_rhs(arg) for arg in stmt.args]
+        self.emitter.append(f"print({stmt.format!r}.format({', '.join(gen_args)}), end='')")
+
+    def on_Assert(self, stmt):
+        raise NotImplementedError # :nocov:
+
+    def on_Assume(self, stmt):
+        raise NotImplementedError # :nocov:
+
+    def on_Cover(self, stmt):
+        raise NotImplementedError # :nocov:
 
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
@@ -390,14 +400,11 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             with self.emitter.indent():
                 self(stmts)
 
-    def on_Assert(self, stmt):
-        raise NotImplementedError # :nocov:
-
-    def on_Assume(self, stmt):
-        raise NotImplementedError # :nocov:
-
-    def on_Cover(self, stmt):
-        raise NotImplementedError # :nocov:
+    def on_statements(self, stmts):
+        for stmt in stmts:
+            self(stmt)
+        if not stmts:
+            self.emitter.append("pass")
 
     @classmethod
     def compile(cls, state, stmt):

@@ -737,6 +737,9 @@ class _StatementCompiler(xfrm.StatementVisitor):
         else:
             self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
+    def on_Display(self, stmt):
+        raise NotImplementedError
+
     def on_property(self, stmt):
         self(stmt._check.eq(stmt.test))
         self(stmt._en.eq(1))

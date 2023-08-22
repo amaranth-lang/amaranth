@@ -485,9 +485,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not compat_mode and not isinstance(stmt, (Assign, Assert, Assume, Cover)):
+            if not compat_mode and not isinstance(stmt, (Assign, Display, Assert, Assume, Cover)):
                 raise SyntaxError(
-                    "Only assignments and property checks may be appended to d.{}"
+                    "Only assignment, display, and property check statements may be appended "
+                    "to d.{}"
                     .format(domain_name(domain)))
 
             stmt._MustUse__used = True

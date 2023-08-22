@@ -16,6 +16,7 @@ from .hdl import *
 __all__ = [
     "Shape", "unsigned", "signed",
     "Value", "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",
+    "Display",
     "Module",
     "ClockDomain",
     "Elaboratable", "Fragment", "Instance",

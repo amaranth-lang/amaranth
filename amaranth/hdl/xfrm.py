@@ -162,6 +162,10 @@ class ValueTransformer(ValueVisitor):
 
 class StatementVisitor(metaclass=ABCMeta):
     @abstractmethod
+    def on_Display(self, stmt):
+        pass # :nocov:
+
+    @abstractmethod
     def on_Assign(self, stmt):
         pass # :nocov:
 
@@ -194,6 +198,8 @@ class StatementVisitor(metaclass=ABCMeta):
     def on_statement(self, stmt):
         if type(stmt) is Assign:
             new_stmt = self.on_Assign(stmt)
+        elif type(stmt) is Display:
+            new_stmt = self.on_Display(stmt)
         elif type(stmt) is Assert:
             new_stmt = self.on_Assert(stmt)
         elif type(stmt) is Assume:
@@ -225,6 +231,9 @@ class StatementTransformer(StatementVisitor):
 
     def on_Assign(self, stmt):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
+
+    def on_Display(self, stmt):
+        return Display(stmt.format, *map(self.on_value, stmt.args), end="", _en=stmt._en)
 
     def on_Assert(self, stmt):
         return Assert(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
@@ -378,6 +387,10 @@ class DomainCollector(ValueVisitor, StatementVisitor):
     def on_Assign(self, stmt):
         self.on_value(stmt.lhs)
         self.on_value(stmt.rhs)
+
+    def on_Display(self, stmt):
+        for arg in stmt.args:
+            self.on_value(arg)
 
     def on_property(self, stmt):
         self.on_value(stmt.test)
@@ -588,10 +601,11 @@ class SwitchCleaner(StatementVisitor):
     def on_ignore(self, stmt):
         return stmt
 
-    on_Assign = on_ignore
-    on_Assert = on_ignore
-    on_Assume = on_ignore
-    on_Cover  = on_ignore
+    on_Assign  = on_ignore
+    on_Display = on_ignore
+    on_Assert  = on_ignore
+    on_Assume  = on_ignore
+    on_Cover   = on_ignore
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
@@ -639,14 +653,15 @@ class LHSGroupAnalyzer(StatementVisitor):
         if lhs_signals:
             self.unify(*stmt._lhs_signals())
 
-    def on_property(self, stmt):
+    def on_cell(self, stmt):
         lhs_signals = stmt._lhs_signals()
         if lhs_signals:
             self.unify(*stmt._lhs_signals())
 
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
+    on_Display = on_cell
+    on_Assert  = on_cell
+    on_Assume  = on_cell
+    on_Cover   = on_cell
 
     def on_Switch(self, stmt):
         for case_stmts in stmt.cases.values():
@@ -674,14 +689,15 @@ class LHSGroupFilter(SwitchCleaner):
             if any_lhs_signal in self.signals:
                 return stmt
 
-    def on_property(self, stmt):
+    def on_cell(self, stmt):
         any_lhs_signal = next(iter(stmt._lhs_signals()))
         if any_lhs_signal in self.signals:
             return stmt
 
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
+    on_Display = on_cell
+    on_Assert  = on_cell
+    on_Assume  = on_cell
+    on_Cover   = on_cell
 
 
 class _ControlInserter(FragmentTransformer):
