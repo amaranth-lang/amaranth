@@ -23,12 +23,12 @@ Glossary
 **Clock signal**
 
  An electronic logic signal that oscillates between a high and a low state at a constant frequency.
- Used to synchronise the actions of digital circuits, clock signals can be one of two types: primary or derived. Primary clocks are generated using a frequency standard, a stable oscillator that creates a signal with a high degree of accuracy and precision. Derived clocks use a ring oscillator to monitor an input signal strength and try to balance any fluctuations in the voltage by making its signal faster or slower. 
+ Used to synchronise the actions of digital circuits, clock signals can be one of two types: primary or derived. Primary clocks are generated using a frequency standard, a stable oscillator that creates a signal with a high degree of accuracy and precision. Derived clocks can be made by dividing another clock signal or using a :ref:`PLL<PLL>`. 
 
 **DUT (Device under test)**
 
- A module that is being tested for performance and proficiency.
- The module fails testing as soon the first out-of-tolerance value is identified. The aim is to ensure damaged devices don’t enter the market.
+ A physical chip or logic circuit being tested at simulation.
+ The results of the testing can result in a chip being given a grade to represent the extent to which it met the tolerance values. 
 
 **Finite state machine**
 
@@ -40,48 +40,63 @@ Glossary
 
  An elementary building block of integrated circuits, flip-flops are the basic memory element for storing a single bit of binary data.
  An edge-triggered device, flip-flops react to the edge of a pulse and have two stable states that they ‘flip’ and ‘flop’ between. 
- There are different kinds of flip-flops: SR (set or reset), D (data or delay), JK (a modified SR flip-flop that acts as a toggle), and T(a single input JK flip-flop).
+ Modern digital design centres around the D flip-flop (DFF) with Set, Reset, and Enable inputs.
 
 **FPGA (Field Programmable Gate Array)**
 
  A reconfigurable integrated circuit containing internal hardware blocks with user-programmable interconnects to create a customised application.
- The device’s physical attributes are programmed using a hardware definition language. I/O blocks interface between the FPGA and external devices.
+ The device’s physical attributes are programmed using a hardware definition language. User-programmable I/O blocks interface between the FPGA and external devices.
  FPGAs combine speed, programmability, and flexibility. In addition, they can process very large volumes of data by duplicating circuits and running them in parallel.
 
 **Hardware register**
 
- Circuits, typically composed of flip flops, that hold configuration and status information.
- Hardware registers are used in the interface between software and peripherals: data passed between peripherals and the FPGA is stored temporarily in the hardware register. 
+ Circuits, typically composed of D flip-flops (DFF), that hold configuration and status information.
+ At a lower level, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making an SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
+
 **HDL (Hardware definition language)**
 
  A hardware definition language, such as Amaranth, describes the structure and timing of electronic circuits and digital logic circuits.
- HDLs describe register transfer, gate, and switch-level logic. Register transfer logic enables the transfer of data between registers. These actions are driven by an explicit clock and gate level logic that defines the individual gate level logic. 
+ Modern HDLs include synthesizable code that describes the synchronous logic (registers), combinational logic (logic gates), and behavioural code (used in testing) to describe a circuit.    
 
 **IC (Integrated circuit)**
 
  An integrated circuit is a computer chip that has an electronic circuit embedded in it.
- The circuit is a small wafer, usually made of silicon, that can hold anywhere from hundreds to millions of transistors, resistors, and capacitors. These components can perform calculations and store data using either digital or analog technology.
+ The circuit is a small wafer, usually made of semiconducting material, that can hold anywhere from hundreds to millions of transistors and resistors (with possibly a few capacitors). These components can perform calculations and store data using either digital or analog technology.
  Digital ICs use logic gates that work only with values of 1s and 0s. 
 
 **Logic gate**
 
  An elementary building block of integrated circuits, logic gates perform logical operations on binary inputs and outputs.
  Based on a Boolean function that computes TRUE or FALSE, each output is based on the input or combination of inputs supplied to it.
+
+**Logic synthesizers**
+The process of translating a high-level logic definition to lower level flip-flops and logic gates.
+High-level language, written in a program like Python, is translated to register transfer level language.
+
 **LUT (Look up table)**
 
  An elementary building block of integrated circuits, a LUT defines how combinatorial logic behaves: the output for every combination of inputs.
  A single input LUT is made up of two flip-flops and a multiplexer. This structure can be expanded into a tree to provide the required capacity. The larger the number of multiplexers, the longer the associated propagation delay.
+ LUTs can be used to implement an arbitrary logic gate with the same or fewer inputs: a 4-LUT can implement 1, 2, 3, or 4 inputs. If five inputs are required, two 4-LUTS can be combined but at the expense of propogation delay.
 
 **MCU (Microcontroller unit)**
 
- A compact integrated circuit designed to govern a specific operation in an embedded system.
- An MCU may be comprised of a processor unit, communication interfaces, and peripherals. Memory and clock functions are usually external to an MCU.
+ An integrated circuit designed to govern a specific operation in an embedded system.
+ An MCU is comprised of a CPU, onboard memory (SRAM, peripherals, and, usually, clock functions.
+
+**Memory-mapped peripheral**
+
+Hardware devices mapped to the memory address space of a microprocessor. 
+The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. 
+A memory-mapped peripheral behaves and looks like physical memory but isn't physical memory. 
 
 **Multiplexer**
 
  A combinational logic circuit designed to switch one of several inputs through to a single common output by the application of a control signal.
  A multiplexer selects between several input signals and forwards the selected input to a single output. 
  This makes it possible for several input signals to access one device or resource instead of having one device per input signal. They use high speed logic gates to switch digital or binary data through to a single output.
+
+.. _PLL:
 
 **PLL (Phase-locked loop)**
  A phase-locked loop is an electronic circuit with a voltage-driven oscillator that constantly adjusts in response to an input signal.
