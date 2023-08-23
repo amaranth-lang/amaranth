@@ -115,20 +115,6 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         raise TypeError("Object {!r} cannot be converted to a data layout"
                         .format(obj))
 
-    @staticmethod
-    def of(obj):
-        """Extract the layout that was used to create a view.
-
-        Raises
-        ------
-        TypeError
-            If ``obj`` is not a :class:`View` instance.
-        """
-        if not isinstance(obj, View):
-            raise TypeError("Object {!r} is not a data view"
-                            .format(obj))
-        return obj._View__orig_layout
-
     @abstractmethod
     def __iter__(self):
         """Iterate fields in the layout.
@@ -610,6 +596,16 @@ class View(ValueCastable):
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
+
+    def shape(self):
+        """Get layout of this view.
+
+        Returns
+        -------
+        :class:`Layout`
+            The ``layout`` provided when constructing the view.
+        """
+        return self.__orig_layout
 
     @ValueCastable.lowermethod
     def as_value(self):

@@ -42,18 +42,20 @@ Implemented RFCs
 .. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
 .. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
+.. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 
 * `RFC 1`_: Aggregate data structure library
 * `RFC 3`_: Enumeration shapes
 * `RFC 4`_: Constant-castable expressions
-* `RFC 5`_: Remove Const.normalize
+* `RFC 5`_: Remove ``Const.normalize``
 * `RFC 6`_: CRC generator
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
-* `RFC 10`_: Move Repl to Value.replicate
+* `RFC 10`_: Move ``Repl`` to ``Value.replicate``
 * `RFC 15`_: Lifting shape-castable objects
+* `RFC 22`_: Define ``ValueCastable.shape()``
 
 
 Language changes

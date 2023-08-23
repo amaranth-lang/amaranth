@@ -1110,7 +1110,11 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             new_name = other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default="$like")
-        kw = dict(shape=Value.cast(other).shape(), name=new_name)
+        if isinstance(other, ValueCastable):
+            shape = other.shape()
+        else:
+            shape = Value.cast(other).shape()
+        kw = dict(shape=shape, name=new_name)
         if isinstance(other, Signal):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
@@ -1363,6 +1367,9 @@ class ValueCastable:
         if not hasattr(cls, "as_value"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
                             "the `as_value` method")
+        if not hasattr(cls, "shape"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
+                            "the `shape` method")
         if not hasattr(cls.as_value, "_ValueCastable__memoized"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate "
                             "the `as_value` method with the `ValueCastable.lowermethod` decorator")

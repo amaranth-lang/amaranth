@@ -1183,6 +1183,9 @@ class MockValueCastable(ValueCastable):
     def __init__(self, dest):
         self.dest = dest
 
+    def shape(self):
+        return Value.cast(self.dest).shape()
+
     @ValueCastable.lowermethod
     def as_value(self):
         return self.dest
@@ -1192,6 +1195,9 @@ class MockValueCastableChanges(ValueCastable):
     def __init__(self, width=0):
         self.width = width
 
+    def shape(self):
+        return unsigned(self.width)
+
     @ValueCastable.lowermethod
     def as_value(self):
         return Signal(self.width)
@@ -1200,6 +1206,9 @@ class MockValueCastableChanges(ValueCastable):
 class MockValueCastableCustomGetattr(ValueCastable):
     def __init__(self):
         pass
+
+    def shape(self):
+        assert False
 
     @ValueCastable.lowermethod
     def as_value(self):
@@ -1218,16 +1227,29 @@ class ValueCastableTestCase(FHDLTestCase):
                 def __init__(self):
                     pass
 
+                def shape(self):
+                    pass
+
                 def as_value(self):
                     return Signal()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must "
+                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from `ValueCastable` must "
                 r"override the `as_value` method$"):
-            class MockValueCastableNoOverride(ValueCastable):
+            class MockValueCastableNoOverrideAsValue(ValueCastable):
                 def __init__(self):
                     pass
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Class 'MockValueCastableNoOverrideShapec' deriving from `ValueCastable` must "
+                r"override the `shape` method$"):
+            class MockValueCastableNoOverrideShapec(ValueCastable):
+                def __init__(self):
+                    pass
+
+                def as_value(self):
+                    return Signal()
 
     def test_memoized(self):
         vc = MockValueCastableChanges(1)
