@@ -1,5 +1,7 @@
-Glossary
+Glossary 
 ========
+
+.. glossary::
 
 **Amaranth**
 
@@ -115,7 +117,7 @@ A memory-mapped peripheral behaves and looks like physical memory but isn't phys
  Made up of a series of flip-flops, a register can temporarily store data or a set of instructions for a processor. A register can enable both serial and parallel data transfers, allowing logic operations to be performed on the data stored in it.
  A number of flip-flops can be combined to store binary words. The length of the stored binary word depends on the number of flip-flops that make up the register. 
 
-**RTL (Register transfer level)**
+**Register transfer level (RTL)**
 
  RTL is used to create high-level representations of a circuit, from which lower-level representations and wiring can be derived.
  It models a synchronous digital circuit in terms of the flow of digital signals between hardware registers, and the logical operations performed on those signals.
