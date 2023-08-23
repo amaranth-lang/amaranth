@@ -4,7 +4,7 @@ Glossary
 **Amaranth**
 
  An open-source toolchain that uses the Python programming language.
- Amaranth makes developing hardware definitions, based on synchronous digital logic, more intuitive by using the popular Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical FPGA development workflow.
+ Amaranth makes developing hardware definitions, based on synchronous digital logic, more intuitive by using the popular Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA (Field Programmable Gate Array)`:ref:`FPGA<FPGA>` development workflow.
 
 **ASIC (Application-specific integrated circuit)**
 
@@ -41,6 +41,8 @@ Glossary
  An elementary building block of integrated circuits, flip-flops are the basic memory element for storing a single bit of binary data.
  An edge-triggered device, flip-flops react to the edge of a pulse and have two stable states that they ‘flip’ and ‘flop’ between. 
  Modern digital design centres around the D flip-flop (DFF) with Set, Reset, and Enable inputs.
+
+.. _FPGA:
 
 **FPGA (Field Programmable Gate Array)**
 
