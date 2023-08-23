@@ -1,7 +1,7 @@
+.. glossary::
+
 Glossary 
 ========
-
-.. glossary::
 
 **Amaranth**
 
