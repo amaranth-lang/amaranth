@@ -365,11 +365,6 @@ class LayoutTestCase(FHDLTestCase):
                 r"^Shape-castable object <.+> casts to itself$"):
             Layout.cast(sc)
 
-    def test_of_wrong(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Object <.+> is not a data view$"):
-            Layout.of(object())
-
     def test_eq_wrong_recur(self):
         sc = MockShapeCastable(None)
         sc.shape = sc
@@ -379,7 +374,7 @@ class LayoutTestCase(FHDLTestCase):
         sl = StructLayout({"f": unsigned(1)})
         s = Signal(1)
         v = sl(s)
-        self.assertIs(Layout.of(v), sl)
+        self.assertIs(v.shape(), sl)
         self.assertIs(v.as_value(), s)
 
     def test_const(self):
@@ -621,6 +616,11 @@ class ViewTestCase(FHDLTestCase):
                 r"and may only be accessed by indexing$"):
             Signal(StructLayout({"_c": signed(1)}))._c
 
+    def test_signal_like(self):
+        s1 = Signal(StructLayout({"a": unsigned(1)}))
+        s2 = Signal.like(s1)
+        self.assertEqual(s2.shape(), StructLayout({"a": unsigned(1)}))
+
     def test_bug_837_array_layout_getitem_str(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Views with array layout may only be indexed with an integer or a value, "
@@ -646,7 +646,7 @@ class StructTestCase(FHDLTestCase):
         }))
 
         v = Signal(S)
-        self.assertEqual(Layout.of(v), S)
+        self.assertEqual(v.shape(), S)
         self.assertEqual(Value.cast(v).shape(), Shape.cast(S))
         self.assertEqual(Value.cast(v).name, "v")
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
@@ -666,11 +666,11 @@ class StructTestCase(FHDLTestCase):
         self.assertEqual(Shape.cast(S), unsigned(9))
 
         v = Signal(S)
-        self.assertIs(Layout.of(v), S)
+        self.assertIs(v.shape(), S)
         self.assertIsInstance(v, S)
-        self.assertIs(Layout.of(v.b), R)
+        self.assertIs(v.b.shape(), R)
         self.assertIsInstance(v.b, R)
-        self.assertIs(Layout.of(v.b.q), Q)
+        self.assertIs(v.b.q.shape(), Q)
         self.assertIsInstance(v.b.q, View)
         self.assertRepr(v.b.p, "(slice (slice (sig v) 1:9) 0:4)")
         self.assertRepr(v.b.q.as_value(), "(slice (slice (sig v) 1:9) 4:8)")
@@ -747,9 +747,16 @@ class StructTestCase(FHDLTestCase):
             b: int
             c: str = "x"
 
-        self.assertEqual(Layout.of(Signal(S)), StructLayout({"a": unsigned(1)}))
+        self.assertEqual(Layout.cast(S), StructLayout({"a": unsigned(1)}))
         self.assertEqual(S.__annotations__, {"b": int, "c": str})
         self.assertEqual(S.c, "x")
+
+    def test_signal_like(self):
+        class S(Struct):
+            a: 1
+        s1 = Signal(S)
+        s2 = Signal.like(s1)
+        self.assertEqual(s2.shape(), S)
 
 
 class UnionTestCase(FHDLTestCase):
@@ -765,7 +772,7 @@ class UnionTestCase(FHDLTestCase):
         }))
 
         v = Signal(U)
-        self.assertEqual(Layout.of(v), U)
+        self.assertEqual(v.shape(), U)
         self.assertEqual(Value.cast(v).shape(), Shape.cast(U))
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
         self.assertRepr(v.b, "(s (slice (sig v) 0:3))")
@@ -887,7 +894,7 @@ class RFCExamplesTestCase(TestCase):
 
         view1 = Signal(layout1)
         self.assertIsInstance(view1, View)
-        self.assertEqual(Layout.of(view1), layout1)
+        self.assertEqual(view1.shape(), layout1)
         self.assertEqual(view1.as_value().shape(), unsigned(3))
 
         m1 = Module()
@@ -933,4 +940,4 @@ class RFCExamplesTestCase(TestCase):
 
         self.assertEqual(layout1, Layout.cast(SomeVariant))
 
-        self.assertIs(SomeVariant, Layout.of(view2))
+        self.assertIs(SomeVariant, view2.shape())
