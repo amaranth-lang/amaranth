@@ -1,7 +1,7 @@
-.. glossary::
-
 Glossary 
 ========
+
+.. glossary::
 
 **Amaranth**
 
@@ -118,7 +118,6 @@ A memory-mapped peripheral behaves and looks like physical memory but isn't phys
  A number of flip-flops can be combined to store binary words. The length of the stored binary word depends on the number of flip-flops that make up the register. 
 
 **Register transfer level (RTL)**
-
  RTL is used to create high-level representations of a circuit, from which lower-level representations and wiring can be derived.
  It models a synchronous digital circuit in terms of the flow of digital signals between hardware registers, and the logical operations performed on those signals.
 
