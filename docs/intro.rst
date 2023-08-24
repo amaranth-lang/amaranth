@@ -6,7 +6,7 @@ Introduction
 
 The Amaranth project provides an open-source toolchain for developing hardware based on synchronous digital logic using the Python programming language. It aims to be easy to learn and use, reduce or eliminate common coding mistakes, and simplify the design of complex hardware with reusable components.
 
-The Amaranth toolchain consists of the :ref:`Amaranth language <intro-lang>`, the :ref:`standard library <intro-stdlib>`, the :ref:`simulator <intro-sim>`, and the :ref:`build system <intro-build>`, covering all steps of a typical :term: `FPGA` development workflow. At the same time, it does not restrict the designer's choice of tools: existing industry-standard (System)Verilog or VHDL code can be integrated into an Amaranth-based design flow, or, conversely, Amaranth code can be integrated into an existing Verilog-based design flow.
+The Amaranth toolchain consists of the :ref:`Amaranth language <intro-lang>`, the :ref:`standard library <intro-stdlib>`, the :ref:`simulator <intro-sim>`, and the :ref:`build system <intro-build>`, covering all steps of a typical :term:`FPGA<FPGA>` development workflow. At the same time, it does not restrict the designer's choice of tools: existing industry-standard (System)Verilog or VHDL code can be integrated into an Amaranth-based design flow, or, conversely, Amaranth code can be integrated into an existing Verilog-based design flow.
 
 .. TODO: add links to connect_rpc docs once they exist
 
@@ -16,7 +16,7 @@ The Amaranth toolchain consists of the :ref:`Amaranth language <intro-lang>`, th
 The Amaranth language
 =====================
 
-The :doc:`Amaranth hardware description language <lang>` is a Python library for :term:`register transfer level` modeling of synchronous logic. Ordinary Python code is used to construct a netlist of a digital circuit, which can be simulated, directly synthesized via Yosys_, or converted to human-readable Verilog code for use with industry-standard toolchains.
+The :doc:`Amaranth hardware description language <lang>` is a Python library for :term:`register transfer level<register transfer level>` modeling of synchronous logic. Ordinary Python code is used to construct a netlist of a digital circuit, which can be simulated, directly synthesized via Yosys_, or converted to human-readable Verilog code for use with industry-standard toolchains.
 
 By relying on the flexibility, rich functionality and widespread adoption of the Python language, the Amaranth language is focused on a single task: modeling digital logic well. It has first-class support for building blocks like clock domains and finite state machines, and uses simple rules for arithmetic operations that closely match the Python semantics. Python classes, functions, loops and conditionals can be used to build organized and flexible designs; Python libraries can be seamlessly used with Amaranth during design or verification; and Python development tools can process Amaranth code.
 
