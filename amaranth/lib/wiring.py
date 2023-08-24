@@ -5,7 +5,7 @@ import inspect
 import re
 import warnings
 
-from ..hdl.ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
+from ..hdl.ast import Shape, CustomShapeCastable, Const, Signal, Value, ValueCastable
 from ..hdl.ir import Elaboratable
 from .._utils import final
 
@@ -57,7 +57,7 @@ class Member:
                                 f"a signature, not {description!r}") from e
             # This mirrors the logic that handles Signal(reset=).
             # TODO: We need a simpler way to check for "is this a valid constant initializer"
-            if issubclass(type(self._description), ShapeCastable):
+            if issubclass(type(self._description), CustomShapeCastable):
                 try:
                     self._reset_as_const = Const.cast(self._description.const(self._reset))
                 except Exception as e:
