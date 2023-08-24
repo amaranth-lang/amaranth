@@ -4,7 +4,7 @@
 Introduction
 ############
 
-The :term:`Amaranth` Amaranth project provides an open-source toolchain for developing hardware based on synchronous digital logic using the Python programming language. It aims to be easy to learn and use, reduce or eliminate common coding mistakes, and simplify the design of complex hardware with reusable components.
+The Amaranth project provides an open-source toolchain for developing hardware based on synchronous digital logic using the Python programming language. It aims to be easy to learn and use, reduce or eliminate common coding mistakes, and simplify the design of complex hardware with reusable components.
 
 The Amaranth toolchain consists of the :ref:`Amaranth language <intro-lang>`, the :ref:`standard library <intro-stdlib>`, the :ref:`simulator <intro-sim>`, and the :ref:`build system <intro-build>`, covering all steps of a typical FPGA development workflow. At the same time, it does not restrict the designer's choice of tools: existing industry-standard (System)Verilog or VHDL code can be integrated into an Amaranth-based design flow, or, conversely, Amaranth code can be integrated into an existing Verilog-based design flow.
 

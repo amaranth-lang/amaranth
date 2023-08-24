@@ -3,7 +3,7 @@
 Glossary 
 ========
 
- Amaranth
+ **Amaranth**
   An open-source toolchain that uses the Python programming language.
 
   Amaranth makes developing hardware definitions, based on synchronous digital logic, more intuitive by using the popular Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA(Field Programmable Gate Array)` development workflow.
