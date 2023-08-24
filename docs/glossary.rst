@@ -1,7 +1,7 @@
+.. glossary::
+
 Glossary 
 ========
-
-.. glossary::
 
  **Amaranth**
   An open-source toolchain that uses the Python programming language.
