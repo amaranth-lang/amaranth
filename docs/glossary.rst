@@ -10,6 +10,8 @@ Glossary
 
   Amaranth makes developing hardware definitions based on synchronous digital logic more intuitive by using the popular Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA(Field Programmable Gate Array)` development workflow.
 
+.. _ASIC:
+
  **ASIC (Application-specific integrated circuit)**
   A non-standard integrated circuit chip made for a specific task or product.
 
@@ -26,6 +28,7 @@ Glossary
 
   The final step in translating requirements into circuits on a chip, the code in the bitstream operationalises requirements into logic blocks and interconnects on the FPGA chip.
 
+.. _BRAM:
 
  **Block RAM (BRAM)**
   Block RAM is on-chip random access memory that stores large amounts of data and is distributed evenly across a chip.
@@ -33,6 +36,8 @@ Glossary
   BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
 
   BRAM :ref:`FIFO<FIFO>` is used to cross clock domains or to buffer data between two interfaces. 
+
+.. _CLB:
 
  **CLB (Configurable logic block)**
   The basic repeating logic block on an FPGA, the purpose of CLBs is to implement combinational and sequential logic on an FPGA.
