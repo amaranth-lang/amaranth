@@ -17,7 +17,7 @@ Glossary
 
   Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via simulation.
 
-.. _Bitstream generation:
+.. _Bistream generation:  
 
  **Bitstream generation**
   The code that configures the flash memomory or external storage device to boot the FPGA at power on.
@@ -65,7 +65,7 @@ Glossary
 
   Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that itemizes the required logic elements and interconnects. 
 
-  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<place and route >`, and :ref:`bistream generation<bistream generation>`.
+  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<place and route >`, and :ref:`bitstream generation<bitstream generation>`.
 
 .. _FIFO:
 
@@ -115,9 +115,9 @@ Glossary
   Digital ICs use logic gates that work only with values of 1s and 0s. 
 
  **JTAG**
-  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices like micro controllers and FPGAs after manufacture.
-
-   JTAG is a hardware interface that provides a way to communicate directly with the microchips on a board. It enables the testing, via software, of all the different interconnects without having to physically probe the connections. 
+  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices like micro controllers and FPGAs after manufacture. 
+  
+  JTAG is a hardware interface that provides a way to communicate directly with the microchips on a board. It enables the testing, via software, of all the different interconnects without having to physically probe the connections. 
 
  **Logic gate**
   An elementary building block of integrated circuits, logic gates perform logical operations on binary inputs and outputs.
@@ -125,9 +125,9 @@ Glossary
   Based on a Boolean function that computes TRUE or FALSE, each output is based on the input or combination of inputs supplied to it.
 
  **Logic synthesis**
- The process of translating a high-level logic definition to lower-level flip-flops and logic gates.
- 
- To achieve this, high-level language, written in a program like Python, is translated to lower-level register transfer level (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
+  The process of translating a high-level logic definition to lower-level flip-flops and logic gates.
+  
+  To achieve this, high-level language, written in a program like Python, is translated to lower-level register transfer level (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
 
  **LUT (Look up table)**
   An elementary building block of integrated circuits, a LUT defines how combinatorial logic behaves: the output for every combination of inputs.
