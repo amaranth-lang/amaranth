@@ -18,8 +18,11 @@ Glossary
   Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via simulation.
 
 .. _Bitstream generation:
+
  **Bitstream generation**
-  
+  The code that configures the flash memomory or external storage device to boot the FPGA at power on.
+
+  The final step in translating requirements into circuits on a chip, the code in the bitstream operationalises requirements into logic blocks and interconnects on the FPGA chip.
 
 
  **Block RAM (BRAM)**
@@ -27,7 +30,7 @@ Glossary
    
   BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
 
-  BRAM :ref:`FIFO<FIFO>`s are used to cross clock domains or to buffer data between two interfaces. 
+  BRAM :ref:`FIFO<FIFO>` is used to cross clock domains or to buffer data between two interfaces. 
 
  **CLB (Configurable logic block)**
   The basic repeating logic block on an FPGA, the purpose of CLBs is to implement combinational and sequential logic on an FPGA.
@@ -60,14 +63,14 @@ Glossary
  **Elaboration**
   Elaboration is the process of constructing a design hierarchy from pre-built modules.
 
-  Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that lists the required logic elements and interconnects. 
+  Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that itemizes the required logic elements and interconnects. 
 
-  Elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`Place and route<Place and route >`, and :ref:`bistream generation<Bistream generation>`.
+  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<place and route >`, and :ref:`bistream generation<bistream generation>`.
 
 .. _FIFO:
 
  **FIFO (First In First Out)**
-  First in, first out is a method for organizing the manipulation of data, especially in a buffer, where the first (oldest) entry is processed first.  
+  First in, first out is a method for organizing the processing of data, especially in a buffer, where the first (oldest) entry is processed first.  
 
   An elementary building block of integrated circuits, FIFOs are used when crossing clock domains, buffering data, or storing data for use at a later time.  
 
@@ -111,6 +114,11 @@ Glossary
    
   Digital ICs use logic gates that work only with values of 1s and 0s. 
 
+ **JTAG**
+  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices like micro controllers and FPGAs after manufacture.
+
+   JTAG is a hardware interface that provides a way to communicate directly with the microchips on a board. It enables the testing, via software, of all the different interconnects without having to physically probe the connections. 
+
  **Logic gate**
   An elementary building block of integrated circuits, logic gates perform logical operations on binary inputs and outputs.
 
@@ -118,8 +126,8 @@ Glossary
 
  **Logic synthesis**
  The process of translating a high-level logic definition to lower-level flip-flops and logic gates.
-
-To achieve this, high-level language, written in a program like Python, is translated to lower-level register transfer level language (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
+ 
+ To achieve this, high-level language, written in a program like Python, is translated to lower-level register transfer level (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
 
  **LUT (Look up table)**
   An elementary building block of integrated circuits, a LUT defines how combinatorial logic behaves: the output for every combination of inputs.
@@ -134,16 +142,15 @@ To achieve this, high-level language, written in a program like Python, is trans
   An MCU integrates a CPU, onboard memory (may be volatile, may be non-volatile), peripherals for communication, and, usually, clock functions. A complex MCU can be described as a system on chip :ref:`SoC(<SoC>).
 
  **Memory-mapped peripheral**
-  Hardware devices mapped to the memory address space of a microprocessor. 
+  Hardware devices, mapped to the memory address space of a microprocessor, are known as memory-mapped peripherals. 
 
-  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. 
-
-  A memory-mapped peripheral behaves (and looks) like physical memory but isn't physical memory. 
+  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. A memory-mapped peripheral behaves like physical memory but isn't physical memory. 
 
  **Microprocessor**
   A microprocessor is a miniature, programmable digital device — a tiny computer on a chip — that retrieves instructions from memory, decodes and executes them, and returns the output. 
 
   Microprocessors contain the arithmetic, logic, and control circuitry necessary to perform the functions of a digital computer’s central processing unit.
+
 
  **Multiplexer**
   A combinational logic circuit designed to switch one of several control signals to a single common output by the application of a control signal.
@@ -160,16 +167,16 @@ To achieve this, high-level language, written in a program like Python, is trans
  **PLL (Phase-locked loop)**
   A phase-locked loop is an electronic circuit with a controllable oscillator that constantly adjusts in response to an input signal.
 
-  Its purpose is to generate a derived clock signal that can be faster or slower than the input signal. The derived clock signal can be the result of dividing an input frequency. PLLs can also increae frequency by a non-integer factor.
+  Its purpose is to generate a derived clock signal that can be faster or slower than the input signal. The derived clock signal can be the result of dividing an input frequency. PLLs can also increase frequency by a non-integer factor.
 
   Where multiple clock domains are interacting synchronously, PLLs use a fixed phase relationship.
 
 .. _Place and route:
 
  **Place and route**
-  The process of deciding the placement of components on a chip and the related wiring between those components.
-
-  Place and route involved complicated maths problems that require optimization and are usually performed by software to produce a layout schema for a chip. 
+  The process of deciding the placement of components on a chip and the related wiring between those components. 
+  
+  Place and route routines involve complicated maths problems that require optimization. These routines are usually performed by software and produce a layout schema for a chip. 
 
  **Propagation delay**
   The time required to change the output from one logic state to another logic state after input is changed.
@@ -229,7 +236,7 @@ To achieve this, high-level language, written in a program like Python, is trans
  **Synthesis**
   Synthesis is the process of building a netlist from a circuit design model.
 
-  Synthesis represents the hardware definition language as register transfer level which automatically transfers into gates. 
+  Synthesis represents the hardware definition language as register transfer level that is automatically transfered into gates. 
 
  **Waveform**
   A mathematical (logical) description of a signal.
