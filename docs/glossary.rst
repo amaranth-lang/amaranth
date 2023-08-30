@@ -65,7 +65,7 @@ Glossary
 
   Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that itemizes the required logic elements and interconnects. 
 
-  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<place and route >`, and :ref:`bitstream generation<bitstream generation>`.
+  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`Place and route<place and route >`, and :ref:`Bitstream generation<bitstream generation>`.
 
 .. _FIFO:
 
