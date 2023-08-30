@@ -9,7 +9,6 @@ Glossary
   An open-source toolchain that uses the Python programming language.
 
   Amaranth makes developing hardware definitions based on synchronous digital logic more intuitive by using the popular Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA(Field Programmable Gate Array)` development workflow.
-
 .. _ASIC:
 
  **ASIC (Application-specific integrated circuit)**
@@ -20,14 +19,12 @@ Glossary
   ASICs can be configured to be more power efficient and have better performance than an off-the-shelf general purpose integrated circuit. However, unlike FPGAs, ASICs cannot be reprogrammed and are expensive to produce so design and testing are critical to the success of ASIC development.
 
   Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via simulation.
-
 .. _Bitstream generation:  
 
  **Bitstream generation**
   The code that configures the flash memomory or external storage device to boot the FPGA at power on.
 
   The final step in translating requirements into circuits on a chip, the code in the bitstream operationalises requirements into logic blocks and interconnects on the FPGA chip.
-
 .. _BRAM:
 
  **Block RAM (BRAM)**
@@ -36,7 +33,6 @@ Glossary
   BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
 
   BRAM :ref:`FIFO<FIFO>` is used to cross clock domains or to buffer data between two interfaces. 
-
 .. _CLB:
 
  **CLB (Configurable logic block)**
