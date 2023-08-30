@@ -3,6 +3,8 @@
 Glossary 
 ========
 
+.. _Amaranth:
+
  **Amaranth**
   An open-source toolchain that uses the Python programming language.
 
@@ -17,7 +19,7 @@ Glossary
 
   Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via simulation.
 
-.. _Bistream generation:  
+.. _Bitstream generation:  
 
  **Bitstream generation**
   The code that configures the flash memomory or external storage device to boot the FPGA at power on.
@@ -65,7 +67,7 @@ Glossary
 
   Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that itemizes the required logic elements and interconnects. 
 
-  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<Place and route >`, and :ref:`bitstream generation<Bitstream generation>`.
+  In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<Place and route>`, and :ref:`bitstream generation<Bitstream generation>`.
 
 .. _FIFO:
 
@@ -103,7 +105,7 @@ Glossary
   Written in low level HDL code, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making an SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
 
  **HDL (Hardware definition language)**
-  A hardware definition language, such as :ref:`Amaranth<Amaranth>` describes the structure and timing of electronic circuits and digital logic circuits.
+  A hardware definition language, such as :ref:`Amaranth<Amaranth>`, describes the structure and timing of electronic circuits and digital logic circuits.
 
   Modern HDLs include synthesizable code that characterises the synchronous logic (registers), combinational logic (logic gates), and behavioural code (used in testing) that describe a circuit.    
 
