@@ -259,7 +259,7 @@ Glossary
 
   In contrast to a computer system that is made up of many distinct components, an SoC integrates the required resources — CPU, memory interfaces, I/O devices, I/O interfaces — into a single chip. 
   
-  SoCs are typically built around a :ref:`microprocessor<microprocessor>`, :ref:`microcontroller<microcontroller>`, or specialised :ref:`integrated circuit<IC>`. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
+  SoCs are typically built around a :ref:`microprocessor<microprocessor>`, :ref:`microcontroller<Microcontroller>`, or specialised :ref:`integrated circuit<IC>`. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
 
   SoCs are more complex than a microcontroller with a higher degree of integration and a greater variety of perhipherals. 
 
@@ -279,7 +279,7 @@ Glossary
  **Synthesis**
   Synthesis is the process of building a :ref:``netlist<Netlist>` from a circuit design model.
 
-  Synthesis represents the :ref:`hardware definition language<HDL>`` as :ref:`register transfer level<RTL>` that is automatically transfered into gates. 
+  Synthesis represents the :ref:`hardware definition language<HDL>` as :ref:`register transfer level<RTL>` that is automatically transfered into gates. 
 
 .. _Waveform:
 
