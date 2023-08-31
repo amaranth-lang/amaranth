@@ -26,6 +26,8 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Update shell environment to use ``AMARANTH_*`` environment variables instead of ``NMIGEN_*`` environment variables.
 * Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>`` name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
 * Update imports of the form ``from amaranth.vendor.some_vendor import SomeVendorPlatform`` to ``from amaranth.vendor import SomeVendorPlatform``. This change will reduce future churn.
+* Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
+* Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
@@ -39,8 +41,6 @@ Implemented RFCs
 .. _RFC 6: https://amaranth-lang.org/rfcs/0006-stdlib-crc.html
 .. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
 .. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
-.. _RFC 8: https://amaranth-lang.org/rfcs/0008-aggregate-extensibility.html
-.. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
 .. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
 .. _RFC 18: https://amaranth-lang.org/rfcs/0018-reorganize-vendor-platforms.html
@@ -51,8 +51,6 @@ Implemented RFCs
 * `RFC 4`_: Constant-castable expressions
 * `RFC 5`_: Remove ``Const.normalize``
 * `RFC 6`_: CRC generator
-* `RFC 8`_: Aggregate extensibility
-* `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 10`_: Move ``Repl`` to ``Value.replicate``
@@ -76,7 +74,7 @@ Language changes
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
-* Deprecated: :meth:`Const.normalize`. (`RFC 5`_)
+* Deprecated: :meth:`Const.normalize`; use ``Const(value, shape).value`` instead of ``Const.normalize(value, shape)``. (`RFC 5`_)
 * Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
