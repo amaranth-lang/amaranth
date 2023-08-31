@@ -44,7 +44,7 @@ Glossary
 
   Be aware that different FPGA manufacturers use different names for this component. 
 
-  Each FPGA contains many logic blocks that are surrounded by a system of programmable interconnects (I/O blocks), called a fabric, that routes signals between the CLBs. The three essential components of a logic block are :ref:`flip-flop<flip-flop>`s, :ref:`LUT<LUT>`s, and :ref:`multiplexer<multiplexer>`s.
+  Each FPGA contains many logic blocks that are surrounded by a system of programmable interconnects (I/O blocks), called a fabric, that routes signals between the CLBs. The three essential components of a logic block are :ref:`flip-flops<Flip-flop>`, :ref:`LUTs<LUT>`, and :ref:`multiplexers<Multiplexer>`.
 
 .. _Clock signal:
 
@@ -172,7 +172,7 @@ Glossary
  **MCU (Microcontroller unit)**
   An integrated circuit designed to govern a specific operation in an embedded system.
 
-  An MCU integrates a CPU, onboard memory (may be volatile, may be non-volatile), peripherals for communication, and, usually, clock functions. A complex MCU can be described as a system on chip :ref:`SoC(<SoC>).
+  An MCU integrates a CPU, onboard memory (may be volatile, may be non-volatile), peripherals for communication, and, usually, clock functions. A complex MCU can be described as a system on chip :ref:`(SoC)<SoC>`.
 
 .. _Memory-mapped peripheral:
 
