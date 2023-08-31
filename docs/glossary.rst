@@ -58,7 +58,7 @@ Glossary
  **DRAM (Dynamic Random Access Memory)**
   DRAM is memory that is stored in capacitors and is constantly refreshed.
   
-  Rather than store data in flip-flops, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh, the continual refreshing has a negative impact on speed and perforamance and the write process produces extra heat as it uses a strong charge. 
+  Rather than store data in flip-flops, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh has a negative impact on speed and perforamance and the write process produces extra heat as it uses a strong charge. 
   
   DRAM has a higher storage capacity than other kinds of memory, is cheaper and smaller than SRAM, and memory can be deleted and refreshed while running a program.
   
@@ -67,7 +67,7 @@ Glossary
 .. _DUT:
 
  **DUT (Device under test)**
-  A physical chip or logic circuit being tested at simulation.
+  A physical chip or logic circuit being tested at :ref:'simulation<Simulation>`.
 
   The results of the testing can result in a chip being given a grade to represent the extent to which it meets tolerance values. 
 
@@ -76,14 +76,14 @@ Glossary
  **Elaboration**
   Elaboration is the process of constructing a design hierarchy from pre-built modules.
 
-  Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the HDL code is analyzed to produce a netlist that itemizes the required logic elements and interconnects. 
+  Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the :ref:`HDL<HDL>` code is analyzed to produce a :ref:`netlist<Netlist>` that itemizes the required logic elements and interconnects. 
 
   In the toolchain, elaboration is followed by :ref:`synthesis<Synthesis>`, :ref:`place and route<Place and route>`, and :ref:`bitstream generation<Bitstream generation>`.
 
 .. _FIFO:
 
  **FIFO (First In First Out)**
-  First in, first out is a method for organizing the processing of data, especially in a buffer, where the first (oldest) entry is processed first.  
+  First in, first out is a method for organizing the processing of data, especially in a buffer, where the oldest entry is processed first.  
 
   An elementary building block of integrated circuits, FIFOs are used when crossing clock domains, buffering data, or storing data for use at a later time.  
 
@@ -110,16 +110,16 @@ Glossary
  **FPGA (Field Programmable Gate Array)**
   A reconfigurable integrated circuit containing internal hardware blocks with user-programmable interconnects to create a customised application.
 
-  The device’s physical attributes are programmed using a hardware definition language. User-programmable I/O blocks interface between the FPGA and external devices.
+  The device’s physical attributes are programmed using a :ref:`hardware definition language<HDL>`. User-programmable I/O blocks interface between the FPGA and external devices.
 
   FPGAs combine speed, programmability, and flexibility. In addition, they can process very large volumes of data by duplicating circuits and running them in parallel.
 
 .. _Hardware register:
 
  **Hardware register**
-  Circuits, typically composed of D flip-flops (DFF), that hold configuration and status information.
+  Circuits, typically composed of D :ref:`flip-flops<Flip-flop>` (DFF), that hold configuration and status information.
 
-  Written in low level HDL code, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making an SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
+  Written in low level :ref:`HDL<HDL>` code, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making an SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
 
 .. _HDL:
 
@@ -135,12 +135,12 @@ Glossary
 
   The circuit is a small wafer, usually made of semiconducting material, that can hold anywhere from hundreds to millions of transistors and resistors (with possibly a few capacitors). These components can perform calculations and store data using either digital or analog technology.
    
-  Digital ICs use logic gates that work only with values of 1s and 0s. 
+  Digital ICs use :ref:`logic gates<Logic gate>` that work only with values of 1s and 0s. 
 
 .. _JTAG:
 
  **JTAG**
-  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices like micro controllers and FPGAs after manufacture. 
+  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices — micro controllers, FPGAs, etc. — after manufacture. 
   
   JTAG is a hardware interface that provides a way to communicate directly with the microchips on a board. It enables the testing, via software, of all the different interconnects without having to physically probe the connections. 
 
@@ -154,16 +154,16 @@ Glossary
 .. _Logic synthesis:
 
  **Logic synthesis**
-  The process of translating a high-level logic definition to lower-level flip-flops and logic gates.
+  The process of translating a high-level logic definition to lower-level :ref:`flip-flops<Flip-flop>` and :ref:`logic gates<Logic gate>`.
   
-  To achieve this, high-level language, written in a program like Python, is translated to lower-level register transfer level (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
+  To achieve this, high-level code, written in a program like Python, is translated to register transfer level (:ref:`RTL<RTL>`) to simulate the behaviour of the circuit for testing.
 
 .. _LUT:
 
  **LUT (Look up table)**
   An elementary building block of integrated circuits, a LUT defines how combinatorial logic behaves: the output for every combination of inputs.
 
-  A single input LUT is made up of two flip-flops and a multiplexer. This structure can be expanded into a tree to provide the required capacity. The larger the number of multiplexers, the longer the associated propagation delay.
+  A single input LUT is made up of two :ref:`flip-flops<Flip-flop>` and a :ref:`multiplexer<Multiplexer>`. This structure can be expanded into a tree to provide the required capacity. The larger the number of multiplexers, the longer the associated propagation delay.
 
   LUTs can be used to implement an arbitrary logic gate with the same or fewer inputs: a 4-LUT can implement 1, 2, 3, or 4 inputs. If five inputs are required, two 4-LUTS can be combined but at the expense of propogation delay.
 
@@ -177,16 +177,16 @@ Glossary
 .. _Memory-mapped peripheral:
 
  **Memory-mapped peripheral**
-  Hardware devices, mapped to the memory address space of a microprocessor, are known as memory-mapped peripherals. 
+  Hardware devices, mapped to the memory address space of a :ref:`microprocessor<Microprocessor>`, are known as memory-mapped peripherals. 
 
-  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. A memory-mapped peripheral behaves like physical memory but isn't physical memory. 
+  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. A memory-mapped peripheral behaves just like physical memory but isn't physical memory. 
 
 .. _Microprocessor:
 
  **Microprocessor**
   A microprocessor is a miniature, programmable digital device — a tiny computer on a chip — that retrieves instructions from memory, decodes and executes them, and returns the output. 
 
-  Microprocessors contain the arithmetic, logic, and control circuitry necessary to perform the functions of a digital computer’s central processing unit.
+  Microprocessors contain the arithmetic, logic, and control circuitry necessary to perform the functions of a computer’s central processing unit.
 
 .. _Multiplexer:
 
@@ -214,18 +214,18 @@ Glossary
 .. _Place and route:
 
  **Place and route**
-  The process of deciding the placement of components on a chip and the related wiring between those components. 
+  Place and route is the process of deciding the placement of components on a chip and the related wiring between those components. 
   
   Place and route routines involve complicated maths problems that require optimization. These routines are usually performed by software and produce a layout schema for a chip. 
 
 .. _Propogation delay:
 
  **Propagation delay**
-  The time required to change the output from one logic state to another logic state after input is changed.
+  Propogation delay is the time required to change the output from one logic state to another logic state after input is changed.
 
   In simplified terms, the time it takes for a signal to move from source to destination.
 
-  The maximum speed at which a synchronous logic circuit works can be determined by combining the longest path of propagation delay from input to output with the maximum combined propagation delay. Bear in mind that, alongside logic gates, wires also have propogation delay.
+  The maximum speed at which a synchronous logic circuit works can be determined by combining the longest path of propagation delay from input to output with the maximum combined propagation delay. Bear in mind that not only do logic gates have propogation delay, wires do too.  
 
 .. _Register:
 
@@ -239,16 +239,16 @@ Glossary
 .. _RTL:
 
  **Register transfer level (RTL)**
-   RTL, the lowest abstraction level for developing FPGAs, is used to create a representation of synchronous digital circuits between hardware registers.
+   RTL, the lowest abstraction level for developing :ref:`FPGAs<FPGA>`, is used to create a representation of synchronous digital circuits between :ref:`hardware registers<Hardware register>`.
 
-   Hardware definition language is tranformed to RTL which then defines the circuit at gate level. The representation can be verified via simulation. 
+   Hardware definition language is tranformed to RTL which then defines the circuit at gate level. The representation can be verified via :ref:`simulation<Simulation>`. 
 
 .. _Simulation:
 
  **Simulation**
   A process in which a model of an electronic circuit is analysed by a computer program to validate its functionality.
   
-  Simulation models the behaviour of a circuit; it does not model the hardware components described by the HDL. Despite being written in HDL, the simulator treats the code as event-driven parallel programming language to run programs on a particular operating system  or to port a system that doesn't have an FPGA.  
+  Simulation models the behaviour of a circuit; it does not model the hardware components described by the :ref:`HDL<HDL>`. Despite being written in HDL, the simulator treats the code as event-driven parallel programming language to run programs on a particular operating system or to port a system that doesn't have an :ref:`FPGA<FPGA>`.  
 
   Simulation is an invaluable tool for ensuring a circuit works the way it was intended to and enables designers to rapidly iterate designs.
 
@@ -259,7 +259,7 @@ Glossary
 
   In contrast to a computer system that is made up of many distinct components, an SoC integrates the required resources — CPU, memory interfaces, I/O devices, I/O interfaces — into a single chip. 
   
-  SoCs are typically built around a microprocessor, microcontroller, or specialised integrated circuit. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
+  SoCs are typically built around a :ref:`microprocessor<microprocessor>`, :ref:`microcontroller<microcontroller>`, or specialised :ref:`integrated circuit<IC>`. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
 
   SoCs are more complex than a microcontroller with a higher degree of integration and a greater variety of perhipherals. 
 
@@ -277,9 +277,9 @@ Glossary
 .. _Synthesis:
 
  **Synthesis**
-  Synthesis is the process of building a netlist from a circuit design model.
+  Synthesis is the process of building a :ref:``netlist<Netlist>` from a circuit design model.
 
-  Synthesis represents the hardware definition language as register transfer level that is automatically transfered into gates. 
+  Synthesis represents the :ref:`hardware definition language<HDL>`` as :ref:`register transfer level<RTL>` that is automatically transfered into gates. 
 
 .. _Waveform:
 
@@ -288,4 +288,4 @@ Glossary
 
   Waveforms have three main characteristics: period, the length of time the waveform takes to repeat; frequency, the number of times the waveform repeats within a one second time period; and amplitude, the magnitude or intensity of the signal waveform measured in volts or amps.
 
-  The waveform of an electrical signal can be visualised using an oscilloscope. The square waveform is commonly used to represent digital information. A waveform dump, one of the outputs of simulation, can be used to measure the performance of devices a CPU.
+  The waveform of an electrical signal can be visualised using an oscilloscope. The square waveform is commonly used to represent digital information. A waveform dump, one of the outputs of simulation, can be used to measure the performance of devices.
