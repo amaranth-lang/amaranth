@@ -760,7 +760,7 @@ class Component(Elaboratable):
             for name, annot in getattr(base, "__annotations__", {}).items():
                 if name.startswith("_"):
                     continue
-                if (annot in (Value, Signal, Const) or
+                if (annot is Value or annot is Signal or annot is Const or
                         (isinstance(annot, type) and issubclass(annot, ValueCastable)) or
                         isinstance(annot, Signature)):
                     if isinstance(annot, type):
