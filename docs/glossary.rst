@@ -277,7 +277,7 @@ Glossary
 .. _Synthesis:
 
  **Synthesis**
-  Synthesis is the process of building a :ref:``netlist<Netlist>` from a circuit design model.
+  Synthesis is the process of building a :ref:`netlist<Netlist>` from a circuit design model.
 
   Synthesis represents the :ref:`hardware definition language<HDL>` as :ref:`register transfer level<RTL>` that is automatically transfered into gates. 
 
