@@ -6,6 +6,7 @@ import re
 
 from .._utils import bits_for, flatten
 from ..hdl import ast, ir, mem, xfrm
+from ..lib import wiring
 
 
 __all__ = ["convert", "convert_fragment"]
@@ -1003,7 +1004,18 @@ def convert_fragment(fragment, name="top", *, emit_src=True):
     return str(builder), name_map
 
 
-def convert(elaboratable, name="top", platform=None, *, ports, emit_src=True, **kwargs):
+def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=True, **kwargs):
+    if (ports is None and
+            hasattr(elaboratable, "signature") and
+            isinstance(elaboratable.signature, wiring.Signature)):
+        ports = []
+        for path, member, value in elaboratable.signature.flatten(elaboratable):
+            if isinstance(value, ast.ValueCastable):
+                value = value.as_value()
+            if isinstance(value, ast.Value):
+                ports.append(value)
+    elif ports is None:
+        raise TypeError("The `convert()` function requires a `ports=` argument")
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
     return il_text
