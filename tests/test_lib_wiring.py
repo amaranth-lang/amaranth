@@ -832,3 +832,15 @@ class ComponentTestCase(unittest.TestCase):
                 r"a signature member; did you mean 'val2: In\(MockValueCastable\)' or "
                 r"'val2: Out\(MockValueCastable\)'\?$"):
             C3().signature
+
+    def test_bug_882(self):
+        class PageBuffer(Component):
+            rand: Signature({}).flip()
+            other: Out(1)
+
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^Component '.+\.PageBuffer' has an annotation 'rand: Signature\({}\)\.flip\(\)', "
+                r"which is not a signature member; did you mean "
+                r"'rand: In\(Signature\({}\)\.flip\(\)\)' or "
+                r"'rand: Out\(Signature\({}\)\.flip\(\)\)'\?$"):
+            PageBuffer()

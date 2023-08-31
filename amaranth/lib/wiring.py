@@ -484,9 +484,11 @@ class FlippedSignature:
             return self.flip() == other.flip()
         else:
             # Delegate comparisons back to Signature (or its descendant) by flipping the arguments;
-            # equality must be reflexive but the implementation of __eq__ need not be, and we can
-            # take advantage of it here.
-            return other == self
+            # equality must be reflexive but the implementation of `__eq__` need not be, and we can
+            # take advantage of it here. This is done by returning `NotImplemented`, otherwise if
+            # the other object cannot be compared to a `FlippedSignature` either this will result
+            # in infinite recursion.
+            return NotImplemented
 
     # These methods do not access instance variables and so their implementation can be shared
     # between the normal and the flipped member collections.
