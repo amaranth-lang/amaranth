@@ -259,7 +259,7 @@ Glossary
 
   In contrast to a computer system that is made up of many distinct components, an SoC integrates the required resources — CPU, memory interfaces, I/O devices, I/O interfaces — into a single chip. 
   
-  SoCs are typically built around a :ref:`microprocessor<microprocessor>`, :ref:`microcontroller<Microcontroller>`, or specialised :ref:`integrated circuit<IC>`. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
+  SoCs are typically built around a :ref:`microprocessor<microprocessor>`, :ref:`microcontroller<MCU>`, or specialised :ref:`integrated circuit<IC>`. This increases performance, reduces power consumption, and requires a smaller footprint on a printed circuit board.
 
   SoCs are more complex than a microcontroller with a higher degree of integration and a greater variety of perhipherals. 
 
