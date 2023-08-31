@@ -1,9 +1,9 @@
 Lattice ECP5
 ############
 
-.. py:module:: amaranth.vendor.lattice_ecp5
+.. currentmodule:: amaranth.vendor
 
-The :mod:`amaranth.vendor.lattice_ecp5` module provides a base platform to support Lattice ECP5 devices.
+The :class:`LatticeECP5Platform` class provides a base platform to support Lattice ECP5 devices.
 
 The Trellis and Diamond toolchains are supported.
 

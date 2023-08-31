@@ -1,9 +1,9 @@
 Gowin
 #####
 
-.. py:module:: amaranth.vendor.gowin
+.. currentmodule:: amaranth.vendor
 
-The :mod:`amaranth.vendor.gowin` module provides a base platform to support Gowin toolchains.
+The :class:`GowinPlatform` class provides a base platform to support Gowin toolchains.
 
 The Apicula and Gowin toolchains are supported.
 
