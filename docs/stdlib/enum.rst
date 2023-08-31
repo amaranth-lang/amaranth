@@ -45,7 +45,17 @@ Any :ref:`constant-castable <lang-constcasting>` expression can be used as the v
    >>> Instr.SUBI
    <Instr.SUBI: 17>
 
-This module is a drop-in replacement for the standard :mod:`enum` module, and re-exports all of its members (not just the ones described below). In an Amaranth project, all ``import enum`` statements may be replaced with ``from amaranth.lib import enum``.
+The ``shape=`` argument is optional. If not specified, classes from this module behave exactly the same as classes from the standard :mod:`enum` module, and likewise, this module re-exports everything exported by the standard :mod:`enum` module.
+
+.. testcode::
+
+   import amaranth.lib.enum
+
+   class NormalEnum(amaranth.lib.enum.Enum):
+       SPAM = 0
+       HAM  = 1
+
+In this way, this module is a drop-in replacement for the standard :mod:`enum` module, and in an Amaranth project, all ``import enum`` statements may be replaced with ``from amaranth.lib import enum``.
 
 
 Metaclass
