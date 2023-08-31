@@ -17,23 +17,23 @@ Glossary
 
   The term *application* refers to the function the circuit will perform, not to a software application.
 
-  ASICs can be configured to be more power efficient and have better performance than an off-the-shelf general purpose integrated circuit. However, unlike FPGAs, ASICs cannot be reprogrammed and are expensive to produce so design and testing are critical to the success of ASIC development.
+  ASICs can be configured to be more power efficient and have better performance than an off-the-shelf general purpose integrated circuit. However, unlike FPGAs, ASICs cannot be reprogrammed and are expensive to produce. Design and testing are critical to the success of ASIC development.
 
-  Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via simulation.
+  Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from cell libraries. The resulting system can then be verified via :ref:`simulation<Simulation>`.
 
 .. _Bitstream generation:  
 
  **Bitstream generation**
-  The code that configures the flash memomory or external storage device to boot the FPGA at power on.
+  The code that configures the flash memomory or external storage device to boot an FPGA at power on.
 
-  The final step in translating requirements into circuits on a chip, the code in the bitstream operationalises requirements into logic blocks and interconnects on the FPGA chip.
+  The final step in translating requirements into circuits on a chip, the bitstream defines the logic blocks and interconnects on the FPGA chip.
 
 .. _BRAM:
 
  **Block RAM (BRAM)**
-  Block RAM is on-chip random access memory that stores large amounts of data and is distributed evenly across a chip.
+  Block RAM is on-chip random access memory, stored evenly across a chip, to store large amounts of data.
    
-  BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
+  BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the single port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
 
   BRAM :ref:`FIFO<FIFO>` is used to cross clock domains or to buffer data between two interfaces. 
 
@@ -60,7 +60,7 @@ Glossary
   
   Rather than store data in flip-flops, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh has a negative impact on speed and perforamance and the write process produces extra heat as it uses a strong charge. 
   
-  DRAM has a higher storage capacity than other kinds of memory, is cheaper and smaller than SRAM, and memory can be deleted and refreshed while running a program.
+  DRAM has a higher storage capacity than other kinds of memory; is cheaper and smaller than SRAM; and memory can be deleted and refreshed while running a program.
   
   DRAM is incompatible with SRAM. To create a :ref:`SoC<SoC>` with DRAM requires the design of capacitors; creating a SoC with SRAM requires the design of flip-flops.
 
@@ -69,7 +69,7 @@ Glossary
  **DUT (Device under test)**
   A physical chip or logic circuit being tested at :ref:'simulation<Simulation>`.
 
-  The results of the testing can result in a chip being given a grade to represent the extent to which it meets tolerance values. 
+  Testing can result in a chip being given a grade to represent the extent to which it met tolerance values. 
 
 .. _Elaboration:
 
@@ -126,7 +126,7 @@ Glossary
  **HDL (Hardware definition language)**
   A hardware definition language, such as :ref:`Amaranth<Amaranth>`, describes the structure and timing of electronic circuits and digital logic circuits.
 
-  Modern HDLs include synthesizable code that characterises the synchronous logic (registers), combinational logic (logic gates), and behavioural code (used in testing) that describe a circuit.    
+  Modern HDLs include synthesizable code that characterises the synchronous logic (:ref:`registers<Register>`), combinational logic (:ref:`logic gates<Logic gate>`), and behavioural code (used in testing) that describe a circuit.    
 
 .. _IC:
 
@@ -179,7 +179,7 @@ Glossary
  **Memory-mapped peripheral**
   Hardware devices, mapped to the memory address space of a :ref:`microprocessor<Microprocessor>`, are known as memory-mapped peripherals. 
 
-  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. A memory-mapped peripheral behaves just like physical memory but isn't physical memory. 
+  The memory data bus moves information bi-directionally between the CPU and memory via store (write) and retrieve (read) signals. 
 
 .. _Microprocessor:
 
@@ -207,7 +207,7 @@ Glossary
  **PLL (Phase-locked loop)**
   A phase-locked loop is an electronic circuit with a controllable oscillator that constantly adjusts in response to an input signal.
 
-  Its purpose is to generate a derived clock signal that can be faster or slower than the input signal. The derived clock signal can be the result of dividing an input frequency. PLLs can also increase frequency by a non-integer factor.
+  Its purpose is to generate a derived clock signal that can be faster or slower than the input signal. The derived clock signal can be the result of dividing an input frequency. PLLs can increase frequency by a non-integer factor.
 
   Where multiple clock domains are interacting synchronously, PLLs use a fixed phase relationship.
 
@@ -232,7 +232,7 @@ Glossary
  **Register**
   A memory device that can store a specific number of data bits.
 
-  Made up of a series of flip-flops, a register can temporarily store data or a set of instructions for a processor. A register can enable both serial and parallel data transfers, allowing logic operations to be performed on the data stored in it.
+  Made up of a series of :ref:`flip-flops<Flip-flop>`, a register can temporarily store data or a set of instructions for a processor. A register can enable both serial and parallel data transfers, allowing logic operations to be performed on the data stored in it.
 
   A number of flip-flops can be combined to store binary words. The length of the stored binary word depends on the number of flip-flops that make up the register. 
 
