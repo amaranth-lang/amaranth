@@ -371,6 +371,33 @@ class Signature(metaclass=SignatureMeta):
         self.members.freeze()
         return self
 
+    def flatten(self, obj):
+        for name, member in self.members.items():
+            path = (name,)
+            value = getattr(obj, name)
+
+            def iter_member(value, *, path):
+                if member.is_port:
+                    yield path, Member(member.flow, member.shape, reset=member.reset), value
+                elif member.is_signature:
+                    for sub_path, sub_member, sub_value in member.signature.flatten(value):
+                        if member.flow == In:
+                            sub_member = sub_member.flip()
+                        yield ((*path, *sub_path), sub_member, sub_value)
+                else:
+                    assert False # :nocov:
+
+            def iter_dimensions(value, dimensions, *, path):
+                if not dimensions:
+                    yield from iter_member(value, path=path)
+                else:
+                    dimension, *rest_of_dimensions = dimensions
+                    for index in range(dimension):
+                        yield from iter_dimensions(value[index], rest_of_dimensions,
+                                                   path=(path, index))
+
+            yield from iter_dimensions(value, dimensions=member.dimensions, path=path)
+
     def is_compliant(self, obj, *, reasons=None, path=("obj",)):
         def check_attr_value(member, attr_value, *, path):
             if member.is_port:

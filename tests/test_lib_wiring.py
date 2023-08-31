@@ -372,6 +372,36 @@ class SignatureTestCase(unittest.TestCase):
                 r"^Cannot add members to a frozen signature$"):
             sig.members += {"b": Out(1)}
 
+    def assertFlattenedSignature(self, actual, expected):
+        for (a_path, a_member, a_value), (b_path, b_member, b_value) in zip(actual, expected):
+            self.assertEqual(a_path, b_path)
+            self.assertEqual(a_member, b_member)
+            self.assertIs(a_value, b_value)
+
+    def test_flatten(self):
+        sig = Signature({"a": In(1), "b": Out(2).array(2)})
+        intf = sig.create()
+        self.assertFlattenedSignature(sig.flatten(intf), [
+            (("a",), In(1), intf.a),
+            ((("b",), 0), Out(2), intf.b[0]),
+            ((("b",), 1), Out(2), intf.b[1])
+        ])
+
+    def test_flatten_sig(self):
+        sig = Signature({
+            "a": Out(Signature({"p": Out(1)})),
+            "b": Out(Signature({"q": In (1)})),
+            "c": In( Signature({"r": Out(1)})),
+            "d": In( Signature({"s": In (1)})),
+        })
+        intf = sig.create()
+        self.assertFlattenedSignature(sig.flatten(intf), [
+            (("a", "p"), Out(1), intf.a.p),
+            (("b", "q"), In (1), intf.b.q),
+            (("c", "r"), Out(1), intf.c.r),
+            (("d", "s"), In (1), intf.d.s),
+        ])
+
     def assertNotCompliant(self, reason_regex, sig, obj):
         self.assertFalse(sig.is_compliant(obj))
         reasons = []
