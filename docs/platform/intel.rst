@@ -1,9 +1,9 @@
 Intel
 #####
 
-.. py:module:: amaranth.vendor.intel
+.. currentmodule:: amaranth.vendor
 
-The :mod:`amaranth.vendor.intel` module provides a base platform to support Intel toolchains.
+The :class:`IntelPlatform` class provides a base platform to support Intel toolchains.
 
 The Quartus and Mistral toolchains are supported.
 

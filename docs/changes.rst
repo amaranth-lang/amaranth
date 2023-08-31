@@ -25,6 +25,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 
 * Update shell environment to use ``AMARANTH_*`` environment variables instead of ``NMIGEN_*`` environment variables.
 * Update shell environment to use ``AMARANTH_ENV_<TOOLCHAIN>`` (with all-uppercase ``<TOOLCHAIN>`` name) environment variable names instead of ``AMARANTH_ENV_<Toolchain>`` or ``NMIGEN_ENV_<Toolchain>`` (with mixed-case ``<Toolchain>`` name).
+* Update imports of the form ``from amaranth.vendor.some_vendor import SomeVendorPlatform`` to ``from amaranth.vendor import SomeVendorPlatform``. This change will reduce future churn.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
@@ -42,6 +43,7 @@ Implemented RFCs
 .. _RFC 9: https://amaranth-lang.org/rfcs/0009-const-init-shape-castable.html
 .. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
+.. _RFC 18: https://amaranth-lang.org/rfcs/0018-reorganize-vendor-platforms.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 
 * `RFC 1`_: Aggregate data structure library
@@ -54,6 +56,7 @@ Implemented RFCs
 * `RFC 8`_: Aggregate extensibility
 * `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 10`_: Move ``Repl`` to ``Value.replicate``
+* `RFC 18`_: Reorganize vendor platforms
 * `RFC 15`_: Lifting shape-castable objects
 * `RFC 22`_: Define ``ValueCastable.shape()``
 
@@ -110,9 +113,10 @@ Platform integration changes
 
 .. currentmodule:: amaranth.vendor
 
-* Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform`.
-* Added: Xray toolchain support in :class:`vendor.xilinx.XilinxPlatform`.
-* Added: :class:`vendor.gowin.GowinPlatform`.
+* Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.LatticeMachXO2Platform`, :class:`vendor.LatticeMachXO3LPlatform`.
+* Added: Xray toolchain support in :class:`vendor.XilinxPlatform`.
+* Added: :class:`vendor.GowinPlatform`.
+* Deprecated: :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`; import platforms directly from :mod:`vendor` instead. (`RFC 18`_)
 * Removed: (deprecated in 0.3) :mod:`lattice_machxo2`
 * Removed: (deprecated in 0.3) :class:`lattice_machxo_2_3l.LatticeMachXO2Or3LPlatform` SVF programming vector ``{{name}}.svf``.
 * Removed: (deprecated in 0.3) :class:`xilinx_spartan_3_6.XilinxSpartan3APlatform`, :class:`xilinx_spartan_3_6.XilinxSpartan6Platform`, :class:`xilinx_7series.Xilinx7SeriesPlatform`, :class:`xilinx_ultrascale.XilinxUltrascalePlatform`.

@@ -1,9 +1,9 @@
 Quicklogic
 ##########
 
-.. py:module:: amaranth.vendor.quicklogic
+.. currentmodule:: amaranth.vendor
 
-The :mod:`amaranth.vendor.quicklogic` module provides a base platform to support Quicklogic toolchains.
+The :class:`QuicklogicPlatform` class provides a base platform to support Quicklogic toolchains.
 
 The Symbiflow toolchain is supported.
 

@@ -1,9 +1,9 @@
 Xilinx
 ######
 
-.. py:module:: amaranth.vendor.xilinx
+.. currentmodule:: amaranth.vendor
 
-The :mod:`amaranth.vendor.xilinx` module provides a base platform to support Xilinx toolchains.
+The :class:`XilinxPlatform` class provides a base platform to support Xilinx toolchains.
 
 The ISE, Vivado, and Symbiflow toolchains are supported.
 
