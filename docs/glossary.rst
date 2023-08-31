@@ -44,7 +44,7 @@ Glossary
 
   Be aware that different FPGA manufacturers use different names for this component. 
 
-  Each FPGA contains many logic blocks that are surrounded by a system of programmable interconnects (I/O blocks), called a fabric, that routes signals between the CLBs. The three essential components of a logic block are flip-flops, LUTs, and multiplexers.
+  Each FPGA contains many logic blocks that are surrounded by a system of programmable interconnects (I/O blocks), called a fabric, that routes signals between the CLBs. The three essential components of a logic block are :ref:`flip-flop`s, :ref:`LUT`s, and :ref:`multiplexer`s.
 
 .. _Clock signal:
 
