@@ -58,8 +58,8 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(len(rdport.addr), 2)
         self.assertEqual(len(rdport.data), 8)
         self.assertEqual(len(rdport.en), 1)
-        self.assertIsInstance(rdport.en, Const)
-        self.assertEqual(rdport.en.value, 1)
+        self.assertIsInstance(rdport.en, Signal)
+        self.assertEqual(rdport.en.reset, 1)
 
     def test_read_port_non_transparent(self):
         mem    = Memory(width=8, depth=4)
