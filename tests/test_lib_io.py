@@ -1,5 +1,9 @@
+import warnings
+
 from amaranth.hdl import *
-from amaranth.hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from amaranth.hdl.rec import *
 from amaranth.sim import *
 from amaranth.lib.io import *
 

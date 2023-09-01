@@ -6,7 +6,9 @@ from amaranth._utils import flatten
 from amaranth.hdl.ast import *
 from amaranth.hdl.cd import  *
 from amaranth.hdl.mem import *
-from amaranth.hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from amaranth.hdl.rec import *
 from amaranth.hdl.dsl import  *
 from amaranth.hdl.ir import *
 from amaranth.sim import *
