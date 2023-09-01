@@ -1,5 +1,9 @@
+import warnings
+
 from .. import *
-from ..hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from ..hdl.rec import *
 
 
 __all__ = ["pin_layout", "Pin"]

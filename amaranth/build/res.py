@@ -1,8 +1,12 @@
 from collections import OrderedDict
+import warnings
 
 from ..hdl.ast import *
-from ..hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from ..hdl.rec import *
 from ..lib.io import *
+from ..lib import wiring
 
 from .dsl import *
 

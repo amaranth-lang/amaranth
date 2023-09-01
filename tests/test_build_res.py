@@ -1,7 +1,11 @@
 # amaranth: UnusedElaboratable=no
 
+import warnings
+
 from amaranth import *
-from amaranth.hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from amaranth.hdl.rec import *
 from amaranth.lib.io import *
 from amaranth.build.dsl import *
 from amaranth.build.res import *

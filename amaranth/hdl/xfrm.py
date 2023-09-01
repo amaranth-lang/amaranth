@@ -8,7 +8,6 @@ from .ast import *
 from .ast import _StatementList
 from .cd import *
 from .ir import *
-from .rec import *
 
 
 __all__ = ["ValueVisitor", "ValueTransformer",
