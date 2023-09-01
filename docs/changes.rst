@@ -28,6 +28,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Update imports of the form ``from amaranth.vendor.some_vendor import SomeVendorPlatform`` to ``from amaranth.vendor import SomeVendorPlatform``. This change will reduce future churn.
 * Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
 * Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
+* Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
@@ -44,6 +45,7 @@ Implemented RFCs
 .. _RFC 10: https://amaranth-lang.org/rfcs/0010-move-repl-to-value.html
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
 .. _RFC 18: https://amaranth-lang.org/rfcs/0018-reorganize-vendor-platforms.html
+.. _RFC 19: https://amaranth-lang.org/rfcs/0019-remove-scheduler.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 
 * `RFC 1`_: Aggregate data structure library
@@ -55,6 +57,7 @@ Implemented RFCs
 * `RFC 9`_: Constant initialization for shape-castable objects
 * `RFC 10`_: Move ``Repl`` to ``Value.replicate``
 * `RFC 18`_: Reorganize vendor platforms
+* `RFC 19`_: Remove ``amaranth.lib.scheduler``
 * `RFC 15`_: Lifting shape-castable objects
 * `RFC 22`_: Define ``ValueCastable.shape()``
 
@@ -89,6 +92,7 @@ Standard library changes
 * Added: :mod:`amaranth.lib.enum`. (`RFC 3`_)
 * Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
 * Added: :mod:`amaranth.lib.crc`. (`RFC 6`_)
+* Deprecated: :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 
 
 Toolchain changes

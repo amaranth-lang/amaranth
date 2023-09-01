@@ -1,11 +1,14 @@
 # amaranth: UnusedElaboratable=no
 
 import unittest
+import warnings
 
 from amaranth.hdl import *
 from amaranth.asserts import *
 from amaranth.sim import *
-from amaranth.lib.scheduler import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from amaranth.lib.scheduler import *
 
 from .utils import *
 
