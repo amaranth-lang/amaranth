@@ -4,18 +4,13 @@ from .. import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from ..hdl.rec import *
+from ..lib.wiring import In, Out, Signature
 
 
 __all__ = ["pin_layout", "Pin"]
 
 
-def pin_layout(width, dir, xdr=0):
-    """
-    Layout of the platform interface of a pin or several pins, which may be used inside
-    user-defined records.
-
-    See :class:`Pin` for details.
-    """
+def _pin_signature(width, dir, xdr=0):
     if not isinstance(width, int) or width < 0:
         raise TypeError("Width must be a non-negative integer, not {!r}"
                         .format(width))
@@ -26,29 +21,42 @@ def pin_layout(width, dir, xdr=0):
         raise TypeError("Gearing ratio must be a non-negative integer, not {!r}"
                         .format(xdr))
 
-    fields = []
+    members = {}
     if dir in ("i", "io"):
         if xdr > 0:
-            fields.append(("i_clk", 1))
+            members["i_clk"] = In(1)
         if xdr > 2:
-            fields.append(("i_fclk", 1))
+            members["i_fclk"] = In(1)
         if xdr in (0, 1):
-            fields.append(("i", width))
+            members["i"] = In(width)
         else:
             for n in range(xdr):
-                fields.append(("i{}".format(n), width))
+                members["i{}".format(n)] = In(width)
     if dir in ("o", "oe", "io"):
         if xdr > 0:
-            fields.append(("o_clk", 1))
+            members["o_clk"] = Out(1)
         if xdr > 2:
-            fields.append(("o_fclk", 1))
+            members["o_fclk"] = Out(1)
         if xdr in (0, 1):
-            fields.append(("o", width))
+            members["o"] = Out(width)
         else:
             for n in range(xdr):
-                fields.append(("o{}".format(n), width))
+                members["o{}".format(n)] = Out(width)
     if dir in ("oe", "io"):
-        fields.append(("oe", 1))
+        members["oe"] = In(1)
+    return Signature(members)
+
+
+def pin_layout(width, dir, xdr=0):
+    """
+    Layout of the platform interface of a pin or several pins, which may be used inside
+    user-defined records.
+
+    See :class:`Pin` for details.
+    """
+    fields = []
+    for name, member in _pin_signature(width, dir, xdr).members.items():
+        fields.append((name, member.shape))
     return Layout(fields)
 
 
@@ -118,3 +126,7 @@ class Pin(Record):
 
         super().__init__(pin_layout(self.width, self.dir, self.xdr),
                          name=name, src_loc_at=src_loc_at + 1)
+
+    @property
+    def signature(self):
+        return _pin_signature(self.width, self.dir, self.xdr)
