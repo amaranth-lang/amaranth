@@ -7,6 +7,7 @@ from functools import reduce, wraps
 from .. import tracer
 from .._utils import union
 from .ast import *
+from ..lib import wiring
 
 
 __all__ = ["Direction", "DIR_NONE", "DIR_FANOUT", "DIR_FANIN", "Layout", "Record"]
@@ -132,6 +133,8 @@ class Record(ValueCastable):
             if fields is not None and field_name in fields:
                 field = fields[field_name]
                 if isinstance(field_shape, Layout):
+                    if isinstance(field, wiring.FlippedInterface):
+                        field = wiring.flipped(field)
                     assert isinstance(field, Record) and field_shape == field.layout
                 else:
                     assert isinstance(field, Signal) and Shape.cast(field_shape) == field.shape()
