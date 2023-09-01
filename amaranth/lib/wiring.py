@@ -552,7 +552,10 @@ class FlippedInterface:
 
 
 def flipped(interface):
-    return FlippedInterface(interface)
+    if type(interface) is FlippedInterface:
+        return interface._FlippedInterface__unflipped
+    else:
+        return FlippedInterface(interface)
 
 
 @final
