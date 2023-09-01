@@ -5,8 +5,11 @@ import importlib
 from .. import vendor
 
 
+__all__ = ["GowinPlatform"]
+
+
 def __getattr__(name):
-    if name in ("GowinPlatform",):
+    if name in __all__:
         warnings.warn(f"instead of `{__name__}.{name}`, use `amaranth.vendor.{name}",
                       DeprecationWarning, stacklevel=2)
         return getattr(vendor, name)
