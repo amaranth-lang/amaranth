@@ -32,6 +32,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
+
 Implemented RFCs
 ----------------
 
@@ -72,6 +73,7 @@ Language changes
 * Added: :meth:`Const.cast`. (`RFC 4`_)
 * Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
 * Added: :meth:`Value.replicate`, superseding :class:`Repl`. (`RFC 10`_)
+* Added: :class:`Memory` supports transparent read ports with read enable.
 * Changed: creating a :class:`Signal` with a shape that is a :class:`ShapeCastable` implementing :meth:`ShapeCastable.__call__` wraps the returned object using that method. (`RFC 15`_)
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.

@@ -678,43 +678,6 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         )
         """)
 
-    def setUp_memory(self):
-        self.m = Memory(width=8, depth=4)
-        self.fr = self.m.read_port().elaborate(platform=None)
-        self.fw = self.m.write_port().elaborate(platform=None)
-        self.f1 = Fragment()
-        self.f2 = Fragment()
-        self.f2.add_subfragment(self.fr)
-        self.f1.add_subfragment(self.f2)
-        self.f3 = Fragment()
-        self.f3.add_subfragment(self.fw)
-        self.f1.add_subfragment(self.f3)
-
-    def test_conflict_memory(self):
-        self.setUp_memory()
-
-        self.f1._resolve_hierarchy_conflicts(mode="silent")
-        self.assertEqual(self.f1.subfragments, [
-            (self.fr, None),
-            (self.fw, None),
-        ])
-
-    def test_conflict_memory_error(self):
-        self.setUp_memory()
-
-        with self.assertRaisesRegex(DriverConflict,
-                r"^Memory 'm' is accessed from multiple fragments: top\.<unnamed #0>, "
-                    r"top\.<unnamed #1>$"):
-            self.f1._resolve_hierarchy_conflicts(mode="error")
-
-    def test_conflict_memory_warning(self):
-        self.setUp_memory()
-
-        with self.assertWarnsRegex(DriverConflict,
-                (r"^Memory 'm' is accessed from multiple fragments: top.<unnamed #0>, "
-                    r"top.<unnamed #1>; hierarchy will be flattened$")):
-            self.f1._resolve_hierarchy_conflicts(mode="warn")
-
     def test_explicit_flatten(self):
         self.f1 = Fragment()
         self.f2 = Fragment()

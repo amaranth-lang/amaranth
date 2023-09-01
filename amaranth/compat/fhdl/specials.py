@@ -83,12 +83,6 @@ class _MemoryPort(CompatModule):
         self.clock = ClockSignal(clock_domain)
 
 
-@extend(NativeMemory)
-@deprecated("it is not necessary or permitted to add Memory as a special or submodule")
-def elaborate(self, platform):
-    return Fragment()
-
-
 class CompatMemory(NativeMemory, Elaboratable):
     def __init__(self, width, depth, init=None, name=None):
         super().__init__(width=width, depth=depth, init=init, name=name)

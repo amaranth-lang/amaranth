@@ -720,10 +720,14 @@ class EnableInserter(_ControlInserter):
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        if isinstance(new_fragment, Instance) and new_fragment.type in ("$memrd", "$memwr"):
-            clk_port, clk_dir = new_fragment.named_ports["CLK"]
-            if isinstance(clk_port, ClockSignal) and clk_port.domain in self.controls:
-                en_port, en_dir = new_fragment.named_ports["EN"]
-                en_port = Mux(self.controls[clk_port.domain], en_port, Const(0, len(en_port)))
-                new_fragment.named_ports["EN"] = en_port, en_dir
+        if isinstance(new_fragment, Instance) and new_fragment.type == "$mem_v2":
+            for kind in ["RD", "WR"]:
+                clk_parts = new_fragment.named_ports[kind + "_CLK"][0].parts
+                en_parts = new_fragment.named_ports[kind + "_EN"][0].parts
+                new_en = []
+                for clk, en in zip(clk_parts, en_parts):
+                    if isinstance(clk, ClockSignal) and clk.domain in self.controls:
+                        en = Mux(self.controls[clk.domain], en, Const(0, len(en)))
+                    new_en.append(en)
+                new_fragment.named_ports[kind + "_EN"] = Cat(new_en), "i"
         return new_fragment
