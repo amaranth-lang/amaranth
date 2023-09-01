@@ -530,6 +530,7 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         self.assertEqual(tintf, flipped(intf))
         self.assertRegex(repr(tintf),
             r"^flipped\(<.+?\.Interface object at .+>\)$")
+        self.assertIs(flipped(tintf), intf)
 
     def test_getattr_setattr(self):
         class I(Interface):
