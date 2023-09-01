@@ -7,6 +7,8 @@ This document describes changes to the public interfaces in the Amaranth languag
 Version 0.4 (unreleased)
 ========================
 
+Support has been added for a new and improved way of defining data structures in :mod:`amaranth.lib.data` and component interfaces in :mod:`amaranth.lib.wiring`, as defined in `RFC 1`_ and `RFC 2`_. :class:`Record` has been deprecated. In a departure from the usual policy, to give designers additional time to migrate, :class:`Record` will be removed in Amaranth 0.6 (one release later than normal).
+
 Support for enumerations has been extended. A shape for enumeration members can be provided for an enumeration class, as defined in `RFC 3`_.
 
 The language includes several new extension points for integration with :class:`Value` based data structures defined outside of the core language. In particular, ``Signal(shape)`` may now return a :class:`Signal` object wrapped in another if ``shape`` implements the call protocol, as defined in `RFC 15`_.
@@ -28,6 +30,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Update imports of the form ``from amaranth.vendor.some_vendor import SomeVendorPlatform`` to ``from amaranth.vendor import SomeVendorPlatform``. This change will reduce future churn.
 * Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
 * Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
+* Replace uses of ``Record`` with :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring`. The appropriate replacement depends on the use case. If ``Record`` was being used for data storage and accessing the bit-level representation, use :mod:`amaranth.lib.data`. If ``Record`` was being used for connecting design components together, use :mod:`amaranth.lib.wiring`.
 * Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
@@ -36,6 +39,7 @@ Implemented RFCs
 ----------------
 
 .. _RFC 1: https://amaranth-lang.org/rfcs/0001-aggregate-data-structures.html
+.. _RFC 2: https://amaranth-lang.org/rfcs/0002-interfaces.html
 .. _RFC 3: https://amaranth-lang.org/rfcs/0003-enumeration-shapes.html
 .. _RFC 4: https://amaranth-lang.org/rfcs/0004-const-castable-exprs.html
 .. _RFC 5: https://amaranth-lang.org/rfcs/0005-remove-const-normalize.html
@@ -48,7 +52,9 @@ Implemented RFCs
 .. _RFC 19: https://amaranth-lang.org/rfcs/0019-remove-scheduler.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 
+
 * `RFC 1`_: Aggregate data structure library
+* `RFC 2`_: Interface definition library
 * `RFC 3`_: Enumeration shapes
 * `RFC 4`_: Constant-castable expressions
 * `RFC 5`_: Remove ``Const.normalize``
@@ -79,6 +85,7 @@ Language changes
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
 * Deprecated: :meth:`Const.normalize`; use ``Const(value, shape).value`` instead of ``Const.normalize(value, shape)``. (`RFC 5`_)
 * Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
+* Deprecated: :class:`Record`; use :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring` instead. (`RFC 1`_, `RFC 2`_)
 * Removed: (deprecated in 0.1) casting of :class:`Shape` to and from a ``(width, signed)`` tuple.
 * Removed: (deprecated in 0.3) :class:`ast.UserValue`.
 * Removed: (deprecated in 0.3) support for ``# nmigen:`` linter instructions at the beginning of file.
