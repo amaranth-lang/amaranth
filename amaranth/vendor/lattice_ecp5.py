@@ -5,8 +5,11 @@ import importlib
 from .. import vendor
 
 
+__all__ = ["LatticeECP5Platform"]
+
+
 def __getattr__(name):
-    if name in ("LatticeECP5Platform",):
+    if name in __all__:
         warnings.warn(f"instead of `{__name__}.{name}`, use `amaranth.vendor.{name}",
                       DeprecationWarning, stacklevel=2)
         return getattr(vendor, name)
