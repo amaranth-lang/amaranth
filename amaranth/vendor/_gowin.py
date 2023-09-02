@@ -1,5 +1,6 @@
 from abc import abstractproperty
 from fractions import Fraction
+import math
 import re
 
 from ..hdl import *
@@ -160,17 +161,22 @@ class GowinPlatform(TemplatedPlatform):
 
     @property
     def _osc_div(self):
-        div_min  = 2
-        div_max  = 128
-        div_step = 2
-        div_frac = Fraction(self._osc_base_freq, self.osc_frequency)
+        div_range = range(2, 128, 2)
+        div_frac  = Fraction(self._osc_base_freq, self.osc_frequency)
 
-        if div_frac.denominator != 1 or div_frac not in range(div_min, div_max, div_step):
+        if div_frac.denominator != 1 or div_frac not in div_range:
+            achievable = (
+                min((frac for frac in div_range if frac > div_frac), default=None),
+                max((frac for frac in div_range if frac < div_frac), default=None)
+            )
             raise ValueError(
-                "On-chip oscillator frequency (platform.osc_frequency) must be chosen such that "
-                "the oscillator divider, calculated as ({}/{}), is an integer between {} and {} in "
-                "steps of {}"
-                .format(div_frac.numerator, div_frac.denominator, div_min, div_max, div_step))
+                f"On-chip oscillator frequency (platform.osc_frequency) must be chosen such that "
+                f"the base frequency of {self._osc_base_freq} Hz is divided by an integer factor "
+                f"between {div_range.start} and {div_range.stop} in steps of {div_range.step}; "
+                f"the divider for the requested frequency of {self.osc_frequency} Hz was "
+                f"calculated as ({div_frac.numerator}/{div_frac.denominator}), and the closest "
+                f"achievable frequencies are " +
+                ", ".join(str(self._osc_base_freq // frac) for frac in achievable if frac))
 
         return div_frac.numerator
 
