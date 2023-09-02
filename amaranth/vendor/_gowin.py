@@ -161,7 +161,7 @@ class GowinPlatform(TemplatedPlatform):
 
     @property
     def _osc_div(self):
-        div_range = range(2, 128, 2)
+        div_range = range(2, 130, 2)
         div_frac  = Fraction(self._osc_base_freq, self.osc_frequency)
 
         if div_frac.denominator != 1 or div_frac not in div_range:
