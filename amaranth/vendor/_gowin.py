@@ -164,7 +164,10 @@ class GowinPlatform(TemplatedPlatform):
         div_range = range(2, 130, 2)
         div_frac  = Fraction(self._osc_base_freq, self.osc_frequency)
 
-        if div_frac.denominator != 1 or div_frac not in div_range:
+        # Check that the requested frequency is within 50 ppm. This takes care of small mismatches
+        # arising due to rounding. The tolerance of a typical crystal oscillator is 50 ppm.
+        if (abs(round(div_frac) - div_frac) > Fraction(50, 1_000_000) or
+                int(div_frac) not in div_range):
             achievable = (
                 min((frac for frac in div_range if frac > div_frac), default=None),
                 max((frac for frac in div_range if frac < div_frac), default=None)
@@ -178,7 +181,7 @@ class GowinPlatform(TemplatedPlatform):
                 f"achievable frequencies are " +
                 ", ".join(str(self._osc_base_freq // frac) for frac in achievable if frac))
 
-        return div_frac.numerator
+        return int(div_frac)
 
     # Common templates
 
