@@ -153,8 +153,8 @@ Shapes from ranges
 
 Casting a shape from a :class:`range` ``r`` produces a shape that:
 
-  * has a width large enough to represent both ``min(r)`` and ``max(r)``, and
-  * is signed if either ``min(r)`` or ``max(r)`` are negative, unsigned otherwise.
+  * has a width large enough to represent both ``min(r)`` and ``max(r)``, but not larger, and
+  * is signed if ``r`` contains any negative values, unsigned otherwise.
 
 Specifying a shape with a range is convenient for counters, indexes, and all other values whose width is derived from a set of numbers they must be able to fit:
 
@@ -183,6 +183,16 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
       0
 
    Amaranth detects uses of :class:`Const` and :class:`Signal` that invoke such an off-by-one error, and emits a diagnostic message.
+
+.. note::
+
+   An empty range always casts to an ``unsigned(0)``, even if both of its bounds are negative.
+   This happens because, being empty, it does not contain any negative values.
+
+   .. doctest::
+
+      >>> Shape.cast(range(-1, -1))
+      unsigned(0)
 
 
 .. _lang-shapeenum:

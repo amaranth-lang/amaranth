@@ -78,11 +78,15 @@ class Shape:
         If ``False``, the value is unsigned. If ``True``, the value is signed two's complement.
     """
     def __init__(self, width=1, signed=False):
-        if not isinstance(width, int) or width < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}"
-                            .format(width))
+        if not isinstance(width, int):
+            raise TypeError(f"Width must be an integer, not {width!r}")
+        if not signed and width < 0:
+            raise TypeError(f"Width of an unsigned value must be zero or a positive integer, "
+                            f"not {width}")
+        if signed and width <= 0:
+            raise TypeError(f"Width of a signed value must be a positive integer, not {width}")
         self.width = width
-        self.signed = signed
+        self.signed = bool(signed)
 
     # The algorithm for inferring shape for standard Python enumerations is factored out so that
     # `Shape.cast()` and Amaranth's `EnumMeta.as_shape()` can both use it.
@@ -116,7 +120,7 @@ class Shape:
                 return Shape(obj)
             elif isinstance(obj, range):
                 if len(obj) == 0:
-                    return Shape(0, obj.start < 0)
+                    return Shape(0)
                 signed = obj[0] < 0 or obj[-1] < 0
                 width  = max(bits_for(obj[0], signed),
                              bits_for(obj[-1], signed))
