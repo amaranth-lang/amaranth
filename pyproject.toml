@@ -1,7 +1,10 @@
 # Project metadata
 
+[tool.pdm.version]
+source = "scm"
+
 [project]
-dynamic = ["version", "urls"]
+dynamic = ["version"]
 
 name = "amaranth"
 description = "Amaranth hardware definition language"
@@ -23,21 +26,24 @@ remote-build  = ["paramiko~=2.7"]
 [project.scripts]
 amaranth-rpc = "amaranth.rpc:main"
 
+[project.urls]
+"Homepage" = "https://amaranth-lang.org/"
+"Documentation" = "https://amaranth-lang.org/docs/amaranth/" # modified in pdm_build.py
+"Source Code" = "https://github.com/amaranth-lang/amaranth"
+"Bug Tracker" = "https://github.com/amaranth-lang/amaranth/issues"
+
 # Build system configuration
 
 [build-system]
-requires = ["wheel", "setuptools>=67.0", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
-[tool.setuptools]
+[tool.pdm.build]
 # If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
 # a git worktree cached by tools like poetry), it can have an empty `nmigen` directory left over,
 # which causes a hard error because setuptools cannot determine the top-level package.
 # Add a workaround to improve experience for people upgrading from old checkouts.
-packages = ["amaranth"]
-
-[tool.setuptools_scm]
-local_scheme = "node-and-timestamp"
+includes = ["amaranth/"]
 
 # Development workflow configuration
 
