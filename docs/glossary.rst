@@ -31,7 +31,7 @@ Glossary
 .. _BRAM:
 
  **Block RAM (BRAM)**
-  Block RAM is on-chip random access memory, stored evenly across a chip, to store large amounts of data.
+  On-chip random access memory, stored evenly across a chip, to store large amounts of data.
    
   BRAM, sometimes called embedded RAM, doesn't need refreshing (as DRAM does) and, like SRAM, doesn't need a memory controller. Single-port BRAM can either read or write on the single port;  dual-port BRAM supports read and write for any two addresses and both ports can read *and* write.
 
@@ -56,7 +56,7 @@ Glossary
 .. _DRAM:
 
  **DRAM (Dynamic Random Access Memory)**
-  DRAM is memory that is stored in capacitors and is constantly refreshed.
+  Memory that is stored in capacitors and is constantly refreshed.
   
   Rather than store data in flip-flops, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh has a negative impact on speed and perforamance and the write process produces extra heat as it uses a strong charge. 
   
@@ -74,7 +74,7 @@ Glossary
 .. _Elaboration:
 
  **Elaboration**
-  Elaboration is the process of constructing a design hierarchy from pre-built modules.
+  The process of constructing a design hierarchy from pre-built modules.
 
   Elaboration is the first step in translating requirements into circuits on a chip. In elaboration, the behaviour described in the :ref:`HDL<HDL>` code is analyzed to produce a :ref:`netlist<Netlist>` that itemizes the required logic elements and interconnects. 
 
@@ -83,7 +83,7 @@ Glossary
 .. _FIFO:
 
  **FIFO (First In First Out)**
-  First in, first out is a method for organizing the processing of data, especially in a buffer, where the oldest entry is processed first.  
+  A method for organizing the processing of data, especially in a buffer, where the oldest entry is processed first.  
 
   An elementary building block of integrated circuits, FIFOs are used when crossing clock domains, buffering data, or storing data for use at a later time.  
 
@@ -140,7 +140,7 @@ Glossary
 .. _JTAG:
 
  **JTAG**
-  JTAG (Joint Test Action Group) is an industry standard for verifying designs and testing devices — micro controllers, FPGAs, etc. — after manufacture. 
+  An industry standard for verifying designs and testing devices — micro controllers, FPGAs, etc. — after manufacture. 
   
   JTAG is a hardware interface that provides a way to communicate directly with the microchips on a board. It enables the testing, via software, of all the different interconnects without having to physically probe the connections. 
 
@@ -184,7 +184,7 @@ Glossary
 .. _Microprocessor:
 
  **Microprocessor**
-  A microprocessor is a miniature, programmable digital device — a tiny computer on a chip — that retrieves instructions from memory, decodes and executes them, and returns the output. 
+  A miniature, programmable digital device — a tiny computer on a chip — that retrieves instructions from memory, decodes and executes them, and returns the output. 
 
   Microprocessors contain the arithmetic, logic, and control circuitry necessary to perform the functions of a computer’s central processing unit.
 
@@ -205,7 +205,7 @@ Glossary
 .. _PLL:
 
  **PLL (Phase-locked loop)**
-  A phase-locked loop is an electronic circuit with a controllable oscillator that constantly adjusts in response to an input signal.
+  An electronic circuit with a controllable oscillator that constantly adjusts in response to an input signal.
 
   Its purpose is to generate a derived clock signal that can be faster or slower than the input signal. The derived clock signal can be the result of dividing an input frequency. PLLs can increase frequency by a non-integer factor.
 
@@ -214,14 +214,14 @@ Glossary
 .. _Place and route:
 
  **Place and route**
-  Place and route is the process of deciding the placement of components on a chip and the related wiring between those components. 
+  The process of deciding the placement of components on a chip and the related wiring between those components. 
   
   Place and route routines involve complicated maths problems that require optimization. These routines are usually performed by software and produce a layout schema for a chip. 
 
 .. _Propogation delay:
 
  **Propagation delay**
-  Propogation delay is the time required to change the output from one logic state to another logic state after input is changed.
+  The time required to change the output from one logic state to another logic state after input is changed.
 
   In simplified terms, the time it takes for a signal to move from source to destination.
 
@@ -239,7 +239,7 @@ Glossary
 .. _RTL:
 
  **Register transfer level (RTL)**
-   RTL, the lowest abstraction level for developing :ref:`FPGAs<FPGA>`, is used to create a representation of synchronous digital circuits between :ref:`hardware registers<Hardware register>`.
+   The lowest abstraction level for developing :ref:`FPGAs<FPGA>`, RTL creates a representation of synchronous digital circuits between :ref:`hardware registers<Hardware register>`.
 
    Hardware definition language is tranformed to RTL which then defines the circuit at gate level. The representation can be verified via :ref:`simulation<Simulation>`. 
 
@@ -277,7 +277,7 @@ Glossary
 .. _Synthesis:
 
  **Synthesis**
-  Synthesis is the process of building a :ref:`netlist<Netlist>` from a circuit design model.
+  The process of building a :ref:`netlist<Netlist>` from a circuit design model.
 
   Synthesis represents the :ref:`hardware definition language<HDL>` as :ref:`register transfer level<RTL>` that is automatically transfered into gates. 
 
