@@ -51,7 +51,7 @@ The test bench is implemented as a Python generator function that is co-simulate
 
 .. TODO: link to simulator reference
 
-When run, the test bench finishes successfully, since all of the assertions hold, and produces a VCD file with waveforms recorded for every ``Signal`` as well as the clock of the ``sync`` domain:
+When run, the test bench finishes successfully, since all of the assertions hold, and produces a VCD (Value Change Dump) file with waveforms recorded for every ``Signal`` as well as the clock of the ``sync`` domain:
 
 .. image:: _images/up_counter_gtkwave.png
 	 :alt: A screenshot of GTKWave displaying waveforms near the clock cycle where the counter overflows.
