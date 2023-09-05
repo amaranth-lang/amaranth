@@ -31,6 +31,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
 * Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
 * Replace uses of ``Record`` with :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring`. The appropriate replacement depends on the use case. If ``Record`` was being used for data storage and accessing the bit-level representation, use :mod:`amaranth.lib.data`. If ``Record`` was being used for connecting design components together, use :mod:`amaranth.lib.wiring`.
+* Ensure the ``Pin`` instance returned by ``platform.request`` is not cast to value directly, but used for its fields. Replace code like ``leds = Cat(platform.request(led, n) for n in range(4))`` with ``leds = Cat(platform.request(led, n).o for n in range(4))`` (note the ``.o``).
 * Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
