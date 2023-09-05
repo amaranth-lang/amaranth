@@ -120,7 +120,7 @@ class Memory(Elaboratable):
 
     def elaborate(self, platform):
         init = "".join(format(Const(elem, unsigned(self.width)).value, f"0{self.width}b") for elem in reversed(self.init))
-        init = Const(int(init or "0", 2), len(self.init) * self.width)
+        init = Const(int(init or "0", 2), self.depth * self.width)
         rd_clk = []
         rd_clk_enable = 0
         rd_transparency_mask = 0
