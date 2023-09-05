@@ -872,7 +872,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                                   hierarchy=hierarchy + (sub_name,))
 
             if sub_type == "$mem_v2" and "MEMID" not in sub_params:
-                sub_params["MEMID"] = "$" + sub_name
+                sub_params["MEMID"] = builder._make_name(sub_name, local=False)
             
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
