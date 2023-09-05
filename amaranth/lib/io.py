@@ -130,3 +130,9 @@ class Pin(Record):
     @property
     def signature(self):
         return _pin_signature(self.width, self.dir, self.xdr)
+
+    def eq(self, other):
+        first_field, _, _ = next(iter(Pin(1, dir="o").layout))
+        warnings.warn(f"`pin.eq(...)` is deprecated; use `pin.{first_field}.eq(...)` here",
+                      DeprecationWarning, stacklevel=2)
+        return super().eq(other)
