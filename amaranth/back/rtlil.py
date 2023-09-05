@@ -832,11 +832,6 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         lhs_compiler   = _LHSValueCompiler(compiler_state)
         stmt_compiler  = _StatementCompiler(compiler_state, rhs_compiler, lhs_compiler)
 
-        # If the fragment is completely empty, add a dummy wire to it, or Yosys will interpret
-        # it as a black box by default (when read as Verilog).
-        if not fragment.ports and not fragment.statements and not fragment.subfragments:
-            module.wire(1, name="$empty_module_filler")
-
         # Register all signals driven in the current fragment. This must be done first, as it
         # affects further codegen; e.g. whether \sig$next signals will be generated and used.
         for domain, signal in fragment.iter_drivers():
@@ -861,6 +856,12 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # name) names.
         memories = OrderedDict()
         for subfragment, sub_name in fragment.subfragments:
+            if not (subfragment.ports or subfragment.statements or subfragment.subfragments):
+                # If the fragment is completely empty, skip translating it, otherwise synthesis
+                # tools (including Yosys and Vivado) will treat it as a black box when it is
+                # loaded after conversion to Verilog.
+                continue
+
             if sub_name is None:
                 sub_name = module.anonymous()
 
