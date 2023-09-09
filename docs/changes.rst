@@ -125,6 +125,7 @@ Platform integration changes
 
 .. currentmodule:: amaranth.vendor
 
+* Added: ``icepack_opts`` override in :class:`vendor.LatticeICE40Platform`.
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.LatticeMachXO2Platform`, :class:`vendor.LatticeMachXO3LPlatform`.
 * Added: Xray toolchain support in :class:`vendor.XilinxPlatform`.
 * Added: :class:`vendor.GowinPlatform`.
