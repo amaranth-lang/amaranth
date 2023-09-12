@@ -820,11 +820,10 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         else:
             return "\\{}".format(fragment.type), port_map
 
-    module_name  = hierarchy[-1] or "anonymous"
+    module_name  = ".".join(name or "anonymous" for name in hierarchy)
     module_attrs = OrderedDict()
     if len(hierarchy) == 1:
         module_attrs["top"] = 1
-    module_attrs["amaranth.hierarchy"] = ".".join(name or "anonymous" for name in hierarchy)
 
     with builder.module(module_name, attrs=module_attrs) as module:
         compiler_state = _ValueCompilerState(module)
