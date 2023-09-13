@@ -20,7 +20,7 @@ class UnusedElaboratable(UnusedMustUse):
     _MustUse__silence = True
 
 
-class Elaboratable(MustUse, metaclass=ABCMeta):
+class Elaboratable(MustUse):
     _MustUse__warning = UnusedElaboratable
 
 
