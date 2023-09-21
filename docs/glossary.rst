@@ -6,9 +6,9 @@ Glossary
 .. _Amaranth:
 
  **Amaranth**
-  An open-source toolchain that uses the Python programming language to create.
+  An open-source toolchain that uses the Python programming language to create hardware definitions based on synchronous digital logic. 
 
-  Amaranth makes developing hardware definitions based on synchronous digital logic more intuitive by using the Python programming language. The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA(Field Programmable Gate Array)` development workflow.
+  The toolchain consists of the Amaranth language, the standard library, the simulator, and the build system, covering all steps of a typical :abbr:`FPGA(Field Programmable Gate Array)` development workflow.
 
 .. _ASIC:
 
@@ -19,7 +19,7 @@ Glossary
 
   ASICs can be configured to be more power efficient and have better performance than an off-the-shelf general purpose integrated circuit. However, unlike FPGAs, ASICs cannot be reprogrammed and are expensive to produce. Design and testing are critical to the success of ASIC development.
 
-  Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from :ref:`cell libraries<Standard cell library>`. The resulting system can then be verified via :ref:`simulation<Simulation>`.
+  Rather than designing and building them from the ground up, ASICs can be created by interconnecting functional components from :ref:`standard cell libraries<Standard cell library>`. The resulting system can then be verified via :ref:`simulation<Simulation>`.
 
 .. _Bitstream generation:  
 
@@ -37,7 +37,7 @@ Glossary
 
 .. _CLB:
 
- **CLB Configurable Logic Block**
+ **CLB (Configurable Logic Block)**
   The basic repeating logic block on an FPGA, the purpose of CLBs is to implement combinational and sequential logic on an FPGA.
 
   Be aware that different FPGA manufacturers use different names for this component. 
@@ -63,7 +63,7 @@ Glossary
  **Clock tree synthesis**
   A technique for distributing the clock signal equally among all sequential parts of a design. 
 
-  Clock tree synthesis occurs directly after :ref:`routing and before placement<Place and route>` in the :ref:`synthesis<Synthesis>` process. It inserts buffers and/or inverters along the clock path to balance the clock delay to all inputs. The aim being to reduce latency and skew to ensure all inputs are synchronized. 
+  Clock tree synthesis occurs directly after :ref:`placement and before routing<Place and route>` in the :ref:`synthesis<Synthesis>` process. It inserts buffers and/or inverters along the clock path to balance the clock delay to all inputs. The aim being to reduce latency and skew to ensure all inputs are synchronized. 
 
 .. _Combinational logic:
 
@@ -77,7 +77,7 @@ Glossary
  **DRAM (Dynamic Random Access Memmory)**
   Memory that is stored in capacitors and is constantly refreshed.
   
-  Rather than store data in :ref:`flip-flop`s, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh has a negative impact on speed and performance; and the write process produces extra heat because it uses a strong charge. 
+  Rather than store data in :ref:`flip-flops<Flip-flop>`, as :ref:`SRAM<SRAM>` does, DRAM constantly reads data into capacitors, row-by-row, in sequence, even when no processing is taking place. Racing the decay of the refresh has a negative impact on speed and performance; and the write process produces extra heat because it uses a strong charge. 
   
   DRAM has a higher storage capacity than other kinds of memory; is cheaper and smaller than SRAM; and memory can be deleted and refreshed while running a program.
   
@@ -143,7 +143,7 @@ Glossary
  **Hardware register**
   Circuits, typically composed of D :ref:`flip-flops<Flip-flop>` (DFF), that hold configuration and status information.
 
-  Written in low-level :ref:`HDL<HDL>` code, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making an SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
+  Written in low-level :ref:`HDL<HDL>` code, a hardware register is a set of DFFs with a shared function. At a higher level, a hardware register can be a specific context for making a SoC a function of a peripheral that is controlled by read and write signals to a memory location. 
 
 .. _HDL:
 
@@ -157,7 +157,7 @@ Glossary
  **IC (Integrated Circuit)**
   Sometimes called a microchip or chip, an IC is a semiconductor-based electronic device consisting of transistors, resistors, capacitors, diodes, and inductors that perform the same functions as a larger circuit comprised of discrete components.
 
-  The circuit is a small wafer that can hold anywhere from hundreds to millions of transistors and resistors (with possibly a few capacitors). These components can perform calculations and store data using either digital or analog technology. Digital ICs use :ref:`logic gates<Logic gate>` that work only with values of 1s and 0s. 
+  The circuit is a small wafer that can hold anywhere from hundreds to millions of transistors and resistors (with possibly a few capacitors). These components can perform calculations and store data using either digital or analog technology. ICs use :ref:`logic gates<Logic gate>` that work only with values of 1s and 0s. 
 
 .. _JTAG:
 
@@ -222,7 +222,7 @@ Glossary
  **Netlist**
   A description of the components and connectivity of an electronic circuit.
 
-  Netlists can be generated at different points in the toolchain process: after synthesis, where the placement information will not be available; and after place and route, when the placement information will be included. 
+  Netlists can be generated at different points in the toolchain process: during logical synthesis, where the placement information will not be available; and after place and route, when the placement information is available. 
 
 .. _PLL:
 
@@ -236,7 +236,7 @@ Glossary
 .. _Place and route:
 
  **Place and route**
-  A stage in the IC design process, place and route decides the placement of components on a chip and the wiring between those components. 
+  A stage in the IC design process, place and route decides the placement of components on a chip and the wiring routes between those components. 
   
   Placement defines the location of the electronic components, circuitry, and logic elements within the defined space. Routing defines the wiring required to connect the components. These routines are usually performed by the toolchain and produce the layout schema for a chip. 
 
@@ -272,7 +272,7 @@ Glossary
   
   Sequential logic has a memory function (unlike :ref:`combinational logic<Combinational logic>` which has none) and is used to construct :ref:`Finite state machines<Finite state machine>`.
 
-  Sequential logic circuits can be either synchronous, the state of the device changes in response to a clock signal or asynchronous, the state of the device changes in response to changing inputs.
+  Sequential logic circuits can be either synchronous (the state of the device changes in response to a clock signal) or asynchronous (the state of the device changes in response to changing inputs).
 
 .. _Simulation:
 
@@ -297,7 +297,7 @@ Glossary
   
   SRAM uses flip-flops to store bits and holds that value until the opposite value replaces it. SRAM is faster in operation than :ref:`DRAM<DRAM>` as it doesn't require a refresh process. 
 
-  In comparison with DRAM, SRAM has a lower power consumption, is more expensive to purchase, has lower storaage capacity, and is more complex in design. 
+  In comparison with DRAM, SRAM has a lower power consumption, is more expensive to purchase, has lower storage capacity, and is more complex in design. 
   
   SRAM is incompatible with DRAM.
 
@@ -315,7 +315,7 @@ Glossary
  **Synthesis**
   The process of coverting a high-level behavioural design to a lower-level physical implementation.
 
-  The synthesis process represents the behaviour outlined in a :ref:`hardware definition language<HDL>` as :ref:`register transfer level<RTL>` that is then translated into logic gates: :ref:`LUTs<LUT>` and :ref:`flip-flops<Flip-flop>`. A bitstream can then be generated to program an FPGA.
+  The synthesis process represents the behaviour outlined in a :ref:`hardware definition language<HDL>` as :ref:`register transfer level<RTL>` that is then translated into :ref:`logic gates<Logic gates>` (:ref:`LUTs<LUT>` and :ref:`flip-flops<Flip-flop>`). A bitstream can then be generated to program an FPGA.
 
 .. _Tapeout:
 
