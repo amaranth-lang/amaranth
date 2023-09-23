@@ -1053,6 +1053,10 @@ class SignalTestCase(FHDLTestCase):
                 r"not <StringEnum\.FOO: 'a'>$"):
             Signal(1, reset=StringEnum.FOO)
 
+    def test_reset_const_castable(self):
+        s1 = Signal(4, reset=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
+        self.assertEqual(s1.reset, 2)
+
     def test_reset_shape_castable_const(self):
         class CastableFromHex(ShapeCastable):
             def as_shape(self):

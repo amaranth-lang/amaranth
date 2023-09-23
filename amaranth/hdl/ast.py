@@ -1056,12 +1056,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                                  .format(orig_shape, Shape.cast(orig_shape),
                                          reset.shape()))
         else:
+            if reset is None:
+                reset = 0
             try:
-                reset = Const.cast(reset or 0)
+                reset = Const.cast(reset)
             except TypeError:
                 raise TypeError("Reset value must be a constant-castable expression, not {!r}"
                                 .format(orig_reset))
-        if orig_reset not in (None, 0, -1): # Avoid false positives for all-zeroes and all-ones
+        # Avoid false positives for all-zeroes and all-ones
+        if orig_reset is not None and not (isinstance(orig_reset, int) and orig_reset in (0, -1)):
             if reset.shape().signed and not self.signed:
                 warnings.warn(
                     message="Reset value {!r} is signed, but the signal shape is {!r}"
