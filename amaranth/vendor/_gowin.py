@@ -596,7 +596,7 @@ class GowinPlatform(TemplatedPlatform):
             )
         return m
 
-    def get_diff_input_output(self, pin, port, atttr, invert):
+    def get_diff_input_output(self, pin, port, attrs, invert):
         self._check_feature("differential input/output", pin, attrs,
                             valid_xdrs=(0, 1, 2), valid_attrs=True)
         m = Module()
