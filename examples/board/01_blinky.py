@@ -2,7 +2,7 @@
 # using the platform default clock (and default reset, if any).
 
 from amaranth import *
-from amaranth_boards.ice40_hx1k_blink_evn import *
+from amaranth_boards.ice40_hx1k_blink_evn import ICE40HX1KBlinkEVNPlatform
 
 
 class Blinky(Elaboratable):
