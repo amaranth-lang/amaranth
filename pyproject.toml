@@ -57,6 +57,9 @@ docs = [
   "sphinx-rtd-theme~=1.2",
   "sphinx-autobuild",
 ]
+examples = [
+  "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git"
+]
 
 [tool.pdm.scripts]
 test.composite = ["test-code", "test-docs"]

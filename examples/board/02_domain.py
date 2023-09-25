@@ -3,7 +3,7 @@
 # independently created in addition to the main "sync" domain.
 
 from amaranth import *
-from amaranth_boards.ice40_hx1k_blink_evn import *
+from amaranth_boards.ice40_hx1k_blink_evn import ICE40HX1KBlinkEVNPlatform
 
 
 class BlinkyWithDomain(Elaboratable):
