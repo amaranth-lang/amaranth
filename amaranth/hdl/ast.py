@@ -604,7 +604,7 @@ class Value(metaclass=ABCMeta):
 
     @abstractmethod
     def _rhs_signals(self):
-        pass # :nocov:
+        raise NotImplementedError # :nocov:
 
 
 @final
