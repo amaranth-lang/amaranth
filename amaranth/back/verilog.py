@@ -1,7 +1,8 @@
 import warnings
 
 from .._toolchain.yosys import *
-from ..hdl import ir
+from ..hdl import ast, ir
+from ..lib import wiring
 from . import rtlil
 
 
@@ -45,8 +46,19 @@ def convert_fragment(*args, strip_internal_attrs=False, **kwargs):
     return _convert_rtlil_text(rtlil_text, strip_internal_attrs=strip_internal_attrs), name_map
 
 
-def convert(elaboratable, name="top", platform=None, *, ports, emit_src=True,
+def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=True,
             strip_internal_attrs=False, **kwargs):
+    if (ports is None and
+            hasattr(elaboratable, "signature") and
+            isinstance(elaboratable.signature, wiring.Signature)):
+        ports = []
+        for path, member, value in elaboratable.signature.flatten(elaboratable):
+            if isinstance(value, ast.ValueCastable):
+                value = value.as_value()
+            if isinstance(value, ast.Value):
+                ports.append(value)
+    elif ports is None:
+        raise TypeError("The `convert()` function requires a `ports=` argument")
     fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs)
     return verilog_text

@@ -1,14 +1,13 @@
+# Extract version for this package from the environment package metadata. This used to be a lot
+# more difficult in earlier Python versions, and the `__version__` field is a legacy of that time.
+import importlib.metadata
 try:
-    try:
-        from importlib import metadata as importlib_metadata # py3.8+ stdlib
-    except ImportError:
-        import importlib_metadata # py3.7- shim
-    __version__ = importlib_metadata.version(__package__)
-except ImportError:
-    # No importlib_metadata. This shouldn't normally happen, but some people prefer not installing
-    # packages via pip at all, instead using PYTHONPATH directly or copying the package files into
-    # `lib/pythonX.Y/site-packages`. Although not a recommended way, we still try to support it.
+    __version__ = importlib.metadata.version(__package__)
+except importlib.metadata.PackageNotFoundError:
+    # No importlib metadata for this package. This shouldn't normally happen, but some people
+    # prefer not installing packages via pip at all. Although not recommended we still support it.
     __version__ = "unknown" # :nocov:
+del importlib
 
 
 from .hdl import *

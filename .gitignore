@@ -1,8 +1,13 @@
 # Python
 __pycache__/
-/*.egg-info
-/.eggs
+*.egg-info
 /dist
+
+# pdm
+/.pdm-plugins
+/.pdm-python
+/.venv
+/pdm.lock
 
 # coverage
 /.coverage

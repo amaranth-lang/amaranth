@@ -18,7 +18,7 @@ class LEDBlinker(Elaboratable):
 
         return m
 # --- BUILD ---
-from amaranth_boards.icestick import *
+from amaranth_boards.icestick import ICEStickPlatform
 
 
 ICEStickPlatform().build(LEDBlinker(), do_program=True)

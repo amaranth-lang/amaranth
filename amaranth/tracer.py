@@ -26,24 +26,40 @@ def get_var_name(depth=2, default=_raise_exception):
             break
     if call_opc not in ("CALL_FUNCTION", "CALL_FUNCTION_KW", "CALL_FUNCTION_EX",
                         "CALL_METHOD", "CALL"):
-        return default
+        if default is _raise_exception:
+            raise NameNotFound
+        else:
+            return default
 
     index = call_index + 2
+    imm = 0
     while True:
         opc = opname[code.co_code[index]]
-        if opc in ("STORE_NAME", "STORE_ATTR"):
-            name_index = int(code.co_code[index + 1])
-            return code.co_names[name_index]
+        if opc == 'EXTENDED_ARG':
+            imm |= int(code.co_code[index + 1])
+            imm <<= 8
+            index += 2
+        elif opc in ("STORE_NAME", "STORE_ATTR"):
+            imm |= int(code.co_code[index + 1])
+            return code.co_names[imm]
         elif opc == "STORE_FAST":
-            name_index = int(code.co_code[index + 1])
-            return code.co_varnames[name_index]
-        elif opc == "STORE_DEREF":
-            name_index = int(code.co_code[index + 1])
+            imm |= int(code.co_code[index + 1])
             if sys.version_info >= (3, 11):
-                name_index -= code.co_nlocals
-            return code.co_cellvars[name_index]
+                return code._varname_from_oparg(imm)
+            else:
+                return code.co_varnames[imm]
+        elif opc == "STORE_DEREF":
+            imm |= int(code.co_code[index + 1])
+            if sys.version_info >= (3, 11):
+                return code._varname_from_oparg(imm)
+            else:
+                if imm < len(code.co_cellvars):
+                    return code.co_cellvars[imm]
+                else:
+                    return code.co_freevars[imm - len(code.co_cellvars)]
         elif opc in ("LOAD_GLOBAL", "LOAD_NAME", "LOAD_ATTR", "LOAD_FAST", "LOAD_DEREF",
                      "DUP_TOP", "BUILD_LIST", "CACHE", "COPY"):
+            imm = 0
             index += 2
         else:
             if default is _raise_exception:

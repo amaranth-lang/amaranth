@@ -3,6 +3,7 @@ from contextlib import contextmanager, _GeneratorContextManager
 from functools import wraps
 from enum import Enum
 import warnings
+import sys
 
 from .._utils import flatten, bits_for
 from .. import tracer
@@ -210,7 +211,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
     def _check_signed_cond(self, cond):
         cond = Value.cast(cond)
-        if cond.shape().signed:
+        if sys.version_info < (3, 12, 0) and cond.shape().signed:
+            # TODO(py3.11): remove; ~True is a warning in 3.12+, finally!
             warnings.warn("Signed values in If/Elif conditions usually result from inverting "
                           "Python booleans with ~, which leads to unexpected results. "
                           "Replace `~flag` with `not flag`. (If this is a false positive, "

@@ -42,11 +42,20 @@ class ShapeTestCase(FHDLTestCase):
         s3 = Shape(3, True)
         self.assertEqual(s3.width, 3)
         self.assertEqual(s3.signed, True)
+        s4 = Shape(0)
+        self.assertEqual(s4.width, 0)
+        self.assertEqual(s4.signed, False)
 
     def test_make_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Width must be a non-negative integer, not -1$"):
-            Shape(-1)
+                r"^Width must be an integer, not 'a'$"):
+            Shape("a")
+        with self.assertRaisesRegex(TypeError,
+                r"^Width of an unsigned value must be zero or a positive integer, not -1$"):
+            Shape(-1, signed=False)
+        with self.assertRaisesRegex(TypeError,
+                r"^Width of a signed value must be a positive integer, not 0$"):
+            Shape(0, signed=True)
 
     def test_compare_non_shape(self):
         self.assertNotEqual(Shape(1, True), "hi")
@@ -87,7 +96,7 @@ class ShapeTestCase(FHDLTestCase):
 
     def test_cast_int_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Width must be a non-negative integer, not -1$"):
+                r"^Width of an unsigned value must be zero or a positive integer, not -1$"):
             Shape.cast(-1)
 
     def test_cast_tuple_wrong(self):
@@ -116,7 +125,10 @@ class ShapeTestCase(FHDLTestCase):
         self.assertEqual(s6.signed, False)
         s7 = Shape.cast(range(-1, -1))
         self.assertEqual(s7.width, 0)
-        self.assertEqual(s7.signed, True)
+        self.assertEqual(s7.signed, False)
+        s8 = Shape.cast(range(0, 10, 3))
+        self.assertEqual(s8.width, 4)
+        self.assertEqual(s8.signed, False)
 
     def test_cast_enum(self):
         s1 = Shape.cast(UnsignedEnum)
@@ -321,6 +333,10 @@ class ValueTestCase(FHDLTestCase):
                         "(cat (slice (const 9'd256) 1:9) (slice (const 9'd256) 0:1))")
         self.assertRepr(Const(256).rotate_left(-7),
                         "(cat (slice (const 9'd256) 7:9) (slice (const 9'd256) 0:7))")
+        self.assertRepr(Const(0, 0).rotate_left(3),
+                        "(cat (slice (const 0'd0) 0:0) (slice (const 0'd0) 0:0))")
+        self.assertRepr(Const(0, 0).rotate_left(-3),
+                        "(cat (slice (const 0'd0) 0:0) (slice (const 0'd0) 0:0))")
 
     def test_rotate_left_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -336,11 +352,32 @@ class ValueTestCase(FHDLTestCase):
                         "(cat (slice (const 9'd256) 8:9) (slice (const 9'd256) 0:8))")
         self.assertRepr(Const(256).rotate_right(-7),
                         "(cat (slice (const 9'd256) 2:9) (slice (const 9'd256) 0:2))")
+        self.assertRepr(Const(0, 0).rotate_right(3),
+                        "(cat (slice (const 0'd0) 0:0) (slice (const 0'd0) 0:0))")
+        self.assertRepr(Const(0, 0).rotate_right(-3),
+                        "(cat (slice (const 0'd0) 0:0) (slice (const 0'd0) 0:0))")
 
     def test_rotate_right_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Rotate amount must be an integer, not 'str'$"):
             Const(31).rotate_right("str")
+
+    def test_replicate_shape(self):
+        s1 = Const(10).replicate(3)
+        self.assertEqual(s1.shape(), unsigned(12))
+        self.assertIsInstance(s1.shape(), Shape)
+        s2 = Const(10).replicate(0)
+        self.assertEqual(s2.shape(), unsigned(0))
+
+    def test_replicate_count_wrong(self):
+        with self.assertRaises(TypeError):
+            Const(10).replicate(-1)
+        with self.assertRaises(TypeError):
+            Const(10).replicate("str")
+
+    def test_replicate_repr(self):
+        s = Const(10).replicate(3)
+        self.assertEqual(repr(s), "(cat (const 4'd10) (const 4'd10) (const 4'd10))")
 
 
 class ConstTestCase(FHDLTestCase):
@@ -358,7 +395,7 @@ class ConstTestCase(FHDLTestCase):
 
     def test_shape_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Width must be a non-negative integer, not -1$"):
+                r"^Width of an unsigned value must be zero or a positive integer, not -1$"):
             Const(1, -1)
 
     def test_wrong_fencepost(self):
@@ -369,6 +406,8 @@ class ConstTestCase(FHDLTestCase):
 
     def test_normalization(self):
         self.assertEqual(Const(0b10110, signed(5)).value, -10)
+        self.assertEqual(Const(0b10000, signed(4)).value, 0)
+        self.assertEqual(Const(-16, 4).value, 0)
 
     def test_value(self):
         self.assertEqual(Const(10).value, 10)
@@ -430,7 +469,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_sub(self):
         v1 = Const(0, unsigned(4)) - Const(0, unsigned(6))
         self.assertEqual(repr(v1), "(- (const 4'd0) (const 6'd0))")
-        self.assertEqual(v1.shape(), unsigned(7))
+        self.assertEqual(v1.shape(), signed(7))
         v2 = Const(0, signed(4)) - Const(0, signed(6))
         self.assertEqual(v2.shape(), signed(7))
         v3 = Const(0, signed(4)) - Const(0, unsigned(4))
@@ -438,7 +477,9 @@ class OperatorTestCase(FHDLTestCase):
         v4 = Const(0, unsigned(4)) - Const(0, signed(4))
         self.assertEqual(v4.shape(), signed(6))
         v5 = 10 - Const(0, 4)
-        self.assertEqual(v5.shape(), unsigned(5))
+        self.assertEqual(v5.shape(), signed(5))
+        v6 = 1 - Const(2)
+        self.assertEqual(v6.shape(), signed(3))
 
     def test_mul(self):
         v1 = Const(0, unsigned(4)) * Const(0, unsigned(6))
@@ -660,6 +701,17 @@ class OperatorTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             hash(Const(0) + Const(0))
 
+    def test_abs(self):
+        s = Signal(4)
+        self.assertRepr(abs(s), """
+        (sig s)
+        """)
+        s = Signal(signed(4))
+        self.assertRepr(abs(s), """
+        (slice (m (>= (sig s) (const 1'd0)) (sig s) (- (sig s))) 0:4)
+        """)
+        self.assertEqual(abs(s).shape(), unsigned(4))
+
 
 class SliceTestCase(FHDLTestCase):
     def test_shape(self):
@@ -701,6 +753,9 @@ class SliceTestCase(FHDLTestCase):
         with self.assertRaisesRegex(IndexError,
                 r"^Slice start 4 must be less than slice stop 2$"):
             Slice(c, 4, 2)
+        with self.assertRaisesRegex(IndexError,
+                r"^Cannot start slice -9 bits into 8-bit value$"):
+            Slice(c, -9, -5)
 
     def test_repr(self):
         s1 = Const(10)[2]
@@ -739,6 +794,11 @@ class BitSelectTestCase(FHDLTestCase):
         s = self.c.bit_select(self.s, 2)
         self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2 1)")
 
+    def test_offset_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Part offset must be unsigned$"):
+            self.c.bit_select(self.s.as_signed(), 1)
+
 
 class WordSelectTestCase(FHDLTestCase):
     def setUp(self):
@@ -770,6 +830,11 @@ class WordSelectTestCase(FHDLTestCase):
     def test_repr(self):
         s = self.c.word_select(self.s, 2)
         self.assertEqual(repr(s), "(part (const 8'd0) (sig s) 2 2)")
+
+    def test_offset_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Part offset must be unsigned$"):
+            self.c.word_select(self.s.as_signed(), 1)
 
 
 class CatTestCase(FHDLTestCase):
@@ -834,33 +899,19 @@ class CatTestCase(FHDLTestCase):
 
 
 class ReplTestCase(FHDLTestCase):
-    def test_shape(self):
-        s1 = Repl(Const(10), 3)
-        self.assertEqual(s1.shape(), unsigned(12))
-        self.assertIsInstance(s1.shape(), Shape)
-        s2 = Repl(Const(10), 0)
-        self.assertEqual(s2.shape(), unsigned(0))
-
-    def test_count_wrong(self):
-        with self.assertRaises(TypeError):
-            Repl(Const(10), -1)
-        with self.assertRaises(TypeError):
-            Repl(Const(10), "str")
-
-    def test_repr(self):
-        s = Repl(Const(10), 3)
-        self.assertEqual(repr(s), "(repl (const 4'd10) 3)")
-
+    @_ignore_deprecated
     def test_cast(self):
         r = Repl(0, 3)
-        self.assertEqual(repr(r), "(repl (const 1'd0) 3)")
+        self.assertEqual(repr(r), "(cat (const 1'd0) (const 1'd0) (const 1'd0))")
 
+    @_ignore_deprecated
     def test_int_01(self):
         with warnings.catch_warnings():
             warnings.filterwarnings(action="error", category=SyntaxWarning)
             Repl(0, 3)
             Repl(1, 3)
 
+    @_ignore_deprecated
     def test_int_wrong(self):
         with self.assertWarnsRegex(SyntaxWarning,
                 r"^Value argument of Repl\(\) is a bare integer 2 used in bit vector context; "
@@ -980,7 +1031,7 @@ class SignalTestCase(FHDLTestCase):
 
     def test_shape_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Width must be a non-negative integer, not -10$"):
+                r"^Width of an unsigned value must be zero or a positive integer, not -10$"):
             Signal(-10)
 
     def test_name(self):
@@ -1001,6 +1052,10 @@ class SignalTestCase(FHDLTestCase):
                 r"^Reset value must be a constant-castable expression, "
                 r"not <StringEnum\.FOO: 'a'>$"):
             Signal(1, reset=StringEnum.FOO)
+
+    def test_reset_const_castable(self):
+        s1 = Signal(4, reset=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
+        self.assertEqual(s1.reset, 2)
 
     def test_reset_shape_castable_const(self):
         class CastableFromHex(ShapeCastable):
@@ -1151,6 +1206,9 @@ class MockValueCastable(ValueCastable):
     def __init__(self, dest):
         self.dest = dest
 
+    def shape(self):
+        return Value.cast(self.dest).shape()
+
     @ValueCastable.lowermethod
     def as_value(self):
         return self.dest
@@ -1160,6 +1218,9 @@ class MockValueCastableChanges(ValueCastable):
     def __init__(self, width=0):
         self.width = width
 
+    def shape(self):
+        return unsigned(self.width)
+
     @ValueCastable.lowermethod
     def as_value(self):
         return Signal(self.width)
@@ -1168,6 +1229,9 @@ class MockValueCastableChanges(ValueCastable):
 class MockValueCastableCustomGetattr(ValueCastable):
     def __init__(self):
         pass
+
+    def shape(self):
+        assert False
 
     @ValueCastable.lowermethod
     def as_value(self):
@@ -1186,16 +1250,29 @@ class ValueCastableTestCase(FHDLTestCase):
                 def __init__(self):
                     pass
 
+                def shape(self):
+                    pass
+
                 def as_value(self):
                     return Signal()
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverride' deriving from `ValueCastable` must "
+                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from `ValueCastable` must "
                 r"override the `as_value` method$"):
-            class MockValueCastableNoOverride(ValueCastable):
+            class MockValueCastableNoOverrideAsValue(ValueCastable):
                 def __init__(self):
                     pass
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Class 'MockValueCastableNoOverrideShapec' deriving from `ValueCastable` must "
+                r"override the `shape` method$"):
+            class MockValueCastableNoOverrideShapec(ValueCastable):
+                def __init__(self):
+                    pass
+
+                def as_value(self):
+                    return Signal()
 
     def test_memoized(self):
         vc = MockValueCastableChanges(1)

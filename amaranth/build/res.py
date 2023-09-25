@@ -1,8 +1,12 @@
 from collections import OrderedDict
+import warnings
 
 from ..hdl.ast import *
-from ..hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from ..hdl.rec import *
 from ..lib.io import *
+from ..lib import wiring
 
 from .dsl import *
 
@@ -118,29 +122,36 @@ class ResourceManager:
                     fields[sub.name] = resolve(sub, dir[sub.name], xdr[sub.name],
                                                name="{}__{}".format(name, sub.name),
                                                attrs={**attrs, **sub.attrs})
-                return Record([
+                rec = Record([
                     (f_name, f.layout) for (f_name, f) in fields.items()
                 ], fields=fields, name=name)
+                rec.signature = wiring.Signature({
+                    f_name: wiring.Out(f.signature) for (f_name, f) in fields.items()
+                })
+                return rec
 
             elif isinstance(resource.ios[0], (Pins, DiffPairs)):
                 phys = resource.ios[0]
+                # The flow is `In` below regardless of requested pin direction. The flow should
+                # never be used as it's not used internally and anyone using `dir="-"` should
+                # ignore it as well.
                 if isinstance(phys, Pins):
                     phys_names = phys.names
-                    port = Record([("io", len(phys))], name=name)
+                    port = wiring.Signature({"io": wiring.In(len(phys))}).create(path=(name,))
                 if isinstance(phys, DiffPairs):
                     phys_names = []
-                    record_fields = []
+                    members = {}
                     if not self.should_skip_port_component(None, attrs, "p"):
                         phys_names += phys.p.names
-                        record_fields.append(("p", len(phys)))
+                        members["p"] = wiring.In(len(phys))
                     if not self.should_skip_port_component(None, attrs, "n"):
                         phys_names += phys.n.names
-                        record_fields.append(("n", len(phys)))
-                    port = Record(record_fields, name=name)
+                        members["n"] = wiring.In(len(phys))
+                    port = wiring.Signature(members).create(path=(name,))
                 if dir == "-":
                     pin = None
                 else:
-                    pin = Pin(len(phys), dir, xdr=xdr, name=name)
+                    pin = wiring.flipped(Pin(len(phys), dir, xdr=xdr, name=name))
 
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:

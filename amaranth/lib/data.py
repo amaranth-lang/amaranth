@@ -1,5 +1,6 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence
+import warnings
 
 from amaranth.hdl import *
 from amaranth.hdl.ast import ShapeCastable, ValueCastable
@@ -114,20 +115,6 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         raise TypeError("Object {!r} cannot be converted to a data layout"
                         .format(obj))
 
-    @staticmethod
-    def of(obj):
-        """Extract the layout that was used to create a view.
-
-        Raises
-        ------
-        TypeError
-            If ``obj`` is not a :class:`View` instance.
-        """
-        if not isinstance(obj, View):
-            raise TypeError("Object {!r} is not a data view"
-                            .format(obj))
-        return obj._View__orig_layout
-
     @abstractmethod
     def __iter__(self):
         """Iterate fields in the layout.
@@ -237,10 +224,11 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
                                      "it casts to, {!r}, and not {!r}"
                                      .format(field.shape, cast_field_shape,
                                              key_value.shape()))
-            else:
+            elif not isinstance(key_value, Const):
                 key_value = Const(key_value, cast_field_shape)
-            int_value &= ~(((1 << cast_field_shape.width) - 1) << field.offset)
-            int_value |= key_value.value << field.offset
+            mask = ((1 << cast_field_shape.width) - 1) << field.offset
+            int_value &= ~mask
+            int_value |= (key_value.value << field.offset) & mask
         return Const(int_value, self.as_shape())
 
 
@@ -599,9 +587,25 @@ class View(ValueCastable):
             raise ValueError("View target is {} bit(s) wide, which is not compatible with "
                              "the {} bit(s) wide view layout"
                              .format(len(cast_target), cast_layout.size))
+        for name, field in cast_layout:
+            if isinstance(name, str) and name[0] != "_" and hasattr(type(self), name):
+                warnings.warn("View layout includes a field {!r} that will be shadowed by "
+                              "the view attribute '{}.{}.{}'"
+                              .format(name, type(self).__module__, type(self).__qualname__, name),
+                              SyntaxWarning, stacklevel=1)
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
+
+    def shape(self):
+        """Get layout of this view.
+
+        Returns
+        -------
+        :class:`Layout`
+            The ``layout`` provided when constructing the view.
+        """
+        return self.__orig_layout
 
     @ValueCastable.lowermethod
     def as_value(self):
@@ -655,6 +659,10 @@ class View(ValueCastable):
             If ``ShapeCastable.__call__`` does not return a value or a value-castable object.
         """
         if isinstance(self.__layout, ArrayLayout):
+            if not isinstance(key, (int, Value, ValueCastable)):
+                raise TypeError("Views with array layout may only be indexed with an integer "
+                                "or a value, not {!r}"
+                                .format(key))
             shape = self.__layout.elem_shape
             value = self.__target.word_select(key, Shape.cast(self.__layout.elem_shape).width)
         else:
@@ -667,14 +675,13 @@ class View(ValueCastable):
             value = self.__target[field.offset:field.offset + field.width]
         # Field guarantees that the shape-castable object is well-formed, so there is no need
         # to handle erroneous cases here.
-        while isinstance(shape, ShapeCastable):
-            if hasattr(shape, "__call__"):
-                value = shape(value)
-                if not isinstance(value, (Value, ValueCastable)):
-                    raise TypeError("{!r}.__call__() must return a value or "
-                                    "a value-castable object, not {!r}"
-                                    .format(shape, value))
-                return value
+        if isinstance(shape, ShapeCastable):
+            value = shape(value)
+            if not isinstance(value, (Value, ValueCastable)):
+                raise TypeError("{!r}.__call__() must return a value or "
+                                "a value-castable object, not {!r}"
+                                .format(shape, value))
+            return value
         if Shape.cast(shape).signed:
             return value.as_signed()
         else:
@@ -691,6 +698,9 @@ class View(ValueCastable):
             If the layout does not define a field called ``name``, or if ``name`` starts with
             an underscore.
         """
+        if isinstance(self.__layout, ArrayLayout):
+            raise AttributeError("View of {!r} with an array layout does not have fields"
+                                 .format(self.__target))
         try:
             item = self[name]
         except KeyError:

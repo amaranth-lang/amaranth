@@ -33,6 +33,9 @@ class BuildPlan:
         forward slashes (``/``).
         """
         assert isinstance(filename, str) and filename not in self.files
+        if (pathlib.PurePosixPath(filename).is_absolute() or
+                pathlib.PureWindowsPath(filename).is_absolute()):
+            raise ValueError(f"Filename {filename!r} must not be an absolute path")
         self.files[filename] = content
 
     def digest(self, size=64):
@@ -61,12 +64,13 @@ class BuildPlan:
             for filename in sorted(self.files):
                 archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
 
-    def execute_local(self, root="build", *, run_script=True):
+    def execute_local(self, root="build", *, run_script=True, env=None):
         """
         Execute build plan using the local strategy. Files from the build plan are placed in
         the build root directory ``root``, and, if ``run_script`` is ``True``, the script
-        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere) is
-        executed in the build root.
+        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere)
+        is executed in the build root. If ``env`` is not ``None``, the environment is replaced
+        with ``env``.
 
         Returns :class:`LocalBuildProducts`.
         """
@@ -77,9 +81,9 @@ class BuildPlan:
 
             for filename, content in self.files.items():
                 filename = pathlib.Path(filename)
-                # Forbid parent directory components completely to avoid the possibility
-                # of writing outside the build root.
-                assert ".." not in filename.parts
+                # Forbid parent directory components and absolute paths completely to avoid
+                # the possibility of writing outside the build root.
+                assert not filename.is_absolute() and ".." not in filename.parts
                 dirname = os.path.dirname(filename)
                 if dirname:
                     os.makedirs(dirname, exist_ok=True)
@@ -94,9 +98,11 @@ class BuildPlan:
                     # Without "call", "cmd /c {}.bat" will return 0.
                     # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
                     # Running the script manually from a command prompt is unaffected.
-                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)])
+                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)],
+                                          env=os.environ if env is None else env)
                 else:
-                    subprocess.check_call(["sh", "{}.sh".format(self.script)])
+                    subprocess.check_call(["sh", "{}.sh".format(self.script)],
+                                          env=os.environ if env is None else env)
 
             return LocalBuildProducts(os.getcwd())
 

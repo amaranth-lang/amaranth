@@ -83,7 +83,11 @@ class _ValueCompiler(ValueVisitor, _Compiler):
                                 "simulate in reasonable time"
                                 .format(src, len(value)))
 
-        return super().on_value(value)
+        v = super().on_value(value)
+        if isinstance(v, str) and len(v) > 1000:
+            # Avoid parser stack overflow on older Pythons.
+            return self.emitter.def_var("intermediate", v)
+        return v
 
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
@@ -138,7 +142,7 @@ class _RHSValueCompiler(_ValueCompiler):
         if len(value.operands) == 1:
             arg, = value.operands
             if value.operator == "~":
-                return f"(~{self(arg)})"
+                return f"(~{mask(arg)})"
             if value.operator == "-":
                 return f"(-{sign(arg)})"
             if value.operator == "b":
@@ -166,11 +170,11 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "%":
                 return f"zmod({sign(lhs)}, {sign(rhs)})"
             if value.operator == "&":
-                return f"({self(lhs)} & {self(rhs)})"
+                return f"({mask(lhs)} & {mask(rhs)})"
             if value.operator == "|":
-                return f"({self(lhs)} | {self(rhs)})"
+                return f"({mask(lhs)} | {mask(rhs)})"
             if value.operator == "^":
-                return f"({self(lhs)} ^ {self(rhs)})"
+                return f"({mask(lhs)} ^ {mask(rhs)})"
             if value.operator == "<<":
                 return f"({sign(lhs)} << {sign(rhs)})"
             if value.operator == ">>":
@@ -209,18 +213,6 @@ class _RHSValueCompiler(_ValueCompiler):
             part_mask = (1 << len(part)) - 1
             gen_parts.append(f"(({part_mask:#x} & {self(part)}) << {offset})")
             offset += len(part)
-        if gen_parts:
-            return f"({' | '.join(gen_parts)})"
-        return f"0"
-
-    def on_Repl(self, value):
-        part_mask = (1 << len(value.value)) - 1
-        gen_part = self.emitter.def_var("repl", f"{part_mask:#x} & {self(value.value)}")
-        gen_parts = []
-        offset = 0
-        for _ in range(value.count):
-            gen_parts.append(f"({gen_part} << {offset})")
-            offset += len(value.value)
         if gen_parts:
             return f"({' | '.join(gen_parts)})"
         return f"0"
@@ -324,9 +316,6 @@ class _LHSValueCompiler(_ValueCompiler):
                 self(part)(f"({part_mask:#x} & ({gen_arg} >> {offset}))")
                 offset += len(part)
         return gen
-
-    def on_Repl(self, value):
-        raise TypeError # :nocov:
 
     def on_ArrayProxy(self, value):
         def gen(arg):

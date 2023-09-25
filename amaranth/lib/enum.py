@@ -7,9 +7,9 @@ from ..hdl.ast import Value, Shape, ShapeCastable, Const
 __all__ = py_enum.__all__
 
 
-for member in py_enum.__all__:
-    globals()[member] = getattr(py_enum, member)
-del member
+for _member in py_enum.__all__:
+    globals()[_member] = getattr(py_enum, _member)
+del _member
 
 
 class EnumMeta(ShapeCastable, py_enum.EnumMeta):
@@ -112,16 +112,11 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         if hasattr(cls, "_amaranth_shape_"):
             # Shape was provided explicitly; return it.
             return cls._amaranth_shape_
-        elif cls.__members__:
-            # Shape was not provided explicitly, but enumeration has members; treat it
-            # the same way `Shape.cast` treats standard library enumerations, so that
-            # `amaranth.lib.enum.Enum` can be a drop-in replacement for `enum.Enum`.
-            return Shape._cast_plain_enum(cls)
         else:
-            # Shape was not provided explicitly, and enumeration has no members.
-            # This is a base or mixin class that cannot be instantiated directly.
-            raise TypeError("Enumeration '{}.{}' does not have a defined shape"
-                            .format(cls.__module__, cls.__qualname__))
+            # Shape was not provided explicitly; treat it the same way `Shape.cast` treats
+            # standard library enumerations, so that `amaranth.lib.enum.Enum` can be a drop-in
+            # replacement for `enum.Enum`.
+            return Shape._cast_plain_enum(cls)
 
     def __call__(cls, value):
         # :class:`py_enum.Enum` uses ``__call__()`` for type casting: ``E(x)`` returns

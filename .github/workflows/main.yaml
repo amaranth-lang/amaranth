@@ -1,17 +1,22 @@
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  merge_group:
+
 name: CI
 jobs:
+
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version:
-        - '3.7'
         - '3.8'
         - '3.9'
         - '3.10'
         - '3.11'
-        - 'pypy-3.7-v7.3.3'
+        - 'pypy-3.8'
+        - 'pypy-3.9'
         allow-failure:
         - false
         include:
@@ -20,12 +25,19 @@ jobs:
     continue-on-error: '${{ matrix.allow-failure }}'
     name: 'test (${{ matrix.python-version }})'
     steps:
+    - name: Preserve Wasm cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/wasmtime
+          ~/.cache/YoWASP
+        key: ${{ runner.os }}-wasm
     - name: Check out source code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -34,25 +46,21 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install coverage codecov
-        pip install yowasp-yosys==0.20.* # last version compatible with Python 3.7
-        pip install -e .[builtin-yosys]
-        pip install -r docs/requirements.txt
-    - name: Preserve Wasm cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/wasmtime
-          ~/.cache/yowasp
-        key: ${{ runner.os }}-wasm
+        pip install codecov yowasp-yosys
+        pdm install --dev
     - name: Run tests
+      env:
+        YOSYS: yowasp-yosys
+        NEXTPNR_ICE40: yowasp-nextpnr-ice40
+        ICEPACK: yowasp-icepack
+        SBY: yowasp-sby
+        SMTBMC: yowasp-yosys-smtbmc
       run: |
-        export AMARANTH_USE_YOSYS=builtin YOSYS=yowasp-yosys SBY=yowasp-sby SMTBMC=yowasp-yosys-smtbmc
-        export PYTHONWARNINGS=error
-        python -m coverage run -m unittest discover -t . -s tests
-        unset PYTHONWARNINGS
-        sphinx-build -b doctest docs/ docs/_build
+        pdm run test
+    - name: Submit code coverage
+      run:
         codecov
+
   document:
     runs-on: ubuntu-latest
     steps:
@@ -63,22 +71,31 @@ jobs:
       - name: Fetch tags from upstream repository
         run: |
           git fetch --tags https://github.com/amaranth-lang/amaranth.git
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v3
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install -r docs/requirements.txt
-          pip install .
+          pdm install --dev
       - name: Build documentation
         run: |
-          sphinx-build docs docs/_build
+          pdm run document
       - name: Upload documentation archive
         uses: actions/upload-artifact@v3
         with:
           name: docs
           path: docs/_build
+
+  required: # group all required workflows into one for the required status check
+    needs:
+      - test
+      - document
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          true
+
   publish-docs:
     needs: document
     if: github.repository == 'amaranth-lang/amaranth'
@@ -111,6 +128,7 @@ jobs:
           branch: main
           folder: docs/
           target-folder: docs/amaranth/${{ github.ref_name }}/
+
   publish-docs-dev:
     needs: document
     if: github.repository != 'amaranth-lang/amaranth'

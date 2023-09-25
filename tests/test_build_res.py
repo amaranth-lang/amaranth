@@ -1,7 +1,12 @@
 # amaranth: UnusedElaboratable=no
 
+import warnings
+
 from amaranth import *
-from amaranth.hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from amaranth.hdl.rec import *
+from amaranth.lib.wiring import *
 from amaranth.lib.io import *
 from amaranth.build.dsl import *
 from amaranth.build.res import *
@@ -58,7 +63,7 @@ class ResourceManagerTestCase(FHDLTestCase):
         r = self.cm.lookup("user_led", 0)
         user_led = self.cm.request("user_led", 0)
 
-        self.assertIsInstance(user_led, Pin)
+        self.assertIsInstance(flipped(user_led), Pin)
         self.assertEqual(user_led.name, "user_led_0")
         self.assertEqual(user_led.width, 1)
         self.assertEqual(user_led.dir, "o")
@@ -87,11 +92,11 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(ports[1].width, 1)
 
         scl_info, sda_info = self.cm.iter_single_ended_pins()
-        self.assertIs(scl_info[0], i2c.scl)
+        self.assertIs(flipped(scl_info[0]), i2c.scl)
         self.assertIs(scl_info[1].io, scl)
         self.assertEqual(scl_info[2], {})
         self.assertEqual(scl_info[3], False)
-        self.assertIs(sda_info[0], i2c.sda)
+        self.assertIs(flipped(sda_info[0]), i2c.sda)
         self.assertIs(sda_info[1].io, sda)
 
         self.assertEqual(list(self.cm.iter_port_constraints()), [
@@ -101,7 +106,7 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_diffpairs(self):
         clk100 = self.cm.request("clk100", 0)
-        self.assertIsInstance(clk100, Pin)
+        self.assertIsInstance(flipped(clk100), Pin)
         self.assertEqual(clk100.dir, "i")
         self.assertEqual(clk100.width, 1)
 
@@ -151,7 +156,6 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")
-        self.assertIsInstance(clk50, Record)
         self.assertIsInstance(clk50.io, Signal)
 
         ports = list(self.cm.iter_ports())
@@ -160,7 +164,6 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_raw_diffpairs(self):
         clk100 = self.cm.request("clk100", 0, dir="-")
-        self.assertIsInstance(clk100, Record)
         self.assertIsInstance(clk100.p, Signal)
         self.assertIsInstance(clk100.n, Signal)
 

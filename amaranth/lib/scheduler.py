@@ -1,3 +1,10 @@
+import warnings
+
+warnings.warn("the `amaranth.lib.scheduler` module will be removed without a replacement; "
+              "copy the module into your project to continue using it",
+              DeprecationWarning, stacklevel=2)
+
+
 from .. import *
 
 

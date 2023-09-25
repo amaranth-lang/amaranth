@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from collections.abc import Iterable
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 import os
 import textwrap
 import re
@@ -20,11 +20,11 @@ __all__ = ["Platform", "TemplatedPlatform"]
 
 
 class Platform(ResourceManager, metaclass=ABCMeta):
-    resources      = abstractproperty()
-    connectors     = abstractproperty()
+    resources      = property(abstractmethod(lambda: None))
+    connectors     = property(abstractmethod(lambda: None))
     default_clk    = None
     default_rst    = None
-    required_tools = abstractproperty()
+    required_tools = property(abstractmethod(lambda: None))
 
     def __init__(self):
         super().__init__(self.resources, self.connectors)
@@ -271,9 +271,9 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
 
 class TemplatedPlatform(Platform):
-    toolchain         = abstractproperty()
-    file_templates    = abstractproperty()
-    command_templates = abstractproperty()
+    toolchain         = property(abstractmethod(lambda: None))
+    file_templates    = property(abstractmethod(lambda: None))
+    command_templates = property(abstractmethod(lambda: None))
 
     build_script_templates = {
         "build_{{name}}.sh": """

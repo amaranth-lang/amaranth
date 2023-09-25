@@ -3,13 +3,13 @@ from collections import OrderedDict
 
 from .. import tracer
 from .ast import *
-from .ir import Elaboratable, Instance
+from .ir import Elaboratable, Instance, Fragment
 
 
 __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
-class Memory:
+class Memory(Elaboratable):
     """A word addressable storage.
 
     Parameters
@@ -58,6 +58,8 @@ class Memory:
                                           .format(name or "memory", addr)))
 
         self.init = init
+        self._read_ports = []
+        self._write_ports = []
 
     @property
     def init(self):
@@ -116,6 +118,96 @@ class Memory:
         """Simulation only."""
         return self._array[index]
 
+    def elaborate(self, platform):
+        init = "".join(format(Const(elem, unsigned(self.width)).value, f"0{self.width}b") for elem in reversed(self.init))
+        init = Const(int(init or "0", 2), self.depth * self.width)
+        rd_clk = []
+        rd_clk_enable = 0
+        rd_transparency_mask = 0
+        for index, port in enumerate(self._read_ports):
+            if port.domain != "comb":
+                rd_clk.append(ClockSignal(port.domain))
+                rd_clk_enable |= 1 << index
+                if port.transparent:
+                    for write_index, write_port in enumerate(self._write_ports):
+                        if port.domain == write_port.domain:
+                            rd_transparency_mask |= 1 << (index * len(self._write_ports) + write_index)
+            else:
+                rd_clk.append(Const(0, 1))
+        f = Instance("$mem_v2",
+            *(("a", attr, value) for attr, value in self.attrs.items()),
+            p_SIZE=self.depth,
+            p_OFFSET=0,
+            p_ABITS=Shape.cast(range(self.depth)).width,
+            p_WIDTH=self.width,
+            p_INIT=init,
+            p_RD_PORTS=len(self._read_ports),
+            p_RD_CLK_ENABLE=Const(rd_clk_enable, len(self._read_ports)) if self._read_ports else Const(0, 1),
+            p_RD_CLK_POLARITY=Const(-1, unsigned(len(self._read_ports))) if self._read_ports else Const(0, 1),
+            p_RD_TRANSPARENCY_MASK=Const(rd_transparency_mask, max(1, len(self._read_ports) * len(self._write_ports))),
+            p_RD_COLLISION_X_MASK=Const(0, max(1, len(self._read_ports) * len(self._write_ports))),
+            p_RD_WIDE_CONTINUATION=Const(0, len(self._read_ports)) if self._read_ports else Const(0, 1),
+            p_RD_CE_OVER_SRST=Const(0, len(self._read_ports)) if self._read_ports else Const(0, 1),
+            p_RD_ARST_VALUE=Const(0, len(self._read_ports) * self.width),
+            p_RD_SRST_VALUE=Const(0, len(self._read_ports) * self.width),
+            p_RD_INIT_VALUE=Const(0, len(self._read_ports) * self.width),
+            p_WR_PORTS=len(self._write_ports),
+            p_WR_CLK_ENABLE=Const(-1, unsigned(len(self._write_ports))) if self._write_ports else Const(0, 1),
+            p_WR_CLK_POLARITY=Const(-1, unsigned(len(self._write_ports))) if self._write_ports else Const(0, 1),
+            p_WR_PRIORITY_MASK=Const(0, len(self._write_ports) * len(self._write_ports)) if self._write_ports else Const(0, 1),
+            p_WR_WIDE_CONTINUATION=Const(0, len(self._write_ports)) if self._write_ports else Const(0, 1),
+            i_RD_CLK=Cat(rd_clk),
+            i_RD_EN=Cat(port.en for port in self._read_ports),
+            i_RD_ARST=Const(0, len(self._read_ports)),
+            i_RD_SRST=Const(0, len(self._read_ports)),
+            i_RD_ADDR=Cat(port.addr for port in self._read_ports),
+            o_RD_DATA=Cat(port.data for port in self._read_ports),
+            i_WR_CLK=Cat(ClockSignal(port.domain) for port in self._write_ports),
+            i_WR_EN=Cat(Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in self._write_ports),
+            i_WR_ADDR=Cat(port.addr for port in self._write_ports),
+            i_WR_DATA=Cat(port.data for port in self._write_ports),
+        )
+        for port in self._read_ports:
+            port._MustUse__used = True
+            if port.domain == "comb":
+                # Asynchronous port
+                f.add_statements(port.data.eq(self._array[port.addr]))
+                f.add_driver(port.data)
+            else:
+                # Synchronous port
+                data = self._array[port.addr]
+                for write_port in self._write_ports:
+                    if port.domain == write_port.domain and port.transparent:
+                        if len(write_port.en) > 1:
+                            parts = []
+                            for index, en_bit in enumerate(write_port.en):
+                                offset = index * write_port.granularity
+                                bits   = slice(offset, offset + write_port.granularity)
+                                cond = en_bit & (port.addr == write_port.addr)
+                                parts.append(Mux(cond, write_port.data[bits], data[bits]))
+                            data = Cat(parts)
+                        else:
+                            data = Mux(write_port.en, write_port.data, data)
+                f.add_statements(
+                    Switch(port.en, {
+                        1: port.data.eq(data)
+                    })
+                )
+                f.add_driver(port.data, port.domain)
+        for port in self._write_ports:
+            port._MustUse__used = True
+            if len(port.en) > 1:
+                for index, en_bit in enumerate(port.en):
+                    offset = index * port.granularity
+                    bits   = slice(offset, offset + port.granularity)
+                    write_data = self._array[port.addr][bits].eq(port.data[bits])
+                    f.add_statements(Switch(en_bit, { 1: write_data }))
+            else:
+                write_data = self._array[port.addr].eq(port.data)
+                f.add_statements(Switch(port.en, { 1: write_data }))
+            for signal in self._array:
+                f.add_driver(signal, port.domain)
+        return f
 
 class ReadPort(Elaboratable):
     """A memory read port.
@@ -142,9 +234,7 @@ class ReadPort(Elaboratable):
     data : Signal(memory.width), out
         Read data.
     en : Signal or Const, in
-        Read enable. If asserted, ``data`` is updated with the word stored at ``addr``. Note that
-        transparent ports cannot assign ``en`` (which is hardwired to 1 instead), as doing so is
-        currently not supported by Yosys.
+        Read enable. If asserted, ``data`` is updated with the word stored at ``addr``.
 
     Exceptions
     ----------
@@ -162,59 +252,19 @@ class ReadPort(Elaboratable):
                            name="{}_r_addr".format(memory.name), src_loc_at=1 + src_loc_at)
         self.data = Signal(memory.width,
                            name="{}_r_data".format(memory.name), src_loc_at=1 + src_loc_at)
-        if self.domain != "comb" and not transparent:
+        if self.domain != "comb":
             self.en = Signal(name="{}_r_en".format(memory.name), reset=1,
                              src_loc_at=1 + src_loc_at)
         else:
             self.en = Const(1)
 
+        memory._read_ports.append(self)
+
     def elaborate(self, platform):
-        f = Instance("$memrd",
-            p_MEMID=self.memory,
-            p_ABITS=self.addr.width,
-            p_WIDTH=self.data.width,
-            p_CLK_ENABLE=self.domain != "comb",
-            p_CLK_POLARITY=1,
-            p_TRANSPARENT=self.transparent,
-            i_CLK=ClockSignal(self.domain) if self.domain != "comb" else Const(0),
-            i_EN=self.en,
-            i_ADDR=self.addr,
-            o_DATA=self.data,
-        )
-        if self.domain == "comb":
-            # Asynchronous port
-            f.add_statements(self.data.eq(self.memory._array[self.addr]))
-            f.add_driver(self.data)
-        elif not self.transparent:
-            # Synchronous, read-before-write port
-            f.add_statements(
-                Switch(self.en, {
-                    1: self.data.eq(self.memory._array[self.addr])
-                })
-            )
-            f.add_driver(self.data, self.domain)
+        if self is self.memory._read_ports[0]:
+            return self.memory
         else:
-            # Synchronous, write-through port
-            # This model is a bit unconventional. We model transparent ports as asynchronous ports
-            # that are latched when the clock is high. This isn't exactly correct, but it is very
-            # close to the correct behavior of a transparent port, and the difference should only
-            # be observable in pathological cases of clock gating. A register is injected to
-            # the address input to achieve the correct address-to-data latency. Also, the reset
-            # value of the data output is forcibly set to the 0th initial value, if any--note that
-            # many FPGAs do not guarantee this behavior!
-            if len(self.memory.init) > 0:
-                self.data.reset = operator.index(self.memory.init[0])
-            latch_addr = Signal.like(self.addr)
-            f.add_statements(
-                latch_addr.eq(self.addr),
-                Switch(ClockSignal(self.domain), {
-                    0: self.data.eq(self.data),
-                    1: self.data.eq(self.memory._array[latch_addr]),
-                }),
-            )
-            f.add_driver(latch_addr, self.domain)
-            f.add_driver(self.data)
-        return f
+            return Fragment()
 
 
 class WritePort(Elaboratable):
@@ -272,31 +322,13 @@ class WritePort(Elaboratable):
         self.en   = Signal(memory.width // granularity,
                            name="{}_w_en".format(memory.name), src_loc_at=1 + src_loc_at)
 
+        memory._write_ports.append(self)
+
     def elaborate(self, platform):
-        f = Instance("$memwr",
-            p_MEMID=self.memory,
-            p_ABITS=self.addr.width,
-            p_WIDTH=self.data.width,
-            p_CLK_ENABLE=1,
-            p_CLK_POLARITY=1,
-            p_PRIORITY=0,
-            i_CLK=ClockSignal(self.domain),
-            i_EN=Cat(Repl(en_bit, self.granularity) for en_bit in self.en),
-            i_ADDR=self.addr,
-            i_DATA=self.data,
-        )
-        if len(self.en) > 1:
-            for index, en_bit in enumerate(self.en):
-                offset = index * self.granularity
-                bits   = slice(offset, offset + self.granularity)
-                write_data = self.memory._array[self.addr][bits].eq(self.data[bits])
-                f.add_statements(Switch(en_bit, { 1: write_data }))
+        if not self.memory._read_ports and self is self.memory._write_ports[0]:
+            return self.memory
         else:
-            write_data = self.memory._array[self.addr].eq(self.data)
-            f.add_statements(Switch(self.en, { 1: write_data }))
-        for signal in self.memory._array:
-            f.add_driver(signal, self.domain)
-        return f
+            return Fragment()
 
 
 class DummyPort:

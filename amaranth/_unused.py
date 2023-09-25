@@ -28,6 +28,8 @@ class MustUse:
     def __del__(self):
         if self._MustUse__silence:
             return
+        if getattr(self._MustUse__warning, "_MustUse__silence", False):
+            return
         if hasattr(self, "_MustUse__used") and not self._MustUse__used:
             if get_linter_option(self._MustUse__context["filename"],
                                  self._MustUse__warning.__name__, bool, True):

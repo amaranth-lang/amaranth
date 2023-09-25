@@ -78,11 +78,15 @@ class Shape:
         If ``False``, the value is unsigned. If ``True``, the value is signed two's complement.
     """
     def __init__(self, width=1, signed=False):
-        if not isinstance(width, int) or width < 0:
-            raise TypeError("Width must be a non-negative integer, not {!r}"
-                            .format(width))
+        if not isinstance(width, int):
+            raise TypeError(f"Width must be an integer, not {width!r}")
+        if not signed and width < 0:
+            raise TypeError(f"Width of an unsigned value must be zero or a positive integer, "
+                            f"not {width}")
+        if signed and width <= 0:
+            raise TypeError(f"Width of a signed value must be a positive integer, not {width}")
         self.width = width
-        self.signed = signed
+        self.signed = bool(signed)
 
     # The algorithm for inferring shape for standard Python enumerations is factored out so that
     # `Shape.cast()` and Amaranth's `EnumMeta.as_shape()` can both use it.
@@ -116,10 +120,10 @@ class Shape:
                 return Shape(obj)
             elif isinstance(obj, range):
                 if len(obj) == 0:
-                    return Shape(0, obj.start < 0)
-                signed = obj.start < 0 or (obj.stop - obj.step) < 0
-                width  = max(bits_for(obj.start, signed),
-                             bits_for(obj.stop - obj.step, signed))
+                    return Shape(0)
+                signed = obj[0] < 0 or obj[-1] < 0
+                width  = max(bits_for(obj[0], signed),
+                             bits_for(obj[-1], signed))
                 return Shape(width, signed)
             elif isinstance(obj, type) and issubclass(obj, Enum):
                 # For compatibility with third party enumerations, handle them as if they were
@@ -263,7 +267,7 @@ class Value(metaclass=ABCMeta):
 
     def __abs__(self):
         if self.shape().signed:
-            return Mux(self >= 0, self, -self)
+            return Mux(self >= 0, self, -self)[:len(self)]
         else:
             return self
 
@@ -277,12 +281,12 @@ class Value(metaclass=ABCMeta):
                 raise IndexError(f"Index {key} is out of bounds for a {n}-bit value")
             if key < 0:
                 key += n
-            return Slice(self, key, key + 1)
+            return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
             start, stop, step = key.indices(n)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
-            return Slice(self, start, stop)
+            return Slice(self, start, stop, src_loc_at=1)
         else:
             raise TypeError("Cannot index value with {}".format(repr(key)))
 
@@ -516,7 +520,8 @@ class Value(metaclass=ABCMeta):
         """
         if not isinstance(amount, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
-        amount %= len(self)
+        if len(self) != 0:
+            amount %= len(self)
         return Cat(self[-amount:], self[:-amount]) # meow :3
 
     def rotate_right(self, amount):
@@ -534,8 +539,32 @@ class Value(metaclass=ABCMeta):
         """
         if not isinstance(amount, int):
             raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
-        amount %= len(self)
+        if len(self) != 0:
+            amount %= len(self)
         return Cat(self[amount:], self[:amount])
+
+    def replicate(self, count):
+        """Replication.
+
+        A ``Value`` is replicated (repeated) several times to be used
+        on the RHS of assignments::
+
+            len(v.replicate(n)) == len(v) * n
+
+        Parameters
+        ----------
+        count : int
+            Number of replications.
+
+        Returns
+        -------
+        Value, out
+            Replicated value.
+        """
+        if not isinstance(count, int) or count < 0:
+            raise TypeError("Replication count must be a non-negative integer, not {!r}"
+                            .format(count))
+        return Cat(self for _ in range(count))
 
     def eq(self, value):
         """Assignment.
@@ -575,7 +604,7 @@ class Value(metaclass=ABCMeta):
 
     @abstractmethod
     def _rhs_signals(self):
-        pass # :nocov:
+        raise NotImplementedError # :nocov:
 
 
 @final
@@ -647,7 +676,7 @@ class Const(Value):
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
-        if self.signed and self.value >> (self.width - 1):
+        if self.signed and self.value >> (self.width - 1) & 1:
             self.value |= -(1 << self.width)
         else:
             self.value &= (1 << self.width) - 1
@@ -728,9 +757,12 @@ class Operator(Value):
                 return Shape(a_shape.width, True)
         elif len(op_shapes) == 2:
             a_shape, b_shape = op_shapes
-            if self.operator in ("+", "-"):
+            if self.operator == "+":
                 o_shape = _bitwise_binary_shape(*op_shapes)
                 return Shape(o_shape.width + 1, o_shape.signed)
+            if self.operator == "-":
+                o_shape = _bitwise_binary_shape(*op_shapes)
+                return Shape(o_shape.width + 1, True)
             if self.operator == "*":
                 return Shape(a_shape.width + b_shape.width, a_shape.signed or b_shape.signed)
             if self.operator == "//":
@@ -793,12 +825,13 @@ class Slice(Value):
         if not isinstance(stop, int):
             raise TypeError("Slice stop must be an integer, not {!r}".format(stop))
 
+        value = Value.cast(value)
         n = len(value)
-        if start not in range(-(n+1), n+1):
+        if start not in range(-n, n+1):
             raise IndexError("Cannot start slice {} bits into {}-bit value".format(start, n))
         if start < 0:
             start += n
-        if stop not in range(-(n+1), n+1):
+        if stop not in range(-n, n+1):
             raise IndexError("Cannot stop slice {} bits into {}-bit value".format(stop, n))
         if stop < 0:
             stop += n
@@ -806,7 +839,7 @@ class Slice(Value):
             raise IndexError("Slice start {} must be less than slice stop {}".format(start, stop))
 
         super().__init__(src_loc_at=src_loc_at)
-        self.value = Value.cast(value)
+        self.value = value
         self.start = int(start)
         self.stop  = int(stop)
 
@@ -831,9 +864,14 @@ class Part(Value):
         if not isinstance(stride, int) or stride <= 0:
             raise TypeError("Part stride must be a positive integer, not {!r}".format(stride))
 
+        value = Value.cast(value)
+        offset = Value.cast(offset)
+        if offset.shape().signed:
+            raise TypeError("Part offset must be unsigned")
+
         super().__init__(src_loc_at=src_loc_at)
         self.value  = value
-        self.offset = Value.cast(offset)
+        self.offset = offset
         self.width  = width
         self.stride = stride
 
@@ -908,8 +946,9 @@ class Cat(Value):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
 
 
-@final
-class Repl(Value):
+# TODO(amaranth-0.5): remove
+@deprecated("instead of `Repl(value, count)`, use `value.replicate(count)`")
+def Repl(value, count):
     """Replicate a value
 
     An input value is replicated (repeated) several times
@@ -926,31 +965,16 @@ class Repl(Value):
 
     Returns
     -------
-    Repl, out
+    Value, out
         Replicated value.
     """
-    def __init__(self, value, count, *, src_loc_at=0):
-        if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a non-negative integer, not {!r}"
-                            .format(count))
+    if isinstance(value, int) and value not in [0, 1]:
+        warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
+                        "context; consider specifying explicit width using C({}, {}) instead"
+                        .format(value, value, bits_for(value)),
+                        SyntaxWarning, stacklevel=3)
 
-        super().__init__(src_loc_at=src_loc_at)
-        if isinstance(value, int) and value not in [0, 1]:
-            warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
-                          "context; consider specifying explicit width using C({}, {}) instead"
-                          .format(value, value, bits_for(value)),
-                          SyntaxWarning, stacklevel=2 + src_loc_at)
-        self.value = Value.cast(value)
-        self.count = count
-
-    def shape(self):
-        return Shape(len(self.value) * self.count)
-
-    def _rhs_signals(self):
-        return self.value._rhs_signals()
-
-    def __repr__(self):
-        return "(repl {!r} {})".format(self.value, self.count)
+    return Value.cast(value).replicate(count)
 
 
 class _SignalMeta(ABCMeta):
@@ -1032,12 +1056,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                                  .format(orig_shape, Shape.cast(orig_shape),
                                          reset.shape()))
         else:
+            if reset is None:
+                reset = 0
             try:
-                reset = Const.cast(reset or 0)
+                reset = Const.cast(reset)
             except TypeError:
                 raise TypeError("Reset value must be a constant-castable expression, not {!r}"
                                 .format(orig_reset))
-        if orig_reset not in (None, 0, -1): # Avoid false positives for all-zeroes and all-ones
+        # Avoid false positives for all-zeroes and all-ones
+        if orig_reset is not None and not (isinstance(orig_reset, int) and orig_reset in (0, -1)):
             if reset.shape().signed and not self.signed:
                 warnings.warn(
                     message="Reset value {!r} is signed, but the signal shape is {!r}"
@@ -1095,7 +1122,11 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             new_name = other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default="$like")
-        kw = dict(shape=Value.cast(other).shape(), name=new_name)
+        if isinstance(other, ValueCastable):
+            shape = other.shape()
+        else:
+            shape = Value.cast(other).shape()
+        kw = dict(shape=shape, name=new_name)
         if isinstance(other, Signal):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
@@ -1348,6 +1379,9 @@ class ValueCastable:
         if not hasattr(cls, "as_value"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
                             "the `as_value` method")
+        if not hasattr(cls, "shape"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
+                            "the `shape` method")
         if not hasattr(cls.as_value, "_ValueCastable__memoized"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate "
                             "the `as_value` method with the `ValueCastable.lowermethod` decorator")
@@ -1722,8 +1756,6 @@ class ValueKey:
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
         elif isinstance(self.value, Sample):
             self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
-        elif isinstance(self.value, Repl):
-            self._hash = hash((ValueKey(self.value.value), self.value.count))
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
@@ -1740,7 +1772,7 @@ class ValueKey:
             return False
 
         if isinstance(self.value, Const):
-            return self.value.value == other.value.value
+            return self.value.value == other.value.value and self.value.width == other.value.width
         elif isinstance(self.value, (Signal, AnyValue)):
             return self.value is other.value
         elif isinstance(self.value, (ClockSignal, ResetSignal)):
@@ -1760,11 +1792,9 @@ class ValueKey:
                     self.value.width == other.value.width and
                     self.value.stride == other.value.stride)
         elif isinstance(self.value, Cat):
-            return all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.parts, other.value.parts))
-        elif isinstance(self.value, Repl):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.count == other.value.count)
+            return (len(self.value.parts) == len(other.value.parts) and
+                    all(ValueKey(a) == ValueKey(b)
+                        for a, b in zip(self.value.parts, other.value.parts)))
         elif isinstance(self.value, ArrayProxy):
             return (ValueKey(self.value.index) == ValueKey(other.value.index) and
                     len(self.value.elems) == len(other.value.elems) and

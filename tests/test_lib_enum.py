@@ -1,3 +1,5 @@
+import enum as py_enum
+
 from amaranth import *
 from amaranth.lib.enum import Enum
 
@@ -21,9 +23,10 @@ class EnumTestCase(FHDLTestCase):
     def test_shape_no_members(self):
         class EnumA(Enum):
             pass
-        with self.assertRaisesRegex(TypeError,
-                r"^Enumeration '.+?\.EnumA' does not have a defined shape$"):
-            Shape.cast(EnumA)
+        class PyEnumA(py_enum.Enum):
+            pass
+        self.assertEqual(Shape.cast(EnumA), unsigned(0))
+        self.assertEqual(Shape.cast(PyEnumA), unsigned(0))
 
     def test_shape_explicit(self):
         class EnumA(Enum, shape=signed(2)):

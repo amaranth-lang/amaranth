@@ -1,8 +1,50 @@
+import warnings
+
 from .. import *
-from ..hdl.rec import *
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from ..hdl.rec import *
+from ..lib.wiring import In, Out, Signature
 
 
 __all__ = ["pin_layout", "Pin"]
+
+
+def _pin_signature(width, dir, xdr=0):
+    if not isinstance(width, int) or width < 0:
+        raise TypeError("Width must be a non-negative integer, not {!r}"
+                        .format(width))
+    if dir not in ("i", "o", "oe", "io"):
+        raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"oe\", not {!r}"""
+                        .format(dir))
+    if not isinstance(xdr, int) or xdr < 0:
+        raise TypeError("Gearing ratio must be a non-negative integer, not {!r}"
+                        .format(xdr))
+
+    members = {}
+    if dir in ("i", "io"):
+        if xdr > 0:
+            members["i_clk"] = In(1)
+        if xdr > 2:
+            members["i_fclk"] = In(1)
+        if xdr in (0, 1):
+            members["i"] = In(width)
+        else:
+            for n in range(xdr):
+                members["i{}".format(n)] = In(width)
+    if dir in ("o", "oe", "io"):
+        if xdr > 0:
+            members["o_clk"] = Out(1)
+        if xdr > 2:
+            members["o_fclk"] = Out(1)
+        if xdr in (0, 1):
+            members["o"] = Out(width)
+        else:
+            for n in range(xdr):
+                members["o{}".format(n)] = Out(width)
+    if dir in ("oe", "io"):
+        members["oe"] = In(1)
+    return Signature(members)
 
 
 def pin_layout(width, dir, xdr=0):
@@ -12,39 +54,9 @@ def pin_layout(width, dir, xdr=0):
 
     See :class:`Pin` for details.
     """
-    if not isinstance(width, int) or width < 1:
-        raise TypeError("Width must be a positive integer, not {!r}"
-                        .format(width))
-    if dir not in ("i", "o", "oe", "io"):
-        raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"oe\", not {!r}"""
-                        .format(dir))
-    if not isinstance(xdr, int) or xdr < 0:
-        raise TypeError("Gearing ratio must be a non-negative integer, not {!r}"
-                        .format(xdr))
-
     fields = []
-    if dir in ("i", "io"):
-        if xdr > 0:
-            fields.append(("i_clk", 1))
-        if xdr > 2:
-            fields.append(("i_fclk", 1))
-        if xdr in (0, 1):
-            fields.append(("i", width))
-        else:
-            for n in range(xdr):
-                fields.append(("i{}".format(n), width))
-    if dir in ("o", "oe", "io"):
-        if xdr > 0:
-            fields.append(("o_clk", 1))
-        if xdr > 2:
-            fields.append(("o_fclk", 1))
-        if xdr in (0, 1):
-            fields.append(("o", width))
-        else:
-            for n in range(xdr):
-                fields.append(("o{}".format(n), width))
-    if dir in ("oe", "io"):
-        fields.append(("oe", 1))
+    for name, member in _pin_signature(width, dir, xdr).members.items():
+        fields.append((name, member.shape))
     return Layout(fields)
 
 
@@ -114,3 +126,13 @@ class Pin(Record):
 
         super().__init__(pin_layout(self.width, self.dir, self.xdr),
                          name=name, src_loc_at=src_loc_at + 1)
+
+    @property
+    def signature(self):
+        return _pin_signature(self.width, self.dir, self.xdr)
+
+    def eq(self, other):
+        first_field, _, _ = next(iter(Pin(1, dir="o").layout))
+        warnings.warn(f"`pin.eq(...)` is deprecated; use `pin.{first_field}.eq(...)` here",
+                      DeprecationWarning, stacklevel=2)
+        return super().eq(other)
