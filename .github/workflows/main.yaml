@@ -46,15 +46,9 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install codecov yowasp-yosys
+        pip install codecov
         pdm install --dev
     - name: Run tests
-      env:
-        YOSYS: yowasp-yosys
-        NEXTPNR_ICE40: yowasp-nextpnr-ice40
-        ICEPACK: yowasp-icepack
-        SBY: yowasp-sby
-        SMTBMC: yowasp-yosys-smtbmc
       run: |
         pdm run test
     - name: Submit code coverage

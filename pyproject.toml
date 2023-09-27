@@ -49,6 +49,7 @@ includes = ["amaranth/"]
 
 [tool.pdm.dev-dependencies]
 test = [
+  "yowasp-yosys",
   "coverage",
 ]
 docs = [
@@ -62,6 +63,8 @@ examples = [
 ]
 
 [tool.pdm.scripts]
+_.env_file = ".env.toolchain"
+
 test.composite = ["test-code", "test-docs"]
 test-code.env = {PYTHONWARNINGS = "error"}
 test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"
