@@ -779,9 +779,6 @@ class Component(Elaboratable):
                                 f"because an attribute with the same name already exists")
         self.__dict__.update(self.signature.members.create())
 
-    # TODO(py3.9): This should be a class method, but descriptors don't stack this way
-    # in Python 3.8 and below.
-    # @classmethod
     @property
     def signature(self):
         cls = type(self)
