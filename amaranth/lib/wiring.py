@@ -522,7 +522,6 @@ class FlippedSignature:
     frozen = Signature.frozen
     freeze = Signature.freeze
     is_compliant = Signature.is_compliant
-    create = Signature.create
 
     # FIXME: document this logic
     def __getattr__(self, name):
