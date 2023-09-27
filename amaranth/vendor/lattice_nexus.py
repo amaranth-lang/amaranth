@@ -1,8 +1,24 @@
+# NXOSCA and NXPLL is part of LiteX. Modified for Amaranth Nexus Platform (Nate Slager <slagernate@gmail.com>)
+# Copyright (c) 2020 David Corrigan <davidcorrigan714@gmail.com>
+# SPDX-License-Identifier: BSD-2-Clause
+
+
 from abc import abstractproperty
 
 from ..hdl import *
 from ..build import *
 
+from collections import namedtuple
+import logging
+import math
+import pprint
+from math import log, log10, exp, pi
+from cmath import phase
+
+io_i2 = namedtuple('io_i2',['io', 'i2', 'IPP_CTRL', 'BW_CTL_BIAS', 'IPP_SEL'])
+nx_pll_param_permutation = namedtuple("nx_pll_param_permutation",[
+    "C1","C2","C3","C4","C5","C6",
+    "IPP_CTRL","BW_CTL_BIAS","IPP_SEL","CSET","CRIPPLE","V2I_PP_RES","IPI_CMP"])
 
 __all__ = ["LatticeNexusPlatform"]
 
@@ -128,7 +144,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
                 ldc_set_location -site {{ '{' }}{{pin_name}}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}} 
                 {% if attrs -%}
-                ldc_set_port -iobuf {{ '{' }}{%- for key, value in attrs.items() %}{{key}}={{value}}{% endfor %}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}}
+                ldc_set_port -iobuf {{ '{' }}{%- for key, value in attrs.items() %}{{key}}={{value}} {% endfor %}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}}
                 {% endif %}
             {% endfor %}
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
@@ -322,6 +338,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 )
             else:
                 clk_i = self.request(self.default_clk).i
+
             if self.default_rst is not None:
                 rst_i = self.request(self.default_rst).i
             else:
@@ -754,3 +771,4 @@ class LatticeNexusPlatform(TemplatedPlatform):
 
     # CDC primitives are not currently specialized for Nexus.
     # While Radiant supports false path constraints; nextpnr-nexus does not.
+
