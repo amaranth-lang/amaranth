@@ -535,6 +535,9 @@ class FlippedSignature:
     def __setattr__(self, name, value):
         return setattr(self.__unflipped, name, value)
 
+    def create(self, *, path=()):
+        return flipped(self.__unflipped.create(path=path))
+
     def __repr__(self):
         return f"{self.__unflipped!r}.flip()"
 
