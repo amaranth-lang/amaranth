@@ -34,7 +34,8 @@ def _build_parser():
                 raise argparse.ArgumentTypeError(f"'{qual_name}:{mod_name}' refers to an object that is not elaboratable")
             return obj
         else:
-            raise argparse.ArgumentTypeError(f"{reference!r} is not a Python object reference")
+            raise argparse.ArgumentTypeError(f"{reference!r} can not be parsed as a Python object reference, "
+                                             "expecting a name like: 'path.to.module:ObjectInModule'")
 
     parser = argparse.ArgumentParser(
         "amaranth", description="""
