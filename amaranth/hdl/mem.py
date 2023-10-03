@@ -187,7 +187,8 @@ class Memory(Elaboratable):
                                 parts.append(Mux(cond, write_port.data[bits], data[bits]))
                             data = Cat(parts)
                         else:
-                            data = Mux(write_port.en, write_port.data, data)
+                            cond = write_port.en & (port.addr == write_port.addr)
+                            data = Mux(cond, write_port.data, data)
                 f.add_statements(
                     Switch(port.en, {
                         1: port.data.eq(data)
