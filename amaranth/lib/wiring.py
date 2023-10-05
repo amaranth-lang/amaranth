@@ -10,7 +10,7 @@ from ..hdl.ir import Elaboratable
 from .._utils import final
 
 
-__all__ = ["In", "Out", "Signature", "connect", "flipped", "Component"]
+__all__ = ["In", "Out", "Signature", "Interface", "connect", "flipped", "Component"]
 
 
 class Flow(enum.Enum):
