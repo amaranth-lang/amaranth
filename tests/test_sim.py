@@ -152,6 +152,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
     def test_and(self):
         stmt = lambda y, a, b: y.eq(a & b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b1000, 4))
+        self.assertStatement(stmt, [C(0b1010, 4), C(0b10, signed(2))], C(0b1010, 4))
+        stmt = lambda y, a: y.eq(a)
+        self.assertStatement(stmt, [C(0b1010, 4) & C(-2, 2).as_unsigned()], C(0b0010, 4))
 
     def test_or(self):
         stmt = lambda y, a, b: y.eq(a | b)
@@ -211,6 +214,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a, b, c: y.eq(Mux(c, a, b))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(3, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(2, 4))
+        stmt = lambda y, a: y.eq(a)
+        self.assertStatement(stmt, [Mux(0, C(0b1010, 4), C(0b10, 2).as_signed())], C(0b1110, 4))
+        self.assertStatement(stmt, [Mux(0, C(0b1010, 4), C(-2, 2).as_unsigned())], C(0b0010, 4))
 
     def test_mux_invert(self):
         stmt = lambda y, a, b, c: y.eq(Mux(~c, a, b))
