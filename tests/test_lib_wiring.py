@@ -887,3 +887,16 @@ class ComponentTestCase(unittest.TestCase):
                 r"'rand: In\(Signature\({}\)\.flip\(\)\)' or "
                 r"'rand: Out\(Signature\({}\)\.flip\(\)\)'\?$"):
             PageBuffer()
+
+    def test_inherit(self):
+        class A(Component):
+            clk: In(1)
+
+        class B(A):
+            rst: In(1)
+
+        class C(B):
+            pass
+
+        c = C()
+        self.assertEqual(c.signature, Signature({"clk": In(1), "rst": In(1)}))
