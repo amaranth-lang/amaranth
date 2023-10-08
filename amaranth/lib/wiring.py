@@ -786,7 +786,7 @@ class Component(Elaboratable):
         cls = type(self)
         signature = Signature({})
         for base in cls.mro()[:cls.mro().index(Component)]:
-            for name, annot in getattr(base, "__annotations__", {}).items():
+            for name, annot in base.__dict__.get("__annotations__", {}).items():
                 if name.startswith("_"):
                     continue
                 if (annot is Value or annot is Signal or annot is Const or
