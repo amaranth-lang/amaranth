@@ -27,13 +27,6 @@ jobs:
     continue-on-error: '${{ matrix.allow-failure }}'
     name: 'test (${{ matrix.python-version }})'
     steps:
-    - name: Preserve Wasm cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/wasmtime
-          ~/.cache/YoWASP
-        key: ${{ runner.os }}-wasm
     - name: Check out source code
       uses: actions/checkout@v3
       with:
@@ -50,6 +43,13 @@ jobs:
         sudo apt-get install yices2
         pip install codecov
         pdm install --dev
+    - name: Cache YoWASP build products
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/YoWASP
+        key: YoWASP-${{ runner.os }}-${{ hashFiles('./.venv/**/*.wasm') }}
+        restore-keys: |
+          YoWASP-${{ runner.os }}-
     - name: Run tests
       run: |
         pdm run test
