@@ -382,22 +382,22 @@ class LayoutTestCase(FHDLTestCase):
             "a": unsigned(1),
             "b": unsigned(2)
         })
-        self.assertRepr(sl.const(None), "(const 3'd0)")
-        self.assertRepr(sl.const({"a": 0b1, "b": 0b10}), "(const 3'd5)")
+        self.assertRepr(sl.const(None).as_value(), "(const 3'd0)")
+        self.assertRepr(sl.const({"a": 0b1, "b": 0b10}).as_value(), "(const 3'd5)")
 
         fl = FlexibleLayout(2, {
             "a": Field(unsigned(1), 0),
             "b": Field(unsigned(2), 0)
         })
-        self.assertRepr(fl.const({"a": 0b11}), "(const 2'd1)")
-        self.assertRepr(fl.const({"b": 0b10}), "(const 2'd2)")
-        self.assertRepr(fl.const({"a": 0b1, "b": 0b10}), "(const 2'd2)")
+        self.assertRepr(fl.const({"a": 0b11}).as_value(), "(const 2'd1)")
+        self.assertRepr(fl.const({"b": 0b10}).as_value(), "(const 2'd2)")
+        self.assertRepr(fl.const({"a": 0b1, "b": 0b10}).as_value(), "(const 2'd2)")
 
         sls = StructLayout({
             "a": signed(4),
             "b": signed(4)
         })
-        self.assertRepr(sls.const({"b": 0, "a": -1}), "(const 8'd15)")
+        self.assertRepr(sls.const({"b": 0, "a": -1}).as_value(), "(const 8'd15)")
 
     def test_const_wrong(self):
         sl = StructLayout({"f": unsigned(1)})
@@ -418,7 +418,7 @@ class LayoutTestCase(FHDLTestCase):
                 return int(init, 16)
 
         sl = StructLayout({"f": CastableFromHex()})
-        self.assertRepr(sl.const({"f": "aa"}), "(const 8'd170)")
+        self.assertRepr(sl.const({"f": "aa"}).as_value(), "(const 8'd170)")
 
         with self.assertRaisesRegex(ValueError,
                 r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
@@ -427,7 +427,7 @@ class LayoutTestCase(FHDLTestCase):
 
     def test_const_field_const(self):
         sl = StructLayout({"f": unsigned(1)})
-        self.assertRepr(sl.const({"f": Const(1)}), "(const 1'd1)")
+        self.assertRepr(sl.const({"f": Const(1)}).as_value(), "(const 1'd1)")
 
     def test_signal_reset(self):
         sl = StructLayout({
