@@ -137,17 +137,22 @@ class ResourceManager:
                 # ignore it as well.
                 if isinstance(phys, Pins):
                     phys_names = phys.names
-                    port = wiring.Signature({"io": wiring.In(len(phys))}).create(path=(name,))
+                    port = Record([("io", len(phys))], name=name)
+                    port.signature = wiring.Signature({"io": wiring.In(len(phys))})
                 if isinstance(phys, DiffPairs):
                     phys_names = []
-                    members = {}
+                    rec_members = []
+                    sig_members = {}
                     if not self.should_skip_port_component(None, attrs, "p"):
                         phys_names += phys.p.names
-                        members["p"] = wiring.In(len(phys))
+                        rec_members.append(("p", len(phys)))
+                        sig_members["p"] = wiring.In(len(phys))
                     if not self.should_skip_port_component(None, attrs, "n"):
                         phys_names += phys.n.names
-                        members["n"] = wiring.In(len(phys))
-                    port = wiring.Signature(members).create(path=(name,))
+                        rec_members.append(("n", len(phys)))
+                        sig_members["n"] = wiring.In(len(phys))
+                    port = Record(rec_members, name=name)
+                    port.signature = wiring.Signature(sig_members)
                 if dir == "-":
                     pin = None
                 else:
