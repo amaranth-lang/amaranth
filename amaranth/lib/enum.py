@@ -118,7 +118,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
             # replacement for `enum.Enum`.
             return Shape._cast_plain_enum(cls)
 
-    def __call__(cls, value):
+    def __call__(cls, value, *args, **kwargs):
         # :class:`py_enum.Enum` uses ``__call__()`` for type casting: ``E(x)`` returns
         # the enumeration member whose value equals ``x``. In this case, ``x`` must be a concrete
         # value.
@@ -130,7 +130,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         # comparisons with enum members of the wrong type.
         if isinstance(value, Value):
             return value
-        return super().__call__(value)
+        return super().__call__(value, *args, **kwargs)
 
     def const(cls, init):
         # Same considerations apply as above.
