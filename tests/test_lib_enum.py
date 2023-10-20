@@ -116,3 +116,6 @@ class EnumTestCase(FHDLTestCase):
                 r"shape used in bit vector context; define the enumeration by inheriting from "
                 r"the class in amaranth\.lib\.enum and specifying the 'shape=' keyword argument$"):
             Cat(EnumA.A)
+
+    def test_functional(self):
+        Enum("FOO", ["BAR", "BAZ"])
