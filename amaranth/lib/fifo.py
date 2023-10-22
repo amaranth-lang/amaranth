@@ -3,6 +3,7 @@
 from .. import *
 from ..asserts import *
 from .._utils import log2_int
+from .wiring import Signature, In, Out
 from .coding import GrayEncoder, GrayDecoder
 from .cdc import FFSynchronizer, AsyncFFSynchronizer
 
@@ -64,7 +65,7 @@ class FIFOInterface:
     w_attributes="",
     r_attributes="")
 
-    def __init__(self, *, width, depth, fwft):
+    def __init__(self, *, width: int, depth: int, fwft):
         if not isinstance(width, int) or width < 0:
             raise TypeError("FIFO width must be a non-negative integer, not {!r}"
                             .format(width))
@@ -84,6 +85,17 @@ class FIFOInterface:
         self.r_rdy  = Signal() # readable; not empty
         self.r_en   = Signal()
         self.r_level = Signal(range(depth + 1))
+
+    @property
+    def signature(self):
+        return Signature({
+            "w_data": In(self.width),
+            "w_rdy":  Out(1),
+            "w_en":   In(1),
+            "r_data": Out(self.width),
+            "r_rdy":  Out(1),
+            "w_en":   In(1),
+        })
 
 
 def _incr(signal, modulo):
@@ -116,7 +128,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, *, width, depth, fwft=True):
+    def __init__(self, *, width: int, depth: int, fwft=True):
         super().__init__(width=width, depth=depth, fwft=fwft)
 
         self.level = Signal(range(depth + 1))
@@ -220,7 +232,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
     r_attributes="",
     w_attributes="")
 
-    def __init__(self, *, width, depth):
+    def __init__(self, *, width: int, depth: int):
         super().__init__(width=width, depth=depth, fwft=True)
 
         self.level = Signal(range(depth + 1))
@@ -295,7 +307,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
     """.strip(),
     w_attributes="")
 
-    def __init__(self, *, width, depth, r_domain="read", w_domain="write", exact_depth=False):
+    def __init__(self, *, width: int, depth: int, r_domain="read", w_domain="write", exact_depth=False):
         if depth != 0:
             try:
                 depth_bits = log2_int(depth, need_pow2=exact_depth)

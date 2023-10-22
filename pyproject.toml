@@ -19,11 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# this version requirement needs to be synchronized with the one in amaranth.back.verilog!
+# This version requirement needs to be synchronized with the one in amaranth.back.verilog!
 builtin-yosys = ["amaranth-yosys>=0.10"]
 remote-build  = ["paramiko~=2.7"]
 
 [project.scripts]
+amaranth = "amaranth_cli:main"
 amaranth-rpc = "amaranth.rpc:main"
 
 [project.urls]
@@ -39,11 +40,8 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm.build]
-# If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
-# a git worktree cached by tools like poetry), it can have an empty `nmigen` directory left over,
-# which causes a hard error because setuptools cannot determine the top-level package.
-# Add a workaround to improve experience for people upgrading from old checkouts.
-includes = ["amaranth/"]
+# The docstring in `amaranth_cli/__init__.py` explains why it is not under `amaranth/`.
+packages = ["amaranth", "amaranth_cli"]
 
 # Development workflow configuration
 
