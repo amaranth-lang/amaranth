@@ -33,6 +33,7 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Replace uses of ``Record`` with :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring`. The appropriate replacement depends on the use case. If ``Record`` was being used for data storage and accessing the bit-level representation, use :mod:`amaranth.lib.data`. If ``Record`` was being used for connecting design components together, use :mod:`amaranth.lib.wiring`.
 * Ensure the ``Pin`` instance returned by ``platform.request`` is not cast to value directly, but used for its fields. Replace code like ``leds = Cat(platform.request(led, n) for n in range(4))`` with ``leds = Cat(platform.request(led, n).o for n in range(4))`` (note the ``.o``).
 * Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
+* Remove uses of ``amaranth.lib.fifo.SyncFIFO(fwft=False)`` and ``amaranth.lib.fifo.FIFOInterface(fwft=False)`` by converting code to use ``fwft=True`` FIFOs or copying the implementation of those classes.
 
 While code that uses the features listed as deprecated below will work in Amaranth 0.4, they will be removed in the next version.
 
@@ -52,6 +53,7 @@ Implemented RFCs
 .. _RFC 15: https://amaranth-lang.org/rfcs/0015-lifting-shape-castables.html
 .. _RFC 18: https://amaranth-lang.org/rfcs/0018-reorganize-vendor-platforms.html
 .. _RFC 19: https://amaranth-lang.org/rfcs/0019-remove-scheduler.html
+.. _RFC 20: https://amaranth-lang.org/rfcs/0020-deprecate-non-fwft-fifos.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 
 
@@ -67,6 +69,7 @@ Implemented RFCs
 * `RFC 18`_: Reorganize vendor platforms
 * `RFC 19`_: Remove ``amaranth.lib.scheduler``
 * `RFC 15`_: Lifting shape-castable objects
+* `RFC 20`_: Deprecate non-FWFT FIFOs
 * `RFC 22`_: Define ``ValueCastable.shape()``
 
 
@@ -103,6 +106,8 @@ Standard library changes
 * Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
 * Added: :mod:`amaranth.lib.crc`. (`RFC 6`_)
 * Deprecated: :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
+* Deprecated: :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
+* Deprecated: :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
 
 
 Toolchain changes

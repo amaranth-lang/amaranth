@@ -1,5 +1,7 @@
 # amaranth: UnusedElaboratable=no
 
+import warnings
+
 from amaranth.hdl import *
 from amaranth.asserts import *
 from amaranth.sim import *
@@ -256,10 +258,14 @@ class FIFOFormalCase(FHDLTestCase):
         self.check_sync_fifo(SyncFIFO(width=8, depth=5, fwft=True))
 
     def test_sync_not_fwft_pot(self):
-        self.check_sync_fifo(SyncFIFO(width=8, depth=4, fwft=False))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.check_sync_fifo(SyncFIFO(width=8, depth=4, fwft=False))
 
     def test_sync_not_fwft_npot(self):
-        self.check_sync_fifo(SyncFIFO(width=8, depth=5, fwft=False))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+            self.check_sync_fifo(SyncFIFO(width=8, depth=5, fwft=False))
 
     def test_sync_buffered_pot(self):
         self.check_sync_fifo(SyncFIFOBuffered(width=8, depth=4))

@@ -1,5 +1,7 @@
 """First-in first-out queues."""
 
+import warnings
+
 from .. import *
 from ..asserts import *
 from .._utils import log2_int
@@ -71,6 +73,10 @@ class FIFOInterface:
         if not isinstance(depth, int) or depth < 0:
             raise TypeError("FIFO depth must be a non-negative integer, not {!r}"
                             .format(depth))
+        if not fwft:
+            warnings.warn("support for FIFOs with `fwft=False` will be removed without a replacement; "
+                          "consider switching to `fwft=True` or copy the module into your project to continue using it",
+                          DeprecationWarning)
         self.width = width
         self.depth = depth
         self.fwft  = fwft
@@ -117,7 +123,13 @@ class SyncFIFO(Elaboratable, FIFOInterface):
     w_attributes="")
 
     def __init__(self, *, width, depth, fwft=True):
-        super().__init__(width=width, depth=depth, fwft=fwft)
+        if not fwft:
+            warnings.warn("support for FIFOs with `fwft=False` will be removed without a replacement; "
+                          "consider switching to `fwft=True` or copy the module into your project to continue using it",
+                          DeprecationWarning)
+        super().__init__(width=width, depth=depth)
+        # Fix up fwft after initialization to avoid the warning from FIFOInterface.
+        self.fwft = fwft
 
         self.level = Signal(range(depth + 1))
 
@@ -326,7 +338,7 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
                 m.d.comb += [
                     Assert(produce < inner_depth),
                     Assert(consume < inner_depth),
-        ]
+                ]
                 with m.If(produce == consume):
                     m.d.comb += Assert((inner_level == 0) | (inner_level == inner_depth))
                 with m.If(produce > consume):
