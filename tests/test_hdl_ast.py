@@ -1077,7 +1077,7 @@ class SignalTestCase(FHDLTestCase):
             Signal(CastableFromHex(), reset="01")
 
     def test_reset_shape_castable_enum_wrong(self):
-        class EnumA(AmaranthEnum):
+        class EnumA(AmaranthEnum, shape=1):
             X = 1
         with self.assertRaisesRegex(TypeError,
                 r"^Reset value must be a constant initializer of <enum 'EnumA'>$"):

@@ -1,7 +1,7 @@
 import enum as py_enum
 
 from amaranth import *
-from amaranth.lib.enum import Enum
+from amaranth.lib.enum import Enum, EnumMeta
 
 from .utils import *
 
@@ -91,14 +91,13 @@ class EnumTestCase(FHDLTestCase):
             A = 1
         self.assertRepr(Value.cast(EnumA.A), "(const 10'd1)")
 
-    def test_const_no_shape(self):
+    def test_no_shape(self):
         class EnumA(Enum):
             Z = 0
             A = 10
             B = 20
-        self.assertRepr(EnumA.const(None), "(const 5'd0)")
-        self.assertRepr(EnumA.const(10), "(const 5'd10)")
-        self.assertRepr(EnumA.const(EnumA.A), "(const 5'd10)")
+        self.assertNotIsInstance(EnumA, EnumMeta)
+        self.assertIsInstance(EnumA, py_enum.EnumMeta)
 
     def test_const_shape(self):
         class EnumA(Enum, shape=8):
