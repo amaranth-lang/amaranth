@@ -270,6 +270,9 @@ class FIFOFormalCase(FHDLTestCase):
     def test_sync_buffered_potm1(self):
         self.check_sync_fifo(SyncFIFOBuffered(width=8, depth=3))
 
+    def test_sync_buffered_one(self):
+        self.check_sync_fifo(SyncFIFOBuffered(width=8, depth=1))
+
     def check_async_fifo(self, fifo):
         # TODO: properly doing model equivalence checking on this likely requires multiclock,
         # which is not really documented nor is it clear how to use it.

@@ -234,31 +234,105 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
             ]
             return m
 
-        # Effectively, this queue treats the output register of the non-FWFT inner queue as
-        # an additional storage element.
-        m.submodules.unbuffered = fifo = SyncFIFO(width=self.width, depth=self.depth - 1,
-                                                  fwft=False)
+        do_write = self.w_rdy & self.w_en
+        do_read = self.r_rdy & self.r_en
 
         m.d.comb += [
-            fifo.w_data.eq(self.w_data),
-            fifo.w_en.eq(self.w_en),
-            self.w_rdy.eq(fifo.w_rdy),
+            self.w_level.eq(self.level),
+            self.r_level.eq(self.level),
         ]
 
+        if self.depth == 1:
+            # Special case: a single register. Note that, by construction, this will
+            # only be able to push a value every other cycle (alternating between
+            # full and empty).
+            m.d.comb += [
+                self.w_rdy.eq(self.level == 0),
+                self.r_rdy.eq(self.level == 1),
+            ]
+            with m.If(do_write):
+                m.d.sync += [
+                    self.r_data.eq(self.w_data),
+                    self.level.eq(1),
+                ]
+            with m.If(do_read):
+                m.d.sync += [
+                    self.level.eq(0),
+                ]
+
+            return m
+
+        inner_depth = self.depth - 1
+        inner_level = Signal(range(inner_depth + 1))
+        inner_r_rdy = Signal()
+
         m.d.comb += [
-            self.r_data.eq(fifo.r_data),
-            fifo.r_en.eq(fifo.r_rdy & (~self.r_rdy | self.r_en)),
+            self.w_rdy.eq(inner_level != inner_depth),
+            inner_r_rdy.eq(inner_level != 0),
         ]
-        with m.If(fifo.r_en):
+
+        do_inner_read  = inner_r_rdy & (~self.r_rdy | self.r_en)
+
+        m.submodules.storage = storage = Memory(width=self.width, depth=inner_depth)
+        w_port  = storage.write_port()
+        r_port  = storage.read_port(domain="sync", transparent=False)
+        produce = Signal(range(inner_depth))
+        consume = Signal(range(inner_depth))
+
+        m.d.comb += [
+            w_port.addr.eq(produce),
+            w_port.data.eq(self.w_data),
+            w_port.en.eq(do_write),
+        ]
+        with m.If(do_write):
+            m.d.sync += produce.eq(_incr(produce, inner_depth))
+
+        m.d.comb += [
+            r_port.addr.eq(consume),
+            self.r_data.eq(r_port.data),
+            r_port.en.eq(do_inner_read)
+        ]
+        with m.If(do_inner_read):
+            m.d.sync += consume.eq(_incr(consume, inner_depth))
+
+        with m.If(do_write & ~do_inner_read):
+            m.d.sync += inner_level.eq(inner_level + 1)
+        with m.If(do_inner_read & ~do_write):
+            m.d.sync += inner_level.eq(inner_level - 1)
+
+        with m.If(do_inner_read):
             m.d.sync += self.r_rdy.eq(1)
         with m.Elif(self.r_en):
             m.d.sync += self.r_rdy.eq(0)
 
         m.d.comb += [
-            self.level.eq(fifo.level + self.r_rdy),
-            self.w_level.eq(self.level),
-            self.r_level.eq(self.level),
+            self.level.eq(inner_level + self.r_rdy),
         ]
+
+        if platform == "formal":
+            # TODO: move this logic to SymbiYosys
+            with m.If(Initial()):
+                m.d.comb += [
+                    Assume(produce < inner_depth),
+                    Assume(consume < inner_depth),
+                ]
+                with m.If(produce == consume):
+                    m.d.comb += Assume((inner_level == 0) | (inner_level == inner_depth))
+                with m.If(produce > consume):
+                    m.d.comb += Assume(inner_level == (produce - consume))
+                with m.If(produce < consume):
+                    m.d.comb += Assume(inner_level == (inner_depth + produce - consume))
+            with m.Else():
+                m.d.comb += [
+                    Assert(produce < inner_depth),
+                    Assert(consume < inner_depth),
+        ]
+                with m.If(produce == consume):
+                    m.d.comb += Assert((inner_level == 0) | (inner_level == inner_depth))
+                with m.If(produce > consume):
+                    m.d.comb += Assert(inner_level == (produce - consume))
+                with m.If(produce < consume):
+                    m.d.comb += Assert(inner_level == (inner_depth + produce - consume))
 
         return m
 
