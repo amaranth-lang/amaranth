@@ -1,3 +1,5 @@
+# amaranth: UnusedElaboratable=no
+
 import unittest
 from types import SimpleNamespace as NS
 
