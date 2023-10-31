@@ -43,7 +43,7 @@ def _pin_signature(width, dir, xdr=0):
             for n in range(xdr):
                 members["o{}".format(n)] = Out(width)
     if dir in ("oe", "io"):
-        members["oe"] = In(1)
+        members["oe"] = Out(1)
     return Signature(members)
 
 

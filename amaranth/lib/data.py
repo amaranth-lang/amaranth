@@ -229,7 +229,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             mask = ((1 << cast_field_shape.width) - 1) << field.offset
             int_value &= ~mask
             int_value |= (key_value.value << field.offset) & mask
-        return Const(int_value, self.as_shape())
+        return View(self, Const(int_value, self.as_shape()))
 
 
 class StructLayout(Layout):

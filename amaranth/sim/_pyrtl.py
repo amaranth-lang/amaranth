@@ -170,11 +170,11 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "%":
                 return f"zmod({sign(lhs)}, {sign(rhs)})"
             if value.operator == "&":
-                return f"({mask(lhs)} & {mask(rhs)})"
+                return f"({sign(lhs)} & {sign(rhs)})"
             if value.operator == "|":
-                return f"({mask(lhs)} | {mask(rhs)})"
+                return f"({sign(lhs)} | {sign(rhs)})"
             if value.operator == "^":
-                return f"({mask(lhs)} ^ {mask(rhs)})"
+                return f"({sign(lhs)} ^ {sign(rhs)})"
             if value.operator == "<<":
                 return f"({sign(lhs)} << {sign(rhs)})"
             if value.operator == ">>":
@@ -194,7 +194,7 @@ class _RHSValueCompiler(_ValueCompiler):
         elif len(value.operands) == 3:
             if value.operator == "m":
                 sel, val1, val0 = value.operands
-                return f"({self(val1)} if {mask(sel)} else {self(val0)})"
+                return f"({sign(val1)} if {mask(sel)} else {sign(val0)})"
         raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
 
     def on_Slice(self, value):

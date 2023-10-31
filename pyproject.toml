@@ -49,10 +49,11 @@ includes = ["amaranth/"]
 
 [tool.pdm.dev-dependencies]
 test = [
+  "yowasp-yosys",
   "coverage",
 ]
 docs = [
-  "sphinx~=5.3",
+  "sphinx~=7.1",
   "sphinxcontrib-platformpicker~=1.3",
   "sphinx-rtd-theme~=1.2",
   "sphinx-autobuild",
@@ -62,6 +63,8 @@ examples = [
 ]
 
 [tool.pdm.scripts]
+_.env_file = ".env.toolchain"
+
 test.composite = ["test-code", "test-docs"]
 test-code.env = {PYTHONWARNINGS = "error"}
 test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"

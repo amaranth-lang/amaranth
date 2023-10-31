@@ -1,3 +1,5 @@
+# amaranth: UnusedElaboratable=no
+
 import unittest
 from types import SimpleNamespace as NS
 
@@ -583,6 +585,18 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^flipped\(\) can only flip an interface object, not Signature\({}\)$"):
             flipped(Signature({}))
+    
+    def test_create_subclass_flipped(self):
+        class CustomInterface(Interface):
+            def custom_method(self):
+                return 69
+        
+        class CustomSignature(Signature):
+            def create(self, *, path=()):
+                return CustomInterface(self, path=path)
+        
+        flipped_interface = CustomSignature({}).flip().create()
+        self.assertTrue(hasattr(flipped_interface, "custom_method"))
 
 
 class ConnectTestCase(unittest.TestCase):
@@ -875,3 +889,16 @@ class ComponentTestCase(unittest.TestCase):
                 r"'rand: In\(Signature\({}\)\.flip\(\)\)' or "
                 r"'rand: Out\(Signature\({}\)\.flip\(\)\)'\?$"):
             PageBuffer()
+
+    def test_inherit(self):
+        class A(Component):
+            clk: In(1)
+
+        class B(A):
+            rst: In(1)
+
+        class C(B):
+            pass
+
+        c = C()
+        self.assertEqual(c.signature, Signature({"clk": In(1), "rst": In(1)}))

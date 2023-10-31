@@ -10,7 +10,7 @@ from ..hdl.ir import Elaboratable
 from .._utils import final
 
 
-__all__ = ["In", "Out", "Signature", "connect", "flipped", "Component"]
+__all__ = ["In", "Out", "Signature", "Interface", "connect", "flipped", "Component"]
 
 
 class Flow(enum.Enum):
@@ -522,7 +522,6 @@ class FlippedSignature:
     frozen = Signature.frozen
     freeze = Signature.freeze
     is_compliant = Signature.is_compliant
-    create = Signature.create
 
     # FIXME: document this logic
     def __getattr__(self, name):
@@ -534,6 +533,9 @@ class FlippedSignature:
 
     def __setattr__(self, name, value):
         return setattr(self.__unflipped, name, value)
+
+    def create(self, *, path=()):
+        return flipped(self.__unflipped.create(path=path))
 
     def __repr__(self):
         return f"{self.__unflipped!r}.flip()"
@@ -779,15 +781,12 @@ class Component(Elaboratable):
                                 f"because an attribute with the same name already exists")
         self.__dict__.update(self.signature.members.create())
 
-    # TODO(py3.9): This should be a class method, but descriptors don't stack this way
-    # in Python 3.8 and below.
-    # @classmethod
     @property
     def signature(self):
         cls = type(self)
         signature = Signature({})
         for base in cls.mro()[:cls.mro().index(Component)]:
-            for name, annot in getattr(base, "__annotations__", {}).items():
+            for name, annot in base.__dict__.get("__annotations__", {}).items():
                 if name.startswith("_"):
                     continue
                 if (annot is Value or annot is Signal or annot is Const or

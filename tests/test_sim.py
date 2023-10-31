@@ -152,6 +152,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
     def test_and(self):
         stmt = lambda y, a, b: y.eq(a & b)
         self.assertStatement(stmt, [C(0b1100, 4), C(0b1010, 4)], C(0b1000, 4))
+        self.assertStatement(stmt, [C(0b1010, 4), C(0b10, signed(2))], C(0b1010, 4))
+        stmt = lambda y, a: y.eq(a)
+        self.assertStatement(stmt, [C(0b1010, 4) & C(-2, 2).as_unsigned()], C(0b0010, 4))
 
     def test_or(self):
         stmt = lambda y, a, b: y.eq(a | b)
@@ -211,6 +214,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a, b, c: y.eq(Mux(c, a, b))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(0)], C(3, 4))
         self.assertStatement(stmt, [C(2, 4), C(3, 4), C(1)], C(2, 4))
+        stmt = lambda y, a: y.eq(a)
+        self.assertStatement(stmt, [Mux(0, C(0b1010, 4), C(0b10, 2).as_signed())], C(0b1110, 4))
+        self.assertStatement(stmt, [Mux(0, C(0b1010, 4), C(-2, 2).as_unsigned())], C(0b0010, 4))
 
     def test_mux_invert(self):
         stmt = lambda y, a, b, c: y.eq(Mux(~c, a, b))
@@ -815,7 +821,52 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
 
-    def test_memory_transparency(self):
+    def test_memory_transparency_simple(self):
+        m = Module()
+        init = [0x11, 0x22, 0x33, 0x44]
+        m.submodules.memory = memory = Memory(width=8, depth=4, init=init)
+        rdport = memory.read_port()
+        wrport = memory.write_port(granularity=8)
+        with self.assertSimulation(m) as sim:
+            def process():
+                yield rdport.addr.eq(0)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x11)
+                yield rdport.addr.eq(1)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x22)
+                yield wrport.addr.eq(0)
+                yield wrport.data.eq(0x44444444)
+                yield wrport.en.eq(1)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x22)
+                yield wrport.addr.eq(1)
+                yield wrport.data.eq(0x55)
+                yield wrport.en.eq(1)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x55)
+                yield wrport.addr.eq(1)
+                yield wrport.data.eq(0x66)
+                yield wrport.en.eq(1)
+                yield rdport.en.eq(0)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x55)
+                yield wrport.addr.eq(2)
+                yield wrport.data.eq(0x77)
+                yield wrport.en.eq(1)
+                yield rdport.en.eq(1)
+                yield
+                yield Settle()
+                self.assertEqual((yield rdport.data), 0x66)
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
+    def test_memory_transparency_multibit(self):
         m = Module()
         init = [0x11111111, 0x22222222, 0x33333333, 0x44444444]
         m.submodules.memory = memory = Memory(width=32, depth=4, init=init)

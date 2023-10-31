@@ -15,23 +15,18 @@ jobs:
         - '3.9'
         - '3.10'
         - '3.11'
+        - '3.12'
         - 'pypy-3.8'
         - 'pypy-3.9'
+        - 'pypy-3.10'
         allow-failure:
         - false
         include:
-        - python-version: '3.12-dev'
+        - python-version: '3.13-dev'
           allow-failure: true
     continue-on-error: '${{ matrix.allow-failure }}'
     name: 'test (${{ matrix.python-version }})'
     steps:
-    - name: Preserve Wasm cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/wasmtime
-          ~/.cache/YoWASP
-        key: ${{ runner.os }}-wasm
     - name: Check out source code
       uses: actions/checkout@v3
       with:
@@ -46,15 +41,16 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install codecov yowasp-yosys
+        pip install codecov
         pdm install --dev
+    - name: Cache YoWASP build products
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/YoWASP
+        key: YoWASP-${{ runner.os }}-${{ hashFiles('./.venv/**/*.wasm') }}
+        restore-keys: |
+          YoWASP-${{ runner.os }}-
     - name: Run tests
-      env:
-        YOSYS: yowasp-yosys
-        NEXTPNR_ICE40: yowasp-nextpnr-ice40
-        ICEPACK: yowasp-icepack
-        SBY: yowasp-sby
-        SMTBMC: yowasp-yosys-smtbmc
       run: |
         pdm run test
     - name: Submit code coverage
@@ -87,14 +83,14 @@ jobs:
           name: docs
           path: docs/_build
 
-  required: # group all required workflows into one for the required status check
+  required: # group all required workflows into one to avoid reconfiguring this in Actions settings
     needs:
       - test
       - document
+    if: always() && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          true
+      - run: ${{ contains(needs.*.result, 'failure') && 'false' || 'true' }}
 
   publish-docs:
     needs: document
