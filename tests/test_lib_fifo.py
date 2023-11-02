@@ -15,10 +15,10 @@ class FIFOTestCase(FHDLTestCase):
     def test_depth_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^FIFO width must be a non-negative integer, not -1$"):
-            FIFOInterface(width=-1, depth=8, fwft=True)
+            FIFOInterface(width=-1, depth=8)
         with self.assertRaisesRegex(TypeError,
                 r"^FIFO depth must be a non-negative integer, not -1$"):
-            FIFOInterface(width=8, depth=-1, fwft=True)
+            FIFOInterface(width=8, depth=-1)
 
     def test_sync_depth(self):
         self.assertEqual(SyncFIFO(width=8, depth=0).depth, 0)
@@ -68,8 +68,8 @@ class FIFOModel(Elaboratable, FIFOInterface):
     """
     Non-synthesizable first-in first-out queue, implemented naively as a chain of registers.
     """
-    def __init__(self, *, width, depth, fwft, r_domain, w_domain):
-        super().__init__(width=width, depth=depth, fwft=fwft)
+    def __init__(self, *, width, depth, r_domain, w_domain):
+        super().__init__(width=width, depth=depth)
 
         self.r_domain = r_domain
         self.w_domain = w_domain
@@ -90,11 +90,8 @@ class FIFOModel(Elaboratable, FIFOInterface):
 
         m.d.comb += self.r_rdy.eq(self.level > 0)
         m.d.comb += r_port.addr.eq((consume + 1) % self.depth)
-        if self.fwft:
-            m.d.comb += self.r_data.eq(r_port.data)
+        m.d.comb += self.r_data.eq(r_port.data)
         with m.If(self.r_en & self.r_rdy):
-            if not self.fwft:
-                m.d[self.r_domain] += self.r_data.eq(r_port.data)
             m.d[self.r_domain] += consume.eq(r_port.addr)
 
         m.d.comb += self.w_rdy.eq(self.level < self.depth)
@@ -136,7 +133,7 @@ class FIFOModelEquivalenceSpec(Elaboratable):
     def elaborate(self, platform):
         m = Module()
         m.submodules.dut  = dut  = self.fifo
-        m.submodules.gold = gold = FIFOModel(width=dut.width, depth=dut.depth, fwft=dut.fwft,
+        m.submodules.gold = gold = FIFOModel(width=dut.width, depth=dut.depth,
                                              r_domain=self.r_domain, w_domain=self.w_domain)
 
         m.d.comb += [
@@ -150,19 +147,7 @@ class FIFOModelEquivalenceSpec(Elaboratable):
         m.d.comb += Assert(dut.r_level == gold.r_level)
         m.d.comb += Assert(dut.w_level == gold.w_level)
 
-        if dut.fwft:
-            m.d.comb += Assert(dut.r_rdy
-                               .implies(dut.r_data == gold.r_data))
-        else:
-            # past_dut_r_rdy = Past(dut.r_rdy, domain=self.r_domain)
-            past_dut_r_rdy = Signal.like(dut.r_rdy, attrs={"amaranth.sample_reg": True})
-            m.d[self.r_domain] += past_dut_r_rdy.eq(dut.r_rdy)
-
-            # past_dut_r_en = Past(dut.r_en, domain=self.r_domain)
-            past_dut_r_en = Signal.like(dut.r_en, attrs={"amaranth.sample_reg": True})
-            m.d[self.r_domain] += past_dut_r_en.eq(dut.r_en)
-
-            m.d.comb += Assert((past_dut_r_rdy & past_dut_r_en).implies(dut.r_data == gold.r_data))
+        m.d.comb += Assert(dut.r_rdy.implies(dut.r_data == gold.r_data))
 
         return m
 
@@ -219,12 +204,7 @@ class FIFOContractSpec(Elaboratable):
             read_2 = Signal(fifo.width)
             with m.State("READ"):
                 m.d.comb += fifo.r_en.eq(1)
-                if fifo.fwft:
-                    r_rdy = fifo.r_rdy
-                else: # r_rdy = Past(fifo.r_rdy, domain=self.r_domain)
-                    r_rdy = Signal.like(fifo.r_rdy, attrs={"amaranth.sample_reg": True})
-                    m.d[self.r_domain] += r_rdy.eq(fifo.r_rdy)
-                with m.If(r_rdy):
+                with m.If(fifo.r_rdy):
                     m.d.sync += [
                         read_1.eq(read_2),
                         read_2.eq(fifo.r_data),
@@ -271,21 +251,11 @@ class FIFOFormalCase(FHDLTestCase):
                                            bound=fifo.depth * 2 + 1),
                           mode="hybrid", depth=fifo.depth * 2 + 1)
 
-    def test_sync_fwft_pot(self):
-        self.check_sync_fifo(SyncFIFO(width=8, depth=4, fwft=True))
+    def test_sync_pot(self):
+        self.check_sync_fifo(SyncFIFO(width=8, depth=4))
 
-    def test_sync_fwft_npot(self):
-        self.check_sync_fifo(SyncFIFO(width=8, depth=5, fwft=True))
-
-    def test_sync_not_fwft_pot(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            self.check_sync_fifo(SyncFIFO(width=8, depth=4, fwft=False))
-
-    def test_sync_not_fwft_npot(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-            self.check_sync_fifo(SyncFIFO(width=8, depth=5, fwft=False))
+    def test_sync_npot(self):
+        self.check_sync_fifo(SyncFIFO(width=8, depth=5))
 
     def test_sync_buffered_pot(self):
         self.check_sync_fifo(SyncFIFOBuffered(width=8, depth=4))
