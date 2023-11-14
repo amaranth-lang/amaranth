@@ -139,7 +139,7 @@ class AttrsTestCase(FHDLTestCase):
         fn = lambda self: "FOO"
         a = Attrs(FOO=fn)
         self.assertEqual(a["FOO"], fn)
-        self.assertEqual(repr(a), "(attrs FOO={!r})".format(fn))
+        self.assertEqual(repr(a), f"(attrs FOO={fn!r})")
 
     def test_wrong_value(self):
         with self.assertRaisesRegex(TypeError,

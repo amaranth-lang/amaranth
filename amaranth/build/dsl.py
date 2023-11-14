@@ -18,7 +18,7 @@ class Pins:
                 raise TypeError("Connector must be None or a pair of string (connector name) and "
                                 "integer/string (connector number), not {!r}"
                                 .format(conn))
-            names = ["{}_{}:{}".format(conn_name, conn_number, name) for name in names]
+            names = [f"{conn_name}_{conn_number}:{name}" for name in names]
 
         if dir not in ("i", "o", "io", "oe"):
             raise TypeError("Direction must be one of \"i\", \"o\", \"oe\", or \"io\", not {!r}"
@@ -118,7 +118,7 @@ class Clock:
         return 1 / self.frequency
 
     def __repr__(self):
-        return "(clock {})".format(self.frequency)
+        return f"(clock {self.frequency})"
 
 
 class Subsignal:
@@ -173,7 +173,7 @@ class Subsignal:
         return " ".join(parts)
 
     def __repr__(self):
-        return "(subsignal {} {})".format(self.name, self._content_repr())
+        return f"(subsignal {self.name} {self._content_repr()})"
 
 
 class Resource(Subsignal):
@@ -205,7 +205,7 @@ class Resource(Subsignal):
         self.number = number
 
     def __repr__(self):
-        return "(resource {} {} {})".format(self.name, self.number, self._content_repr())
+        return f"(resource {self.name} {self.number} {self._content_repr()})"
 
 
 class Connector:
@@ -242,13 +242,13 @@ class Connector:
                                 .format(conn))
 
             for conn_pin, plat_pin in mapping.items():
-                mapping[conn_pin] = "{}_{}:{}".format(conn_name, conn_number, plat_pin)
+                mapping[conn_pin] = f"{conn_name}_{conn_number}:{plat_pin}"
 
         self.mapping = mapping
 
     def __repr__(self):
         return "(connector {} {} {})".format(self.name, self.number,
-                                             " ".join("{}=>{}".format(conn, plat)
+                                             " ".join(f"{conn}=>{plat}"
                                                       for conn, plat in self.mapping.items()))
 
     def __len__(self):
@@ -256,4 +256,4 @@ class Connector:
 
     def __iter__(self):
         for conn_pin, plat_pin in self.mapping.items():
-            yield "{}_{}:{}".format(self.name, self.number, conn_pin), plat_pin
+            yield f"{self.name}_{self.number}:{conn_pin}", plat_pin

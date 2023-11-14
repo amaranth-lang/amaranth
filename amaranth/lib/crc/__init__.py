@@ -233,7 +233,7 @@ class Parameters:
         crc = self._initial_crc << self._data_width
         for word in data:
             if not 0 <= word <= word_max:
-                raise ValueError("data word must be between 0 and {}".format(word_max - 1))
+                raise ValueError(f"data word must be between 0 and {word_max - 1}")
 
             if self._reflect_input:
                 word = self._reflect(word, self._data_width)

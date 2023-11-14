@@ -6,7 +6,7 @@ def log2_int(n, need_pow2=True):
         return 0
     r = (n - 1).bit_length()
     if need_pow2 and (1 << r) != n:
-        raise ValueError("{} is not a power of 2".format(n))
+        raise ValueError(f"{n} is not a power of 2")
     return r
 
 

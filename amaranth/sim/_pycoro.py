@@ -41,7 +41,7 @@ class PyCoroProcess(BaseProcess):
             frame = coroutine.gi_frame
         if inspect.iscoroutine(coroutine):
             frame = coroutine.cr_frame
-        return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
+        return f"{inspect.getfile(frame)}:{inspect.getlineno(frame)}"
 
     def add_trigger(self, signal, trigger=None):
         self.state.add_trigger(self, signal, trigger=trigger)

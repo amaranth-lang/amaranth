@@ -103,7 +103,7 @@ class CompatMemory(NativeMemory, Elaboratable):
         assert mode != NO_CHANGE
         rdport = self.read_port(domain="comb" if async_read else clock_domain,
                                 transparent=mode == WRITE_FIRST)
-        rdport.addr.name = "{}_addr".format(self.name)
+        rdport.addr.name = f"{self.name}_addr"
         adr = rdport.addr
         dat_r = rdport.data
         if write_capable:

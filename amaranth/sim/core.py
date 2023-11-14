@@ -27,7 +27,7 @@ class Delay(Command):
         if self.interval is None:
             return "(delay ε)"
         else:
-            return "(delay {:.3}us)".format(self.interval * 1e6)
+            return f"(delay {self.interval * 1e6:.3}us)"
 
 
 class Tick(Command):
@@ -39,7 +39,7 @@ class Tick(Command):
         self.domain = domain
 
     def __repr__(self):
-        return "(tick {})".format(self.domain)
+        return f"(tick {self.domain})"
 
 
 class Passive(Command):

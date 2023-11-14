@@ -125,9 +125,9 @@ class XilinxPlatform(TemplatedPlatform):
     @property
     def _part(self):
         if self.family in {"ultrascale", "ultrascaleplus"}:
-            return "{}-{}-{}".format(self.device, self.package, self.speed)
+            return f"{self.device}-{self.package}-{self.speed}"
         else:
-            return "{}{}-{}".format(self.device, self.package, self.speed)
+            return f"{self.device}{self.package}-{self.speed}"
 
     @property
     def vendor_toolchain(self):
@@ -365,7 +365,7 @@ class XilinxPlatform(TemplatedPlatform):
         elif self._part.startswith("xc7s"):
             return "spartan7"
         else:
-            print("Unknown bitstream device for part {}".format(self._part))
+            print(f"Unknown bitstream device for part {self._part}")
             raise ValueError
 
     # device naming according to part_db.yml of f4pga project
@@ -378,7 +378,7 @@ class XilinxPlatform(TemplatedPlatform):
         elif self._part.startswith("xc7a200"):
             return "xc7a200t_test"
         else:
-            print("Unknown symbiflow device for part {}".format(self._part))
+            print(f"Unknown symbiflow device for part {self._part}")
             raise ValueError
 
 
@@ -576,7 +576,7 @@ class XilinxPlatform(TemplatedPlatform):
         elif device.startswith("xq"):
             device = device[2:]
         else:
-            raise ValueError("Device '{}' is not recognized".format(self.device))
+            raise ValueError(f"Device '{self.device}' is not recognized")
         # Do actual name matching.
         if device.startswith("2vp"):
             self.family = "virtex2p"
@@ -635,16 +635,16 @@ class XilinxPlatform(TemplatedPlatform):
         assert toolchain in ("Vivado", "ISE", "Symbiflow", "Xray")
         if toolchain == "Vivado":
             if self.family in ISE_FAMILIES:
-                raise ValueError("Family '{}' is not supported by the Vivado toolchain, please use ISE instead".format(self.family))
+                raise ValueError(f"Family '{self.family}' is not supported by the Vivado toolchain, please use ISE instead")
         elif toolchain == "ISE":
             if self.family not in ISE_FAMILIES and self.family != "series7":
-                raise ValueError("Family '{}' is not supported by the ISE toolchain, please use Vivado instead".format(self.family))
+                raise ValueError(f"Family '{self.family}' is not supported by the ISE toolchain, please use Vivado instead")
         elif toolchain == "Symbiflow":
             if self.family != "series7":
-                raise ValueError("Family '{}' is not supported by the Symbiflow toolchain".format(self.family))
+                raise ValueError(f"Family '{self.family}' is not supported by the Symbiflow toolchain")
         elif toolchain == "Xray":
             if self.family != "series7":
-                raise ValueError("Family '{}' is not supported by the yosys nextpnr toolchain".format(self.family))
+                raise ValueError(f"Family '{self.family}' is not supported by the yosys nextpnr toolchain")
 
         self.toolchain = toolchain
 
@@ -926,11 +926,11 @@ class XilinxPlatform(TemplatedPlatform):
 
         i = o = t = None
         if "i" in pin.dir:
-            i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
+            i = Signal(pin.width, name=f"{pin.name}_xdr_i")
         if "o" in pin.dir:
-            o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
+            o = Signal(pin.width, name=f"{pin.name}_xdr_o")
         if pin.dir in ("oe", "io"):
-            t = Signal(1,         name="{}_xdr_t".format(pin.name))
+            t = Signal(1,         name=f"{pin.name}_xdr_t")
 
         if pin.xdr == 0:
             if "i" in pin.dir:
@@ -1037,7 +1037,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUF",
                 i_I=port.io[bit],
                 o_O=i[bit]
             )
@@ -1050,7 +1050,7 @@ class XilinxPlatform(TemplatedPlatform):
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), o_invert=invert)
         if self.vendor_toolchain:
             for bit in range(pin.width):
-                m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUF",
+                m.submodules[f"{pin.name}_{bit}"] = Instance("OBUF",
                     i_I=o[bit],
                     o_O=port.io[bit]
                 )
@@ -1067,7 +1067,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFT",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFT",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.io[bit]
@@ -1083,7 +1083,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUF",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -1100,7 +1100,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUFDS",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUFDS",
                 i_I=port.p[bit], i_IB=port.n[bit],
                 o_O=i[bit]
             )
@@ -1115,7 +1115,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFDS",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFDS",
                 i_I=o[bit],
                 o_O=port.p[bit], o_OB=port.n[bit]
             )
@@ -1130,7 +1130,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUFTDS",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFTDS",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.p[bit], o_OB=port.n[bit]
@@ -1146,7 +1146,7 @@ class XilinxPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUFDS",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUFDS",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -1168,7 +1168,7 @@ class XilinxPlatform(TemplatedPlatform):
 
     def get_ff_sync(self, ff_sync):
         m = Module()
-        flops = [Signal(ff_sync.i.shape(), name="stage{}".format(index),
+        flops = [Signal(ff_sync.i.shape(), name=f"stage{index}",
                         reset=ff_sync._reset, reset_less=ff_sync._reset_less,
                         attrs={"ASYNC_REG": "TRUE"})
                  for index in range(ff_sync._stages)]
@@ -1190,7 +1190,7 @@ class XilinxPlatform(TemplatedPlatform):
     def get_async_ff_sync(self, async_ff_sync):
         m = Module()
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)
-        flops = [Signal(1, name="stage{}".format(index), reset=1,
+        flops = [Signal(1, name=f"stage{index}", reset=1,
                         attrs={"ASYNC_REG": "TRUE"})
                  for index in range(async_ff_sync._stages)]
         if self.toolchain == "Vivado":

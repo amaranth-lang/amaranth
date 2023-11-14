@@ -250,11 +250,11 @@ class ReadPort(Elaboratable):
         self.transparent = transparent
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_r_addr".format(memory.name), src_loc_at=1 + src_loc_at)
+                           name=f"{memory.name}_r_addr", src_loc_at=1 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_r_data".format(memory.name), src_loc_at=1 + src_loc_at)
+                           name=f"{memory.name}_r_data", src_loc_at=1 + src_loc_at)
         if self.domain != "comb":
-            self.en = Signal(name="{}_r_en".format(memory.name), reset=1,
+            self.en = Signal(name=f"{memory.name}_r_en", reset=1,
                              src_loc_at=1 + src_loc_at)
         else:
             self.en = Const(1)
@@ -317,11 +317,11 @@ class WritePort(Elaboratable):
         self.granularity  = granularity
 
         self.addr = Signal(range(memory.depth),
-                           name="{}_w_addr".format(memory.name), src_loc_at=1 + src_loc_at)
+                           name=f"{memory.name}_w_addr", src_loc_at=1 + src_loc_at)
         self.data = Signal(memory.width,
-                           name="{}_w_data".format(memory.name), src_loc_at=1 + src_loc_at)
+                           name=f"{memory.name}_w_data", src_loc_at=1 + src_loc_at)
         self.en   = Signal(memory.width // granularity,
-                           name="{}_w_en".format(memory.name), src_loc_at=1 + src_loc_at)
+                           name=f"{memory.name}_w_en", src_loc_at=1 + src_loc_at)
 
         memory._write_ports.append(self)
 
@@ -348,8 +348,8 @@ class DummyPort:
             name = tracer.get_var_name(depth=2, default="dummy")
 
         self.addr = Signal(addr_width,
-                           name="{}_addr".format(name), src_loc_at=1)
+                           name=f"{name}_addr", src_loc_at=1)
         self.data = Signal(data_width,
-                           name="{}_data".format(name), src_loc_at=1)
+                           name=f"{name}_data", src_loc_at=1)
         self.en   = Signal(data_width // granularity,
-                           name="{}_en".format(name), src_loc_at=1)
+                           name=f"{name}_en", src_loc_at=1)

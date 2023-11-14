@@ -41,7 +41,7 @@ class _NameExtractor:
 
         for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
             if subfragment_name is None:
-                subfragment_name = "U${}".format(subfragment_index)
+                subfragment_name = f"U${subfragment_index}"
             self(subfragment, hierarchy=(*hierarchy, subfragment_name))
 
         return self.names
@@ -54,9 +54,9 @@ class _VCDWriter:
 
     def __init__(self, fragment, *, vcd_file, gtkw_file=None, traces=()):
         if isinstance(vcd_file, str):
-            vcd_file = open(vcd_file, "wt")
+            vcd_file = open(vcd_file, "w")
         if isinstance(gtkw_file, str):
-            gtkw_file = open(gtkw_file, "wt")
+            gtkw_file = open(gtkw_file, "w")
 
         self.vcd_vars = SignalDict()
         self.vcd_file = vcd_file
@@ -101,7 +101,7 @@ class _VCDWriter:
                         if suffix is None:
                             var_name_suffix = var_name
                         else:
-                            var_name_suffix = "{}${}".format(var_name, suffix)
+                            var_name_suffix = f"{var_name}${suffix}"
                         if signal not in self.vcd_vars:
                             vcd_var = self.vcd_writer.register_var(
                                 scope=var_scope, name=var_name_suffix,
@@ -140,7 +140,7 @@ class _VCDWriter:
             self.gtkw_save.treeopen("top")
             for signal in self.traces:
                 if len(signal) > 1 and not signal.decoder:
-                    suffix = "[{}:0]".format(len(signal) - 1)
+                    suffix = f"[{len(signal) - 1}:0]"
                 else:
                     suffix = ""
                 self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)

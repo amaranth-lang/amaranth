@@ -81,9 +81,9 @@ class _LowerNext(ValueTransformer, StatementTransformer):
             except KeyError:
                 related = node.target if isinstance(node.target, Signal) else None
                 next_value = Signal(node.target.shape(),
-                    name=None if related is None else "{}_fsm_next".format(related.name))
+                    name=None if related is None else f"{related.name}_fsm_next")
                 next_value_ce = Signal(
-                    name=None if related is None else "{}_fsm_next_ce".format(related.name))
+                    name=None if related is None else f"{related.name}_fsm_next_ce")
                 self.registers.append((node.target, next_value_ce, next_value))
             return next_value.eq(node.value), next_value_ce.eq(1)
         else:
@@ -161,10 +161,10 @@ class FSM(CompatModule):
     @_ignore_deprecated
     def do_finalize(self):
         nstates = len(self.actions)
-        self.encoding = dict((s, n) for n, s in enumerate(self.actions.keys()))
+        self.encoding = {s: n for n, s in enumerate(self.actions.keys())}
         self.decoding = {n: s for s, n in self.encoding.items()}
 
-        decoder = lambda n: "{}/{}".format(self.decoding[n], n)
+        decoder = lambda n: f"{self.decoding[n]}/{n}"
         self.state = Signal(range(nstates), reset=self.encoding[self.reset_state], decoder=decoder)
         self.next_state = Signal.like(self.state)
 
@@ -183,7 +183,7 @@ class FSM(CompatModule):
         return _LowerNext(self.next_state, self.encoding, self.state_aliases)
 
     def _finalize_sync(self, ls):
-        cases = dict((self.encoding[k], ls.on_statement(v)) for k, v in self.actions.items() if v)
+        cases = {self.encoding[k]: ls.on_statement(v) for k, v in self.actions.items() if v}
         self.comb += [
             self.next_state.eq(self.state),
             Case(self.state, cases).makedefault(self.encoding[self.reset_state])

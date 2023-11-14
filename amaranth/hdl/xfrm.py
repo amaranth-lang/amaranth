@@ -74,7 +74,7 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     def on_unknown_value(self, value):
-        raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+        raise TypeError(f"Cannot transform value {value!r}") # :nocov:
 
     def replace_value_src_loc(self, value, new_value):
         return True
@@ -186,7 +186,7 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     def on_unknown_statement(self, stmt):
-        raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
+        raise TypeError(f"Cannot transform statement {stmt!r}") # :nocov:
 
     def replace_statement_src_loc(self, stmt, new_stmt):
         return True
@@ -300,7 +300,7 @@ class FragmentTransformer:
             value._transforms_.append(self)
             return value
         else:
-            raise AttributeError("Object {!r} cannot be elaborated".format(value))
+            raise AttributeError(f"Object {value!r} cannot be elaborated")
 
 
 class TransformedElaboratable(Elaboratable):
@@ -425,9 +425,9 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
             domain_map = {"sync": domain_map}
         for src, dst in domain_map.items():
             if src == "comb":
-                raise ValueError("Domain '{}' may not be renamed".format(src))
+                raise ValueError(f"Domain '{src}' may not be renamed")
             if dst == "comb":
-                raise ValueError("Domain '{}' may not be renamed to '{}'".format(src, dst))
+                raise ValueError(f"Domain '{src}' may not be renamed to '{dst}'")
         self.domain_map = OrderedDict(domain_map)
 
     def on_ClockSignal(self, value):
@@ -531,9 +531,9 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
     def _name_reset(self, value):
         if isinstance(value, Const):
-            return "c${}".format(value.value), value.value
+            return f"c${value.value}", value.value
         elif isinstance(value, Signal):
-            return "s${}".format(value.name), value.reset
+            return f"s${value.name}", value.reset
         elif isinstance(value, ClockSignal):
             return "clk", 0
         elif isinstance(value, ResetSignal):
@@ -554,7 +554,7 @@ class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         else:
             assert value.domain is not None
             sampled_name, sampled_reset = self._name_reset(value.value)
-            name = "$sample${}${}${}".format(sampled_name, value.domain, value.clocks)
+            name = f"$sample${sampled_name}${value.domain}${value.clocks}"
             sample = Signal.like(value.value, name=name, reset_less=True, reset=sampled_reset)
             sample.attrs["amaranth.sample_reg"] = True
 

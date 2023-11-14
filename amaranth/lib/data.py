@@ -446,7 +446,7 @@ class ArrayLayout(Layout):
             if key < 0:
                 key += self._length
             return Field(self._elem_shape, key * Shape.cast(self._elem_shape).width)
-        raise TypeError("Cannot index array layout with {!r}".format(key))
+        raise TypeError(f"Cannot index array layout with {key!r}")
 
     @property
     def size(self):
@@ -531,7 +531,7 @@ class FlexibleLayout(Layout):
     def __getitem__(self, key):
         if isinstance(key, (int, str)):
             return self._fields[key]
-        raise TypeError("Cannot index flexible layout with {!r}".format(key))
+        raise TypeError(f"Cannot index flexible layout with {key!r}")
 
     def __repr__(self):
         return f"FlexibleLayout({self._size}, {self._fields!r})"
