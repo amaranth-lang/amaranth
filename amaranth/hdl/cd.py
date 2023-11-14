@@ -45,7 +45,7 @@ class ClockDomain:
         if domain_name == "sync":
             return signal_name
         else:
-            return "{}_{}".format(domain_name, signal_name)
+            return f"{domain_name}_{signal_name}"
 
     def __init__(self, name=None, *, clk_edge="pos", reset_less=False, async_reset=False,
                  local=False):
@@ -57,7 +57,7 @@ class ClockDomain:
         if name.startswith("cd_"):
             name = name[3:]
         if name == "comb":
-            raise ValueError("Domain '{}' may not be clocked".format(name))
+            raise ValueError(f"Domain '{name}' may not be clocked")
 
         if clk_edge not in ("pos", "neg"):
             raise ValueError("Domain clock edge must be one of 'pos' or 'neg', not {!r}"

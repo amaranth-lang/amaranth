@@ -31,7 +31,7 @@ def _pin_signature(width, dir, xdr=0):
             members["i"] = In(width)
         else:
             for n in range(xdr):
-                members["i{}".format(n)] = In(width)
+                members[f"i{n}"] = In(width)
     if dir in ("o", "oe", "io"):
         if xdr > 0:
             members["o_clk"] = Out(1)
@@ -41,7 +41,7 @@ def _pin_signature(width, dir, xdr=0):
             members["o"] = Out(width)
         else:
             for n in range(xdr):
-                members["o{}".format(n)] = Out(width)
+                members[f"o{n}"] = Out(width)
     if dir in ("oe", "io"):
         members["oe"] = Out(1)
     return Signature(members)

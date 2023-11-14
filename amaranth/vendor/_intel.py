@@ -323,8 +323,8 @@ class IntelPlatform(TemplatedPlatform):
             )
             return i_sdr
         elif pin.xdr == 2:
-            i_ddr = Signal(pin.width, name="{}_i_ddr".format(pin.name))
-            m.submodules["{}_i_ddr".format(pin.name)] = Instance("altddio_in",
+            i_ddr = Signal(pin.width, name=f"{pin.name}_i_ddr")
+            m.submodules[f"{pin.name}_i_ddr"] = Instance("altddio_in",
                 p_width=pin.width,
                 i_datain=i_ddr,
                 i_inclock=pin.i_clk,
@@ -347,7 +347,7 @@ class IntelPlatform(TemplatedPlatform):
         if pin.xdr == 0:
             return get_oneg(pin.o)
         elif pin.xdr == 1:
-            o_sdr = Signal(pin.width, name="{}_o_sdr".format(pin.name))
+            o_sdr = Signal(pin.width, name=f"{pin.name}_o_sdr")
             m.submodules += Instance("$dff",
                 p_CLK_POLARITY=1,
                 p_WIDTH=pin.width,
@@ -357,8 +357,8 @@ class IntelPlatform(TemplatedPlatform):
             )
             return o_sdr
         elif pin.xdr == 2:
-            o_ddr = Signal(pin.width, name="{}_o_ddr".format(pin.name))
-            m.submodules["{}_o_ddr".format(pin.name)] = Instance("altddio_out",
+            o_ddr = Signal(pin.width, name=f"{pin.name}_o_ddr")
+            m.submodules[f"{pin.name}_o_ddr"] = Instance("altddio_out",
                 p_width=pin.width,
                 o_dataout=o_ddr,
                 i_outclock=pin.o_clk,
@@ -374,7 +374,7 @@ class IntelPlatform(TemplatedPlatform):
         if pin.xdr == 0:
             return pin.oe.replicate(pin.width)
         elif pin.xdr in (1, 2):
-            oe_reg = Signal(pin.width, name="{}_oe_reg".format(pin.name))
+            oe_reg = Signal(pin.width, name=f"{pin.name}_oe_reg")
             oe_reg.attrs["useioff"] = "1"
             m.submodules += Instance("$dff",
                 p_CLK_POLARITY=1,

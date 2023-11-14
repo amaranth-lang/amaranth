@@ -195,7 +195,7 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "m":
                 sel, val1, val0 = value.operands
                 return f"({sign(val1)} if {mask(sel)} else {sign(val0)})"
-        raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
+        raise NotImplementedError(f"Operator '{value.operator}' not implemented") # :nocov:
 
     def on_Slice(self, value):
         return f"({(1 << len(value)) - 1:#x} & ({self(value.value)} >> {value.start}))"
@@ -475,7 +475,7 @@ class _FragmentCompiler:
 
         for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
             if subfragment_name is None:
-                subfragment_name = "U${}".format(subfragment_index)
+                subfragment_name = f"U${subfragment_index}"
             processes.update(self(subfragment))
 
         return processes

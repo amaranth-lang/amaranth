@@ -136,7 +136,7 @@ class Record:
 
     def connect(self, *slaves, keep=None, omit=None):
         if keep is None:
-            _keep = set([f[0] for f in self.layout])
+            _keep = {f[0] for f in self.layout}
         elif isinstance(keep, list):
             _keep = set(keep)
         else:

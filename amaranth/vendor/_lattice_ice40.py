@@ -378,7 +378,7 @@ class LatticeICE40Platform(TemplatedPlatform):
                 m.submodules += Instance("SB_HFOSC",
                                          i_CLKHFEN=1,
                                          i_CLKHFPU=1,
-                                         p_CLKHF_DIV="0b{0:02b}".format(self.hfosc_div),
+                                         p_CLKHF_DIV=f"0b{self.hfosc_div:02b}",
                                          o_CLKHF=clk_i)
                 delay = int(100e-6 * self.default_clk_frequency)
             # Internal low-speed clock: 10 KHz.
@@ -441,7 +441,7 @@ class LatticeICE40Platform(TemplatedPlatform):
 
         def get_ineg(y, invert):
             if invert_lut:
-                a = Signal.like(y, name_suffix="_x{}".format(1 if invert else 0))
+                a = Signal.like(y, name_suffix=f"_x{1 if invert else 0}")
                 for bit in range(len(y)):
                     m.submodules += Instance("SB_LUT4",
                         p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
@@ -460,7 +460,7 @@ class LatticeICE40Platform(TemplatedPlatform):
 
         def get_oneg(a, invert):
             if invert_lut:
-                y = Signal.like(a, name_suffix="_x{}".format(1 if invert else 0))
+                y = Signal.like(a, name_suffix=f"_x{1 if invert else 0}")
                 for bit in range(len(a)):
                     m.submodules += Instance("SB_LUT4",
                         p_LUT_INIT=Const(0b01 if invert else 0b10, 16),
@@ -566,9 +566,9 @@ class LatticeICE40Platform(TemplatedPlatform):
                 io_args.append(("i", "OUTPUT_ENABLE", pin.oe))
 
             if is_global_input:
-                m.submodules["{}_{}".format(pin.name, bit)] = Instance("SB_GB_IO", *io_args)
+                m.submodules[f"{pin.name}_{bit}"] = Instance("SB_GB_IO", *io_args)
             else:
-                m.submodules["{}_{}".format(pin.name, bit)] = Instance("SB_IO", *io_args)
+                m.submodules[f"{pin.name}_{bit}"] = Instance("SB_IO", *io_args)
 
     def get_input(self, pin, port, attrs, invert):
         self._check_feature("single-ended input", pin, attrs,

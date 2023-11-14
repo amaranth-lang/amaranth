@@ -29,15 +29,15 @@ def _signed(value):
     elif isinstance(value, ast.Const):
         return value.signed
     else:
-        assert False, "Invalid constant {!r}".format(value)
+        assert False, f"Invalid constant {value!r}"
 
 
 def _const(value):
     if isinstance(value, str):
-        return "\"{}\"".format(value.translate(_escape_map))
+        return f"\"{value.translate(_escape_map)}\""
     elif isinstance(value, int):
         if value in range(0, 2**31-1):
-            return "{:d}".format(value)
+            return f"{value:d}"
         else:
             # This code path is only used for Instances, where Verilog-like behavior is desirable.
             # Verilog ensures that integers with unspecified width are 32 bits wide or more.
@@ -47,7 +47,7 @@ def _const(value):
         value_twos_compl = value.value & ((1 << value.width) - 1)
         return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
     else:
-        assert False, "Invalid constant {!r}".format(value)
+        assert False, f"Invalid constant {value!r}"
 
 
 class _Namer:
@@ -58,7 +58,7 @@ class _Namer:
         self._names = set()
 
     def anonymous(self):
-        name = "U$${}".format(self._anon)
+        name = f"U$${self._anon}"
         assert name not in self._names
         self._anon += 1
         return name
@@ -66,12 +66,12 @@ class _Namer:
     def _make_name(self, name, local):
         if name is None:
             self._index += 1
-            name = "${}".format(self._index)
+            name = f"${self._index}"
         elif not local and name[0] not in "\\$":
-            name = "\\{}".format(name)
+            name = f"\\{name}"
         while name in self._names:
             self._index += 1
-            name = "{}${}".format(name, self._index)
+            name = f"{name}${self._index}"
         self._names.add(name)
         return name
 
@@ -259,7 +259,7 @@ class _SwitchBuilder(_AttrBuilder, _ProxiedBuilder):
             self._append("{}case\n", "  " * (self.indent + 1))
         else:
             self._append("{}case {}\n", "  " * (self.indent + 1),
-                         ", ".join("{}'{}".format(len(value), value) for value in values))
+                         ", ".join(f"{len(value)}'{value}" for value in values))
         return _CaseBuilder(self.rtlil, self.indent + 2)
 
 
@@ -287,7 +287,7 @@ def _src(src_loc):
     if src_loc is None:
         return None
     file, line = src_loc
-    return "{}:{}".format(file, line)
+    return f"{file}:{line}"
 
 
 class _LegalizeValue(Exception):
@@ -332,7 +332,7 @@ class _ValueCompilerState:
         else:
             port_id = port_kind = None
         if prefix is not None:
-            wire_name = "{}_{}".format(prefix, signal.name)
+            wire_name = f"{prefix}_{signal.name}"
         else:
             wire_name = signal.name
 
@@ -416,9 +416,9 @@ class _ValueCompiler(xfrm.ValueVisitor):
         if value.start == value.stop:
             return "{}"
         elif value.start + 1 == value.stop:
-            return "{} [{}]".format(sigspec, value.start)
+            return f"{sigspec} [{value.start}]"
         else:
-            return "{} [{}:{}]".format(sigspec, value.stop - 1, value.start)
+            return f"{sigspec} [{value.stop - 1}:{value.start}]"
 
     def on_ArrayProxy(self, value):
         index = self.s.expand(value.index)
@@ -661,11 +661,11 @@ class _LHSValueCompiler(_ValueCompiler):
         else: # new_shape.width > value_shape.width
             dummy_bits = new_shape.width - value_shape.width
             dummy_wire = self.s.rtlil.wire(dummy_bits)
-            return "{{ {} {} }}".format(dummy_wire, self(value))
+            return f"{{ {dummy_wire} {self(value)} }}"
 
     def on_Signal(self, value):
         if value not in self.s.driven:
-            raise ValueError("No LHS wire for non-driven signal {}".format(repr(value)))
+            raise ValueError(f"No LHS wire for non-driven signal {value!r}")
         wire_curr, wire_next = self.s.resolve(value)
         return wire_next or wire_curr
 
@@ -683,7 +683,7 @@ class _LHSValueCompiler(_ValueCompiler):
                 return slice
             else:
                 dummy_wire = self.s.rtlil.wire(stop - len(value.value))
-                return "{{ {} {} }}".format(dummy_wire, slice)
+                return f"{{ {dummy_wire} {slice} }}"
         else:
             # Only so many possible parts. The amount of branches is exponential; if value.offset
             # is large (e.g. 32-bit wide), trying to naively legalize it is likely to exhaust
@@ -813,12 +813,12 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
     if isinstance(fragment, ir.Instance):
         port_map = OrderedDict()
         for port_name, (value, dir) in fragment.named_ports.items():
-            port_map["\\{}".format(port_name)] = value
+            port_map[f"\\{port_name}"] = value
 
         if fragment.type[0] == "$":
             return fragment.type, port_map
         else:
-            return "\\{}".format(fragment.type), port_map
+            return f"\\{fragment.type}", port_map
 
     module_name  = ".".join(name or "anonymous" for name in hierarchy)
     module_attrs = OrderedDict()
@@ -898,7 +898,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             lhs_group_filter = xfrm.LHSGroupFilter(group_signals)
             group_stmts = lhs_group_filter(fragment.statements)
 
-            with module.process(name="$group_{}".format(group)) as process:
+            with module.process(name=f"$group_{group}") as process:
                 with process.case() as case:
                     # For every signal in comb domain, assign \sig$next to the reset value.
                     # For every signal in sync domains, assign \sig$next to the current

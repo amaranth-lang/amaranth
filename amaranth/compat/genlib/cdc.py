@@ -16,11 +16,11 @@ class MultiReg(NativeFFSynchronizer):
         old_opts = []
         new_opts = []
         if odomain != "sync":
-            old_opts.append(", odomain={!r}".format(odomain))
-            new_opts.append(", o_domain={!r}".format(odomain))
+            old_opts.append(f", odomain={odomain!r}")
+            new_opts.append(f", o_domain={odomain!r}")
         if n != 2:
-            old_opts.append(", n={!r}".format(n))
-            new_opts.append(", stages={!r}".format(n))
+            old_opts.append(f", n={n!r}")
+            new_opts.append(f", stages={n!r}")
         warnings.warn("instead of `MultiReg(...{})`, use `FFSynchronizer(...{})`"
                       .format("".join(old_opts), "".join(new_opts)),
                       DeprecationWarning, stacklevel=2)

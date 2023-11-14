@@ -466,8 +466,8 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             r_empty.eq(consume_r_gry == produce_r_gry),
         ]
 
-        m.d[self._w_domain] += self.w_level.eq((produce_w_bin - consume_w_bin))
-        m.d.comb += self.r_level.eq((produce_r_bin - consume_r_bin))
+        m.d[self._w_domain] += self.w_level.eq(produce_w_bin - consume_w_bin)
+        m.d.comb += self.r_level.eq(produce_r_bin - consume_r_bin)
 
         storage = Memory(width=self.width, depth=self.depth)
         w_port  = m.submodules.w_port = storage.write_port(domain=self._w_domain)

@@ -82,9 +82,9 @@ class Layout:
         field_reprs = []
         for name, shape, dir in self:
             if dir == DIR_NONE:
-                field_reprs.append("({!r}, {!r})".format(name, shape))
+                field_reprs.append(f"({name!r}, {shape!r})")
             else:
-                field_reprs.append("({!r}, {!r}, Direction.{})".format(name, shape, dir.name))
+                field_reprs.append(f"({name!r}, {shape!r}, Direction.{dir.name})")
         return "Layout([{}])".format(", ".join(field_reprs))
 
 
@@ -101,7 +101,7 @@ class Record(ValueCastable):
         def concat(a, b):
             if a is None:
                 return b
-            return "{}__{}".format(a, b)
+            return f"{a}__{b}"
 
         fields = {}
         for field_name in other.fields:
@@ -125,7 +125,7 @@ class Record(ValueCastable):
         def concat(a, b):
             if a is None:
                 return b
-            return "{}__{}".format(a, b)
+            return f"{a}__{b}"
 
         self.layout = Layout.cast(layout, src_loc_at=1 + src_loc_at)
         self.fields = OrderedDict()
@@ -158,7 +158,7 @@ class Record(ValueCastable):
                 if self.name is None:
                     reference = "Unnamed record"
                 else:
-                    reference = "Record '{}'".format(self.name)
+                    reference = f"Record '{self.name}'"
                 raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
                                      .format(reference, item, ", ".join(self.fields))) from None
         elif isinstance(item, tuple):
@@ -174,7 +174,7 @@ class Record(ValueCastable):
                 if self.name is None:
                     reference = "Unnamed record"
                 else:
-                    reference = "Record '{}'".format(self.name)
+                    reference = f"Record '{self.name}'"
                 raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
                                      .format(reference, item, ", ".join(self.fields))) from None
 
@@ -211,7 +211,7 @@ class Record(ValueCastable):
             if record.name is None:
                 return "unnamed record"
             else:
-                return "record '{}'".format(record.name)
+                return f"record '{record.name}'"
 
         for field in include or {}:
             if field not in self.fields:

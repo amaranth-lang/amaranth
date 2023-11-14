@@ -209,7 +209,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
                 if osch_freq not in self._supported_osch_freqs:
                     raise ValueError("Frequency {!r} is not valid for OSCH clock. Valid frequencies are {!r}"
                              .format(osch_freq, self._supported_osch_freqs))
-                osch_freq_param = "{:.2f}".format(float(osch_freq))
+                osch_freq_param = f"{float(osch_freq):.2f}"
                 m.submodules += [ Instance("OSCH", p_NOM_FREQ=osch_freq_param, i_STDBY=Const(0), o_OSC=clk_i, o_SEDSTDBY=Signal()) ]
             # GSR implicitly connects to every appropriate storage element. As such, the sync
             # domain is reset-less; domains driven by other clocks would need to have dedicated
@@ -308,11 +308,11 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
 
         i = o = t = None
         if "i" in pin.dir:
-            i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
+            i = Signal(pin.width, name=f"{pin.name}_xdr_i")
         if "o" in pin.dir:
-            o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
+            o = Signal(pin.width, name=f"{pin.name}_xdr_o")
         if pin.dir in ("oe", "io"):
-            t = Signal(1,         name="{}_xdr_t".format(pin.name))
+            t = Signal(1,         name=f"{pin.name}_xdr_t")
 
         if pin.xdr == 0:
             if "i" in pin.dir:
@@ -350,7 +350,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(len(port)):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IB",
                 i_I=port.io[bit],
                 o_O=i[bit]
             )
@@ -362,7 +362,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(port)):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OB",
                 i_I=o[bit],
                 o_O=port.io[bit]
             )
@@ -374,7 +374,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(len(port)):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.io[bit]
@@ -387,7 +387,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(len(port)):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("BB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("BB",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -401,7 +401,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IB",
                 i_I=port.p[bit],
                 o_O=i[bit]
             )
@@ -413,7 +413,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OB",
                 i_I=o[bit],
                 o_O=port.p[bit],
             )
@@ -425,7 +425,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBZ",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBZ",
                 i_T=t,
                 i_I=o[bit],
                 o_O=port.p[bit],
@@ -438,7 +438,7 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("BB",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("BB",
                 i_T=t,
                 i_I=o[bit],
                 o_O=i[bit],
