@@ -598,6 +598,38 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         flipped_interface = CustomSignature({}).flip().create()
         self.assertTrue(hasattr(flipped_interface, "custom_method"))
 
+    def test_propagate_flipped(self):
+        class InterfaceWithFlippedSub(Component):
+            signature = Signature({
+                "a": In(Signature({
+                    "b": Out(Signature({
+                        "c": Out(1)
+                    })),
+                    "d": In(Signature({
+                        "e": Out(1)
+                    })),
+                    "f": Out(1)
+                }))
+            })
+
+            def __init__(self):
+                super().__init__()
+                self.g = Signature({"h": In(1)})
+
+        ifsub = InterfaceWithFlippedSub()
+        self.assertIsInstance(ifsub.a.b.signature, FlippedSignature)
+        self.assertIsInstance(ifsub.a.d.signature, Signature)
+        self.assertIsInstance(ifsub.signature.members["a"].signature.
+                              members["b"].signature, FlippedSignature)
+        self.assertIsInstance(ifsub.signature.members["a"].signature.
+                              members["d"].signature, Signature)
+        self.assertIsInstance(ifsub.a.f, Signal)
+        self.assertEqual(ifsub.signature.members["a"].signature.
+                         members["f"].flow, In)
+        self.assertIsInstance(flipped(ifsub).g, Signature)
+        self.assertEqual(ifsub.g.members["h"].flow, In)
+        self.assertEqual(flipped(ifsub).g.members["h"].flow, In)
+
 
 class ConnectTestCase(unittest.TestCase):
     def test_arg_handles_and_signature_attr(self):

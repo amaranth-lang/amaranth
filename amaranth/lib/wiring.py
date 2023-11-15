@@ -570,6 +570,9 @@ class FlippedInterface:
         value = getattr(self.__unflipped, name)
         if inspect.ismethod(value):
             return types.MethodType(value.__func__, self)
+        elif name in self.__unflipped.signature.members and \
+                self.__unflipped.signature.members[name].is_signature:
+            return flipped(value)
         else:
             return value
 
