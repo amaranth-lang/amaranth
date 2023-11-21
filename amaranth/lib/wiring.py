@@ -625,7 +625,7 @@ def connect(m, *args, **kwargs):
     # is completely unrelated `[b]`. Since the assumption that all signatures are equal, or even
     # of equal length, cannot be made, it is necessary to simultaneously iterate (like with `zip`)
     # the signature of every object being connected, making sure each set of next members is
-    # is_compliant with each other.
+    # compliant with each other.
     while True:
         # Classify the members by kind and flow: signature, In, Out. Flow of signature members is
         # implied in the flow of each port member, so the signature members are only classified
@@ -663,7 +663,7 @@ def connect(m, *args, **kwargs):
             if member is None:
                 continue
             # At this point we know the paths are equal, but the members can still have
-            # inis_compliant flow, kind (signature or port), signature, or shape. Collect all of
+            # incompliant flow, kind (signature or port), signature, or shape. Collect all of
             # these for later evaluation.
             if member.is_port:
                 if member.flow == Out:
