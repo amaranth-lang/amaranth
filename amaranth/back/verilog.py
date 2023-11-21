@@ -1,5 +1,3 @@
-import warnings
-
 from .._toolchain.yosys import *
 from ..hdl import ast, ir
 from ..lib import wiring
@@ -11,15 +9,11 @@ __all__ = ["YosysError", "convert", "convert_fragment"]
 
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
     # this version requirement needs to be synchronized with the one in pyproject.toml!
-    yosys = find_yosys(lambda ver: ver >= (0, 10))
-    yosys_version = yosys.version()
+    yosys = find_yosys(lambda ver: ver >= (0, 35))
 
     script = []
     script.append(f"read_ilang <<rtlil\n{rtlil_text}\nrtlil")
-    if yosys_version >= (0, 17):
-        script.append("proc -nomux -norom")
-    else:
-        script.append("proc -nomux")
+    script.append("proc -nomux -norom")
     script.append("memory_collect")
 
     if strip_internal_attrs:
