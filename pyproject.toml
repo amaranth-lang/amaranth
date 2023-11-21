@@ -20,7 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # this version requirement needs to be synchronized with the one in amaranth.back.verilog!
-builtin-yosys = ["amaranth-yosys>=0.10"]
+builtin-yosys = ["amaranth-yosys>=0.35"]
 remote-build  = ["paramiko~=2.7"]
 
 [project.scripts]
