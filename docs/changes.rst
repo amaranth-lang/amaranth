@@ -60,6 +60,7 @@ Implemented RFCs
 .. _RFC 20: https://amaranth-lang.org/rfcs/0020-deprecate-non-fwft-fifos.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 .. _RFC 28: https://amaranth-lang.org/rfcs/0028-override-value-operators.html
+.. _RFC 31: https://amaranth-lang.org/rfcs/0031-enumeration-type-safety.html
 
 
 * `RFC 1`_: Aggregate data structure library
@@ -77,6 +78,7 @@ Implemented RFCs
 * `RFC 20`_: Deprecate non-FWFT FIFOs
 * `RFC 22`_: Define ``ValueCastable.shape()``
 * `RFC 28`_: Allow overriding ``Value`` operators
+* `RFC 31`_: Enumeration type safety
 
 
 Language changes
