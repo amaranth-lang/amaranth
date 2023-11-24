@@ -4,7 +4,7 @@ Installation
 System requirements
 ===================
 
-.. |yosys-version| replace:: 0.10 (or newer)
+.. |yosys-version| replace:: 0.35 (or newer)
 
 Amaranth HDL requires Python 3.8; it works on CPython_ 3.8 (or newer), and works faster on PyPy3.8_ 7.3.7 (or newer). Installation requires pip_ 23.0 (or newer).
 
