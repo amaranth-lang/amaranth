@@ -15,6 +15,14 @@ Language changes
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 
 
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
+
+
 Version 0.4
 ===========
 
