@@ -15,38 +15,6 @@ from ._pyclock import PyClockProcess
 __all__ = ["PySimEngine"]
 
 
-class _NameExtractor:
-    def __init__(self):
-        self.names = SignalDict()
-
-    def __call__(self, fragment, *, hierarchy=("bench", "top",)):
-        def add_signal_name(signal):
-            hierarchical_signal_name = (*hierarchy, signal.name)
-            if signal not in self.names:
-                self.names[signal] = {hierarchical_signal_name}
-            else:
-                self.names[signal].add(hierarchical_signal_name)
-
-        for domain_name, domain_signals in fragment.drivers.items():
-            if domain_name is not None:
-                domain = fragment.domains[domain_name]
-                add_signal_name(domain.clk)
-                if domain.rst is not None:
-                    add_signal_name(domain.rst)
-
-        for statement in fragment.statements:
-            for signal in statement._lhs_signals() | statement._rhs_signals():
-                if not isinstance(signal, (ClockSignal, ResetSignal)):
-                    add_signal_name(signal)
-
-        for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
-            if subfragment_name is None:
-                subfragment_name = f"U${subfragment_index}"
-            self(subfragment, hierarchy=(*hierarchy, subfragment_name))
-
-        return self.names
-
-
 class _VCDWriter:
     @staticmethod
     def decode_to_vcd(signal, value):
@@ -69,12 +37,18 @@ class _VCDWriter:
 
         self.traces = []
 
-        signal_names = _NameExtractor()(fragment)
+        signal_names = SignalDict()
+        for subfragment, subfragment_name in \
+                fragment._assign_names_to_fragments(hierarchy=("bench", "top",)).items():
+            for signal, signal_name in subfragment._assign_names_to_signals().items():
+                if signal not in signal_names:
+                    signal_names[signal] = set()
+                signal_names[signal].add((*subfragment_name, signal_name))
 
         trace_names = SignalDict()
         for trace in traces:
             if trace not in signal_names:
-                trace_names[trace] = {('bench', trace.name)}
+                trace_names[trace] = {("bench", trace.name)}
             self.traces.append(trace)
 
         if self.vcd_writer is None:
