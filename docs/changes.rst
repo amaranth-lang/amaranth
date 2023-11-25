@@ -4,6 +4,17 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
+Version 0.5 (unreleased)
+========================
+
+Language changes
+----------------
+
+.. currentmodule:: amaranth.hdl
+
+* Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
+
+
 Version 0.4
 ===========
 

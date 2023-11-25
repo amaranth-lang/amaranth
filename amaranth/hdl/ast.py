@@ -711,16 +711,6 @@ class Const(Value):
     """
     src_loc = None
 
-    # TODO(amaranth-0.5): remove
-    @staticmethod
-    @deprecated("instead of `Const.normalize(value, shape)`, use `Const(value, shape).value`")
-    def normalize(value, shape):
-        mask = (1 << shape.width) - 1
-        value &= mask
-        if shape.signed and value >> (shape.width - 1):
-            value |= ~mask
-        return value
-
     @staticmethod
     def cast(obj):
         """Converts ``obj`` to an Amaranth constant.
