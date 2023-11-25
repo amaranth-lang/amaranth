@@ -592,7 +592,7 @@ class View(ValueCastable):
                 warnings.warn("View layout includes a field {!r} that will be shadowed by "
                               "the view attribute '{}.{}.{}'"
                               .format(name, type(self).__module__, type(self).__qualname__, name),
-                              SyntaxWarning, stacklevel=1)
+                              SyntaxWarning, stacklevel=2)
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
@@ -714,6 +714,35 @@ class View(ValueCastable):
                                  "accessed by indexing"
                                  .format(self.__target, name))
         return item
+
+    def __eq__(self, other):
+        if isinstance(other, View):
+            if self.__layout.size != other.__layout.size:
+                raise TypeError(f"View of {self.__layout!r} can only be compared to a value of the same width, not {other!r}")
+            if self.__layout != other.__layout:
+                warnings.warn(f"View of {self.__layout!r} compared to a view of {other.__layout!r}",
+                              SyntaxWarning, stacklevel=2)
+            return self.__target == other.__target
+        other = Value.cast(other)
+        if self.__layout.size != other.shape().width:
+            raise TypeError(f"View of {self.__layout!r} can only be compared to a value of the same width, not {other!r}")
+        return self.__target == other
+
+    def __ne__(self, other):
+        if isinstance(other, View):
+            if self.__layout.size != other.__layout.size:
+                raise TypeError(f"View of {self.__layout!r} can only be compared to a value of the same width, not {other!r}")
+            if self.__layout != other.__layout:
+                warnings.warn(f"View of {self.__layout!r} compared to a view of {other.__layout!r}",
+                              SyntaxWarning, stacklevel=2)
+            return self.__target != other.__target
+        other = Value.cast(other)
+        if self.__layout.size != other.shape().width:
+            raise TypeError(f"View of {self.__layout!r} can only be compared to a value of the same width, not {other!r}")
+        return self.__target != other
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
 
 
 class _AggregateMeta(ShapeCastable, type):

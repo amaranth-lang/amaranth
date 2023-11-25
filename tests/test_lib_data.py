@@ -632,6 +632,38 @@ class ViewTestCase(FHDLTestCase):
                 r"^View of \(sig \$signal\) with an array layout does not have fields$"):
             Signal(ArrayLayout(unsigned(1), 1), reset=[0]).reset
 
+    def test_eq(self):
+        s1 = Signal(StructLayout({"a": unsigned(2)}))
+        s2 = Signal(StructLayout({"a": unsigned(2)}))
+        s3 = Signal(StructLayout({"a": unsigned(1), "b": unsigned(1)}))
+        s4 = Signal(StructLayout({"a": unsigned(1)}))
+        self.assertRepr(s1 == s2, "(== (sig s1) (sig s2))")
+        self.assertRepr(s1 != s2, "(!= (sig s1) (sig s2))")
+        self.assertRepr(s1 == Const(0, 2), "(== (sig s1) (const 2'd0))")
+        self.assertRepr(s1 != Const(0, 2), "(!= (sig s1) (const 2'd0))")
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^View of .* compared to a view of .*$"):
+            self.assertRepr(s1 == s3, "(== (sig s1) (sig s3))")
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^View of .* compared to a view of .*$"):
+            self.assertRepr(s1 != s3, "(!= (sig s1) (sig s3))")
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to a value of the same width, not .*$"):
+            s1 == s4
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to a value of the same width, not .*$"):
+            s1 != s4
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to a value of the same width, not .*$"):
+            s1 == Const(0, 1)
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to a value of the same width, not .*$"):
+            s1 != Const(0, 1)
+
+    def test_repr(self):
+        s1 = Signal(StructLayout({"a": unsigned(2)}))
+        self.assertRepr(s1, "View(StructLayout({'a': unsigned(2)}), (sig s1))")
+
 
 class StructTestCase(FHDLTestCase):
     def test_construct(self):
