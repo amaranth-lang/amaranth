@@ -154,9 +154,15 @@ class FIFOModelEquivalenceSpec(Elaboratable):
             m.d.comb += Assert(dut.r_rdy
                                .implies(dut.r_data == gold.r_data))
         else:
-            m.d.comb += Assert((Past(dut.r_rdy, domain=self.r_domain) &
-                                Past(dut.r_en, domain=self.r_domain))
-                               .implies(dut.r_data == gold.r_data))
+            # past_dut_r_rdy = Past(dut.r_rdy, domain=self.r_domain)
+            past_dut_r_rdy = Signal.like(dut.r_rdy, attrs={"amaranth.sample_reg": True})
+            m.d[self.r_domain] += past_dut_r_rdy.eq(dut.r_rdy)
+
+            # past_dut_r_en = Past(dut.r_en, domain=self.r_domain)
+            past_dut_r_en = Signal.like(dut.r_en, attrs={"amaranth.sample_reg": True})
+            m.d[self.r_domain] += past_dut_r_en.eq(dut.r_en)
+
+            m.d.comb += Assert((past_dut_r_rdy & past_dut_r_en).implies(dut.r_data == gold.r_data))
 
         return m
 
@@ -215,8 +221,9 @@ class FIFOContractSpec(Elaboratable):
                 m.d.comb += fifo.r_en.eq(1)
                 if fifo.fwft:
                     r_rdy = fifo.r_rdy
-                else:
-                    r_rdy = Past(fifo.r_rdy, domain=self.r_domain)
+                else: # r_rdy = Past(fifo.r_rdy, domain=self.r_domain)
+                    r_rdy = Signal.like(fifo.r_rdy, attrs={"amaranth.sample_reg": True})
+                    m.d[self.r_domain] += r_rdy.eq(fifo.r_rdy)
                 with m.If(r_rdy):
                     m.d.sync += [
                         read_1.eq(read_2),
@@ -230,15 +237,28 @@ class FIFOContractSpec(Elaboratable):
         with m.If(Initial()):
             m.d.comb += Assume(write_fsm.ongoing("WRITE-1"))
             m.d.comb += Assume(read_fsm.ongoing("READ"))
-        with m.If(Past(Initial(), self.bound - 1)):
+
+        cycle = Signal(range(self.bound + 1))
+        m.d.sync += cycle.eq(cycle + 1)
+        with m.If(Initial()):
+            m.d.comb += Assume(cycle == 0)
+        with m.If(cycle == self.bound):
             m.d.comb += Assert(read_fsm.ongoing("DONE"))
 
         with m.If(ResetSignal(domain=self.w_domain)):
             m.d.comb += Assert(~fifo.r_rdy)
 
         if self.w_domain != "sync" or self.r_domain != "sync":
-            m.d.comb += Assume(Rose(ClockSignal(self.w_domain)) |
-                               Rose(ClockSignal(self.r_domain)))
+            # rose_w_domain_clk = Rose(ClockSignal(self.w_domain))
+            past_w_domain_clk = Signal()
+            m.d.sync += past_w_domain_clk.eq(ClockSignal(self.w_domain))
+            rose_w_domain_clk = (past_w_domain_clk == 0) & (ClockSignal(self.w_domain) == 1)
+            # rose_r_domain_clk = Rose(ClockSignal(self.r_domain))
+            past_r_domain_clk = Signal()
+            m.d.sync += past_r_domain_clk.eq(ClockSignal(self.r_domain))
+            rose_r_domain_clk = (past_r_domain_clk == 0) & (ClockSignal(self.r_domain) == 1)
+
+            m.d.comb += Assume(rose_w_domain_clk | rose_r_domain_clk)
 
         return m
 
