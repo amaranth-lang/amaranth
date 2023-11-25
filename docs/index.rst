@@ -17,3 +17,4 @@ Language & toolchain
    platform
    changes
    contrib
+   glossary

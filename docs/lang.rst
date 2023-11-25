@@ -81,7 +81,7 @@ All values have a ``.shape()`` method that computes their shape. The width of a 
 Values
 ======
 
-The basic building block of the Amaranth language is a *value*, which is a term for a binary number that is computed or stored anywhere in the design. Each value has a *width*---the amount of bits used to represent the value---and a *signedness*---the interpretation of the value by arithmetic operations---collectively called its *shape*. Signed values always use `two's complement`_ representation.
+The basic building block of the Amaranth language is a *value*, which is a term for a binary number that is computed or stored anywhere in the design. Each value has a *width*---the number of bits used to represent the value---and a *signedness*---the interpretation of the value by arithmetic operations---collectively called its *shape*. Signed values always use `two's complement`_ representation.
 
 .. _two's complement: https://en.wikipedia.org/wiki/Two's_complement
 
@@ -98,7 +98,7 @@ The simplest Amaranth value is a *constant*, representing a fixed number, and in
    >>> ten = Const(10)
    >>> minus_two = C(-2)
 
-The code above does not specify any shape for the constants. If the shape is omitted, Amaranth uses unsigned shape for positive numbers and signed shape for negative numbers, with the width inferred from the smallest amount of bits necessary to represent the number. As a special case, in order to get the same inferred shape for ``True`` and ``False``, ``0`` is considered to be 1-bit unsigned.
+The code above does not specify any shape for the constants. If the shape is omitted, Amaranth uses unsigned shape for positive numbers and signed shape for negative numbers, with the width inferred from the smallest number of bits necessary to represent the number. As a special case, to get the same inferred shape for ``True`` and ``False``, ``0`` is considered to be 1-bit unsigned.
 
 .. doctest::
 
@@ -478,7 +478,7 @@ Although the syntax is similar, it is important to remember that Amaranth values
      ...
    TypeError: Attempted to convert Amaranth value to Python boolean
 
-Because the value of ``a``, and therefore ``a == 0``, is not known at the time when the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, Amaranth provides its own :ref:`control structures <lang-control>` that, also, manipulate circuits.
+Because the value of ``a``, and therefore ``a == 0``, is not known at the time the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, Amaranth provides its own :ref:`control structures <lang-control>` that, also, manipulate circuits.
 
 
 .. _lang-widthext:
@@ -496,7 +496,7 @@ Arithmetic operators
 
 Most arithmetic operations on integers provided by Python can be used on Amaranth values, too.
 
-Although Python integers have unlimited precision and Amaranth values are represented with a :ref:`finite amount of bits <lang-values>`, arithmetics on Amaranth values never overflows because the width of the arithmetic expression is always sufficient to represent all possible results.
+Although Python integers have unlimited precision and Amaranth values are represented with a :ref:`finite number of bits <lang-values>`, arithmetic computations on Amaranth values never overflows because the width of the arithmetic expression is always sufficient to represent all possible results.
 
 .. doctest::
 
@@ -795,7 +795,7 @@ A *control domain* is a named group of :ref:`signals <lang-signals>` that change
 
 All designs have a single predefined *combinatorial domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinatorial domain.
 
-A design can also have any amount of user-defined *synchronous domains*, also called *clock domains*, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
+A design can also have any number of user-defined *synchronous domains*, also called *clock domains*, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
 
 The behavior of assignments differs for signals in :ref:`combinatorial <lang-comb>` and :ref:`synchronous <lang-sync>` domains. Collectively, signals in synchronous domains contain the state of a design, whereas signals in the combinatorial domain cannot form feedback loops or hold state.
 
@@ -897,7 +897,7 @@ Every signal included in the target of an assignment becomes a part of the domai
 Assignment order
 ----------------
 
-Unlike with two different domains, adding multiple assignments to the same signal to the same domain is well-defined.
+In contrast to working with two different domains, adding multiple assignments to the same signal to the same domain is well-defined.
 
 Assignments to different signal bits apply independently. For example, the following two snippets are equivalent:
 
