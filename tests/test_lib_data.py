@@ -1,4 +1,5 @@
 from enum import Enum
+import operator
 from unittest import TestCase
 
 from amaranth.hdl import *
@@ -631,6 +632,63 @@ class ViewTestCase(FHDLTestCase):
         with self.assertRaisesRegex(AttributeError,
                 r"^View of \(sig \$signal\) with an array layout does not have fields$"):
             Signal(ArrayLayout(unsigned(1), 1), reset=[0]).reset
+
+    def test_eq(self):
+        s1 = Signal(StructLayout({"a": unsigned(2)}))
+        s2 = Signal(StructLayout({"a": unsigned(2)}))
+        s3 = Signal(StructLayout({"a": unsigned(1), "b": unsigned(1)}))
+        self.assertRepr(s1 == s2, "(== (sig s1) (sig s2))")
+        self.assertRepr(s1 != s2, "(!= (sig s1) (sig s2))")
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to another view of the same layout, not .*$"):
+            s1 == s3
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to another view of the same layout, not .*$"):
+            s1 != s3
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to another view of the same layout, not .*$"):
+            s1 == Const(0, 2)
+        with self.assertRaisesRegex(TypeError,
+                r"^View of .* can only be compared to another view of the same layout, not .*$"):
+            s1 != Const(0, 2)
+
+    def test_operator(self):
+        s1 = Signal(StructLayout({"a": unsigned(2)}))
+        s2 = Signal(unsigned(2))
+        for op in [
+            operator.__add__,
+            operator.__sub__,
+            operator.__mul__,
+            operator.__floordiv__,
+            operator.__mod__,
+            operator.__lshift__,
+            operator.__rshift__,
+            operator.__lt__,
+            operator.__le__,
+            operator.__gt__,
+            operator.__ge__,
+        ]:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot perform arithmetic operations on a View$"):
+                op(s1, s2)
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot perform arithmetic operations on a View$"):
+                op(s2, s1)
+        for op in [
+            operator.__and__,
+            operator.__or__,
+            operator.__xor__,
+        ]:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot perform bitwise operations on a View$"):
+                op(s1, s2)
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot perform bitwise operations on a View$"):
+                op(s2, s1)
+
+    def test_repr(self):
+        s1 = Signal(StructLayout({"a": unsigned(2)}))
+        self.assertRepr(s1, "View(StructLayout({'a': unsigned(2)}), (sig s1))")
 
 
 class StructTestCase(FHDLTestCase):
