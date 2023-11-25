@@ -19,6 +19,8 @@ Support for Python 3.6 and 3.7 has been removed, and support for Python 3.11 and
 
 Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
 
+The Migen compatibility layer remains deprecated (as it had been since Amaranth 0.1), and is now scheduled to be removed in version 0.5.
+
 
 Migrating from version 0.3
 --------------------------
@@ -31,6 +33,8 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
 * Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
 * Replace uses of ``Record`` with :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring`. The appropriate replacement depends on the use case. If ``Record`` was being used for data storage and accessing the bit-level representation, use :mod:`amaranth.lib.data`. If ``Record`` was being used for connecting design components together, use :mod:`amaranth.lib.wiring`.
+* Replace uses of ``Sample``, ``Past``, ``Stable``, ``Rose``, ``Fell`` with a manually instantiated register, e.g. ``past_x = Signal.like(x); m.d.sync += past_x.eq(x)``.
+* Remove uses of ``amaranth.compat`` by migrating to native Amaranth syntax.
 * Ensure the ``Pin`` instance returned by ``platform.request`` is not cast to value directly, but used for its fields. Replace code like ``leds = Cat(platform.request(led, n) for n in range(4))`` with ``leds = Cat(platform.request(led, n).o for n in range(4))`` (note the ``.o``).
 * Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
 * Remove uses of ``amaranth.lib.fifo.SyncFIFO(fwft=False)`` and ``amaranth.lib.fifo.FIFOInterface(fwft=False)`` by converting code to use ``fwft=True`` FIFOs or copying the implementation of those classes.
@@ -91,6 +95,7 @@ Language changes
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
+* Deprecated: :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`. (Predating the RFC process.)
 * Deprecated: :meth:`Const.normalize`; use ``Const(value, shape).value`` instead of ``Const.normalize(value, shape)``. (`RFC 5`_)
 * Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
 * Deprecated: :class:`Record`; use :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring` instead. (`RFC 1`_, `RFC 2`_)
