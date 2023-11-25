@@ -11,7 +11,9 @@ from ._base import BaseProcess
 
 __all__ = ["PyRTLProcess"]
 
+
 _USE_PATTERN_MATCHING = (sys.version_info >= (3, 10))
+
 
 class PyRTLProcess(BaseProcess):
     __slots__ = ("is_comb", "runnable", "passive", "run")
@@ -83,11 +85,11 @@ class _ValueCompiler(ValueVisitor, _Compiler):
                                 "simulate in reasonable time"
                                 .format(src, len(value)))
 
-        v = super().on_value(value)
-        if isinstance(v, str) and len(v) > 1000:
+        code = super().on_value(value)
+        if isinstance(code, str) and len(code) > 1000:
             # Avoid parser stack overflow on older Pythons.
-            return self.emitter.def_var("intermediate", v)
-        return v
+            return self.emitter.def_var("expr_split", code)
+        return code
 
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
