@@ -506,11 +506,10 @@ class Fragment:
                 self.add_ports(sig, dir="i")
 
     def prepare(self, ports=None, missing_domain=lambda name: ClockDomain(name)):
-        from .xfrm import SampleLowerer, DomainLowerer
+        from .xfrm import DomainLowerer
 
-        fragment = SampleLowerer()(self)
-        new_domains = fragment._propagate_domains(missing_domain)
-        fragment = DomainLowerer()(fragment)
+        new_domains = self._propagate_domains(missing_domain)
+        fragment = DomainLowerer()(self)
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:

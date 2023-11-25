@@ -894,7 +894,7 @@ class CatTestCase(FHDLTestCase):
     def test_cast(self):
         c = Cat(1, 0)
         self.assertEqual(repr(c), "(cat (const 1'd1) (const 1'd0))")
-    
+
     def test_str_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Object 'foo' cannot be converted to an Amaranth value$"):
@@ -1380,39 +1380,6 @@ class ValueLikeTestCase(FHDLTestCase):
         self.assertFalse(isinstance(EnumB.A, ValueLike))
         self.assertTrue(isinstance(EnumC.A, ValueLike))
         self.assertFalse(isinstance(EnumD.A, ValueLike))
-
-
-class SampleTestCase(FHDLTestCase):
-    @_ignore_deprecated
-    def test_const(self):
-        s = Sample(1, 1, "sync")
-        self.assertEqual(s.shape(), unsigned(1))
-
-    @_ignore_deprecated
-    def test_signal(self):
-        s1 = Sample(Signal(2), 1, "sync")
-        self.assertEqual(s1.shape(), unsigned(2))
-        s2 = Sample(ClockSignal(), 1, "sync")
-        s3 = Sample(ResetSignal(), 1, "sync")
-
-    @_ignore_deprecated
-    def test_wrong_value_operator(self):
-        with self.assertRaisesRegex(TypeError,
-                (r"^Sampled value must be a signal or a constant, not "
-                r"\(\+ \(sig \$signal\) \(const 1'd1\)\)$")):
-            Sample(Signal() + 1, 1, "sync")
-
-    @_ignore_deprecated
-    def test_wrong_clocks_neg(self):
-        with self.assertRaisesRegex(ValueError,
-                r"^Cannot sample a value 1 cycles in the future$"):
-            Sample(Signal(), -1, "sync")
-
-    @_ignore_deprecated
-    def test_wrong_domain(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Domain name must be a string or None, not 0$"):
-            Sample(Signal(), 1, 0)
 
 
 class InitialTestCase(FHDLTestCase):

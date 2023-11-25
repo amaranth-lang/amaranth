@@ -13,6 +13,7 @@ Language changes
 .. currentmodule:: amaranth.hdl
 
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
+* Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
 
 
 Standard library changes

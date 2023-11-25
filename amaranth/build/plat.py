@@ -9,7 +9,7 @@ import jinja2
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
-from ..hdl.xfrm import SampleLowerer, DomainLowerer
+from ..hdl.xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
 from .res import *
@@ -143,7 +143,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self._prepared = True
 
         fragment = Fragment.get(elaboratable, self)
-        fragment = SampleLowerer()(fragment)
         fragment._propagate_domains(self.create_missing_domain, platform=self)
         fragment = DomainLowerer()(fragment)
 
