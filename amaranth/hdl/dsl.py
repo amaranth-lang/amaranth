@@ -491,7 +491,6 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     .format(domain_name(domain)))
 
             stmt._MustUse__used = True
-            stmt = SampleDomainInjector(domain)(stmt)
 
             for signal in stmt._lhs_signals():
                 if signal not in self._driving:
@@ -539,8 +538,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
         for submodule in self._anon_submodules:
             fragment.add_subfragment(Fragment.get(submodule, platform), None)
-        statements = SampleDomainInjector("sync")(self._statements)
-        fragment.add_statements(statements)
+        fragment.add_statements(self._statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
         fragment.add_domains(self._domains.values())

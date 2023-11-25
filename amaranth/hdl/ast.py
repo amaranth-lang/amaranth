@@ -20,7 +20,7 @@ __all__ = [
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
-    "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
+    "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
     "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
@@ -1549,70 +1549,6 @@ class ValueLike(metaclass=_ValueLikeMeta):
         raise TypeError("ValueLike is an abstract class and cannot be constructed")
 
 
-# TODO(amaranth-0.5): remove
-@final
-class Sample(Value):
-    """Value from the past.
-
-    A ``Sample`` of an expression is equal to the value of the expression ``clocks`` clock edges
-    of the ``domain`` clock back. If that moment is before the beginning of time, it is equal
-    to the value of the expression calculated as if each signal had its reset value.
-    """
-    @deprecated("instead of using `Sample`, create a register explicitly")
-    def __init__(self, expr, clocks, domain, *, src_loc_at=0):
-        super().__init__(src_loc_at=1 + src_loc_at)
-        self.value  = Value.cast(expr)
-        self.clocks = int(clocks)
-        self.domain = domain
-        if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal, Initial)):
-            raise TypeError("Sampled value must be a signal or a constant, not {!r}"
-                            .format(self.value))
-        if self.clocks < 0:
-            raise ValueError("Cannot sample a value {} cycles in the future"
-                             .format(-self.clocks))
-        if not (self.domain is None or isinstance(self.domain, str)):
-            raise TypeError("Domain name must be a string or None, not {!r}"
-                            .format(self.domain))
-
-    def shape(self):
-        return self.value.shape()
-
-    def _rhs_signals(self):
-        return SignalSet((self,))
-
-    def __repr__(self):
-        return "(sample {!r} @ {}[{}])".format(
-            self.value, "<default>" if self.domain is None else self.domain, self.clocks)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Past`, create a register explicitly")
-def Past(expr, clocks=1, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Stable`, create registers and comparisons explicitly")
-def Stable(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks + 1, domain) == Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Rose`, create registers and comparisons explicitly")
-def Rose(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return ~Sample(expr, clocks + 1, domain) & Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Fell`, create registers and comparisons explicitly")
-def Fell(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
-
-
 @final
 class Initial(Value):
     """Start indicator, for model checking.
@@ -1626,7 +1562,7 @@ class Initial(Value):
         return Shape(1)
 
     def _rhs_signals(self):
-        return SignalSet((self,))
+        return SignalSet()
 
     def __repr__(self):
         return "(initial)"
@@ -1895,8 +1831,6 @@ class ValueKey:
         elif isinstance(self.value, ArrayProxy):
             self._hash = hash((ValueKey(self.value.index),
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
@@ -1942,10 +1876,6 @@ class ValueKey:
                     all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value._iter_as_values(),
                                         other.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.clocks == other.value.clocks and
-                    self.value.domain == self.value.domain)
         elif isinstance(self.value, Initial):
             return True
         else: # :nocov:

@@ -15,7 +15,6 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
-           "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "EnableInserter"]
 
@@ -66,10 +65,6 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Sample(self, value):
-        pass # :nocov:
-
-    @abstractmethod
     def on_Initial(self, value):
         pass # :nocov:
 
@@ -103,8 +98,6 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Cat(value)
         elif type(value) is ArrayProxy:
             new_value = self.on_ArrayProxy(value)
-        elif type(value) is Sample:
-            new_value = self.on_Sample(value)
         elif type(value) is Initial:
             new_value = self.on_Initial(value)
         else:
@@ -152,9 +145,6 @@ class ValueTransformer(ValueVisitor):
     def on_ArrayProxy(self, value):
         return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
                           self.on_value(value.index))
-
-    def on_Sample(self, value):
-        return Sample(self.on_value(value.value), value.clocks, value.domain)
 
     def on_Initial(self, value):
         return value
@@ -369,9 +359,6 @@ class DomainCollector(ValueVisitor, StatementVisitor):
             self.on_value(elem)
         self.on_value(value.index)
 
-    def on_Sample(self, value):
-        self.on_value(value.value)
-
     def on_Initial(self, value):
         pass
 
@@ -507,81 +494,6 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         new_fragment = super().on_fragment(fragment)
         self._insert_resets(new_fragment)
         return new_fragment
-
-
-class SampleDomainInjector(ValueTransformer, StatementTransformer):
-    def __init__(self, domain):
-        self.domain = domain
-
-    @_ignore_deprecated
-    def on_Sample(self, value):
-        if value.domain is not None:
-            return value
-        return Sample(value.value, value.clocks, self.domain)
-
-    def __call__(self, stmts):
-        return self.on_statement(stmts)
-
-
-class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
-    def __init__(self):
-        self.initial = None
-        self.sample_cache = None
-        self.sample_stmts = None
-
-    def _name_reset(self, value):
-        if isinstance(value, Const):
-            return f"c${value.value}", value.value
-        elif isinstance(value, Signal):
-            return f"s${value.name}", value.reset
-        elif isinstance(value, ClockSignal):
-            return "clk", 0
-        elif isinstance(value, ResetSignal):
-            return "rst", 1
-        elif isinstance(value, Initial):
-            return "init", 0 # Past(Initial()) produces 0, 1, 0, 0, ...
-        else:
-            raise NotImplementedError # :nocov:
-
-    @_ignore_deprecated
-    def on_Sample(self, value):
-        if value in self.sample_cache:
-            return self.sample_cache[value]
-
-        sampled_value = self.on_value(value.value)
-        if value.clocks == 0:
-            sample = sampled_value
-        else:
-            assert value.domain is not None
-            sampled_name, sampled_reset = self._name_reset(value.value)
-            name = f"$sample${sampled_name}${value.domain}${value.clocks}"
-            sample = Signal.like(value.value, name=name, reset_less=True, reset=sampled_reset)
-            sample.attrs["amaranth.sample_reg"] = True
-
-            prev_sample = self.on_Sample(Sample(sampled_value, value.clocks - 1, value.domain))
-            if value.domain not in self.sample_stmts:
-                self.sample_stmts[value.domain] = []
-            self.sample_stmts[value.domain].append(sample.eq(prev_sample))
-
-        self.sample_cache[value] = sample
-        return sample
-
-    def on_Initial(self, value):
-        if self.initial is None:
-            self.initial = Signal(name="init")
-        return self.initial
-
-    def map_statements(self, fragment, new_fragment):
-        self.initial = None
-        self.sample_cache = ValueDict()
-        self.sample_stmts = OrderedDict()
-        new_fragment.add_statements(map(self.on_statement, fragment.statements))
-        for domain, stmts in self.sample_stmts.items():
-            new_fragment.add_statements(stmts)
-            for stmt in stmts:
-                new_fragment.add_driver(stmt.lhs, domain)
-        if self.initial is not None:
-            new_fragment.add_subfragment(Instance("$initstate", o_Y=self.initial))
 
 
 class SwitchCleaner(StatementVisitor):

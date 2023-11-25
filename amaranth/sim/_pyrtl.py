@@ -103,9 +103,6 @@ class _ValueCompiler(ValueVisitor, _Compiler):
     def on_AnySeq(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Sample(self, value):
-        raise NotImplementedError # :nocov:
-
     def on_Initial(self, value):
         raise NotImplementedError # :nocov:
 

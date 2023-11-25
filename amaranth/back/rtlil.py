@@ -398,12 +398,6 @@ class _ValueCompiler(xfrm.ValueVisitor):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_Sample(self, value):
-        raise NotImplementedError # :nocov:
-
-    def on_Initial(self, value):
-        raise NotImplementedError # :nocov:
-
     def on_Cat(self, value):
         return "{{ {} }}".format(" ".join(reversed([self(o) for o in value.parts])))
 
@@ -496,6 +490,13 @@ class _RHSValueCompiler(_ValueCompiler):
             "WIDTH": res_shape.width,
         }, src=_src(value.src_loc))
         self.s.anys[value] = res
+        return res
+
+    def on_Initial(self, value):
+        res = self.s.rtlil.wire(width=1, src=_src(value.src_loc))
+        self.s.rtlil.cell("$initstate", ports={
+            "\\Y": res,
+        }, src=_src(value.src_loc))
         return res
 
     def on_Signal(self, value):
@@ -644,6 +645,9 @@ class _LHSValueCompiler(_ValueCompiler):
         raise TypeError # :nocov:
 
     def on_AnySeq(self, value):
+        raise TypeError # :nocov:
+
+    def on_Initial(self, value):
         raise TypeError # :nocov:
 
     def on_Operator(self, value):
