@@ -5,7 +5,7 @@ import warnings
 import re
 
 from .._utils import bits_for, flatten
-from ..hdl import ast, ir, mem, xfrm
+from ..hdl import ast, ir, mem, xfrm, _repr
 from ..lib import wiring
 
 
@@ -337,12 +337,14 @@ class _ValueCompilerState:
             wire_name = signal.name
 
         is_sync_driven = signal in self.driven and self.driven[signal]
-        
+
         attrs = dict(signal.attrs)
-        if signal._enum_class is not None:
-            attrs["enum_base_type"] = signal._enum_class.__name__
-            for value in signal._enum_class:
-                attrs["enum_value_{:0{}b}".format(value.value, signal.width)] = value.name
+        for repr in signal._value_repr:
+            if repr.path == () and isinstance(repr.format, _repr.FormatEnum):
+                enum = repr.format.enum
+                attrs["enum_base_type"] = enum.__name__
+                for value in enum:
+                    attrs["enum_value_{:0{}b}".format(value.value, signal.width)] = value.name
 
         # For every signal in the sync domain, assign \sig's initial value (using the \init reg
         # attribute) to the reset value.
@@ -872,7 +874,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
 
             if sub_type == "$mem_v2" and "MEMID" not in sub_params:
                 sub_params["MEMID"] = builder._make_name(sub_name, local=False)
-            
+
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
                 if not isinstance(subfragment, ir.Instance):
@@ -917,7 +919,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     stmt_compiler._has_rhs = False
                     stmt_compiler._wrap_assign = False
                     stmt_compiler(group_stmts)
-        
+
         # For every driven signal in the sync domain, create a flop of appropriate type. Which type
         # is appropriate depends on the domain: for domains with sync reset, it is a $dff, for
         # domains with async reset it is an $adff. The latter is directly provided with the reset
@@ -930,7 +932,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             wire_curr, wire_next = compiler_state.resolve(signal)
 
             if not cd.async_reset:
-                # For sync reset flops, the reset value comes from logic inserted by 
+                # For sync reset flops, the reset value comes from logic inserted by
                 # `hdl.xfrm.DomainLowerer`.
                 module.cell("$dff", ports={
                     "\\CLK": wire_clk,

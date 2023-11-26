@@ -2,6 +2,7 @@ import enum as py_enum
 import warnings
 
 from ..hdl.ast import Value, Shape, ShapeCastable, Const
+from ..hdl._repr import *
 
 
 __all__ = py_enum.__all__
@@ -149,6 +150,9 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         else:
             member = cls(init)
         return Const(member.value, cls.as_shape())
+
+    def _value_repr(cls, value):
+        yield Repr(FormatEnum(cls), value)
 
 
 class Enum(py_enum.Enum):
