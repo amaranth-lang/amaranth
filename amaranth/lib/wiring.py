@@ -499,9 +499,9 @@ def _gettypeattr(obj, attr):
             return cls.__dict__[attr]
         except KeyError:
             pass
-    # In case there is `__getattr__` on the metaclass, or just to generate an `AttributeError` with
-    # the standard message.
-    return type(obj).attr
+    # Call ``getattr`` In case there is ``__getattr__`` on the metaclass, or just to generate
+    # an ``AttributeError`` with the standard message.
+    return getattr(type(obj), attr)
 
 
 # To simplify implementation and reduce API surface area `FlippedSignature` is made final. This
