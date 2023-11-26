@@ -530,7 +530,7 @@ class FlippedSignatureTestCase(unittest.TestCase):
         sig = Signature({"a": In(1)}).flip()
         self.assertEqual(repr(sig), "Signature({'a': In(1)}).flip()")
 
-    def test_getattr_setattr(self):
+    def test_getsetdelattr(self):
         class S(Signature):
             def __init__(self):
                 super().__init__({})
@@ -539,12 +539,61 @@ class FlippedSignatureTestCase(unittest.TestCase):
             def f(self2):
                 self.assertIsInstance(self2, FlippedSignature)
                 return "f()"
+
         sig = S()
         fsig = sig.flip()
         self.assertEqual(fsig.x, 1)
         self.assertEqual(fsig.f(), "f()")
         fsig.y = 2
         self.assertEqual(sig.y, 2)
+        del fsig.y
+        self.assertFalse(hasattr(sig, "y"))
+
+    def test_getsetdelattr_property(self):
+        class S(Signature):
+            def __init__(self):
+                super().__init__({})
+                self.x_get_type = None
+                self.x_set_type = None
+                self.x_set_val = None
+                self.x_del_type = None
+
+            @property
+            def x(self):
+                self.x_get_type = type(self)
+
+            @x.setter
+            def x(self, val):
+                self.x_set_type = type(self)
+                self.x_set_val = val
+
+            @x.deleter
+            def x(self):
+                self.x_del_type = type(self)
+
+        sig = S()
+        fsig = sig.flip()
+        fsig.x
+        fsig.x = 1
+        del fsig.x
+        # Tests both attribute access through the descriptor, and attribute setting without one!
+        self.assertEqual(sig.x_get_type, type(fsig))
+        self.assertEqual(sig.x_set_type, type(fsig))
+        self.assertEqual(sig.x_set_val, 1)
+        self.assertEqual(sig.x_del_type, type(fsig))
+
+    def test_classmethod(self):
+        x_type = None
+        class S(Signature):
+            @classmethod
+            def x(cls):
+                nonlocal x_type
+                x_type = cls
+
+        sig = S({})
+        fsig = sig.flip()
+        fsig.x()
+        self.assertEqual(x_type, S)
 
 
 class InterfaceTestCase(unittest.TestCase):
@@ -564,8 +613,8 @@ class FlippedInterfaceTestCase(unittest.TestCase):
             r"^flipped\(<.+?\.Interface object at .+>\)$")
         self.assertIs(flipped(tintf), intf)
 
-    def test_getattr_setattr(self):
-        class I(Interface):
+    def test_getsetdelattr(self):
+        class I:
             signature = Signature({})
 
             def __init__(self):
@@ -574,27 +623,82 @@ class FlippedInterfaceTestCase(unittest.TestCase):
             def f(self2):
                 self.assertIsInstance(self2, FlippedInterface)
                 return "f()"
+
         intf = I()
-        tintf = flipped(intf)
-        self.assertEqual(tintf.x, 1)
-        self.assertEqual(tintf.f(), "f()")
-        tintf.y = 2
+        fintf = flipped(intf)
+        self.assertEqual(fintf.x, 1)
+        self.assertEqual(fintf.f(), "f()")
+        fintf.y = 2
         self.assertEqual(intf.y, 2)
+        del fintf.y
+        self.assertFalse(hasattr(intf, "y"))
+
+    def test_getsetdelattr_property(self):
+        class I:
+            signature = Signature({})
+
+            def __init__(self):
+                self.x_get_type = None
+                self.x_set_type = None
+                self.x_set_val = None
+                self.x_del_type = None
+
+            @property
+            def x(self):
+                self.x_get_type = type(self)
+
+            @x.setter
+            def x(self, val):
+                self.x_set_type = type(self)
+                self.x_set_val = val
+
+            @x.deleter
+            def x(self):
+                self.x_del_type = type(self)
+
+        intf = I()
+        fintf = flipped(intf)
+        fintf.x
+        fintf.x = 1
+        del fintf.x
+        # Tests both attribute access through the descriptor, and attribute setting without one!
+        self.assertEqual(intf.x_get_type, type(fintf))
+        self.assertEqual(intf.x_set_type, type(fintf))
+        self.assertEqual(intf.x_set_val, 1)
+        self.assertEqual(intf.x_del_type, type(fintf))
+
+    def test_classmethod(self):
+        x_type = None
+        class I:
+            signature = Signature({})
+
+            def __init__(self):
+                pass
+
+            @classmethod
+            def x(cls):
+                nonlocal x_type
+                x_type = cls
+
+        intf = I()
+        fintf = flipped(intf)
+        fintf.x()
+        self.assertEqual(x_type, I)
 
     def test_flipped_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^flipped\(\) can only flip an interface object, not Signature\({}\)$"):
             flipped(Signature({}))
-    
+
     def test_create_subclass_flipped(self):
         class CustomInterface(Interface):
             def custom_method(self):
                 return 69
-        
+
         class CustomSignature(Signature):
             def create(self, *, path=()):
                 return CustomInterface(self, path=path)
-        
+
         flipped_interface = CustomSignature({}).flip().create()
         self.assertTrue(hasattr(flipped_interface, "custom_method"))
 
@@ -629,6 +733,10 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         self.assertIsInstance(flipped(ifsub).g, Signature)
         self.assertEqual(ifsub.g.members["h"].flow, In)
         self.assertEqual(flipped(ifsub).g.members["h"].flow, In)
+
+        # This should be a no-op! That requires hooking ``__setattr__``.
+        flipped(ifsub).a = flipped(ifsub).a
+        self.assertEqual(ifsub.a.signature.members["f"].flow, In)
 
 
 class ConnectTestCase(unittest.TestCase):
