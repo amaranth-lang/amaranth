@@ -491,6 +491,19 @@ class Signature(metaclass=SignatureMeta):
         return super().__repr__()
 
 
+def _gettypeattr(obj, attr):
+    # Resolve the attribute on the object's class, without triggering the descriptor protocol for
+    # attributes that are class methods, etc.
+    for cls in type(obj).__mro__:
+        try:
+            return cls.__dict__[attr]
+        except KeyError:
+            pass
+    # In case there is `__getattr__` on the metaclass, or just to generate an `AttributeError` with
+    # the standard message.
+    return type(obj).attr
+
+
 # To simplify implementation and reduce API surface area `FlippedSignature` is made final. This
 # restriction could be lifted if there is a compelling use case.
 @final
@@ -524,15 +537,29 @@ class FlippedSignature:
     is_compliant = Signature.is_compliant
 
     # FIXME: document this logic
+
+    # Because we would like to forward attribute access (other than what is explicitly overridden)
+    # to the unflipped signature, including access via e.g. @property-decorated functions, we have
+    # to reimplement the Python decorator protocol here. Note that in all of these functions, there
+    # are two possible exits via `except AttributeError`: from `getattr` and from `.__get__()`.
+
     def __getattr__(self, name):
-        value = getattr(self.__unflipped, name)
-        if inspect.ismethod(value):
-            return types.MethodType(value.__func__, self)
-        else:
-            return value
+        try: # descriptor first
+            return _gettypeattr(self.__unflipped, name).__get__(self, type(self.__unflipped))
+        except AttributeError:
+            return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        return setattr(self.__unflipped, name, value)
+        try: # descriptor first
+            _gettypeattr(self.__unflipped, name).__set__(self, value)
+        except AttributeError:
+            setattr(self.__unflipped, name, value)
+
+    def __delattr__(self, name):
+        try: # descriptor first
+            _gettypeattr(self.__unflipped, name).__delete__(self)
+        except AttributeError:
+            delattr(self.__unflipped, name)
 
     def create(self, *, path=()):
         return flipped(self.__unflipped.create(path=path))
@@ -566,18 +593,35 @@ class FlippedInterface:
         return type(self) is type(other) and self.__unflipped == other.__unflipped
 
     # FIXME: document this logic
+
+    # See the note in ``FlippedSignature``. In addition, these accessors also handle flipping of
+    # an interface member.
+
     def __getattr__(self, name):
-        value = getattr(self.__unflipped, name)
-        if inspect.ismethod(value):
-            return types.MethodType(value.__func__, self)
-        elif name in self.__unflipped.signature.members and \
-                self.__unflipped.signature.members[name].is_signature:
-            return flipped(value)
+        if (name in self.__unflipped.signature.members and
+                self.__unflipped.signature.members[name].is_signature):
+            return flipped(getattr(self.__unflipped, name))
         else:
-            return value
+            try: # descriptor first
+                return _gettypeattr(self.__unflipped, name).__get__(self, type(self.__unflipped))
+            except AttributeError:
+                return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        return setattr(self.__unflipped, name, value)
+        if (name in self.__unflipped.signature.members and
+                self.__unflipped.signature.members[name].is_signature):
+            setattr(self.__unflipped, name, flipped(value))
+        else:
+            try: # descriptor first
+                _gettypeattr(self.__unflipped, name).__set__(self, value)
+            except AttributeError:
+                setattr(self.__unflipped, name, value)
+
+    def __delattr__(self, name):
+        try: # descriptor first
+            _gettypeattr(self.__unflipped, name).__delete__(self)
+        except AttributeError:
+            delattr(self.__unflipped, name)
 
     def __repr__(self):
         return f"flipped({self.__unflipped!r})"
