@@ -7,6 +7,7 @@ from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequenc
 from enum import Enum
 from itertools import chain
 
+from ._repr import *
 from .. import tracer
 from .._utils import *
 from .._utils import _ignore_deprecated
@@ -52,6 +53,9 @@ class ShapeCastable:
         if not hasattr(cls, "const"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `const` method")
+
+    def _value_repr(self, value):
+        return (Repr(FormatInt(), value),)
 
 
 class Shape:
@@ -1127,19 +1131,51 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
-        if decoder is None and isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
-            decoder = orig_shape
-        if isinstance(decoder, type) and issubclass(decoder, Enum):
+        if decoder is not None:
+            # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
+            # this is the only way to add a custom filter to the signal right now. The setter sets
+            # `self._value_repr` as well as the compatibility `self.decoder`.
+            self.decoder = decoder
+        else:
+            # If it's an enum, expose it via `self.decoder` for compatibility, whether it's a Python
+            # enum or an Amaranth enum. This also sets the value representation, even for custom
+            # shape-castables that implement their own `_value_repr`.
+            if isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+                self.decoder = orig_shape
+            else:
+                self.decoder = None
+            # The value representation is specified implicitly in the shape of the signal.
+            if isinstance(orig_shape, ShapeCastable):
+                # A custom shape-castable always has a `_value_repr`, at least the default one.
+                self._value_repr = tuple(orig_shape._value_repr(self))
+            elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+                # A non-Amaranth enum needs a value repr constructed for it.
+                self._value_repr = (Repr(FormatEnum(orig_shape), self),)
+            else:
+                # Any other case is formatted as a plain integer.
+                self._value_repr = (Repr(FormatInt(), self),)
+
+    @property
+    def decoder(self):
+        return self._decoder
+
+    @decoder.setter
+    def decoder(self, decoder):
+        # Compute the value representation that will be used by Amaranth.
+        if decoder is None:
+            self._value_repr = (Repr(FormatInt(), self),)
+            self._decoder = None
+        elif not (isinstance(decoder, type) and issubclass(decoder, Enum)):
+            self._value_repr = (Repr(FormatCustom(decoder), self),)
+            self._decoder = decoder
+        else: # Violence. In the name of backwards compatibility!
+            self._value_repr = (Repr(FormatEnum(decoder), self),)
             def enum_decoder(value):
                 try:
                     return "{0.name:}/{0.value:}".format(decoder(value))
                 except ValueError:
                     return str(value)
-            self.decoder = enum_decoder
-            self._enum_class = decoder
-        else:
-            self.decoder = decoder
-            self._enum_class = None
+            self._decoder = enum_decoder
 
     # Not a @classmethod because amaranth.compat requires it.
     @staticmethod
@@ -1914,3 +1950,6 @@ class SignalDict(_MappedKeyDict):
 class SignalSet(_MappedKeySet):
     _map_key   = SignalKey
     _unmap_key = lambda self, key: key.signal
+
+
+from ._repr import *

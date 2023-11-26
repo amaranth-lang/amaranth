@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod
+from enum import Enum
 from collections.abc import Mapping, Sequence
 import warnings
 
 from amaranth.hdl import *
+from amaranth.hdl._repr import *
 from amaranth.hdl.ast import ShapeCastable, ValueCastable
 
 
@@ -230,6 +232,21 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             int_value &= ~mask
             int_value |= (key_value.value << field.offset) & mask
         return View(self, Const(int_value, self.as_shape()))
+
+    def _value_repr(self, value):
+        yield Repr(FormatInt(), value)
+        for key, field in self:
+            shape = Shape.cast(field.shape)
+            field_value = value[field.offset:field.offset+shape.width]
+            if shape.signed:
+                field_value = field_value.as_signed()
+            if isinstance(field.shape, ShapeCastable):
+                for repr in field.shape._value_repr(field_value):
+                    yield Repr(repr.format, repr.value, path=(key,) + repr.path)
+            elif isinstance(field.shape, type) and issubclass(field.shape, Enum):
+                yield Repr(FormatEnum(field.shape), field_value, path=(key,))
+            else:
+                yield Repr(FormatInt(), field_value, path=(key,))
 
 
 class StructLayout(Layout):
@@ -773,6 +790,9 @@ class _AggregateMeta(ShapeCastable, type):
             fields = cls.__default.copy()
             fields.update(init or {})
             return cls.as_shape().const(fields)
+
+    def _value_repr(cls, value):
+        return cls.__layout._value_repr(value)
 
 
 class Struct(View, metaclass=_AggregateMeta):
