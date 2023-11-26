@@ -315,3 +315,12 @@ class ResourceManagerTestCase(FHDLTestCase):
                 (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
             self.cm.add_clock_constraint(clk100.i, 1e6)
+
+    def test_eq_deprecation(self):
+        user_led = self.cm.request("user_led", 0)
+        m = Module()
+        with self.assertWarns(DeprecationWarning):
+            m.d.sync += user_led.eq(1)
+        p = Pin(4, "o")
+        with self.assertWarns(DeprecationWarning):
+            m.d.sync += p.eq(1)
