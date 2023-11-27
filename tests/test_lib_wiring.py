@@ -385,8 +385,8 @@ class SignatureTestCase(unittest.TestCase):
         intf = sig.create()
         self.assertFlattenedSignature(sig.flatten(intf), [
             (("a",), In(1), intf.a),
-            ((("b",), 0), Out(2), intf.b[0]),
-            ((("b",), 1), Out(2), intf.b[1])
+            (("b", 0), Out(2), intf.b[0]),
+            (("b", 1), Out(2), intf.b[1])
         ])
 
     def test_flatten_sig(self):
