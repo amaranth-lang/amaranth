@@ -405,6 +405,21 @@ class Signature(metaclass=SignatureMeta):
             yield from iter_dimensions(value, dimensions=member.dimensions, path=path)
 
     def is_compliant(self, obj, *, reasons=None, path=("obj",)):
+        if not hasattr(obj, "signature"):
+            if reasons is not None:
+                reasons.append(f"{_format_path(path)} does not have an attribute 'signature'")
+            return False
+        if not isinstance(obj.signature, Signature):
+            if reasons is not None:
+                reasons.append(f"{_format_path(path + ('signature',))} is expected to be "
+                               f"a signature, but it is a {obj.signature!r}")
+            return False
+        if self != obj.signature:
+            if reasons is not None:
+                reasons.append(f"{_format_path(path + ('signature',))} is expected to be equal "
+                               f"to this signature, {self!r}, but it is a {obj.signature!r}")
+            return False
+
         def check_attr_value(member, attr_value, *, path):
             if member.is_port:
                 try:
