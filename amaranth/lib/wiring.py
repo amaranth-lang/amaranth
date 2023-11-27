@@ -394,7 +394,7 @@ class Signature(metaclass=SignatureMeta):
                     dimension, *rest_of_dimensions = dimensions
                     for index in range(dimension):
                         yield from iter_dimensions(value[index], rest_of_dimensions,
-                                                   path=(path, index))
+                                                   path=(*path, index))
 
             yield from iter_dimensions(value, dimensions=member.dimensions, path=path)
 
