@@ -1,5 +1,10 @@
 /* Some of our section titles are looong */
-.wy-menu-vertical { width: 340px; }
+.wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
+.wy-side-nav-search { width: 325px; }
+.wy-nav-content-wrap { margin-left: 340px; }
+
+/* We don't have a version picker widget */
+.wy-nav-side { padding-bottom: 0; }
 
 /* Many of our diagnostics are even longer */
 .rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre { white-space: pre-wrap; }
