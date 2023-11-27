@@ -353,6 +353,12 @@ class Signature(metaclass=SignatureMeta):
     def members(self):
         return self.__members
 
+    @members.setter
+    def members(self, new_members):
+        # The setter is called when `sig.members += ...` is used.
+        if new_members is not self.__members:
+            raise AttributeError("property 'members' of 'Signature' object cannot be set")
+
     def __eq__(self, other):
         other_unflipped = other.flip() if type(other) is FlippedSignature else other
         if type(self) is type(other_unflipped) is Signature:
@@ -518,6 +524,11 @@ class FlippedSignature:
     def members(self):
         return FlippedSignatureMembers(self.__unflipped.members)
 
+    @members.setter
+    def members(self, new_members):
+        if new_members.flip() is not self.__unflipped.members:
+            raise AttributeError("property 'members' of 'FlippedSignature' object cannot be set")
+
     def __eq__(self, other):
         if type(other) is FlippedSignature:
             # Trivial case.
@@ -550,10 +561,16 @@ class FlippedSignature:
             return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        try: # descriptor first
-            _gettypeattr(self.__unflipped, name).__set__(self, value)
-        except AttributeError:
-            setattr(self.__unflipped, name, value)
+        if name == "members":
+            # Although `sig.flip().members` does not call `__getattr__` but directly invokes
+            # the descriptor of the `FlippedSignature.members` property, `sig.flip().members +=`
+            # does call `__setattr__`, and this must be special-cased for the setter to work.
+            FlippedSignature.members.__set__(self, value)
+        else:
+            try: # descriptor first
+                _gettypeattr(self.__unflipped, name).__set__(self, value)
+            except AttributeError:
+                setattr(self.__unflipped, name, value)
 
     def __delattr__(self, name):
         try: # descriptor first

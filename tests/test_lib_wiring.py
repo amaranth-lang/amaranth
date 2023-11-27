@@ -374,6 +374,18 @@ class SignatureTestCase(unittest.TestCase):
                 r"^Cannot add members to a frozen signature$"):
             sig.members += {"b": Out(1)}
 
+    def test_members_plus_equal(self):
+        sig = Signature({})
+        # This invokes the setter of Signature.members.
+        sig.members += {"a": In(1)}
+        self.assertIn("a", sig.members)
+
+    def test_members_equal_wrong(self):
+        sig = Signature({})
+        with self.assertRaisesRegex(AttributeError,
+                r"property 'members' of 'Signature' object cannot be set"):
+            sig.members = SignatureMembers({})
+
     def assertFlattenedSignature(self, actual, expected):
         for (a_path, a_member, a_value), (b_path, b_member, b_value) in zip(actual, expected):
             self.assertEqual(a_path, b_path)
@@ -594,6 +606,18 @@ class FlippedSignatureTestCase(unittest.TestCase):
         fsig = sig.flip()
         fsig.x()
         self.assertEqual(x_type, S)
+
+    def test_members_plus_equal(self):
+        sig = Signature({})
+        # This invokes the setter of FlippedSignature.members.
+        sig.flip().members += {"a": In(1)}
+        self.assertIn("a", sig.members)
+
+    def test_members_equal_wrong(self):
+        sig = Signature({})
+        with self.assertRaisesRegex(AttributeError,
+                r"property 'members' of 'FlippedSignature' object cannot be set"):
+            sig.flip().members = SignatureMembers({})
 
 
 class InterfaceTestCase(unittest.TestCase):
