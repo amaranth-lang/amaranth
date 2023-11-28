@@ -64,9 +64,10 @@ class _VCDWriter:
 
         trace_names = SignalDict()
         for trace in traces:
-            if trace not in signal_names:
-                trace_names[trace] = {("bench", trace.name)}
-            self.traces.append(trace)
+            for trace_signal in trace._rhs_signals():
+                if trace_signal not in signal_names:
+                    trace_names[trace_signal] = {("bench", trace_signal.name)}
+                self.traces.append(trace_signal)
 
         if self.vcd_writer is None:
             return
