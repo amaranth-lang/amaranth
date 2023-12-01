@@ -599,4 +599,19 @@ Making connections
 Components
 ==========
 
+.. _JSON Schema: https://json-schema.org
+
 .. autoclass:: Component
+
+
+Component metadata
+==================
+
+.. autoexception:: InvalidMetadata
+
+.. autoclass:: ComponentMetadata
+   :no-members:
+   :members: validate, origin, as_json
+
+   .. autoattribute:: schema
+      :annotation: = { "$id": "https://amaranth-lang.org/schema/amaranth/0.5/component.json", ... }

@@ -49,6 +49,7 @@ Implemented RFCs
 
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
 .. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
+.. _RFC 30: https://amaranth-lang.org/rfcs/0030-component-metadata.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 .. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
@@ -65,6 +66,7 @@ Implemented RFCs
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
+* `RFC 30`_: Component metadata
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
 * `RFC 43`_: Rename ``reset=`` to ``init=``
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
@@ -120,6 +122,7 @@ Standard library changes
 * Changed: :meth:`amaranth.lib.wiring.Signature.is_compliant` no longer rejects reset-less signals.
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
+* Added: :mod:`amaranth.lib.meta`, :class:`amaranth.lib.wiring.ComponentMetadata`. (`RFC 30`_)
 * Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)

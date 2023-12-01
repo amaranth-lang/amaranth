@@ -16,6 +16,7 @@ license = {file = "LICENSE.txt"}
 requires-python = "~=3.8"
 dependencies = [
   "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
+  "jschon~=0.11.1", # for amaranth.lib.meta
   "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
 ]
@@ -30,6 +31,9 @@ remote-build  = ["paramiko~=2.7"]
 
 [project.scripts]
 amaranth-rpc = "amaranth.rpc:main"
+
+[project.entry-points."amaranth.lib.meta"]
+"0.5/component.json" = "amaranth.lib.wiring:ComponentMetadata"
 
 [project.urls]
 "Homepage" = "https://amaranth-lang.org/"
@@ -95,3 +99,5 @@ document-linkcheck.cmd = "sphinx-build docs/ docs/_linkcheck/ -b linkcheck"
 coverage-text.cmd = "python -m coverage report"
 coverage-html.cmd = "python -m coverage html"
 coverage-xml.cmd  = "python -m coverage xml"
+
+extract-schemas.call = "amaranth.lib.meta:_extract_schemas('amaranth', base_uri='https://amaranth-lang.org/schema/amaranth')"
