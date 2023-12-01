@@ -9,6 +9,9 @@ __pycache__/
 /.venv
 /pdm.lock
 
+# metadata schemas
+/schema
+
 # coverage
 /.coverage
 /htmlcov

@@ -8,8 +8,9 @@ from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
 from amaranth.lib.wiring import Signature, FlippedSignature, PureInterface, FlippedInterface
-from amaranth.lib.wiring import Component
+from amaranth.lib.wiring import Component, ComponentMetadata, InvalidMetadata
 from amaranth.lib.wiring import ConnectionError, connect, flipped
+from amaranth.lib.meta import Annotation
 
 
 class FlowTestCase(unittest.TestCase):
@@ -335,6 +336,11 @@ class SignatureTestCase(unittest.TestCase):
     def test_create(self):
         sig = Signature({"a": In(1)})
         self.assertEqual(sig.members, SignatureMembers({"a": In(1)}))
+
+    def test_annotations_empty(self):
+        sig   = Signature({"a": In(1)})
+        iface = PureInterface(sig)
+        self.assertEqual(sig.annotations(iface), ())
 
     def test_eq(self):
         self.assertEqual(Signature({"a": In(1)}),
@@ -1156,3 +1162,174 @@ class ComponentTestCase(unittest.TestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Object 4 is not a signature nor a dict$"):
             C(2)
+
+    def test_metadata_origin(self):
+        class A(Component):
+            clk: In(1)
+
+        a = A()
+        self.assertIsInstance(a.metadata, ComponentMetadata)
+        self.assertIs(a.metadata.origin, a)
+
+
+class ComponentMetadataTestCase(unittest.TestCase):
+    def test_as_json(self):
+        class Annotation1(Annotation):
+            schema = {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://example.com/schema/foo/0.1/bar.json",
+                "type": "object",
+                "properties": {
+                    "hello": { "type": "boolean" },
+                },
+            }
+
+            def origin(self):
+                return object()
+
+            def as_json(self):
+                instance = { "hello": True }
+                self.validate(instance)
+                return instance
+
+        class Signature1(Signature):
+            def __init__(self):
+                super().__init__({
+                    "i": In(unsigned(8), init=42).array(2).array(3),
+                    "o": Out(signed(4))
+                })
+
+            def annotations(self, obj):
+                return (*Signature.annotations(self, obj), Annotation1())
+
+        class Signature2(Signature):
+            def __init__(self):
+                super().__init__({
+                    "clk": In(1),
+                    "foo": Out(Signature1()).array(4),
+                    "oof": In(Signature1())
+                })
+
+            def annotations(self, obj):
+                return (*Signature.annotations(self, obj), Annotation1())
+
+        class A(Component):
+            def __init__(self):
+                super().__init__(Signature2())
+
+        metadata = ComponentMetadata(A())
+        self.assertEqual(metadata.as_json(), {
+            "interface": {
+                "members": {
+                    "clk": {
+                        "type": "port",
+                        "name": "clk",
+                        "dir": "in",
+                        "width": 1,
+                        "signed": False,
+                        "init": "0",
+                    },
+                    "foo": [{
+                        "type": "interface",
+                        "members": {
+                            "i": [[{
+                                    "type": "port",
+                                    "name": f"foo__{x}__i__{y}__{z}",
+                                    "dir": "in",
+                                    "width": 8,
+                                    "signed": False,
+                                    "init": "42",
+                                } for z in range(2)] for y in range(3)],
+                            "o": {
+                                "type": "port",
+                                "name": f"foo__{x}__o",
+                                "dir": "out",
+                                "width": 4,
+                                "signed": True,
+                                "init": "0",
+                            },
+                        },
+                        "annotations": {
+                            "https://example.com/schema/foo/0.1/bar.json": {
+                                "hello": True,
+                            },
+                        },
+                    } for x in range(4)],
+                    "oof": {
+                        "type": "interface",
+                        "members": {
+                            "i": [[{
+                                "type": "port",
+                                "name": f"oof__i__{y}__{z}",
+                                "dir": "out",
+                                "width": 8,
+                                "signed": False,
+                                "init": "42",
+                            } for z in range(2)] for y in range(3)],
+                            "o": {
+                                "type": "port",
+                                "name": "oof__o",
+                                "dir": "in",
+                                "width": 4,
+                                "signed": True,
+                                "init": "0",
+                            },
+                        },
+                        "annotations": {
+                            "https://example.com/schema/foo/0.1/bar.json": {
+                                "hello": True,
+                            },
+                        },
+                    },
+                },
+                "annotations": {
+                    "https://example.com/schema/foo/0.1/bar.json": {
+                        "hello": True,
+                    },
+                },
+            },
+        })
+
+    def test_validate(self):
+        ComponentMetadata.validate({
+            "interface": {
+                "members": {
+                    "i": {
+                        "type": "port",
+                        "name": "i",
+                        "dir": "in",
+                        "width": 1,
+                        "signed": False,
+                        "init": "0",
+                    },
+                    "o": {
+                        "type": "port",
+                        "name": "o",
+                        "dir": "out",
+                        "width": 1,
+                        "signed": False,
+                        "init": "0",
+                    },
+                },
+                "annotations": {
+                    "https://example.com/schema/foo/0/foo.json": {
+                        "foo": True,
+                    },
+                },
+            },
+        })
+
+    def test_validate_error(self):
+        with self.assertRaises(InvalidMetadata):
+            ComponentMetadata.validate({
+                "interface": {
+                    "members": {
+                        "foo": True,
+                    },
+                    "annotations": {},
+                },
+            })
+
+    def test_wrong_origin(self):
+        with self.assertRaisesRegex(TypeError, r"Origin must be a component, not 'foo'"):
+            ComponentMetadata("foo")

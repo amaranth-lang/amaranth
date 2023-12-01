@@ -7,6 +7,7 @@ from .. import tracer
 from ..hdl._ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
 from ..hdl._ir import Elaboratable
 from .._utils import final
+from .meta import Annotation, InvalidAnnotation
 
 
 __all__ = ["In", "Out", "Signature", "PureInterface", "connect", "flipped", "Component"]
@@ -682,7 +683,7 @@ class Signature(metaclass=SignatureMeta):
     An interface object is a Python object that has a :py:`signature` attribute containing
     a :class:`Signature` object, as well as an attribute for every member of its signature.
     Signatures and interface objects are tightly linked: an interface object can be created out
-    of a signature, and the signature is used when :func:`connect` ing two interface objects
+    of a signature, and the signature is used when :func:`connect`\\ ing two interface objects
     together. See the :ref:`introduction to interfaces <wiring-intro1>` for a more detailed
     explanation of why this is useful.
 
@@ -984,6 +985,21 @@ class Signature(metaclass=SignatureMeta):
         """
         return PureInterface(self, path=path, src_loc_at=1 + src_loc_at)
 
+    def annotations(self, obj, /):
+        """Annotate an interface object.
+
+        Subclasses of :class:`Signature` may override this method to provide annotations for
+        a corresponding interface object. The default implementation provides none.
+
+        See :mod:`amaranth.lib.meta` for details.
+
+        Returns
+        -------
+        iterable of :class:`~.meta.Annotation`
+            :py:`tuple()`
+        """
+        return tuple()
+
     def __repr__(self):
         if type(self) is Signature:
             return f"Signature({dict(self.members.items())})"
@@ -1244,7 +1260,7 @@ class FlippedInterface:
 
         Returns
         -------
-        Signature
+        :class:`Signature`
             :py:`unflipped.signature.flip()`
         """
         return self.__unflipped.signature.flip()
@@ -1254,7 +1270,7 @@ class FlippedInterface:
 
         Returns
         -------
-        bool
+        :class:`bool`
             :py:`True` if :py:`other` is an instance :py:`FlippedInterface(other_unflipped)` where
             :py:`unflipped == other_unflipped`, :py:`False` otherwise.
         """
@@ -1676,7 +1692,7 @@ class Component(Elaboratable):
 
     @property
     def signature(self):
-        """The signature of the component.
+        """Signature of the component.
 
         .. warning::
 
@@ -1685,3 +1701,244 @@ class Component(Elaboratable):
             can be used to customize a component's signature.
         """
         return self.__signature
+
+    @property
+    def metadata(self):
+        """Metadata attached to the component.
+
+        Returns
+        -------
+        :class:`ComponentMetadata`
+        """
+        return ComponentMetadata(self)
+
+
+class InvalidMetadata(Exception):
+    """Exception raised by :meth:`ComponentMetadata.validate` when the JSON representation of
+    a component's metadata does not conform to its schema."""
+
+
+class ComponentMetadata(Annotation):
+    """Component metadata.
+
+    Component :ref:`metadata <meta>` describes the interface of a :class:`Component` and can be
+    exported to JSON for interoperability with non-Amaranth tooling.
+
+    Arguments
+    ---------
+    origin : :class:`Component`
+        Component described by this metadata instance.
+    """
+
+    #: :class:`dict`: Schema of component metadata, expressed in the `JSON Schema`_ language.
+    #:
+    #: A copy of this schema can be retrieved `from amaranth-lang.org
+    #: <https://amaranth-lang.org/schema/amaranth/0.5/component.json>`_.
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://amaranth-lang.org/schema/amaranth/0.5/component.json",
+        "$defs": {
+            "member": {
+                "oneOf": [
+                    { "$ref": "#/$defs/member-array" },
+                    { "$ref": "#/$defs/member-port" },
+                    { "$ref": "#/$defs/member-interface" },
+                ]
+            },
+            "member-array": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/$defs/member",
+                },
+            },
+            "member-port": {
+                "type": "object",
+                "properties": {
+                    "type": { "const": "port" },
+                    "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                    },
+                    "dir": { "enum": [ "in", "out" ] },
+                    "width": {
+                        "type": "integer",
+                        "minimum": 0,
+                    },
+                    "signed": { "type": "boolean" },
+                    "init": {
+                        "type": "string",
+                        "pattern": "^[+-]?[0-9]+$",
+                    },
+                },
+                "additionalProperties": False,
+                "required": [
+                    "type",
+                    "name",
+                    "dir",
+                    "width",
+                    "signed",
+                    "init",
+                ],
+            },
+            "member-interface": {
+                "type": "object",
+                "properties": {
+                    "type": { "const": "interface" },
+                    "members": {
+                        "type": "object",
+                        "patternProperties": {
+                            "^[A-Za-z][A-Za-z0-9_]*$": {
+                                "$ref": "#/$defs/member",
+                            },
+                        },
+                    },
+                    "annotations": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                        },
+                    },
+                },
+                "additionalProperties": False,
+                "required": [
+                    "type",
+                    "members",
+                    "annotations",
+                ],
+            },
+        },
+        "type": "object",
+        "properties": {
+            "interface": {
+                "type": "object",
+                "properties": {
+                    "members": {
+                        "type": "object",
+                        "patternProperties": {
+                            "^[A-Za-z][A-Za-z0-9_]*$": {
+                                "$ref": "#/$defs/member",
+                            },
+                        },
+                    },
+                    "annotations": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                        },
+                    },
+                },
+                "additionalProperties": False,
+                "required": [
+                    "members",
+                    "annotations",
+                ],
+            },
+        },
+        "additionalProperties": False,
+        "required": [
+            "interface",
+        ],
+    }
+
+    def __init__(self, origin):
+        if not isinstance(origin, Component):
+            raise TypeError(f"Origin must be a component, not {origin!r}")
+        self._origin = origin
+
+    @property
+    def origin(self):
+        """Component described by this metadata.
+
+        Returns
+        -------
+        :class:`Component`
+        """
+        return self._origin
+
+    @classmethod
+    def validate(cls, instance):
+        """Validate a JSON representation of component metadata against :attr:`schema`.
+
+        This method does not validate annotations of the interface members, and consequently does
+        not make network requests.
+
+        Arguments
+        ---------
+        instance : :class:`dict`
+            JSON representation to validate, either previously returned by :meth:`as_json` or
+            retrieved from an external source.
+
+        Raises
+        ------
+        :exc:`InvalidMetadata`
+            If :py:`instance` doesn't conform to :attr:`schema`.
+        """
+        try:
+            super(cls, cls).validate(instance)
+        except InvalidAnnotation as e:
+            raise InvalidMetadata(e) from e
+
+    def as_json(self):
+        """Translate to JSON.
+
+        Returns
+        -------
+        :class:`dict`
+            JSON representation of :attr:`origin` that describes its interface members and includes
+            their annotations.
+        """
+        def translate_member(member, origin, *, path):
+            assert isinstance(member, Member)
+            if member.is_port:
+                cast_shape = Shape.cast(member.shape)
+                return {
+                    "type": "port",
+                    "name": "__".join(str(key) for key in path),
+                    "dir": "in" if member.flow == In else "out",
+                    "width": cast_shape.width,
+                    "signed": cast_shape.signed,
+                    "init": str(member._init_as_const.value),
+                }
+            elif member.is_signature:
+                return {
+                    "type": "interface",
+                    "members": {
+                        sub_name: translate_dimensions(sub.dimensions, sub,
+                                                       getattr(origin, sub_name),
+                                                       path=(*path, sub_name))
+                        for sub_name, sub in member.signature.members.items()
+                    },
+                    "annotations": {
+                        annotation.schema["$id"]: annotation.as_json()
+                        for annotation in member.signature.annotations(origin)
+                    },
+                }
+            else:
+                assert False # :nocov:
+
+        def translate_dimensions(dimensions, member, origin, *, path):
+            if len(dimensions) == 0:
+                return translate_member(member, origin, path=path)
+            dimension, *rest_of_dimensions = dimensions
+            return [
+                translate_dimensions(rest_of_dimensions, member, origin[index],
+                                     path=(*path, index))
+                for index in range(dimension)
+            ]
+
+        instance = {
+            "interface": {
+                "members": {
+                    member_name: translate_dimensions(member.dimensions, member,
+                                                      getattr(self.origin, member_name),
+                                                      path=(member_name,))
+                    for member_name, member in self.origin.signature.members.items()
+                },
+                "annotations": {
+                    annotation.schema["$id"]: annotation.as_json()
+                    for annotation in self.origin.signature.annotations(self.origin)
+                },
+            },
+        }
+        self.validate(instance)
+        return instance
