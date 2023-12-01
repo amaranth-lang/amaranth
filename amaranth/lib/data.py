@@ -483,7 +483,12 @@ class ArrayLayout(Layout):
 class FlexibleLayout(Layout):
     """Description of a flexible layout.
 
-    The fields of a flexible layout can be located arbitrarily, and its size is explicitly defined.
+    A flexible layout is similar to a structure layout; while fields in :class:`StructLayout` are
+    defined contiguously, the fields in a flexible layout can overlap and have gaps between them.
+
+    Because the size and field boundaries in a flexible layout can be defined arbitrarily, it
+    may also be more convenient to use a flexible layout when the layout information is derived
+    from an external data file rather than defined in Python code.
 
     For example, the following layout of a 16-bit value:
 
@@ -501,7 +506,10 @@ class FlexibleLayout(Layout):
         })
 
     Both strings and integers can be used as names of flexible layout fields, so flexible layouts
-    can be used to describe structures and arrays with arbitrary padding.
+    can be used to describe structures with arbitrary padding and arrays with arbitrary stride.
+
+    If another data structure is used as the source of truth for creating flexible layouts,
+    consider instead inheriting from the base :class:`Layout` class, which may be more convenient.
 
     Attributes
     ----------
