@@ -3,6 +3,7 @@ from enum import Enum
 from collections.abc import Mapping, Sequence
 import warnings
 
+from amaranth._utils import final
 from amaranth.hdl import *
 from amaranth.hdl._repr import *
 from amaranth.hdl.ast import ShapeCastable, ValueCastable
@@ -14,6 +15,7 @@ __all__ = [
 ]
 
 
+@final
 class Field:
     """Description of a data field.
 
