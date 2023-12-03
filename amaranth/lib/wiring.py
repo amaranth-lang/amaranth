@@ -607,6 +607,12 @@ class Interface:
             **signature.members.create(path=path)
         })
 
+    def __repr__(self):
+        attrs = ''.join(f", {name}={value!r}"
+                        for name, value in self.__dict__.items()
+                        if name != "signature")
+        return f'<Interface: {self.signature}{attrs}>'
+
 
 # To reduce API surface area `FlippedInterface` is made final. This restriction could be lifted
 # if there is a compelling use case.
