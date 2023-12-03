@@ -653,7 +653,23 @@ class FlippedSignatureTestCase(unittest.TestCase):
 
 
 class InterfaceTestCase(unittest.TestCase):
-    pass
+    def test_construct(self):
+        sig = Signature({
+            "a": In(4),
+            "b": Out(signed(2)),
+        })
+        intf = Interface(sig, path=("test",))
+        self.assertIs(intf.signature, sig)
+        self.assertIsInstance(intf.a, Signal)
+        self.assertIsInstance(intf.b, Signal)
+
+    def test_repr(self):
+        sig = Signature({
+            "a": In(4),
+            "b": Out(signed(2)),
+        })
+        intf = Interface(sig, path=("test",))
+        self.assertEqual(repr(intf), "<Interface: Signature({'a': In(4), 'b': Out(signed(2))}), a=(sig test__a), b=(sig test__b)>")
 
 
 class FlippedInterfaceTestCase(unittest.TestCase):
@@ -666,7 +682,7 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         self.assertEqual(tintf.signature, intf.signature.flip())
         self.assertEqual(tintf, flipped(intf))
         self.assertRegex(repr(tintf),
-            r"^flipped\(<.+?\.Interface object at .+>\)$")
+            r"^flipped\(<Interface: .+>\)$")
         self.assertIs(flipped(tintf), intf)
 
     def test_getsetdelattr(self):
