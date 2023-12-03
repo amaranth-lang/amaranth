@@ -8,7 +8,7 @@ from amaranth.hdl.ast import ValueCastable
 from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
-from amaranth.lib.wiring import Signature, FlippedSignature, Interface, FlippedInterface
+from amaranth.lib.wiring import Signature, FlippedSignature, PureInterface, FlippedInterface
 from amaranth.lib.wiring import Component
 from amaranth.lib.wiring import ConnectionError, connect, flipped
 
@@ -652,13 +652,13 @@ class FlippedSignatureTestCase(unittest.TestCase):
             sig.flip().members = SignatureMembers({})
 
 
-class InterfaceTestCase(unittest.TestCase):
+class PureInterfaceTestCase(unittest.TestCase):
     def test_construct(self):
         sig = Signature({
             "a": In(4),
             "b": Out(signed(2)),
         })
-        intf = Interface(sig, path=("test",))
+        intf = PureInterface(sig, path=("test",))
         self.assertIs(intf.signature, sig)
         self.assertIsInstance(intf.a, Signal)
         self.assertIsInstance(intf.b, Signal)
@@ -668,8 +668,8 @@ class InterfaceTestCase(unittest.TestCase):
             "a": In(4),
             "b": Out(signed(2)),
         })
-        intf = Interface(sig, path=("test",))
-        self.assertEqual(repr(intf), "<Interface: Signature({'a': In(4), 'b': Out(signed(2))}), a=(sig test__a), b=(sig test__b)>")
+        intf = PureInterface(sig, path=("test",))
+        self.assertEqual(repr(intf), "<PureInterface: Signature({'a': In(4), 'b': Out(signed(2))}), a=(sig test__a), b=(sig test__b)>")
 
 
 class FlippedInterfaceTestCase(unittest.TestCase):
@@ -681,8 +681,7 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         tintf = flipped(intf)
         self.assertEqual(tintf.signature, intf.signature.flip())
         self.assertEqual(tintf, flipped(intf))
-        self.assertRegex(repr(tintf),
-            r"^flipped\(<Interface: .+>\)$")
+        self.assertRegex(repr(tintf), r"^flipped\(<PureInterface: .+>\)$")
         self.assertIs(flipped(tintf), intf)
 
     def test_getsetdelattr(self):
@@ -763,7 +762,7 @@ class FlippedInterfaceTestCase(unittest.TestCase):
             flipped(Signature({}))
 
     def test_create_subclass_flipped(self):
-        class CustomInterface(Interface):
+        class CustomInterface(PureInterface):
             def custom_method(self):
                 return 69
 

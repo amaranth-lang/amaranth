@@ -10,7 +10,7 @@ from ..hdl.ir import Elaboratable
 from .._utils import final
 
 
-__all__ = ["In", "Out", "Signature", "Interface", "connect", "flipped", "Component"]
+__all__ = ["In", "Out", "Signature", "PureInterface", "connect", "flipped", "Component"]
 
 
 class Flow(enum.Enum):
@@ -504,7 +504,7 @@ class Signature(metaclass=SignatureMeta):
         return result
 
     def create(self, *, path=()):
-        return Interface(self, path=path)
+        return PureInterface(self, path=path)
 
     def __repr__(self):
         if type(self) is Signature:
@@ -600,7 +600,7 @@ class FlippedSignature:
         return f"{self.__unflipped!r}.flip()"
 
 
-class Interface:
+class PureInterface:
     def __init__(self, signature, *, path):
         self.__dict__.update({
             "signature": signature,
@@ -611,7 +611,7 @@ class Interface:
         attrs = ''.join(f", {name}={value!r}"
                         for name, value in self.__dict__.items()
                         if name != "signature")
-        return f'<Interface: {self.signature}{attrs}>'
+        return f'<PureInterface: {self.signature}{attrs}>'
 
 
 # To reduce API surface area `FlippedInterface` is made final. This restriction could be lifted
