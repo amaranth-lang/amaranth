@@ -59,7 +59,7 @@ The ``shape=`` argument is optional. If not specified, classes from this module 
 
 In this way, this module is a drop-in replacement for the standard :mod:`enum` module, and in an Amaranth project, all ``import enum`` statements may be replaced with ``from amaranth.lib import enum``.
 
-Signals with :class:`Enum` or :class:`Flag` based shape are automatically wrapped in the :class:`EnumView` or :class:`FlagView` value-castable wrappers, which ensure type safety. Any :ref:`value-castable <lang-valuecasting>` can also be explicitly wrapped in a view class by casting it to the enum type:
+Signals with :class:`Enum` or :class:`Flag` based shape are automatically wrapped in the :class:`EnumView` or :class:`FlagView` value-like wrappers, which ensure type safety. Any :ref:`value-like <lang-valuelike>` can also be explicitly wrapped in a view class by casting it to the enum type:
 
 .. doctest::
 

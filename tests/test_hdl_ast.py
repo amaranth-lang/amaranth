@@ -1,5 +1,5 @@
 import warnings
-from enum import Enum
+from enum import Enum, EnumMeta
 
 from amaranth.hdl.ast import *
 from amaranth.lib.enum import Enum as AmaranthEnum
@@ -187,6 +187,44 @@ class ShapeCastableTestCase(FHDLTestCase):
     def test_recurse(self):
         sc = MockShapeCastable(MockShapeCastable(unsigned(1)))
         self.assertEqual(Shape.cast(sc), unsigned(1))
+
+
+class ShapeLikeTestCase(FHDLTestCase):
+    def test_construct(self):
+        with self.assertRaises(TypeError):
+            ShapeLike()
+
+    def test_subclass(self):
+        self.assertTrue(issubclass(Shape, ShapeLike))
+        self.assertTrue(issubclass(MockShapeCastable, ShapeLike))
+        self.assertTrue(issubclass(int, ShapeLike))
+        self.assertTrue(issubclass(range, ShapeLike))
+        self.assertTrue(issubclass(EnumMeta, ShapeLike))
+        self.assertFalse(issubclass(Enum, ShapeLike))
+        self.assertFalse(issubclass(str, ShapeLike))
+        self.assertTrue(issubclass(ShapeLike, ShapeLike))
+
+    def test_isinstance(self):
+        self.assertTrue(isinstance(unsigned(2), ShapeLike))
+        self.assertTrue(isinstance(MockShapeCastable(unsigned(2)), ShapeLike))
+        self.assertTrue(isinstance(2, ShapeLike))
+        self.assertTrue(isinstance(0, ShapeLike))
+        self.assertFalse(isinstance(-1, ShapeLike))
+        self.assertTrue(isinstance(range(10), ShapeLike))
+        self.assertFalse(isinstance("abc", ShapeLike))
+
+    def test_isinstance_enum(self):
+        class EnumA(Enum):
+            A = 1
+            B = 2
+        class EnumB(Enum):
+            A = "a"
+            B = "b"
+        class EnumC(Enum):
+            A = Cat(Const(1, 2), Const(0, 2))
+        self.assertTrue(isinstance(EnumA, ShapeLike))
+        self.assertFalse(isinstance(EnumB, ShapeLike))
+        self.assertTrue(isinstance(EnumC, ShapeLike))
 
 
 class ValueTestCase(FHDLTestCase):
@@ -1298,6 +1336,50 @@ class ValueCastableTestCase(FHDLTestCase):
     def test_recurse(self):
         vc = MockValueCastable(MockValueCastable(Signal()))
         self.assertIsInstance(Value.cast(vc), Signal)
+
+
+class ValueLikeTestCase(FHDLTestCase):
+    def test_construct(self):
+        with self.assertRaises(TypeError):
+            ValueLike()
+
+    def test_subclass(self):
+        self.assertTrue(issubclass(Value, ValueLike))
+        self.assertTrue(issubclass(MockValueCastable, ValueLike))
+        self.assertTrue(issubclass(int, ValueLike))
+        self.assertFalse(issubclass(range, ValueLike))
+        self.assertFalse(issubclass(EnumMeta, ValueLike))
+        self.assertTrue(issubclass(Enum, ValueLike))
+        self.assertFalse(issubclass(str, ValueLike))
+        self.assertTrue(issubclass(ValueLike, ValueLike))
+
+    def test_isinstance(self):
+        self.assertTrue(isinstance(Const(0, 2), ValueLike))
+        self.assertTrue(isinstance(MockValueCastable(Const(0, 2)), ValueLike))
+        self.assertTrue(isinstance(2, ValueLike))
+        self.assertTrue(isinstance(-2, ValueLike))
+        self.assertFalse(isinstance(range(10), ValueLike))
+
+    def test_enum(self):
+        class EnumA(Enum):
+            A = 1
+            B = 2
+        class EnumB(Enum):
+            A = "a"
+            B = "b"
+        class EnumC(Enum):
+            A = Cat(Const(1, 2), Const(0, 2))
+        class EnumD(Enum):
+            A = 1
+            B = "a"
+        self.assertTrue(issubclass(EnumA, ValueLike))
+        self.assertFalse(issubclass(EnumB, ValueLike))
+        self.assertTrue(issubclass(EnumC, ValueLike))
+        self.assertFalse(issubclass(EnumD, ValueLike))
+        self.assertTrue(isinstance(EnumA.A, ValueLike))
+        self.assertFalse(isinstance(EnumB.A, ValueLike))
+        self.assertTrue(isinstance(EnumC.A, ValueLike))
+        self.assertFalse(isinstance(EnumD.A, ValueLike))
 
 
 class SampleTestCase(FHDLTestCase):
