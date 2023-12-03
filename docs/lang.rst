@@ -121,14 +121,14 @@ The shape of the constant can be specified explicitly, in which case the number'
    0
 
 
-.. _lang-shapecasting:
+.. _lang-shapelike:
 
 Shape casting
 =============
 
-Shapes can be *cast* from other objects, which are called *shape-castable*. Casting is a convenient way to specify a shape indirectly, for example, by a range of numbers representable by values with that shape.
+Shapes can be *cast* from other objects, which are called *shape-like*. Casting is a convenient way to specify a shape indirectly, for example, by a range of numbers representable by values with that shape.
 
-Casting to a shape can be done explicitly with ``Shape.cast``, but is usually implicit, since shape-castable objects are accepted anywhere shapes are.
+Casting to a shape can be done explicitly with ``Shape.cast``, but is usually implicit, since shape-like objects are accepted anywhere shapes are.
 
 
 .. _lang-shapeint:
@@ -244,16 +244,16 @@ The :mod:`amaranth.lib.enum` module extends the standard enumerations such that 
    The enumeration does not have to subclass :class:`enum.IntEnum` or have :class:`int` as one of its base classes; it only needs to have integers as values of every member. Using enumerations based on :class:`enum.Enum` rather than :class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
 
 
-.. _lang-valuecasting:
+.. _lang-valuelike:
 
 Value casting
 =============
 
-Like shapes, values may be *cast* from other objects, which are called *value-castable*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
+Like shapes, values may be *cast* from other objects, which are called *value-like*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
 
 .. TODO: link to ValueCastable
 
-Casting to a value can be done explicitly with ``Value.cast``, but is usually implicit, since value-castable objects are accepted anywhere values are.
+Casting to a value can be done explicitly with ``Value.cast``, but is usually implicit, since value-like objects are accepted anywhere values are.
 
 
 Values from integers
@@ -343,7 +343,7 @@ A *signal* is a value representing a (potentially) varying number. Signals can b
 Signal shapes
 -------------
 
-A signal can be created with an explicitly specified shape (any :ref:`shape-castable <lang-shapecasting>` object); if omitted, the shape defaults to ``unsigned(1)``. Although rarely useful, 0-bit signals are permitted.
+A signal can be created with an explicitly specified shape (any :ref:`shape-like <lang-shapelike>` object); if omitted, the shape defaults to ``unsigned(1)``. Although rarely useful, 0-bit signals are permitted.
 
 .. doctest::
 
@@ -444,7 +444,7 @@ Amaranth provides aggregate data structures in the standard library module :mod:
 Operators
 =========
 
-To describe computations, Amaranth values can be combined with each other or with :ref:`value-castable <lang-valuecasting>` objects using a rich array of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
+To describe computations, Amaranth values can be combined with each other or with :ref:`value-like <lang-valuelike>` objects using a rich array of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
 
 
 .. _lang-abstractexpr:

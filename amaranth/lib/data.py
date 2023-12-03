@@ -26,7 +26,7 @@ class Field:
 
     Attributes
     ----------
-    shape : :ref:`shape-castable <lang-shapecasting>`
+    shape : :ref:`shape-like <lang-shapelike>`
         Shape of the field. When initialized or assigned, the object is stored as-is.
     offset : :class:`int`, >=0
         Index of the least significant bit of the field.
@@ -56,7 +56,7 @@ class Field:
         """Width of the field.
 
         This property should be used over ``self.shape.width`` because ``self.shape`` can be
-        an arbitrary :ref:`shape-castable <lang-shapecasting>` object, which may not have
+        an arbitrary :ref:`shape-like <lang-shapelike>` object, which may not have
         a ``width`` property.
 
         Returns
@@ -82,7 +82,7 @@ class Field:
 class Layout(ShapeCastable, metaclass=ABCMeta):
     """Description of a data layout.
 
-    The :ref:`shape-castable <lang-shapecasting>` :class:`Layout` interface associates keys
+    The :ref:`shape-like <lang-shapelike>` :class:`Layout` interface associates keys
     (string names or integer indexes) with fields, giving identifiers to spans of bits in
     an Amaranth value.
 
@@ -96,7 +96,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
 
     @staticmethod
     def cast(obj):
-        """Cast a :ref:`shape-castable <lang-shapecasting>` object to a layout.
+        """Cast a :ref:`shape-like <lang-shapelike>` object to a layout.
 
         This method performs a subset of the operations done by :meth:`Shape.cast`; it will
         recursively call ``.as_shape()``, but only until a layout is returned.
@@ -279,7 +279,7 @@ class StructLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-castable <lang-shapecasting>`
+    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
         Dictionary of structure members.
     """
 
@@ -350,7 +350,7 @@ class UnionLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-castable <lang-shapecasting>`
+    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
         Dictionary of union members.
     """
     def __init__(self, members):
@@ -425,7 +425,7 @@ class ArrayLayout(Layout):
 
     Attributes
     ----------
-    elem_shape : :ref:`shape-castable <lang-shapecasting>`
+    elem_shape : :ref:`shape-like <lang-shapelike>`
         Shape of an individual element.
     length : :class:`int`
         Amount of elements.
@@ -567,7 +567,7 @@ class FlexibleLayout(Layout):
 class View(ValueCastable):
     """A value viewed through the lens of a layout.
 
-    The :ref:`value-castable <lang-valuecasting>` class :class:`View` provides access to the fields
+    The :ref:`value-like <lang-valuelike>` class :class:`View` provides access to the fields
     of an underlying Amaranth value via the names or indexes defined in the provided layout.
 
     Creating a view
@@ -583,7 +583,7 @@ class View(ValueCastable):
     a value-castable object. If the shape of the field is a :class:`Layout`, it will be
     a :class:`View`; if it is a class deriving from :class:`Struct` or :class:`Union`, it
     will be an instance of that data class; if it is another
-    :ref:`shape-castable <lang-shapecasting>` object implementing ``__call__``, it will be
+    :ref:`shape-like <lang-shapelike>` object implementing ``__call__``, it will be
     the result of calling that method.
 
     Slicing a view whose layout is an :class:`ArrayLayout` can be done with an index that is
@@ -859,7 +859,7 @@ class Struct(View, metaclass=_AggregateMeta):
     to describe the structure layout and reset values for the fields using Python
     :term:`variable annotations <python:variable annotation>`.
 
-    Any annotations containing :ref:`shape-castable <lang-shapecasting>` objects are used,
+    Any annotations containing :ref:`shape-like <lang-shapelike>` objects are used,
     in the order in which they appear in the source code, to construct a :class:`StructLayout`.
     The values assigned to such annotations are used to populate the reset value of the signal
     created by the view. Any other annotations are kept as-is.

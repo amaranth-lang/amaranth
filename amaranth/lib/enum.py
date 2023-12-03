@@ -19,13 +19,13 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     protocol.
 
     This metaclass provides the :meth:`as_shape` method, making its instances
-    :ref:`shape-castable <lang-shapecasting>`, and accepts a ``shape=`` keyword argument
+    :ref:`shape-like <lang-shapelike>`, and accepts a ``shape=`` keyword argument
     to specify a shape explicitly. Other than this, it acts the same as the standard
     :class:`enum.EnumMeta` class; if the ``shape=`` argument is not specified and
     :meth:`as_shape` is never called, it places no restrictions on the enumeration class
     or the values of its members.
 
-    When a :ref:`value-castable <lang-valuecasting>` is cast to an enum type that is an instance
+    When a :ref:`value-like <lang-valuelike>` is cast to an enum type that is an instance
     of this metaclass, it can be automatically wrapped in a view class. A custom view class
     can be specified by passing the ``view_class=`` keyword argument when creating the enum class.
     """
@@ -139,7 +139,7 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         When given an integer constant, it returns the corresponding enum value, like a standard
         Python enumeration.
 
-        When given a :ref:`value-castable <lang-valuecasting>`, it is cast to a value, then wrapped
+        When given a :ref:`value-like <lang-valuelike>`, it is cast to a value, then wrapped
         in the ``view_class`` specified for this enum type (:class:`EnumView` for :class:`Enum`,
         :class:`FlagView` for :class:`Flag`, or a custom user-defined class). If the type has no
         ``view_class`` (like :class:`IntEnum` or :class:`IntFlag`), a plain
@@ -214,7 +214,7 @@ class EnumView(ValueCastable):
 
     def __init__(self, enum, target):
         """Constructs a view with the given enum type and target
-        (a :ref:`value-castable <lang-valuecasting>`).
+        (a :ref:`value-like <lang-valuelike>`).
         """
         if not isinstance(enum, EnumMeta) or not hasattr(enum, "_amaranth_shape_"):
             raise TypeError(f"EnumView type must be an enum with shape, not {enum!r}")
@@ -312,7 +312,7 @@ class FlagView(EnumView):
     values of the same enum type."""
 
     def __invert__(self):
-        """Inverts all flags in this value and returns another :ref:`FlagView`.
+        """Inverts all flags in this value and returns another :class:`FlagView`.
 
         Note that this is not equivalent to applying bitwise negation to the underlying value:
         just like the Python :class:`enum.Flag` class, only bits corresponding to flags actually

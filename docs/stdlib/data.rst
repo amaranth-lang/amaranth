@@ -61,7 +61,7 @@ While this implementation works, it is repetitive, error-prone, hard to read, an
 
     m.d.comb += o_gray.eq((i_color.red + i_color.green + i_color.blue) << 1)
 
-The :class:`View` is :ref:`value-castable <lang-valuecasting>` and can be used anywhere a plain value can be used. For example, it can be assigned to in the usual way:
+The :class:`View` is :ref:`value-like <lang-valuelike>` and can be used anywhere a plain value can be used. For example, it can be assigned to in the usual way:
 
 .. testcode::
 
@@ -135,7 +135,7 @@ In case the data has related operations or transformations, :class:`View` can be
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
+Here, the ``RGBLayout`` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
 
 .. doctest::
 
