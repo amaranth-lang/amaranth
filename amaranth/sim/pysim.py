@@ -63,10 +63,17 @@ class _VCDWriter:
                 signal_names[signal].add((*subfragment_name, signal_name))
 
         trace_names = SignalDict()
+        assigned_names = set()
         for trace in traces:
             for trace_signal in trace._rhs_signals():
                 if trace_signal not in signal_names:
-                    trace_names[trace_signal] = {("bench", trace_signal.name)}
+                    if trace_signal.name not in assigned_names:
+                        name = trace_signal.name
+                    else:
+                        name = f"{trace_signal.name}${len(assigned_names)}"
+                        assert name not in assigned_names
+                    trace_names[trace_signal] = {("bench", name)}
+                    assigned_names.add(name)
                 self.traces.append(trace_signal)
 
         if self.vcd_writer is None:
