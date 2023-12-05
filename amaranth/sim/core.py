@@ -80,18 +80,22 @@ class Simulator:
                             .format(process))
         return process
 
-    def add_process(self, process):
+    def add_process(self, process, *, passive=False):
         process = self._check_process(process)
         def wrapper():
+            if passive:
+                yield Passive()
             # Only start a bench process after comb settling, so that the initial values are correct.
             yield object.__new__(Settle)
             yield from process()
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
     @deprecated("The `add_sync_process` method is deprecated per RFC 47. Use `add_process` or `add_testbench` instead.")
-    def add_sync_process(self, process, *, domain="sync"):
+    def add_sync_process(self, process, *, domain="sync", passive=False):
         process = self._check_process(process)
         def wrapper():
+            if passive:
+                yield Passive()
             # Only start a sync process after the first clock edge (or reset edge, if the domain
             # uses an asynchronous reset). This matches the behavior of synchronous FFs.
             generator = process()
@@ -114,9 +118,11 @@ class Simulator:
                     exception = e
         self._engine.add_coroutine_process(wrapper, default_cmd=Tick(domain))
 
-    def add_testbench(self, process):
+    def add_testbench(self, process, *, passive=False):
         process = self._check_process(process)
         def wrapper():
+            if passive:
+                yield Passive()
             generator = process()
             # Only start a bench process after power-on reset finishes. Use object.__new__ to
             # avoid deprecation warning.
