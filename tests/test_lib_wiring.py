@@ -671,6 +671,12 @@ class PureInterfaceTestCase(unittest.TestCase):
         intf = PureInterface(sig, path=("test",))
         self.assertEqual(repr(intf), "<PureInterface: Signature({'a': In(4), 'b': Out(signed(2))}), a=(sig test__a), b=(sig test__b)>")
 
+    def test_repr_inherit(self):
+        class CustomInterface(PureInterface):
+            pass
+        intf = CustomInterface(Signature({}), path=())
+        self.assertRegex(repr(intf), r"^<CustomInterface: .+?>$")
+
 
 class FlippedInterfaceTestCase(unittest.TestCase):
     def test_basic(self):
