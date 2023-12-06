@@ -87,7 +87,10 @@ class Simulator:
                 yield Passive()
             # Only start a bench process after comb settling, so that the initial values are correct.
             yield object.__new__(Settle)
-            yield from process()
+            generator = process()
+            if inspect.isawaitable(generator):
+                generator = generator.__await__()
+            yield from generator
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
     @deprecated("The `add_sync_process` method is deprecated per RFC 47. Use `add_process` or `add_testbench` instead.")
@@ -99,6 +102,8 @@ class Simulator:
             # Only start a sync process after the first clock edge (or reset edge, if the domain
             # uses an asynchronous reset). This matches the behavior of synchronous FFs.
             generator = process()
+            if inspect.isawaitable(generator):
+                generator = generator.__await__()
             result = None
             exception = None
             yield Tick(domain)
@@ -124,6 +129,8 @@ class Simulator:
             if passive:
                 yield Passive()
             generator = process()
+            if inspect.isawaitable(generator):
+                generator = generator.__await__()
             # Only start a bench process after power-on reset finishes. Use object.__new__ to
             # avoid deprecation warning.
             yield object.__new__(Settle)
