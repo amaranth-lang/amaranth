@@ -58,6 +58,35 @@ class Active(Command):
         return "(active)"
 
 
+class _Changed(Command):
+    def __init__(self, signal, value=None):
+        self.signal = signal
+        self.value = value
+
+
+class _AsyncTrigger:
+    def __init__(self, cmd):
+        self.cmd = cmd
+
+    def __await__(self):
+        yield self.cmd
+
+    async def until(self, condition):
+        while not (await condition.get()):
+            await self
+
+
+class SimulatorContext:
+    def delay(self, interval=None):
+        return _AsyncTrigger(Delay(interval))
+
+    def tick(self, domain="sync"):
+        return _AsyncTrigger(Tick(domain))
+
+    def changed(self, signal, value=None):
+        return _AsyncTrigger(_Changed(signal, value))
+
+
 class Simulator:
     def __init__(self, fragment, *, engine="pysim"):
         if isinstance(engine, type) and issubclass(engine, BaseEngine):
@@ -87,7 +116,10 @@ class Simulator:
                 yield Passive()
             # Only start a bench process after comb settling, so that the initial values are correct.
             yield object.__new__(Settle)
-            generator = process()
+            if "sim" in inspect.signature(process).parameters:
+                generator = process(sim=SimulatorContext())
+            else:
+                generator = process()
             if inspect.isawaitable(generator):
                 generator = generator.__await__()
             yield from generator
@@ -101,7 +133,10 @@ class Simulator:
                 yield Passive()
             # Only start a sync process after the first clock edge (or reset edge, if the domain
             # uses an asynchronous reset). This matches the behavior of synchronous FFs.
-            generator = process()
+            if "sim" in inspect.signature(process).parameters:
+                generator = process(sim=SimulatorContext())
+            else:
+                generator = process()
             if inspect.isawaitable(generator):
                 generator = generator.__await__()
             result = None
@@ -128,7 +163,10 @@ class Simulator:
         def wrapper():
             if passive:
                 yield Passive()
-            generator = process()
+            if "sim" in inspect.signature(process).parameters:
+                generator = process(sim=SimulatorContext())
+            else:
+                generator = process()
             if inspect.isawaitable(generator):
                 generator = generator.__await__()
             # Only start a bench process after power-on reset finishes. Use object.__new__ to

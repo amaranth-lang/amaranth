@@ -3,7 +3,7 @@ import inspect
 from ..hdl import *
 from ..hdl._ast import Statement, SignalSet, ValueCastable
 from ..hdl._mem import MemorySimRead, MemorySimWrite
-from .core import Tick, Settle, Delay, Passive, Active
+from .core import Tick, Settle, Delay, Passive, Active, _Changed
 from ._base import BaseProcess, BaseMemoryState
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
 
@@ -102,6 +102,10 @@ class PyCoroProcess(BaseProcess):
                     self.add_trigger(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
                         self.add_trigger(domain.rst, trigger=1)
+                    return
+
+                elif type(command) is _Changed:
+                    self.add_trigger(command.signal, trigger=command.value)
                     return
 
                 elif type(command) is Settle:
