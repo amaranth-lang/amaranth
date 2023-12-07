@@ -5,6 +5,7 @@ import inspect
 import re
 import warnings
 
+from .. import tracer
 from ..hdl.ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
 from ..hdl.ir import Elaboratable
 from .._utils import final
@@ -219,23 +220,27 @@ class SignatureMembers(Mapping):
             if member.is_signature:
                 yield from member.signature.members.flatten(path=(*path, name))
 
-    def create(self, *, path=()):
+    def create(self, *, path=None, src_loc_at=0):
+        if path is None:
+            path = (tracer.get_var_name(depth=2 + src_loc_at, default="$signature"),)
         attrs = {}
         for name, member in self.items():
-            def create_value(path):
+            def create_value(path, *, src_loc_at):
                 if member.is_port:
-                    return Signal(member.shape, reset=member.reset,
+                    return Signal(member.shape, reset=member.reset, src_loc_at=1 + src_loc_at,
                                   name="__".join(str(item) for item in path))
                 if member.is_signature:
-                    return member.signature.create(path=path)
+                    return member.signature.create(path=path, src_loc_at=1 + src_loc_at)
                 assert False # :nocov:
-            def create_dimensions(dimensions, *, path):
+            def create_dimensions(dimensions, *, path, src_loc_at):
                 if not dimensions:
-                    return create_value(path)
+                    return create_value(path, src_loc_at=1 + src_loc_at)
                 dimension, *rest_of_dimensions = dimensions
-                return [create_dimensions(rest_of_dimensions, path=(*path, index))
+                return [create_dimensions(rest_of_dimensions, path=(*path, index),
+                                          src_loc_at=1 + src_loc_at)
                         for index in range(dimension)]
-            attrs[name] = create_dimensions(member.dimensions, path=(*path, name))
+            attrs[name] = create_dimensions(member.dimensions, path=(*path, name),
+                                            src_loc_at=1 + src_loc_at)
         return attrs
 
     def __repr__(self):
@@ -503,8 +508,8 @@ class Signature(metaclass=SignatureMeta):
                     continue
         return result
 
-    def create(self, *, path=()):
-        return PureInterface(self, path=path)
+    def create(self, *, path=None, src_loc_at=0):
+        return PureInterface(self, path=path, src_loc_at=1 + src_loc_at)
 
     def __repr__(self):
         if type(self) is Signature:
@@ -593,18 +598,19 @@ class FlippedSignature:
         except AttributeError:
             delattr(self.__unflipped, name)
 
-    def create(self, *, path=()):
-        return flipped(self.__unflipped.create(path=path))
+    def create(self, *args, path=None, src_loc_at=0, **kwargs):
+        return flipped(self.__unflipped.create(*args, path=path, src_loc_at=1 + src_loc_at,
+                                               **kwargs))
 
     def __repr__(self):
         return f"{self.__unflipped!r}.flip()"
 
 
 class PureInterface:
-    def __init__(self, signature, *, path):
+    def __init__(self, signature, *, path=None, src_loc_at=0):
         self.__dict__.update({
             "signature": signature,
-            **signature.members.create(path=path)
+            **signature.members.create(path=path, src_loc_at=1 + src_loc_at)
         })
 
     def __repr__(self):
@@ -864,7 +870,7 @@ class Component(Elaboratable):
             if hasattr(self, name):
                 raise NameError(f"Cannot initialize attribute for signature member {name!r} "
                                 f"because an attribute with the same name already exists")
-        self.__dict__.update(self.signature.members.create())
+        self.__dict__.update(self.signature.members.create(path=()))
 
     @property
     def signature(self):
