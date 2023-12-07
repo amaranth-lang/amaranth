@@ -279,9 +279,9 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(list(attrs.keys()), ["a", "s"])
         self.assertIsInstance(attrs["a"], Signal)
         self.assertEqual(attrs["a"].shape(), unsigned(1))
-        self.assertEqual(attrs["a"].name, "a")
+        self.assertEqual(attrs["a"].name, "attrs__a")
         self.assertEqual(attrs["s"].b.shape(), unsigned(2))
-        self.assertEqual(attrs["s"].b.name, "s__b")
+        self.assertEqual(attrs["s"].b.name, "attrs__s__b")
 
     def test_create_reset(self):
         members = SignatureMembers({
@@ -301,7 +301,7 @@ class SignatureMembersTestCase(unittest.TestCase):
         for x in members["a"]:
             for y in x:
                 self.assertIsInstance(y, Signal)
-        self.assertEqual(members["a"][1][2].name, "a__1__2")
+        self.assertEqual(members["a"][1][2].name, "members__a__1__2")
 
     def test_repr(self):
         self.assertEqual(repr(SignatureMembers({})),
@@ -773,8 +773,8 @@ class FlippedInterfaceTestCase(unittest.TestCase):
                 return 69
 
         class CustomSignature(Signature):
-            def create(self, *, path=()):
-                return CustomInterface(self, path=path)
+            def create(self, *, path=None, src_loc_at=0):
+                return CustomInterface(self, path=path, src_loc_at=1 + src_loc_at)
 
         flipped_interface = CustomSignature({}).flip().create()
         self.assertTrue(hasattr(flipped_interface, "custom_method"))
