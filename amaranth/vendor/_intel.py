@@ -197,7 +197,6 @@ class IntelPlatform(TemplatedPlatform):
                 read_ilang {{file}}
             {% endfor %}
             read_ilang {{name}}.il
-            delete w:$verilog_initial_trigger
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_intel_alm {{get_override("synth_opts")|options}} -top {{name}}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
