@@ -4,8 +4,8 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
-Version 0.4 (unreleased)
-========================
+Version 0.4
+===========
 
 Support has been added for a new and improved way of defining data structures in :mod:`amaranth.lib.data` and component interfaces in :mod:`amaranth.lib.wiring`, as defined in `RFC 1`_ and `RFC 2`_. :class:`Record` has been deprecated. In a departure from the usual policy, to give designers additional time to migrate, :class:`Record` will be removed in Amaranth 0.6 (one release later than normal).
 
