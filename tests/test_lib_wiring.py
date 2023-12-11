@@ -711,17 +711,15 @@ class FlippedInterfaceTestCase(unittest.TestCase):
 
     def test_propagate_flipped(self):
         class InterfaceWithFlippedSub(Component):
-            signature = Signature({
-                "a": In(Signature({
-                    "b": Out(Signature({
-                        "c": Out(1)
-                    })),
-                    "d": In(Signature({
-                        "e": Out(1)
-                    })),
-                    "f": Out(1)
-                }))
-            })
+            a: In(Signature({
+                "b": Out(Signature({
+                    "c": Out(1)
+                })),
+                "d": In(Signature({
+                    "e": Out(1)
+                })),
+                "f": Out(1)
+            }))
 
             def __init__(self):
                 super().__init__()
@@ -984,53 +982,6 @@ class ComponentTestCase(unittest.TestCase):
                 r"with the same name already exists$"):
             C()
 
-    def test_missing_in_out_warning(self):
-        class C1(Component):
-            prt1 : In(1)
-            sig2 : Signal
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C1' has an annotation 'sig2: Signal', which is not a signature "
-                r"member; did you mean 'sig2: In\(Signal\)' or 'sig2: Out\(Signal\)'\?$"):
-            C1().signature
-
-        class C2(Component):
-            prt1 : In(1)
-            sig2 : Signature({})
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C2' has an annotation 'sig2: Signature\({}\)', which is not "
-                r"a signature member; did you mean 'sig2: In\(Signature\({}\)\)' or "
-                r"'sig2: Out\(Signature\({}\)\)'\?$"):
-            C2().signature
-
-        class MockValueCastable(ValueCastable):
-            def shape(self): pass
-            @ValueCastable.lowermethod
-            def as_value(self): pass
-
-        class C3(Component):
-            prt1 : In(1)
-            val2 : MockValueCastable
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C3' has an annotation 'val2: MockValueCastable', which is not "
-                r"a signature member; did you mean 'val2: In\(MockValueCastable\)' or "
-                r"'val2: Out\(MockValueCastable\)'\?$"):
-            C3().signature
-
-    def test_bug_882(self):
-        class PageBuffer(Component):
-            rand: Signature({}).flip()
-            other: Out(1)
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.PageBuffer' has an annotation 'rand: Signature\({}\)\.flip\(\)', "
-                r"which is not a signature member; did you mean "
-                r"'rand: In\(Signature\({}\)\.flip\(\)\)' or "
-                r"'rand: Out\(Signature\({}\)\.flip\(\)\)'\?$"):
-            PageBuffer()
-
     def test_inherit(self):
         class A(Component):
             clk: In(1)
@@ -1054,3 +1005,49 @@ class ComponentTestCase(unittest.TestCase):
         with self.assertRaisesRegex(SignatureError,
                 r"^Member 'a' is redefined in .*<locals>.B$"):
             B()
+
+    def test_create(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__(Signature({
+                    "a": In(width)
+                }))
+
+        c = C(2)
+        self.assertEqual(c.signature, Signature({"a": In(2)}))
+        self.assertIsInstance(c.a, Signal)
+        self.assertEqual(c.a.shape(), unsigned(2))
+
+    def test_create_dict(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__({
+                    "a": In(width)
+                })
+
+        c = C(2)
+        self.assertEqual(c.signature, Signature({"a": In(2)}))
+        self.assertIsInstance(c.a, Signal)
+        self.assertEqual(c.a.shape(), unsigned(2))
+
+    def test_create_wrong(self):
+        class C(Component):
+            a: In(2)
+
+            def __init__(self, width):
+                super().__init__(Signature({
+                    "a": In(width)
+                }))
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Signature was passed as an argument, but component '.*.C' already has signature member annotations$"):
+            C(2)
+
+    def test_create_wrong_type(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__(4)
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Object 4 is not a signature nor a dict$"):
+            C(2)

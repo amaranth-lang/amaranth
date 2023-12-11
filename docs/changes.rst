@@ -64,6 +64,7 @@ Implemented RFCs
 .. _RFC 34: https://amaranth-lang.org/rfcs/0034-interface-rename.html
 .. _RFC 35: https://amaranth-lang.org/rfcs/0035-shapelike-valuelike.html
 .. _RFC 37: https://amaranth-lang.org/rfcs/0037-make-signature-immutable.html
+.. _RFC 38: https://amaranth-lang.org/rfcs/0038-component-signature-immutability.html
 
 
 * `RFC 1`_: Aggregate data structure library
@@ -85,6 +86,7 @@ Implemented RFCs
 * `RFC 34`_: Rename ``amaranth.lib.wiring.Interface`` to ``PureInterface``
 * `RFC 35`_: Add ``ShapeLike``, ``ValueLike``
 * `RFC 37`_: Make ``Signature`` immutable
+* `RFC 38`_: ``Component.signature`` immutability
 
 
 Language changes
