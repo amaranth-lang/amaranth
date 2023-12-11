@@ -151,8 +151,12 @@ class SignatureError(Exception):
 class SignatureMembers(Mapping):
     def __init__(self, members=()):
         self._dict = dict()
-        self._frozen = False
-        self += members
+        for name, member in dict(members).items():
+            self._check_name(name)
+            if type(member) is not Member:
+                raise TypeError(f"Value {member!r} must be a member; "
+                                f"did you mean In({member!r}) or Out({member!r})?")
+            self._dict[name] = member
 
     def flip(self):
         return FlippedSignatureMembers(self)
@@ -179,16 +183,7 @@ class SignatureMembers(Mapping):
         return self._dict[name]
 
     def __setitem__(self, name, member):
-        self._check_name(name)
-        if name in self._dict:
-            raise SignatureError(f"Member '{name}' already exists in the signature and cannot "
-                                 f"be replaced")
-        if type(member) is not Member:
-            raise TypeError(f"Assigned value {member!r} must be a member; "
-                            f"did you mean In({member!r}) or Out({member!r})?")
-        if self._frozen:
-            raise SignatureError("Cannot add members to a frozen signature")
-        self._dict[name] = member
+        raise SignatureError("Members cannot be added to a signature once constructed")
 
     def __delitem__(self, name):
         raise SignatureError("Members cannot be removed from a signature")
@@ -198,21 +193,6 @@ class SignatureMembers(Mapping):
 
     def __len__(self):
         return len(self._dict)
-
-    def __iadd__(self, members):
-        for name, member in dict(members).items():
-            self[name] = member
-        return self
-
-    @property
-    def frozen(self):
-        return self._frozen
-
-    def freeze(self):
-        self._frozen = True
-        for member in self.values():
-            if member.is_signature:
-                member.signature.freeze()
 
     def flatten(self, *, path=()):
         for name, member in self.items():
@@ -244,8 +224,7 @@ class SignatureMembers(Mapping):
         return attrs
 
     def __repr__(self):
-        frozen_repr = ".freeze()" if self._frozen else ""
-        return f"SignatureMembers({self._dict}){frozen_repr}"
+        return f"SignatureMembers({self._dict})"
 
 
 @final
@@ -276,17 +255,6 @@ class FlippedSignatureMembers(Mapping):
 
     def __len__(self):
         return self.__unflipped.__len__()
-
-    def __iadd__(self, members):
-        self.__unflipped.__iadd__({name: member.flip() for name, member in members.items()})
-        return self
-
-    @property
-    def frozen(self):
-        return self.__unflipped.frozen
-
-    def freeze(self):
-        self.__unflipped.freeze()
 
     # These methods do not access instance variables and so their implementation can be shared
     # between the normal and the flipped member collections.
@@ -358,12 +326,6 @@ class Signature(metaclass=SignatureMeta):
     def members(self):
         return self.__members
 
-    @members.setter
-    def members(self, new_members):
-        # The setter is called when `sig.members += ...` is used.
-        if new_members is not self.__members:
-            raise AttributeError("property 'members' of 'Signature' object cannot be set")
-
     def __eq__(self, other):
         other_unflipped = other.flip() if type(other) is FlippedSignature else other
         if type(self) is type(other_unflipped) is Signature:
@@ -373,14 +335,6 @@ class Signature(metaclass=SignatureMeta):
             # Otherwise (if `self` refers to a derived class) compare by identity. This will
             # usually be overridden in a derived class.
             return self is other
-
-    @property
-    def frozen(self):
-        return self.members.frozen
-
-    def freeze(self):
-        self.members.freeze()
-        return self
 
     def flatten(self, obj):
         for name, member in self.members.items():
@@ -544,11 +498,6 @@ class FlippedSignature:
     def members(self):
         return FlippedSignatureMembers(self.__unflipped.members)
 
-    @members.setter
-    def members(self, new_members):
-        if new_members.flip() is not self.__unflipped.members:
-            raise AttributeError("property 'members' of 'FlippedSignature' object cannot be set")
-
     def __eq__(self, other):
         if type(other) is FlippedSignature:
             # Trivial case.
@@ -561,10 +510,8 @@ class FlippedSignature:
             # in infinite recursion.
             return NotImplemented
 
-    # These methods do not access instance variables and so their implementation can be shared
+    # This method does not access instance variables and so its implementation can be shared
     # between the normal and the flipped member collections.
-    frozen = Signature.frozen
-    freeze = Signature.freeze
     is_compliant = Signature.is_compliant
 
     # FIXME: document this logic
@@ -581,16 +528,10 @@ class FlippedSignature:
             return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        if name == "members":
-            # Although `sig.flip().members` does not call `__getattr__` but directly invokes
-            # the descriptor of the `FlippedSignature.members` property, `sig.flip().members +=`
-            # does call `__setattr__`, and this must be special-cased for the setter to work.
-            FlippedSignature.members.__set__(self, value)
-        else:
-            try: # descriptor first
-                _gettypeattr(self.__unflipped, name).__set__(self, value)
-            except AttributeError:
-                setattr(self.__unflipped, name, value)
+        try: # descriptor first
+            _gettypeattr(self.__unflipped, name).__set__(self, value)
+        except AttributeError:
+            setattr(self.__unflipped, name, value)
 
     def __delattr__(self, name):
         try: # descriptor first
@@ -703,7 +644,7 @@ def connect(m, *args, **kwargs):
             reasons_as_string = "".join("\n- " + reason for reason in reasons)
             raise ConnectionError(f"Argument {handle!r} does not match its signature:" +
                                   reasons_as_string)
-        signatures[handle] = obj.signature.freeze()
+        signatures[handle] = obj.signature
 
     # Collate signatures and build connections.
     flattens = {handle: signature.members.flatten()
@@ -875,8 +816,8 @@ class Component(Elaboratable):
     @property
     def signature(self):
         cls = type(self)
-        signature = Signature({})
-        for base in cls.mro()[:cls.mro().index(Component)]:
+        members = {}
+        for base in reversed(cls.mro()[:cls.mro().index(Component)]):
             for name, annot in base.__dict__.get("__annotations__", {}).items():
                 if name.startswith("_"):
                     continue
@@ -897,9 +838,11 @@ class Component(Elaboratable):
                         category=SyntaxWarning,
                         stacklevel=2)
                 elif type(annot) is Member:
-                    signature.members[name] = annot
-        if not signature.members:
+                    if name in members:
+                        raise SignatureError(f"Member '{name}' is redefined in {base.__module__}.{base.__qualname__}")
+                    members[name] = annot
+        if not members:
             raise NotImplementedError(
                 f"Component '{cls.__module__}.{cls.__qualname__}' does not have signature member "
                 f"annotations")
-        return signature
+        return Signature(members)
