@@ -26,6 +26,10 @@ class FlowTestCase(unittest.TestCase):
         self.assertEqual(str(Flow.In), "In")
         self.assertEqual(str(Flow.Out), "Out")
 
+    def test_flow_value(self):
+        self.assertEqual(Flow.In.value, "In")
+        self.assertEqual(Flow.Out.value, "Out")
+
 
 class MemberTestCase(unittest.TestCase):
     def test_port_member(self):

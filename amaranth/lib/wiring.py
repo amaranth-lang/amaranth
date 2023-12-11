@@ -15,8 +15,8 @@ __all__ = ["In", "Out", "Signature", "PureInterface", "connect", "flipped", "Com
 
 
 class Flow(enum.Enum):
-    Out = 0
-    In = 1
+    Out = "Out"
+    In = "In"
 
     def flip(self):
         if self == Out:
