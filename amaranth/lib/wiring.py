@@ -806,43 +806,41 @@ def connect(m, *args, **kwargs):
 
 
 class Component(Elaboratable):
-    def __init__(self):
-        for name in self.signature.members:
-            if hasattr(self, name):
-                raise NameError(f"Cannot initialize attribute for signature member {name!r} "
-                                f"because an attribute with the same name already exists")
-        self.__dict__.update(self.signature.members.create(path=()))
-
-    @property
-    def signature(self):
+    def __init__(self, signature=None):
         cls = type(self)
         members = {}
         for base in reversed(cls.mro()[:cls.mro().index(Component)]):
             for name, annot in base.__dict__.get("__annotations__", {}).items():
                 if name.startswith("_"):
                     continue
-                if (annot is Value or annot is Signal or annot is Const or
-                        (isinstance(annot, type) and issubclass(annot, ValueCastable)) or
-                        isinstance(annot, Signature)):
-                    if isinstance(annot, type):
-                        annot_repr = annot.__name__
-                    else:
-                        annot_repr = repr(annot)
-                    # To suppress this warning in the rare cases where it is necessary (and naming
-                    # the field with a leading underscore is infeasible), override the property.
-                    warnings.warn(
-                        message=f"Component '{cls.__module__}.{cls.__qualname__}' has "
-                                f"an annotation '{name}: {annot_repr}', which is not "
-                                f"a signature member; did you mean '{name}: In({annot_repr})' "
-                                f"or '{name}: Out({annot_repr})'?",
-                        category=SyntaxWarning,
-                        stacklevel=2)
-                elif type(annot) is Member:
+                if type(annot) is Member:
                     if name in members:
                         raise SignatureError(f"Member '{name}' is redefined in {base.__module__}.{base.__qualname__}")
                     members[name] = annot
         if not members:
-            raise NotImplementedError(
-                f"Component '{cls.__module__}.{cls.__qualname__}' does not have signature member "
-                f"annotations")
-        return Signature(members)
+            if signature is None:
+                raise NotImplementedError(
+                    f"Component '{cls.__module__}.{cls.__qualname__}' does not have signature "
+                    f"member annotations")
+            if isinstance(signature, dict):
+                signature = Signature(signature)
+            elif not isinstance(signature, Signature):
+                raise TypeError(f"Object {signature!r} is not a signature nor a dict")
+        else:
+            if signature is not None:
+                raise TypeError(
+                    f"Signature was passed as an argument, but component "
+                    f"'{cls.__module__}.{cls.__qualname__}' already has signature "
+                    f"member annotations")
+            signature = Signature(members)
+
+        self.__signature = signature
+        for name in signature.members:
+            if hasattr(self, name):
+                raise NameError(f"Cannot initialize attribute for signature member {name!r} "
+                                f"because an attribute with the same name already exists")
+        self.__dict__.update(signature.members.create(path=()))
+
+    @property
+    def signature(self):
+        return self.__signature
