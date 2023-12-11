@@ -61,6 +61,8 @@ Implemented RFCs
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 .. _RFC 28: https://amaranth-lang.org/rfcs/0028-override-value-operators.html
 .. _RFC 31: https://amaranth-lang.org/rfcs/0031-enumeration-type-safety.html
+.. _RFC 34: https://amaranth-lang.org/rfcs/0034-interface-rename.html
+.. _RFC 35: https://amaranth-lang.org/rfcs/0035-shapelike-valuelike.html
 
 
 * `RFC 1`_: Aggregate data structure library
@@ -79,6 +81,8 @@ Implemented RFCs
 * `RFC 22`_: Define ``ValueCastable.shape()``
 * `RFC 28`_: Allow overriding ``Value`` operators
 * `RFC 31`_: Enumeration type safety
+* `RFC 34`_: Rename ``amaranth.lib.wiring.Interface`` to ``PureInterface``
+* `RFC 35`_: Add ``ShapeLike``, ``ValueLike``
 
 
 Language changes
@@ -87,6 +91,7 @@ Language changes
 .. currentmodule:: amaranth.hdl
 
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
+* Added: :class:`ShapeLike` and :class:`ValueLike`. (`RFC 35`_)
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Added: :meth:`Const.cast`. (`RFC 4`_)
 * Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
