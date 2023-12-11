@@ -200,11 +200,11 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(list(iter(members)), ["a"])
         self.assertEqual(len(members), 1)
 
-    def test_iter_sorted(self):
+    def test_iter_insertion_order(self):
         self.assertEqual(list(iter(SignatureMembers({"a": In(1), "b": Out(1)}))),
                          ["a", "b"])
         self.assertEqual(list(iter(SignatureMembers({"b": In(1), "a": Out(1)}))),
-                         ["a", "b"])
+                         ["b", "a"])
 
     def test_flatten(self):
         sig = Signature({
@@ -913,6 +913,27 @@ class ConnectTestCase(unittest.TestCase):
                      a=NS(signature=Signature({"f": Out(1)}).flip(), f=Signal(name='q__a'))))
         self.assertEqual([repr(stmt) for stmt in m._statements], [
             '(eq (sig q__a) (sig p__a))'
+        ])
+
+    def test_unordered(self):
+        m = Module()
+        connect(m,
+                p=NS(signature=Signature({"a": Out(1),
+                                          "b": Out(Signature({"f": Out(1), "g": Out(1)}))}),
+                     a=Signal(name="p__a"),
+                     b=NS(signature=Signature({"f": Out(1), "g": Out(1)}),
+                          f=Signal(name="p__b__f"),
+                          g=Signal(name="p__b__g"))),
+                q=NS(signature=Signature({"b": In(Signature({"g": Out(1), "f": Out(1)})),
+                                          "a": In(1)}),
+                     b=NS(signature=Signature({"g": Out(1), "f": Out(1)}).flip(),
+                          g=Signal(name="q__b__g"),
+                          f=Signal(name="q__b__f")),
+                     a=Signal(name="q__a")))
+        self.assertEqual([repr(stmt) for stmt in m._statements], [
+            '(eq (sig q__a) (sig p__a))',
+            '(eq (sig q__b__f) (sig p__b__f))',
+            '(eq (sig q__b__g) (sig p__b__g))',
         ])
 
     def test_dimension(self):

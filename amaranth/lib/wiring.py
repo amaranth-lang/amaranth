@@ -163,7 +163,7 @@ class SignatureMembers(Mapping):
 
     def __eq__(self, other):
         return (isinstance(other, (SignatureMembers, FlippedSignatureMembers)) and
-                list(self.flatten()) == list(other.flatten()))
+                list(sorted(self.flatten())) == list(sorted(other.flatten())))
 
     def __contains__(self, name):
         return name in self._dict
@@ -189,7 +189,7 @@ class SignatureMembers(Mapping):
         raise SignatureError("Members cannot be removed from a signature")
 
     def __iter__(self):
-        return iter(sorted(self._dict))
+        return iter(self._dict)
 
     def __len__(self):
         return len(self._dict)
@@ -647,7 +647,7 @@ def connect(m, *args, **kwargs):
         signatures[handle] = obj.signature
 
     # Collate signatures and build connections.
-    flattens = {handle: signature.members.flatten()
+    flattens = {handle: iter(sorted(signature.members.flatten()))
                 for handle, signature in signatures.items()}
     connections = []
     # Each iteration of the outer loop is intended to connect several (usually a pair) members
