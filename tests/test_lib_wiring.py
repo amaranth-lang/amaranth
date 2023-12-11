@@ -178,29 +178,9 @@ class SignatureMembersTestCase(unittest.TestCase):
 
     def test_setitem(self):
         members = SignatureMembers()
-        members["a"] = In(1)
-        self.assertEqual(members["a"], In(1))
-
-    def test_setitem_existing(self):
-        members = SignatureMembers({"a": In(1)})
         with self.assertRaisesRegex(SignatureError,
-                r"^Member 'a' already exists in the signature and cannot be replaced$"):
-            members["a"] = Out(2)
-
-    def test_setitem_wrong(self):
-        members = SignatureMembers()
-        with self.assertRaisesRegex(TypeError,
-                r"^Member name must be a string, not 1$"):
-            members[1] = Out(1)
-        with self.assertRaisesRegex(TypeError,
-                r"^Assigned value 1 must be a member; did you mean In\(1\) or Out\(1\)\?$"):
-            members["a"] = 1
-        with self.assertRaisesRegex(NameError,
-                r"^Member name '_a' must be a valid, public Python attribute name$"):
-            members["_a"] = Out(1)
-        with self.assertRaisesRegex(NameError,
-                r"^Member name cannot be 'signature'$"):
-            members["signature"] = Out(1)
+                r"^Members cannot be added to a signature once constructed$"):
+            members["a"] = In(1)
 
     def test_delitem(self):
         members = SignatureMembers()
@@ -212,7 +192,7 @@ class SignatureMembersTestCase(unittest.TestCase):
         members = SignatureMembers()
         self.assertEqual(list(iter(members)), [])
         self.assertEqual(len(members), 0)
-        members["a"] = In(1)
+        members = SignatureMembers({"a": In(1)})
         self.assertEqual(list(iter(members)), ["a"])
         self.assertEqual(len(members), 1)
 
@@ -221,35 +201,6 @@ class SignatureMembersTestCase(unittest.TestCase):
                          ["a", "b"])
         self.assertEqual(list(iter(SignatureMembers({"b": In(1), "a": Out(1)}))),
                          ["a", "b"])
-
-    def test_iadd(self):
-        members = SignatureMembers()
-        members += {"a": In(1)}
-        members += [("b", Out(1))]
-        self.assertEqual(members, SignatureMembers({"a": In(1), "b": Out(1)}))
-
-    def test_freeze(self):
-        members = SignatureMembers({"a": In(1)})
-        self.assertEqual(members.frozen, False)
-        members.freeze()
-        self.assertEqual(members.frozen, True)
-        with self.assertRaisesRegex(SignatureError,
-                r"^Cannot add members to a frozen signature$"):
-            members += {"b": Out(1)}
-
-    def test_freeze_rec(self):
-        sig = Signature({})
-        members = SignatureMembers({
-            "a": In(1),
-            "s": Out(sig)
-        })
-        self.assertEqual(members.frozen, False)
-        self.assertEqual(sig.frozen, False)
-        self.assertEqual(sig.members.frozen, False)
-        members.freeze()
-        self.assertEqual(members.frozen, True)
-        self.assertEqual(sig.frozen, True)
-        self.assertEqual(sig.members.frozen, True)
 
     def test_flatten(self):
         sig = Signature({
@@ -303,15 +254,19 @@ class SignatureMembersTestCase(unittest.TestCase):
                 self.assertIsInstance(y, Signal)
         self.assertEqual(members["a"][1][2].name, "members__a__1__2")
 
+    def test_create_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Value 1 must be a member; did you mean In\(1\) or Out\(1\)\?$"):
+            SignatureMembers({"a": 1})
+
     def test_repr(self):
         self.assertEqual(repr(SignatureMembers({})),
                          "SignatureMembers({})")
         self.assertEqual(repr(SignatureMembers({"a": In(1)})),
                          "SignatureMembers({'a': In(1)})")
         members = SignatureMembers({"b": Out(2)})
-        members.freeze()
         self.assertEqual(repr(members),
-                         "SignatureMembers({'b': Out(2)}).freeze()")
+                         "SignatureMembers({'b': Out(2)})")
 
 
 class FlippedSignatureMembersTestCase(unittest.TestCase):
@@ -321,12 +276,14 @@ class FlippedSignatureMembersTestCase(unittest.TestCase):
         self.assertIsInstance(fmembers, FlippedSignatureMembers)
         self.assertIn("a", fmembers)
         self.assertEqual(fmembers["a"], Out(1))
-        fmembers["b"] = Out(2)
+        members = SignatureMembers({"a": In(1), "b": In(2)})
+        fmembers = members.flip()
         self.assertEqual(len(fmembers), 2)
-        self.assertEqual(members["b"], In(2))
+        self.assertEqual(fmembers["b"], Out(2))
         self.assertEqual(list(fmembers), ["a", "b"])
-        fmembers += {"c": In(2)}
-        self.assertEqual(members["c"], Out(2))
+        members = SignatureMembers({"a": In(1), "b": In(2), "c": Out(2)})
+        fmembers = members.flip()
+        self.assertEqual(fmembers["c"], In(2))
         self.assertIs(fmembers.flip(), members)
 
     def test_eq(self):
@@ -340,14 +297,6 @@ class FlippedSignatureMembersTestCase(unittest.TestCase):
         with self.assertRaisesRegex(SignatureError,
                 r"^Members cannot be removed from a signature$"):
             del fmembers["a"]
-
-    def test_freeze(self):
-        members = SignatureMembers({"a": In(1)})
-        fmembers = members.flip()
-        self.assertEqual(fmembers.frozen, False)
-        fmembers.freeze()
-        self.assertEqual(members.frozen, True)
-        self.assertEqual(fmembers.frozen, True)
 
     def test_repr(self):
         fmembers = SignatureMembers({"a": In(1)}).flip()
@@ -365,25 +314,9 @@ class SignatureTestCase(unittest.TestCase):
         self.assertNotEqual(Signature({"a": In(1)}),
                             Signature({"a": Out(1)}))
 
-    def test_freeze(self):
-        sig = Signature({"a": In(1)})
-        self.assertEqual(sig.frozen, False)
-        sig.freeze()
-        self.assertEqual(sig.frozen, True)
-        with self.assertRaisesRegex(SignatureError,
-                r"^Cannot add members to a frozen signature$"):
-            sig.members += {"b": Out(1)}
-
-    def test_members_plus_equal(self):
-        sig = Signature({})
-        # This invokes the setter of Signature.members.
-        sig.members += {"a": In(1)}
-        self.assertIn("a", sig.members)
-
     def test_members_equal_wrong(self):
         sig = Signature({})
-        with self.assertRaisesRegex(AttributeError,
-                r"property 'members' of 'Signature' object cannot be set"):
+        with self.assertRaises(AttributeError):
             sig.members = SignatureMembers({})
 
     def assertFlattenedSignature(self, actual, expected):
@@ -639,16 +572,9 @@ class FlippedSignatureTestCase(unittest.TestCase):
         fsig.x()
         self.assertEqual(x_type, S)
 
-    def test_members_plus_equal(self):
-        sig = Signature({})
-        # This invokes the setter of FlippedSignature.members.
-        sig.flip().members += {"a": In(1)}
-        self.assertIn("a", sig.members)
-
     def test_members_equal_wrong(self):
         sig = Signature({})
-        with self.assertRaisesRegex(AttributeError,
-                r"property 'members' of 'FlippedSignature' object cannot be set"):
+        with self.assertRaises(AttributeError):
             sig.flip().members = SignatureMembers({})
 
 
@@ -838,12 +764,6 @@ class ConnectTestCase(unittest.TestCase):
                 r"^Argument 0 does not match its signature:\n"
                 r"- 'arg0' does not have an attribute 'a'$"):
             connect(m, NS(signature=Signature({"a": In(1)})))
-
-    def test_signature_freeze(self):
-        m = Module()
-        intf = NS(signature=Signature({}))
-        connect(m, intf)
-        self.assertTrue(intf.signature.frozen)
 
     def test_member_missing(self):
         m = Module()
@@ -1119,3 +1039,14 @@ class ComponentTestCase(unittest.TestCase):
 
         c = C()
         self.assertEqual(c.signature, Signature({"clk": In(1), "rst": In(1)}))
+
+    def test_inherit_wrong(self):
+        class A(Component):
+            a: In(1)
+
+        class B(A):
+            a: Out(1)
+
+        with self.assertRaisesRegex(SignatureError,
+                r"^Member 'a' is redefined in .*<locals>.B$"):
+            B()
