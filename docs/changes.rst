@@ -98,7 +98,7 @@ Language changes
 * Added: :class:`ShapeLike` and :class:`ValueLike`. (`RFC 35`_)
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Added: :meth:`Const.cast`. (`RFC 4`_)
-* Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
+* Added: ``Signal(reset=)``, :meth:`Value.matches`, ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
 * Added: :meth:`Value.replicate`, superseding :class:`Repl`. (`RFC 10`_)
 * Added: :class:`Memory` supports transparent read ports with read enable.
 * Changed: creating a :class:`Signal` with a shape that is a :class:`ShapeCastable` implementing :meth:`ShapeCastable.__call__` wraps the returned object using that method. (`RFC 15`_)
@@ -106,6 +106,8 @@ Language changes
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
+* Changed: ``signed(0)`` is no longer constructible. (The semantics of this shape were never defined.)
+* Changed: :meth:`Value.__abs__` returns an unsigned value.
 * Deprecated: :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`. (Predating the RFC process.)
 * Deprecated: :meth:`Const.normalize`; use ``Const(value, shape).value`` instead of ``Const.normalize(value, shape)``. (`RFC 5`_)
 * Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
@@ -122,6 +124,7 @@ Standard library changes
 
 * Added: :mod:`amaranth.lib.enum`. (`RFC 3`_)
 * Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
+* Added: :mod:`amaranth.lib.wiring`. (`RFC 2`_)
 * Added: :mod:`amaranth.lib.crc`. (`RFC 6`_)
 * Deprecated: :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Deprecated: :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
@@ -136,6 +139,7 @@ Toolchain changes
 * Changed: text files are written with LF line endings on Windows, like on other platforms.
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
 * Added: ``env=`` argument to :meth:`build.run.BuildPlan.execute_local`.
+* Changed: :meth:`build.run.BuildPlan.add_file` rejects absolute paths.
 * Deprecated: use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 * Removed: (deprecated in 0.3) :meth:`sim.Simulator.step`.
 * Removed: (deprecated in 0.3) :mod:`back.pysim`.
@@ -151,6 +155,7 @@ Platform integration changes
 * Added: ``icepack_opts`` override in :class:`vendor.LatticeICE40Platform`.
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.LatticeMachXO2Platform`, :class:`vendor.LatticeMachXO3LPlatform`.
 * Added: Xray toolchain support in :class:`vendor.XilinxPlatform`.
+* Added: Artix UltraScale+ part support in :class:`vendor.XilinxPlatform`.
 * Added: :class:`vendor.GowinPlatform`.
 * Deprecated: :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`; import platforms directly from :mod:`vendor` instead. (`RFC 18`_)
 * Removed: (deprecated in 0.3) :mod:`lattice_machxo2`
