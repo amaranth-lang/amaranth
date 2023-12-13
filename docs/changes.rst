@@ -27,6 +27,14 @@ Standard library changes
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 
 
+Platform integration changes
+----------------------------
+
+.. currentmodule:: amaranth.vendor
+
+* Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
+
+
 Version 0.4
 ===========
 
