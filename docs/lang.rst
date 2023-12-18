@@ -293,8 +293,6 @@ Constant casting
 
 A subset of :ref:`values <lang-values>` are *constant-castable*. If a value is constant-castable and all of its operands are also constant-castable, it can be converted to a :class:`Const`, the numeric value of which can then be read by Python code. This provides a way to perform computation on Amaranth values while constructing the design.
 
-.. TODO: link to m.Case and v.matches() below
-
 Constant-castable objects are accepted anywhere a constant integer is accepted. Casting to a constant can also be done explicitly with :meth:`Const.cast`:
 
 .. doctest::
@@ -318,6 +316,8 @@ They may be used in enumeration members, provided the enumeration inherits from 
        ADD  = Cat(Funct.ADD, Op.REG)
        ADDI = Cat(Funct.ADD, Op.IMM)
        ...
+
+They may also be provided as a pattern to the :ref:`match operator <lang-matchop>` and the :ref:`Case block <lang-switch>`.
 
 .. note::
 
@@ -478,7 +478,7 @@ Although the syntax is similar, it is important to remember that Amaranth values
      ...
    TypeError: Attempted to convert Amaranth value to Python boolean
 
-Because the value of ``a``, and therefore ``a == 0``, is not known at the time when the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, Amaranth provides its own :ref:`control structures <lang-control>` that, also, manipulate circuits.
+Because the value of ``a``, and therefore ``a == 0``, is not known at the time when the ``if`` statement is executed, there is no way to decide whether the body of the statement should be executed---in fact, if the design is synthesized, by the time ``a`` has any concrete value, the Python program has long finished! To solve this problem, Amaranth provides its own :ref:`control flow syntax <lang-control>` that, also, manipulates circuits.
 
 
 .. _lang-widthext:
@@ -602,6 +602,7 @@ Operation             Description                                Notes
 
 
 .. _lang-reduceops:
+.. _lang-bool:
 
 Reduction operators
 -------------------
@@ -751,12 +752,36 @@ Amaranth operation        Equivalent Python code
    Could Amaranth have used a different indexing or iteration order for values? Yes, but it would be necessary to either place the most significant bit at index 0, or deliberately break the Python sequence type interface. Both of these options would cause more issues than using different iteration orders for numeric and sequence operations.
 
 
+.. _lang-matchop:
+
+Match operator
+--------------
+
+The :pc:`val.matches(*patterns)` operator examines a value against a set of patterns. It evaluates to :pc:`Const(1)` if the value *matches* any of the patterns, and to :pc:`Const(0)` otherwise. What it means for a value to match a pattern depends on the type of the pattern.
+
+If the pattern is a :class:`str`, it is treated as a bit mask with "don't care" bits. After removing whitespace, each character of the pattern is compared to the bit of the value in the same position as the character. If the pattern character is ``'0'`` or ``'1'``, the comparison succeeds if the bit equals ``0`` or ``1`` correspondingly. If the pattern character is ``'-'``, the comparison always succeeds. Aside from spaces and tabs, which are ignored, no other characters are accepted.
+
+Otherwise, the pattern is :ref:`cast to a constant <lang-constcasting>` and compared to :pc:`val` using the :ref:`equality operator <lang-cmpops>`.
+
+For example, given a 8-bit value :pc:`val`, :pc:`val.matches(1, '---- -01-')` is equivalent to :pc:`(val == 1) | ((val & 0b0110_0000) == 0b0100_0000)`. Note that the direction in which bits are specified for the :pc:`.match()` operator (least to most significant) is the opposite of the direction in which an integer literal is written (most to least significant). Bit patterns in this operator are treated similarly to :ref:`bit sequence operators <lang-bitops>`.
+
+The :ref:`Case <lang-switch>` control flow block accepts the same patterns, with the same meaning, as the match operator.
+
+.. TODO: https://github.com/amaranth-lang/amaranth/issues/1003
+
+.. warning::
+
+    Do not rely on the behavior of :pc:`val.matches()` with no patterns.
+
+
 .. _lang-convops:
 
 Conversion operators
 --------------------
 
-The ``.as_signed()`` and ``.as_unsigned()`` conversion operators reinterpret the bits of a value with the requested signedness. This is useful when the same value is sometimes treated as signed and sometimes as unsigned, or when a signed value is constructed using slices or concatenations. For example, ``(pc + imm[:7].as_signed()).as_unsigned()`` sign-extends the 7 least significant bits of ``imm`` to the width of ``pc``, performs the addition, and produces an unsigned result.
+The ``.as_signed()`` and ``.as_unsigned()`` conversion operators reinterpret the bits of a value with the requested signedness. This is useful when the same value is sometimes treated as signed and sometimes as unsigned, or when a signed value is constructed using slices or concatenations.
+
+For example, ``(pc + imm[:7].as_signed()).as_unsigned()`` sign-extends the 7 least significant bits of ``imm`` to the width of ``pc``, performs the addition, and produces an unsigned result.
 
 .. TODO: more general shape conversion? https://github.com/amaranth-lang/amaranth/issues/381
 
@@ -774,7 +799,7 @@ The ``Mux(sel, val1, val0)`` choice expression (similar to the :ref:`conditional
 Modules
 =======
 
-A *module* is a unit of the Amaranth design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control structures <lang-control>`, manage clock domains, and aggregate submodules.
+A *module* is a unit of the Amaranth design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control flow syntax <lang-control>`, manage clock domains, and aggregate submodules.
 
 .. TODO: link to clock domains
 .. TODO: link to submodules
@@ -789,11 +814,11 @@ Every Amaranth design starts with a fresh module:
 .. _lang-domains:
 
 Control domains
----------------
+===============
 
 A *control domain* is a named group of :ref:`signals <lang-signals>` that change their value in identical conditions.
 
-All designs have a single predefined *combinatorial domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinatorial domain.
+All designs have a single predefined *combinatorial domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinatorial domain, and refers to the same domain in all modules.
 
 A design can also have any amount of user-defined *synchronous domains*, also called *clock domains*, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
 
@@ -935,10 +960,10 @@ Multiple assignments to the same signal bits are more useful when combined with 
 
 .. _lang-control:
 
-Control structures
-------------------
+Control flow
+============
 
-Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control structures* tailored for this task: If, Switch, and FSM. The syntax of all control structures is based on :ref:`context managers <python:context-managers>` and uses ``with`` blocks, for example:
+Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control flow syntax* tailored for this task: :ref:`If/Elif/Else <lang-if>`, :ref:`Switch/Case <lang-switch>`, and :ref:`FSM/State <lang-fsm>`. The control flow syntax uses :pc:`with` blocks (it is implemented using :ref:`context managers <python:context-managers>`), for example:
 
 .. TODO: link to relevant subsections
 
@@ -950,14 +975,14 @@ Although it is possible to write any decision tree as a combination of :ref:`ass
    with m.Else():
        m.d.sync += timer.eq(timer - 1)
 
-While some Amaranth control structures are superficially similar to imperative control flow statements (such as Python's ``if``), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
+While some Amaranth control structures are superficially similar to imperative control flow statements (such as Python's :pc:`if`), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
 
 .. testcode::
 
    timer = Signal(8)
    m.d.sync += timer.eq(Mux(timer == 0, 10, timer - 1))
 
-Because all branches of a decision tree affect the generated circuit, all of the Python code inside Amaranth control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as ``print()``:
+Because all branches of a decision tree affect the generated circuit, all of the Python code inside Amaranth control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as :pc:`print()`:
 
 .. testcode::
 
@@ -1018,10 +1043,175 @@ Combining these cases together, the code above is equivalent to:
    m.d.sync += timer.eq(Mux(timer == 0, 10, timer - 1))
 
 
+.. _lang-if:
+
+:pc:`If`/:pc:`Elif`/:pc:`Else` control blocks
+---------------------------------------------
+
+Conditional control flow is described using a :pc:`with m.If(cond1):` block, which may be followed by one or more :pc:`with m.Elif(cond2):` blocks, and optionally a final :pc:`with m.Else():` block. This structure parallels Python's own :ref:`if/elif/else <python:if>` control flow syntax. For example:
+
+.. testsetup::
+
+    x_coord = Signal(8)
+    is_fporch = Signal()
+    is_active = Signal()
+    is_bporch = Signal()
+
+.. testcode::
+
+    with m.If(x_coord < 4):
+        m.d.comb += is_bporch.eq(1)
+        m.d.sync += x_coord.eq(x_coord + 1)
+    with m.Elif((x_coord >= 4) & (x_coord < 364)):
+        m.d.comb += is_active.eq(1)
+        m.d.sync += x_coord.eq(x_coord + 1)
+    with m.Elif((x_coord >= 364) & (x_coord < 374)):
+        m.d.comb += is_fporch.eq(1)
+        m.d.sync += x_coord.eq(x_coord + 1)
+    with m.Else():
+        m.d.sync += x_coord.eq(0)
+
+Within a single :pc:`If`/:pc:`Elif`/:pc:`Else` sequence of blocks, the statements within at most one block will be active at any time. This will be the first block in the order of definition whose condition, :ref:`converted to boolean <lang-bool>`, is true.
+
+If an :pc:`Else` block is present, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
+
+
+.. _lang-switch:
+
+:pc:`Switch`/:pc:`Case` control blocks
+--------------------------------------
+
+Case comparison, where a single value is examined against several different *patterns*, is described using a :pc:`with m.Switch(value):` block. This block can contain any amount of :pc:`with m.Case(*patterns)` and :pc:`with m.Default():` blocks. This structure parallels Python's own :ref:`match/case <python:match>` control flow syntax. For example:
+
+.. TODO: rename `Switch` to `Match`, to mirror `Value.matches()`?
+
+.. testsetup::
+
+    is_even = Signal()
+    is_odd  = Signal()
+    too_big = Signal()
+
+.. testcode::
+
+    value = Signal(4)
+
+    with m.Switch(value):
+        with m.Case(0, 2, 4):
+            m.d.comb += is_even.eq(1)
+        with m.Case(1, 3, 5):
+            m.d.comb += is_odd.eq(1)
+        with m.Default():
+            m.d.comb += too_big.eq(1)
+
+.. TODO: diagnostic for `Case` blocks after `Default`?
+
+Within a single :pc:`Switch` block, the statements within at most one block will be active at any time. This will be the first :pc:`Case` block in the order of definition whose pattern :ref:`matches <lang-matchop>` the value, or the first :pc:`Default` block, whichever is earlier.
+
+If a :pc:`Default` block is present, or the patterns in the :pc:`Case` blocks cover every possible :pc:`Switch` value, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
+
+.. TODO: https://github.com/amaranth-lang/amaranth/issues/1003
+
+.. warning::
+
+    Do not rely on the behavior of a :pc:`with m.Case():` with no patterns.
+
+.. tip::
+
+    While all Amaranth control flow syntax can be generated programmatically, the :pc:`Switch` control block is particularly easy to use in this way:
+
+    .. testcode::
+
+        length  = Signal(4)
+        squared = Signal.like(length * length)
+
+        with m.Switch(length):
+            for value in range(length.shape().width):
+                with m.Case(value):
+                    m.d.comb += squared.eq(value * value)
+
+
+.. _lang-fsm:
+
+:pc:`FSM`/:pc:`State` control blocks
+------------------------------------
+
+Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machine>`_ are described using a :pc:`with m.FSM():` block. This block can contain one or more :pc:`with m.State("Name")` blocks. In addition to these blocks, the :pc:`m.next = "Name"` syntax chooses which state the FSM enters on the next clock cycle. For example, this FSM performs a bus read transaction once after reset:
+
+.. testcode::
+
+    bus_addr = Signal(16)
+    r_data   = Signal(8)
+    r_en     = Signal()
+    latched  = Signal.like(r_data)
+
+    with m.FSM():
+        with m.State("Set Address"):
+            m.d.sync += addr.eq(0x1234)
+            m.next = "Strobe Read Enable"
+
+        with m.State("Strobe Read Enable"):
+            m.d.comb += r_en.eq(1)
+            m.next = "Sample Data"
+
+        with m.State("Sample Data"):
+            m.d.sync += latched.eq(r_data)
+            with m.If(r_data == 0):
+                m.next = "Set Address" # try again
+
+.. TODO: FSM() should require keyword arguments, for good measure
+
+The reset state of the FSM can be provided when defining it using the :pc:`with m.FSM(reset="Name"):` argument. If not provided, it is the first state in the order of definition. For example, this definition is equivalent to the one at the beginning of this section:
+
+.. testcode::
+
+    with m.FSM(reset="Set Address"):
+        ...
+
+The FSM belongs to a :ref:`clock domain <lang-domains>`, which is specified using the :pc:`with m.FSM(domain="dom")` argument. If not specified, it is the ``sync`` domain. For example, this definition is equivalent to the one at the beginning of this section:
+
+.. testcode::
+
+    with m.FSM(domain="sync"):
+        ...
+
+To determine (from code that is outside the FSM definition) whether it is currently in a particular state, the FSM can be captured; its :pc:`.ongoing("Name")` method returns a value that is true whenever the FSM is in the corresponding state. For example:
+
+.. testcode::
+
+    with m.FSM() as fsm:
+        ...
+
+    with m.If(fsm.ongoing("Set Address")):
+        ...
+
+Note that in Python, assignments made using :pc:`with x() as y:` syntax persist past the end of the block.
+
+.. TODO: `ongoing` currently creates a state if it doesn't exist, which seems clearly wrong but maybe some depend on it? add a diagnostic here
+.. TODO: `m.next` does the same, which is worse because adding a diagnostic is harder
+
+.. warning::
+
+    If you make a typo in the state name provided to :pc:`m.next = ...` or :pc:`fsm.ongoing(...)`, an empty and unreachable state with that name will be created with no diagnostic message.
+
+    This hazard will be eliminated in the future.
+
+.. warning::
+
+    If a non-string object is provided as a state name to :pc:`with m.State(...):`, it is cast to a string first, which may lead to surprising behavior. :pc:`with m.State(...):` **does not** treat an enumeration value specially; if one is provided, it is cast to a string, and its numeric value will have no correspondence to the numeric value of the generated state signal.
+
+    This hazard will be eliminated in the future.
+
+.. TODO: we should probably have `fsm.next = "Name"` or `fsm.next("Name")` instead
+
+.. note::
+
+    If you are nesting two state machines within each other, the :pc:`m.next = ...` syntax always refers to the innermost one. To change the state of the outer state machine from within the inner one, use an intermediate signal.
+
+
 .. _lang-comb:
 
 Combinatorial evaluation
-------------------------
+========================
 
 Signals in the combinatorial :ref:`control domain <lang-domains>` change whenever any value used to compute them changes. The final value of a combinatorial signal is equal to its :ref:`initial value <lang-initial>` updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>`. Combinatorial signals cannot hold any state.
 
@@ -1040,7 +1230,7 @@ Consider the following code:
 
 Whenever the signals ``en`` or ``b`` change, the signal ``a`` changes as well. If ``en`` is false, the final value of ``a`` is its initial value, ``1``. If ``en`` is true, the final value of ``a`` is equal to ``b + 1``.
 
-A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (i.e. implement a constant driver or a transparent latch), or unstable (i.e. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
+A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (e.g. implement a constant driver or a transparent latch), or unstable (e.g. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
 
 .. warning::
 
@@ -1058,8 +1248,80 @@ A combinatorial signal that is computed directly or indirectly based on its own 
 .. _lang-sync:
 
 Synchronous evaluation
-----------------------
+======================
 
 Signals in synchronous :ref:`control domains <lang-domains>` change whenever a specific transition (positive or negative edge) occurs on the clock of the synchronous domain. In addition, the signals in clock domains with an asynchronous reset change when such a reset is asserted. The final value of a synchronous signal is equal to its :ref:`initial value <lang-initial>` if the reset (of any type) is asserted, or to its current value updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>` otherwise. Synchronous signals always hold state.
 
 .. TODO: link to clock domains
+
+Consider the following code:
+
+.. testsetup::
+
+    up = Signal()
+    down = Signal()
+
+.. testcode::
+
+    timer = Signal(8)
+
+    with m.If(up):
+        m.d.sync += timer.eq(timer + 1)
+    with m.Elif(down):
+        m.d.sync += timer.eq(timer - 1)
+
+Whenever there is a transition on the clock of the ``sync`` domain, the :pc:`timer` signal is incremented by one if :pc:`up` is true, decremented by one if :pc:`down` is true, and retains its value otherwise.
+
+
+.. _lang-clockdomains:
+
+Clock domains
+=============
+
+.. todo:: Write this section.
+
+
+.. _lang-latesignals:
+
+:pc:`ClockSignal` and :pc:`ResetSignal`
+---------------------------------------
+
+.. todo:: Write this section.
+
+
+.. _lang-elaboration:
+
+Elaboration
+===========
+
+.. todo:: Write this section.
+
+
+.. _lang-domainrenamer:
+
+Renaming domains
+----------------
+
+.. todo:: Write this section about :class:`DomainRenamer`
+
+
+.. _lang-controlinserter:
+
+Modifying control flow
+----------------------
+
+.. todo:: Write this section about :class:`ResetInserter` and :class:`EnableInserter`
+
+
+.. _lang-memory:
+
+Memory arrays
+=============
+
+.. todo:: Write this section.
+
+
+Instances
+=========
+
+.. todo:: Write this section.
