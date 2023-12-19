@@ -820,7 +820,7 @@ A *control domain* is a named group of :ref:`signals <lang-signals>` that change
 
 All designs have a single predefined *combinatorial domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinatorial domain, and refers to the same domain in all modules.
 
-A design can also have any amount of user-defined *synchronous domains*, also called *clock domains*, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
+A design can also have any amount of user-defined *synchronous domains*, also called :ref:`clock domains <lang-clockdomains>`, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
 
 The behavior of assignments differs for signals in :ref:`combinatorial <lang-comb>` and :ref:`synchronous <lang-sync>` domains. Collectively, signals in synchronous domains contain the state of a design, whereas signals in the combinatorial domain cannot form feedback loops or hold state.
 
@@ -1050,7 +1050,8 @@ Combining these cases together, the code above is equivalent to:
 
 Conditional control flow is described using a :pc:`with m.If(cond1):` block, which may be followed by one or more :pc:`with m.Elif(cond2):` blocks, and optionally a final :pc:`with m.Else():` block. This structure parallels Python's own :ref:`if/elif/else <python:if>` control flow syntax. For example:
 
-.. testsetup::
+.. testcode::
+    :hide:
 
     x_coord = Signal(8)
     is_fporch = Signal()
@@ -1085,7 +1086,8 @@ Case comparison, where a single value is examined against several different *pat
 
 .. TODO: rename `Switch` to `Match`, to mirror `Value.matches()`?
 
-.. testsetup::
+.. testcode::
+    :hide:
 
     is_even = Signal()
     is_odd  = Signal()
@@ -1217,16 +1219,17 @@ Signals in the combinatorial :ref:`control domain <lang-domains>` change wheneve
 
 Consider the following code:
 
-.. testsetup::
+.. testcode::
+    :hide:
 
-   en = Signal()
-   b = Signal(8)
+    en = Signal()
+    b = Signal(8)
 
 .. testcode::
 
-   a = Signal(8, reset=1)
-   with m.If(en):
-       m.d.comb += a.eq(b + 1)
+    a = Signal(8, reset=1)
+    with m.If(en):
+        m.d.comb += a.eq(b + 1)
 
 Whenever the signals ``en`` or ``b`` change, the signal ``a`` changes as well. If ``en`` is false, the final value of ``a`` is its initial value, ``1``. If ``en`` is true, the final value of ``a`` is equal to ``b + 1``.
 
@@ -1250,13 +1253,14 @@ A combinatorial signal that is computed directly or indirectly based on its own 
 Synchronous evaluation
 ======================
 
-Signals in synchronous :ref:`control domains <lang-domains>` change whenever a specific transition (positive or negative edge) occurs on the clock of the synchronous domain. In addition, the signals in clock domains with an asynchronous reset change when such a reset is asserted. The final value of a synchronous signal is equal to its :ref:`initial value <lang-initial>` if the reset (of any type) is asserted, or to its current value updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>` otherwise. Synchronous signals always hold state.
+Signals in synchronous :ref:`control domains <lang-domains>` change whenever the *active edge* (a 0-to-1 or 1-to-0 transition, configured when :ref:`creating the domain <lang-clockdomains>`) occurs on the clock of the synchronous domain. In addition, the signals in clock domains with an asynchronous reset change when such a reset is asserted. The final value of a synchronous signal is equal to its :ref:`initial value <lang-initial>` if the reset (of any type) is asserted, or to its current value updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>` otherwise. Synchronous signals always hold state.
 
 .. TODO: link to clock domains
 
 Consider the following code:
 
-.. testsetup::
+.. testcode::
+    :hide:
 
     up = Signal()
     down = Signal()
@@ -1278,15 +1282,91 @@ Whenever there is a transition on the clock of the ``sync`` domain, the :pc:`tim
 Clock domains
 =============
 
-.. todo:: Write this section.
+A new synchronous :ref:`control domain <lang-domains>`, which is more often called a *clock domain*, can be defined in a design by creating a :class:`ClockDomain` object and adding it to the :pc:`m.domains` collection:
+
+.. testcode::
+
+    m.domains.video = cd_video = ClockDomain(local=True)
+
+If the name of the domain is not known upfront, another, less concise, syntax can be used instead:
+
+.. testcode::
+
+    def add_video_domain(n):
+        cd = ClockDomain(f"video_{n}", local=True)
+        m.domains += cd
+        return cd
+
+    add_video_domain(2)
+
+.. tip::
+
+    Whenever the created :class:`ClockDomain` object is immediately assigned using the :pc:`domain_name = ClockDomain(...)` or :pc:`m.domains.domain_name = ClockDomain(...)` syntax, the name of the domain may be omitted from the :pc:`ClockDomain()` invocation. In other cases, it must be provided as the first argument.
+
+A clock domain always has a clock signal, which can be accessed through the :attr:`cd.clk <ClockDomain.clk>` attribute. By default, the *active edge* of the clock domain is positive; this means that the signals in the domain change when the clock signal transitions from 0 to 1. A clock domain can be configured to have a negative active edge so that signals in it change when the clock signal transitions from 1 to 0:
+
+.. testcode::
+
+    m.domains.jtag = ClockDomain(clk_edge="neg", local=True)
+
+A clock domain also has a reset signal, which can be accessed through the :attr:`cd.rst <ClockDomain.rst>` attribute. The reset signal is always active-high: the signals in the clock domain are reset if the value of the reset signal is 1. The :ref:`initial value <lang-initial>` of this signal is 0, so if the reset signal is never assigned, the signals in the clock domain are never explicitly reset (they are still :ref:`reset at power-on <lang-initial>`). Nevertheless, if its existence is undesirable, the clock domain can be configured to omit it:
+
+.. testcode::
+
+    m.domains.startup = ClockDomain(reset_less=True, local=True)
+
+If a clock domain is defined in a module, it is also available in all of its submodules.
+
+.. warning::
+
+    Always provide the :pc:`local=True` keyword argument when defining a clock domain. The behavior of clock domains defined without this keyword argument is subject to change in near future, and is intentionally left undocumented.
+
+.. warning::
+
+    Clock domains use synchronous reset unless otherwise specified. Clock domains with asynchronous reset are implemented, but their behavior is subject to change in near future, and is intentionally left undocumented.
+
+.. TODO: mention that ResetInserter will add a reset even to a reset-less domain
+.. TODO: link to hierarchy section
 
 
 .. _lang-latesignals:
 
-:pc:`ClockSignal` and :pc:`ResetSignal`
+Late binding of clock and reset signals
 ---------------------------------------
 
-.. todo:: Write this section.
+Clock domains are *late bound*, which means that their signals and properties can be referred to using the domain's name before the :class:`ClockDomain` object with that name is created and added to the design. This happens whenever :ref:`an assignment is added <lang-assigns>` to a domain. In some cases, it is necessary to refer to the domain's clock or reset signal using only the domain's name. The :class:`ClockSignal` and :class:`ResetSignal` values make this possible:
+
+.. testcode::
+    :hide:
+
+    m = Module()
+    bus_clk = Signal()
+    bus_rstn = Signal()
+
+.. testcode::
+
+    m.d.comb += [
+        ClockSignal().eq(bus_clk),
+        ResetSignal().eq(~bus_rstn),
+    ]
+
+In this example, once the design is processed, :pc:`bus_clk` will be assigned to the clock signal of the clock domain `sync` found in this module or one of its containing modules. The :pc:`bus_rstn` signal will be assigned to the inverted reset signal of the same clock domain. With the `sync` domain created in the same module, these statements become equivalent to:
+
+.. testcode::
+
+    m.domains.sync = cd_sync = ClockDomain()
+    m.d.comb += [
+        cd_sync.clk.eq(bus_clk),
+        cd_sync.rst.eq(~bus_rstn),
+    ]
+
+The :class:`ClockSignal` and :class:`ResetSignal` values may also be assigned to other signals and used in expressions. They take a single argument, which is the name of the domain; if not specified, it defaults to :pc:`"sync"`.
+
+.. warning::
+
+    Be especially careful when using :class:`ClockSignal` or :attr:`cd.clk <ClockDomain.clk>` in expressions. Assigning to and from a clock signal is usually safe; any other operations may have unpredictable results. Consult the documentation for your synthesis toolchain and platform to understand which operations with a clock signal are permitted.
+
+    FPGAs usually have dedicated clocking facilities that can be used to disable, divide, or multiplex clock signals. When targeting an FPGA, these facilities should be used if at all possible, and expressions like :pc:`ClockSignal() & en` or :pc:`Mux(sel, ClockSignal("a"), ClockSignal("b"))` should be avoided.
 
 
 .. _lang-elaboration:
