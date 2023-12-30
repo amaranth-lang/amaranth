@@ -935,6 +935,16 @@ class CatTestCase(FHDLTestCase):
                 r"specify the width explicitly using C\(2, 2\)$"):
             Cat(2)
 
+    def test_const(self):
+        a = Const.cast(Cat(Const(1, 1), Const(0, 1), Const(3, 2), Const(2, 2)))
+        self.assertEqual(a.value, 0x2d)
+        self.assertEqual(a.width, 6)
+        self.assertEqual(a.signed, False)
+        a = Const.cast(Cat(Const(-4, 8), Const(-3, 8)))
+        self.assertEqual(a.value, 0xfdfc)
+        self.assertEqual(a.width, 16)
+        self.assertEqual(a.signed, False)
+
 
 class ReplTestCase(FHDLTestCase):
     @_ignore_deprecated
