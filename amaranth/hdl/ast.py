@@ -737,7 +737,8 @@ class Const(Value):
             width = 0
             for part in obj.parts:
                 const  = Const.cast(part)
-                value |= const.value << width
+                part_value = Const(const.value, unsigned(const.width)).value
+                value |= part_value << width
                 width += len(const)
             return Const(value, width)
         else:
