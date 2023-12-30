@@ -325,6 +325,7 @@ They may also be provided as a pattern to the :ref:`match operator <lang-matchop
 
    * :class:`Const`
    * :class:`Cat`
+   * :class:`Slice`
 
    This list will be expanded in the future.
 

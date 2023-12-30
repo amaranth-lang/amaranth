@@ -730,6 +730,9 @@ class Const(Value):
                 value |= const.value << width
                 width += len(const)
             return Const(value, width)
+        elif type(obj) is Slice:
+            value = Const.cast(obj.value)
+            return Const(value.value >> obj.start, unsigned(obj.stop - obj.start))
         else:
             raise TypeError(f"Value {obj!r} cannot be converted to an Amaranth constant")
 
