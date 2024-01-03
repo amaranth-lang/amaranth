@@ -115,6 +115,28 @@ class BuildPlan:
 
         return LocalBuildProducts(build_dir)
 
+
+    def execute_local_docker(self, image, *, root="build", docker_args=[]):
+        """
+        Execute build plan inside a Docker container. Files from the build plan are placed in the 
+        build root directory ``root`` on the local filesystem. This directory is bind mounted to 
+        ``/build`` in a container and the script ``{script}.sh`` is executed inside it.
+        ``docker_args`` is a list containing additional arguments to docker.
+
+        Returns :class:`LocalBuildProducts`.
+        """
+        build_dir = self.extract(root)
+        subprocess.check_call([
+            "docker", "run", *docker_args,
+            "--rm", # remove the container after running
+            "--mount", f"type=bind,source={build_dir},target=/build",
+            "--workdir", "/build",
+            image,
+            "sh", f"{self.script}.sh",
+        ])
+        return LocalBuildProducts(build_dir)
+
+
     def execute_remote_ssh(self, *, connect_to={}, root, run_script=True):
         """
         Execute build plan using the remote SSH strategy. Files from the build
