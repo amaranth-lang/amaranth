@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import warnings
 import zipfile
 import hashlib
 import pathlib
@@ -91,7 +92,7 @@ class BuildPlan:
         finally:
             os.chdir(cwd)
 
-    def execute_local(self, root="build", *, run_script=True, env=None):
+    def execute_local(self, root="build", *, run_script=None, env=None):
         """
         Execute build plan using the local strategy. Files from the build plan are placed in
         the build root directory ``root``, and, if ``run_script`` is ``True``, the script
@@ -99,10 +100,13 @@ class BuildPlan:
         is executed in the build root. If ``env`` is not ``None``, the environment is replaced
         with ``env``.
 
+        The ``run_script`` argument is deprecated. If you only want to extract the files
+        into a local folder, use the ``extract`` method.
+
         Returns :class:`LocalBuildProducts`.
         """
         build_dir = self.extract(root)
-        if run_script:
+        if run_script is None or run_script:
             if sys.platform.startswith("win32"):
                 # Without "call", "cmd /c {}.bat" will return 0.
                 # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
@@ -112,6 +116,13 @@ class BuildPlan:
             else:
                 subprocess.check_call(["sh", f"{self.script}.sh"],
                                         env=os.environ if env is None else env)
+        # TODO(amaranth-0.5): remove
+        if run_script is not None:
+            warnings.warn("The `run_script` argument is deprecated. If you only want to "
+                            "extract the files from the BuildPlan, use the .extract() method",
+                            DeprecationWarning, stacklevel=2)
+
+
 
         return LocalBuildProducts(build_dir)
 
