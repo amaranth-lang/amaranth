@@ -1382,6 +1382,8 @@ class Array(MutableSequence):
         self._mutable  = True
 
     def __getitem__(self, index):
+        if isinstance(index, ValueCastable):
+            index = Value.cast(index)
         if isinstance(index, Value):
             if self._mutable:
                 self._proxy_at = tracer.get_src_loc()
