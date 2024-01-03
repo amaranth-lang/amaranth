@@ -64,15 +64,10 @@ class BuildPlan:
             for filename in sorted(self.files):
                 archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
 
-    def execute_local(self, root="build", *, run_script=True, env=None):
-        """
-        Execute build plan using the local strategy. Files from the build plan are placed in
-        the build root directory ``root``, and, if ``run_script`` is ``True``, the script
-        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere)
-        is executed in the build root. If ``env`` is not ``None``, the environment is replaced
-        with ``env``.
+    def extract(self, root="build"):
+        """Extracts the files from the build plan into the local build directory ``root``.
 
-        Returns :class:`LocalBuildProducts`.
+        Returns :class:`pathlib.Path`
         """
         os.makedirs(root, exist_ok=True)
         cwd = os.getcwd()
@@ -92,22 +87,33 @@ class BuildPlan:
                     content = content.encode("utf-8")
                 with open(filename, "wb") as f:
                     f.write(content)
-
-            if run_script:
-                if sys.platform.startswith("win32"):
-                    # Without "call", "cmd /c {}.bat" will return 0.
-                    # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
-                    # Running the script manually from a command prompt is unaffected.
-                    subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
-                                          env=os.environ if env is None else env)
-                else:
-                    subprocess.check_call(["sh", f"{self.script}.sh"],
-                                          env=os.environ if env is None else env)
-
-            return LocalBuildProducts(os.getcwd())
-
+            return pathlib.Path(os.getcwd())
         finally:
             os.chdir(cwd)
+
+    def execute_local(self, root="build", *, run_script=True, env=None):
+        """
+        Execute build plan using the local strategy. Files from the build plan are placed in
+        the build root directory ``root``, and, if ``run_script`` is ``True``, the script
+        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere)
+        is executed in the build root. If ``env`` is not ``None``, the environment is replaced
+        with ``env``.
+
+        Returns :class:`LocalBuildProducts`.
+        """
+        build_dir = self.extract(root)
+        if run_script:
+            if sys.platform.startswith("win32"):
+                # Without "call", "cmd /c {}.bat" will return 0.
+                # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
+                # Running the script manually from a command prompt is unaffected.
+                subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
+                                        env=os.environ if env is None else env)
+            else:
+                subprocess.check_call(["sh", f"{self.script}.sh"],
+                                        env=os.environ if env is None else env)
+
+        return LocalBuildProducts(build_dir)
 
     def execute_remote_ssh(self, *, connect_to={}, root, run_script=True):
         """
