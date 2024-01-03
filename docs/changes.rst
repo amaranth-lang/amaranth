@@ -35,6 +35,7 @@ Platform integration changes
 
 .. currentmodule:: amaranth.vendor
 
+* Added: ``build.sh``  begins with ``#!/bin/sh``.
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
 
