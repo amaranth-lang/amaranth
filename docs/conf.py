@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath("."))
 import amaranth
 
 project = "Amaranth HDL toolchain"
-version = amaranth.__version__
+version = amaranth.__version__.replace(".editable", "")
 release = version.split("+")[0]
 copyright = "2020—2023, Amaranth HDL developers"
 
