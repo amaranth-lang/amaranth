@@ -1,3 +1,7 @@
+/* Links in text should be underlined. */
+a { text-decoration: underline; }
+.wy-menu-vertical a, .wy-side-nav-search > a { text-decoration: none; }
+
 /* Some of our section titles are looong */
 .wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
 .wy-side-nav-search { width: 325px; }
