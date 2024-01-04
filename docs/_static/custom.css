@@ -9,9 +9,11 @@ a { text-decoration: underline; }
 .wy-side-nav-search > a img.logo { width: 200px; }
 
 /* Some of our section titles are looong */
-.wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
-.wy-side-nav-search { width: 325px; }
-.wy-nav-content-wrap { margin-left: 340px; }
+@media screen and (min-width:769px) {
+  .wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
+  .wy-side-nav-search { width: 325px; }
+  .wy-nav-content-wrap { margin-left: 340px; }
+}
 
 /* We don't have a version picker widget */
 .wy-nav-side { padding-bottom: 0; }
