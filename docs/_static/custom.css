@@ -3,7 +3,7 @@ a { text-decoration: underline; }
 .wy-menu-vertical a, .wy-side-nav-search > a { text-decoration: none; }
 
 /* Match the logo colors in the background. */
-.wy-side-nav-search { background-color: #784b9a; }
+.wy-nav-top, .wy-side-nav-search { background-color: #784b9a; }
 
 /* Make the logo more reasonably sized. */
 .wy-side-nav-search > a img.logo { width: 200px; }
