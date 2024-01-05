@@ -1,7 +1,7 @@
 import inspect
 
 from ..hdl import *
-from ..hdl.ast import Statement, SignalSet
+from ..hdl.ast import Statement, SignalSet, ValueCastable
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
@@ -66,6 +66,8 @@ class PyCoroProcess(BaseProcess):
                     command = self.default_cmd
                 response = None
 
+                if isinstance(command, ValueCastable):
+                    command = Value.cast(command)
                 if isinstance(command, Value):
                     exec(_RHSValueCompiler.compile(self.state, command, mode="curr"),
                         self.exec_locals)
