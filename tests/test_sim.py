@@ -690,6 +690,27 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_process(process)
         self.assertTrue(survived)
 
+    def test_value_castable(self):
+        class MyValue(ValueCastable):
+            @ValueCastable.lowermethod
+            def as_value(self):
+                return Signal()
+            
+            def shape():
+                return unsigned(1)
+        
+        a = Array([1,2,3])
+        a[MyValue()]
+
+        survived = False
+        with self.assertSimulation(Module()) as sim:
+            def process():
+                nonlocal survived
+                yield MyValue()
+                survived = True
+            sim.add_process(process)
+        self.assertTrue(survived)
+
     def setUp_memory(self, rd_synchronous=True, rd_transparent=True, wr_granularity=None):
         self.m = Module()
         self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
