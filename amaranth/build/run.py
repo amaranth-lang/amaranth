@@ -112,25 +112,23 @@ class BuildPlan:
                 # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
                 # Running the script manually from a command prompt is unaffected.
                 subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
-                                        env=os.environ if env is None else env)
+                                      cwd=build_dir, env=os.environ if env is None else env)
             else:
                 subprocess.check_call(["sh", f"{self.script}.sh"],
-                                        env=os.environ if env is None else env)
+                                      cwd=build_dir, env=os.environ if env is None else env)
         # TODO(amaranth-0.5): remove
         if run_script is not None:
             warnings.warn("The `run_script` argument is deprecated. If you only want to "
                             "extract the files from the BuildPlan, use the .extract() method",
                             DeprecationWarning, stacklevel=2)
 
-
-
         return LocalBuildProducts(build_dir)
 
 
     def execute_local_docker(self, image, *, root="build", docker_args=[]):
         """
-        Execute build plan inside a Docker container. Files from the build plan are placed in the 
-        build root directory ``root`` on the local filesystem. This directory is bind mounted to 
+        Execute build plan inside a Docker container. Files from the build plan are placed in the
+        build root directory ``root`` on the local filesystem. This directory is bind mounted to
         ``/build`` in a container and the script ``{script}.sh`` is executed inside it.
         ``docker_args`` is a list containing additional arguments to docker.
 
