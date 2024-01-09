@@ -404,7 +404,7 @@ class TemplatedPlatform(Platform):
                 else:
                     assert False
 
-            return "\n".join(commands)
+            return "\n".join(commands) + "\n"
 
         @jinja2.pass_context
         def invoke_tool(context, name):
