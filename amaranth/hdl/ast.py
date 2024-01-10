@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import inspect
 import warnings
 import functools
+import operator
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum, EnumMeta
@@ -739,7 +740,7 @@ class Const(Value):
 
     def __init__(self, value, shape=None, *, src_loc_at=0):
         # We deliberately do not call Value.__init__ here.
-        self.value = int(value)
+        self.value = int(operator.index(value))
         if shape is None:
             shape = Shape(bits_for(self.value), signed=self.value < 0)
         elif isinstance(shape, int):
@@ -919,8 +920,8 @@ class Slice(Value):
 
         super().__init__(src_loc_at=src_loc_at)
         self.value = value
-        self.start = int(start)
-        self.stop  = int(stop)
+        self.start = int(operator.index(start))
+        self.stop  = int(operator.index(stop))
 
     def shape(self):
         return Shape(self.stop - self.start)
