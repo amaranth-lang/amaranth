@@ -9,6 +9,7 @@ from itertools import chain
 
 from ._repr import *
 from .. import tracer
+from ..utils import *
 from .._utils import *
 from .._utils import _ignore_deprecated
 from .._unused import *

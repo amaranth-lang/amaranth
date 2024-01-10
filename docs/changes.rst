@@ -10,13 +10,31 @@ Version 0.5 (unreleased)
 The Migen compatibility layer has been removed.
 
 
+Migrating from version 0.4
+--------------------------
+
+Apply the following changes to code written against Amaranth 0.4 to migrate it to version 0.5:
+
+* Update uses of :func:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`
+* Update uses of :func:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`
+
+
+Implemented RFCs
+----------------
+
+.. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
+
+* `RFC 17`_: Remove ``log2_int``
+
+
 Language changes
 ----------------
 
 .. currentmodule:: amaranth.hdl
 
-* Deprecated: argument `run_script=` in :meth:`BuildPlan.execute_local`
-* Added: `class:ast.Slice` objects have been made const-castable.
+* Added: :class:`ast.Slice` objects have been made const-castable.
+* Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
+* Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
 
@@ -39,6 +57,7 @@ Platform integration changes
 * Added: :meth:`BuildPlan.execute_local_docker`.
 * Added: :meth:`BuildPlan.extract`.
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
+* Deprecated: argument `run_script=` in :meth:`BuildPlan.execute_local`
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
 

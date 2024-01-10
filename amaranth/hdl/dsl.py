@@ -5,7 +5,8 @@ from enum import Enum
 import warnings
 import sys
 
-from .._utils import flatten, bits_for
+from .._utils import flatten
+from ..utils import bits_for
 from .. import tracer
 from .ast import *
 from .ir import *

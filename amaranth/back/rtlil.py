@@ -4,7 +4,8 @@ from contextlib import contextmanager
 import warnings
 import re
 
-from .._utils import bits_for, flatten
+from .._utils import flatten
+from ..utils import bits_for
 from ..hdl import ast, ir, mem, xfrm, _repr
 from ..lib import wiring
 
