@@ -6,11 +6,9 @@ import re
 from collections import OrderedDict
 from collections.abc import Iterable
 
-from .utils import *
 
-
-__all__ = ["flatten", "union" , "log2_int", "bits_for", "memoize", "final", "deprecated",
-           "get_linter_options", "get_linter_option"]
+__all__ = ["flatten", "union", "memoize", "final", "deprecated", "get_linter_options",
+           "get_linter_option"]
 
 
 def flatten(i):
