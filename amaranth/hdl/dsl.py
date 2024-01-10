@@ -344,7 +344,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             # If none of the provided cases can possibly be true, omit this branch completely.
             # This needs to be differentiated from no cases being provided in the first place,
             # which means the branch will always match.
-            if not (patterns and not new_patterns):
+            # Likewise, omit this branch if another branch with this exact set of patterns already
+            # exists (since otherwise we'd overwrite the previous branch's slot in the dict).
+            if not (patterns and not new_patterns) and new_patterns not in switch_data["cases"]:
                 switch_data["cases"][new_patterns] = self._statements
                 switch_data["case_src_locs"][new_patterns] = src_loc
         finally:
