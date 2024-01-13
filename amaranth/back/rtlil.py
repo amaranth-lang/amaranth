@@ -888,8 +888,13 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                 if len(value) > 0 or sub_type == "$mem_v2":
                     sub_ports[port] = rhs_compiler(value)
 
+            if isinstance(subfragment, ir.Instance):
+                src = _src(subfragment.src_loc)
+            else:
+                src = ""
+
             module.cell(sub_type, name=sub_name, ports=sub_ports, params=sub_params,
-                        attrs=subfragment.attrs)
+                        attrs=subfragment.attrs, src=src)
 
         # If we emit all of our combinatorial logic into a single RTLIL process, Verilog
         # simulators will break horribly, because Yosys write_verilog transforms RTLIL processes

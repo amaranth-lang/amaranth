@@ -3,6 +3,7 @@ from collections import defaultdict, OrderedDict
 from functools import reduce
 import warnings
 
+from .. import tracer
 from .._utils import *
 from .._unused import *
 from .ast import *
@@ -617,12 +618,13 @@ class Fragment:
 
 
 class Instance(Fragment):
-    def __init__(self, type, *args, **kwargs):
+    def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
         super().__init__()
 
         self.type        = type
         self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
+        self.src_loc     = src_loc or tracer.get_src_loc(src_loc_at)
 
         for (kind, name, value) in args:
             if kind == "a":

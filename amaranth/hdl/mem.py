@@ -166,6 +166,7 @@ class Memory(Elaboratable):
             i_WR_EN=Cat(Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in self._write_ports),
             i_WR_ADDR=Cat(port.addr for port in self._write_ports),
             i_WR_DATA=Cat(port.data for port in self._write_ports),
+            src_loc=self.src_loc,
         )
         for port in self._read_ports:
             port._MustUse__used = True
