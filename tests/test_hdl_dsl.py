@@ -366,7 +366,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
-    def test_Switch_default_Case(self):
+    def test_Switch_empty_Case(self):
         m = Module()
         with m.Switch(self.w1):
             with m.Case(3):
@@ -378,7 +378,6 @@ class DSLTestCase(FHDLTestCase):
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
-                (default (eq (sig c2) (const 1'd1)))
             )
         )
         """)

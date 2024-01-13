@@ -15,6 +15,8 @@ Migrating from version 0.4
 
 Apply the following changes to code written against Amaranth 0.4 to migrate it to version 0.5:
 
+* Replace uses of ``m.Case()`` with no patterns with ``m.Default()``
+* Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
 * Update uses of :func:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`
 * Update uses of :func:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`
 
@@ -23,8 +25,10 @@ Implemented RFCs
 ----------------
 
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
+.. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 
 * `RFC 17`_: Remove ``log2_int``
+* `RFC 39`_: Change semantics of no-argument ``m.Case()``
 
 
 Language changes
@@ -34,6 +38,8 @@ Language changes
 
 * Added: :class:`ast.Slice` objects have been made const-castable.
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
+* Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
+* Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
