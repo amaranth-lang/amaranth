@@ -750,6 +750,11 @@ class OperatorTestCase(FHDLTestCase):
         """)
         self.assertEqual(abs(s).shape(), unsigned(4))
 
+    def test_contains(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot use 'in' with an Amaranth value$"):
+            1 in Signal(3)
+
 
 class SliceTestCase(FHDLTestCase):
     def test_shape(self):

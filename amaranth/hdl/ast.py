@@ -377,6 +377,9 @@ class Value(metaclass=ABCMeta):
         else:
             raise TypeError(f"Cannot index value with {key!r}")
 
+    def __contains__(self, other):
+        raise TypeError("Cannot use 'in' with an Amaranth value")
+
     def as_unsigned(self):
         """Conversion to unsigned.
 
