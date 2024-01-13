@@ -263,7 +263,7 @@ class FragmentTransformer:
 
     def on_fragment(self, fragment):
         if isinstance(fragment, Instance):
-            new_fragment = Instance(fragment.type)
+            new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
             self.map_named_ports(fragment, new_fragment)
         else:
