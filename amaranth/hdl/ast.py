@@ -542,7 +542,7 @@ class Value(metaclass=ABCMeta):
                     continue
                 matches.append(self == pattern)
         if not matches:
-            return Const(1)
+            return Const(0)
         elif len(matches) == 1:
             return matches[0]
         else:
