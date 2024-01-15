@@ -6,7 +6,7 @@ a { text-decoration: underline; }
 .wy-nav-top, .wy-side-nav-search { background-color: #784b9a; }
 
 /* Make the logo more reasonably sized. */
-.wy-side-nav-search > a img.logo { width: 200px; }
+.wy-side-nav-search > a img.logo { width: 160px; }
 
 /* Some of our section titles are looong */
 @media screen and (min-width:769px) {
