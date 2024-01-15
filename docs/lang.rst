@@ -1449,7 +1449,70 @@ A submodule can also be added without specifying a name:
 Modifying control flow
 ----------------------
 
-.. todo:: Write this section about :class:`ResetInserter` and :class:`EnableInserter`
+Control flow within an elaboratable can be altered without introducing a new clock domain by using *control flow modifiers* that affect :ref:`synchronous evaluation <lang-sync>` of signals in a specified domain (or domains). They never affect :ref:`combinatorial evaluation <lang-comb>`. There are two control flow modifiers:
+
+* :class:`ResetInserter` introduces a synchronous reset input (or inputs), updating all of the signals in the specified domains to their :ref:`initial value <lang-initial>` whenever the active edge occurs on the clock of the domain *if* the synchronous reset input is asserted.
+* :class:`EnableInserter` introduces a synchronous enable input (or inputs), preventing any of the signals in the specified domains from changing value whenever the active edge occurs on the clock of the domain *unless* the synchronous enable input is asserted.
+
+Control flow modifiers use the syntax :pc:`Modifier(controls)(elaboratable)`, where :pc:`controls` is a mapping from :ref:`clock domain <lang-clockdomains>` names to 1-wide :ref:`values <lang-values>` and :pc:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. When only the ``sync`` domain is involved, instead of writing :pc:`Modifier({"sync": input})(elaboratable)`, the equivalent but shorter :pc:`Modifier(input)(elaboratable)` syntax can be used.
+
+The result of applying a control flow modifier to an elaboratable is, itself, an elaboratable object. A common way to use a control flow modifier is to apply it to another elaboratable while adding it as a submodule:
+
+.. testcode::
+    :hide:
+
+    m = Module()
+
+.. testcode::
+
+    rst = Signal()
+    m.submodules.counter = counter = ResetInserter(rst)(Counter())
+
+A control flow modifier affects all logic within a given elaboratable and clock domain, which includes the submodules of that elaboratable.
+
+.. note::
+
+    Applying a control flow modifier to an elaboratable does not mutate it; a new proxy object is returned that forwards attribute accesses and method calls to the original elaboratable. Whenever this proxy object is elaborated, it manipulates the circuit defined by the original elaboratable to include the requested control inputs.
+
+.. note::
+
+    It is possible to apply several control flow modifiers to the same elaboratable, even if the same domain is used. For :class:`ResetInserter`, the signals in a domain are held at their initial value whenever any of the reset inputs for that domain are asserted (logical OR), and for :class:`EnableInserter`, the signals in a domain are allowed to update whenever all of the enable signals for that domain are asserted (logical AND).
+
+Consider the following code:
+
+.. testcode::
+    :hide:
+
+    z = Signal()
+    n = Signal(8)
+    en = Signal()
+    rst = Signal()
+
+.. testcode::
+
+    m = Module()
+    m.d.sync += n.eq(n + 1)
+    m.d.comb += z.eq(n == 0)
+
+    m = ResetInserter({"sync": rst})(m)
+    m = EnableInserter({"sync": en})(m)
+
+The application of control flow modifiers in it causes the behavior of the final :pc:`m` to be identical to that of this module:
+
+.. testcode::
+
+    m = Module()
+    with m.If(en):
+        m.d.sync += n.eq(n + 1)
+    with m.If(rst):
+        m.d.sync += n.eq(n.reset)
+    m.d.comb += z.eq(n == 0)
+
+.. tip::
+
+    The control input provided to :class:`ResetInserter` must be synchronous to the domain that is being reset by it. If you need to reset another domain, use :class:`amaranth.lib.cdc.ResetSynchronizer` instead.
+
+.. TODO: link to a clock gating primitive if/when we ever get one, from a tip about EnableInserter similar to the tip about ResetInserter above
 
 
 .. _lang-domainrenamer:
