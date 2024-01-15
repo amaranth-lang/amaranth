@@ -1316,7 +1316,7 @@ A clock domain also has a reset signal, which can be accessed through the :attr:
 
     m.domains.startup = ClockDomain(reset_less=True, local=True)
 
-If a clock domain is defined in a module, it is also available in all of its submodules.
+If a clock domain is defined in a module, all of its submodules can refer to that domain under the same name.
 
 .. warning::
 
@@ -1325,6 +1325,12 @@ If a clock domain is defined in a module, it is also available in all of its sub
 .. warning::
 
     Clock domains use synchronous reset unless otherwise specified. Clock domains with asynchronous reset are implemented, but their behavior is subject to change in near future, and is intentionally left undocumented.
+
+.. tip::
+
+    Unless you need to introduce a new asynchronous control set in the design, consider :ref:`using ResetInserter or EnableInserter <lang-controlinserter>` instead of defining a new clock domain. Designs with fewer clock domains are easier to reason about.
+
+    A new asynchronous control set is necessary when some signals must change on a different active edge of a clock, at a different frequency, with a different phase, or when a different asynchronous reset signal is asserted.
 
 .. TODO: mention that ResetInserter will add a reset even to a reset-less domain
 .. TODO: link to hierarchy section
@@ -1351,11 +1357,13 @@ Clock domains are *late bound*, which means that their signals and properties ca
         ResetSignal().eq(~bus_rstn),
     ]
 
-In this example, once the design is processed, :pc:`bus_clk` will be assigned to the clock signal of the clock domain `sync` found in this module or one of its containing modules. The :pc:`bus_rstn` signal will be assigned to the inverted reset signal of the same clock domain. With the `sync` domain created in the same module, these statements become equivalent to:
+In this example, once the design is processed, the clock signal of the clock domain ``sync`` found in this module or one of its containing modules will be equal to :pc:`bus_clk`. The reset signal of the same clock domain will be equal to the negated :pc:`bus_rstn`. With the ``sync`` domain created in the same module, these statements become equivalent to:
+
+.. TODO: explain the difference (or lack thereof, eventually) between m.d, m.domain, and m.domains
 
 .. testcode::
 
-    m.domains.sync = cd_sync = ClockDomain()
+    m.domains.sync = cd_sync = ClockDomain(local=True)
     m.d.comb += [
         cd_sync.clk.eq(bus_clk),
         cd_sync.rst.eq(~bus_rstn),
