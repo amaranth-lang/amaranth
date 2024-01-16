@@ -822,10 +822,79 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         for port_name, (value, dir) in fragment.named_ports.items():
             port_map[f"\\{port_name}"] = value
 
+        params = OrderedDict(fragment.parameters)
+
         if fragment.type[0] == "$":
-            return fragment.type, port_map
+            return fragment.type, port_map, params
         else:
-            return f"\\{fragment.type}", port_map
+            return f"\\{fragment.type}", port_map, params
+
+    if isinstance(fragment, mem.MemoryInstance):
+        memory = fragment.memory
+        init = "".join(format(ast.Const(elem, ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
+        init = ast.Const(int(init or "0", 2), memory.depth * memory.width)
+        rd_clk = []
+        rd_clk_enable = 0
+        rd_clk_polarity = 0
+        rd_transparency_mask = 0
+        for index, port in enumerate(fragment.read_ports):
+            if port.domain != "comb":
+                cd = fragment.domains[port.domain]
+                rd_clk.append(cd.clk)
+                if cd.clk_edge == "pos":
+                    rd_clk_polarity |= 1 << index
+                rd_clk_enable |= 1 << index
+                if port.transparent:
+                    for write_index, write_port in enumerate(fragment.write_ports):
+                        if port.domain == write_port.domain:
+                            rd_transparency_mask |= 1 << (index * len(fragment.write_ports) + write_index)
+            else:
+                rd_clk.append(ast.Const(0, 1))
+        wr_clk = []
+        wr_clk_enable = 0
+        wr_clk_polarity = 0
+        for index, port in enumerate(fragment.write_ports):
+            cd = fragment.domains[port.domain]
+            wr_clk.append(cd.clk)
+            wr_clk_enable |= 1 << index
+            if cd.clk_edge == "pos":
+                wr_clk_polarity |= 1 << index
+        params = {
+            "MEMID": builder._make_name(hierarchy[-1], local=False),
+            "SIZE": memory.depth,
+            "OFFSET": 0,
+            "ABITS": ast.Shape.cast(range(memory.depth)).width,
+            "WIDTH": memory.width,
+            "INIT": init,
+            "RD_PORTS": len(fragment.read_ports),
+            "RD_CLK_ENABLE": ast.Const(rd_clk_enable, max(1, len(fragment.read_ports))),
+            "RD_CLK_POLARITY": ast.Const(rd_clk_polarity, max(1, len(fragment.read_ports))),
+            "RD_TRANSPARENCY_MASK": ast.Const(rd_transparency_mask, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
+            "RD_COLLISION_X_MASK": ast.Const(0, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
+            "RD_WIDE_CONTINUATION": ast.Const(0, max(1, len(fragment.read_ports))),
+            "RD_CE_OVER_SRST": ast.Const(0, max(1, len(fragment.read_ports))),
+            "RD_ARST_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
+            "RD_SRST_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
+            "RD_INIT_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
+            "WR_PORTS": len(fragment.write_ports),
+            "WR_CLK_ENABLE": ast.Const(wr_clk_enable, max(1, len(fragment.write_ports))),
+            "WR_CLK_POLARITY": ast.Const(wr_clk_polarity, max(1, len(fragment.write_ports))),
+            "WR_PRIORITY_MASK": ast.Const(0, max(1, len(fragment.write_ports) * len(fragment.write_ports))),
+            "WR_WIDE_CONTINUATION": ast.Const(0, max(1, len(fragment.write_ports))),
+        }
+        port_map = {
+            "\\RD_CLK": ast.Cat(rd_clk),
+            "\\RD_EN": ast.Cat(port.en for port in fragment.read_ports),
+            "\\RD_ARST": ast.Const(0, len(fragment.read_ports)),
+            "\\RD_SRST": ast.Const(0, len(fragment.read_ports)),
+            "\\RD_ADDR": ast.Cat(port.addr for port in fragment.read_ports),
+            "\\RD_DATA": ast.Cat(port.data for port in fragment.read_ports),
+            "\\WR_CLK": ast.Cat(wr_clk),
+            "\\WR_EN": ast.Cat(ast.Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in fragment.write_ports),
+            "\\WR_ADDR": ast.Cat(port.addr for port in fragment.write_ports),
+            "\\WR_DATA": ast.Cat(port.data for port in fragment.write_ports),
+        }
+        return "$mem_v2", port_map, params
 
     module_name  = ".".join(name or "anonymous" for name in hierarchy)
     module_attrs = OrderedDict()
@@ -860,9 +929,9 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # Transform all subfragments to their respective cells. Transforming signals connected
         # to their ports into wires eagerly makes sure they get sensible (prefixed with submodule
         # name) names.
-        memories = OrderedDict()
         for subfragment, sub_name in fragment.subfragments:
-            if not (subfragment.ports or subfragment.statements or subfragment.subfragments):
+            if not (subfragment.ports or subfragment.statements or subfragment.subfragments or
+                    isinstance(subfragment, (ir.Instance, mem.MemoryInstance))):
                 # If the fragment is completely empty, skip translating it, otherwise synthesis
                 # tools (including Yosys and Vivado) will treat it as a black box when it is
                 # loaded after conversion to Verilog.
@@ -871,25 +940,22 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             if sub_name is None:
                 sub_name = module.anonymous()
 
-            sub_params = OrderedDict(getattr(subfragment, "parameters", {}))
-
-            sub_type, sub_port_map = \
+            sub_type, sub_port_map, sub_params = \
                 _convert_fragment(builder, subfragment, name_map,
                                   hierarchy=hierarchy + (sub_name,))
 
-            if sub_type == "$mem_v2" and "MEMID" not in sub_params:
-                sub_params["MEMID"] = builder._make_name(sub_name, local=False)
-
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
-                if not isinstance(subfragment, ir.Instance):
+                if not isinstance(subfragment, (ir.Instance, mem.MemoryInstance)):
                     for signal in value._rhs_signals():
                         compiler_state.resolve_curr(signal, prefix=sub_name)
-                if len(value) > 0 or sub_type == "$mem_v2":
+                if len(value) > 0:
                     sub_ports[port] = rhs_compiler(value)
 
             if isinstance(subfragment, ir.Instance):
                 src = _src(subfragment.src_loc)
+            elif isinstance(subfragment, mem.MemoryInstance):
+                src = _src(subfragment.memory.src_loc)
             else:
                 src = ""
 
@@ -1005,7 +1071,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             wire_name = wire_name[1:]
         name_map[signal] = hierarchy + (wire_name,)
 
-    return module.name, port_map
+    return module.name, port_map, {}
 
 
 def convert_fragment(fragment, name="top", *, emit_src=True):

@@ -4,9 +4,11 @@ import warnings
 
 from amaranth.hdl.ast import *
 from amaranth.hdl.cd import *
+from amaranth.hdl.dsl import *
 from amaranth.hdl.ir import *
 from amaranth.hdl.xfrm import *
 from amaranth.hdl.mem import *
+from amaranth.hdl.mem import MemoryInstance
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -112,6 +114,22 @@ class DomainRenamerTestCase(FHDLTestCase):
             "ext": cd_sync,
             "pix": cd_pix,
         })
+
+    def test_rename_mem_ports(self):
+        m = Module()
+        mem = Memory(depth=4, width=16)
+        m.submodules.mem = mem
+        mem.read_port(domain="a")
+        mem.read_port(domain="b")
+        mem.write_port(domain="c")
+
+        f = Fragment.get(m, None)
+        f = DomainRenamer({"a": "d", "c": "e"})(f)
+        mem = f.subfragments[0][0]
+        self.assertIsInstance(mem, MemoryInstance)
+        self.assertEqual(mem.read_ports[0].domain, "d")
+        self.assertEqual(mem.read_ports[1].domain, "b")
+        self.assertEqual(mem.write_ports[0].domain, "e")
 
     def test_rename_wrong_to_comb(self):
         with self.assertRaisesRegex(ValueError,
@@ -501,31 +519,20 @@ class EnableInserterTestCase(FHDLTestCase):
         mem = Memory(width=8, depth=4)
         mem.read_port(transparent=False)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.named_ports["RD_EN"][0], """
-        (cat (m (sig c1) (sig mem_r_en) (const 1'd0)))
+        self.assertRepr(f.read_ports[0].en, """
+        (& (sig mem_r_en) (sig c1))
         """)
 
     def test_enable_write_port(self):
         mem = Memory(width=8, depth=4)
-        mem.write_port()
+        mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.named_ports["WR_EN"][0], """
-        (cat (m
+        self.assertRepr(f.write_ports[0].en, """
+        (m
             (sig c1)
-            (cat
-                (cat
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                )
-            )
-            (const 8'd0)
-        ))
+            (sig mem_w_en)
+            (const 4'd0)
+        )
         """)
 
 
