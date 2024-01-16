@@ -387,11 +387,13 @@ class DSLTestCase(FHDLTestCase):
 
     def test_Switch_default_Case(self):
         m = Module()
-        with m.Switch(self.w1):
-            with m.Case(3):
-                m.d.comb += self.c1.eq(1)
-            with m.Case():
-                m.d.comb += self.c2.eq(1)
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^The behavior of Case\(\) with no patterns will change to never-active"):
+            with m.Switch(self.w1):
+                with m.Case(3):
+                    m.d.comb += self.c1.eq(1)
+                with m.Case():
+                    m.d.comb += self.c2.eq(1)
         m._flush()
         self.assertRepr(m._statements, """
         (

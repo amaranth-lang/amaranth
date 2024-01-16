@@ -541,6 +541,8 @@ class Value(metaclass=ABCMeta):
                     continue
                 matches.append(self == pattern)
         if not matches:
+            warnings.warn("The value of Value.matches() with no patterns will change to Const(0) "
+                          "in Amaranth 0.5", SyntaxWarning, stacklevel=2)
             return Const(1)
         elif len(matches) == 1:
             return matches[0]

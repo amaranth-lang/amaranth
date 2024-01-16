@@ -682,7 +682,9 @@ class OperatorTestCase(FHDLTestCase):
 
     def test_matches(self):
         s = Signal(4)
-        self.assertRepr(s.matches(), "(const 1'd1)")
+        with self.assertWarnsRegex(SyntaxWarning,
+                r"^The value of Value.matches\(\) with no patterns will change to Const\(0\)"):
+            self.assertRepr(s.matches(), "(const 1'd1)")
         self.assertRepr(s.matches(1), """
         (== (sig s) (const 1'd1))
         """)
