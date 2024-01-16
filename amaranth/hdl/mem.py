@@ -119,55 +119,7 @@ class Memory(Elaboratable):
         return self._array[index]
 
     def elaborate(self, platform):
-        init = "".join(format(Const(elem, unsigned(self.width)).value, f"0{self.width}b") for elem in reversed(self.init))
-        init = Const(int(init or "0", 2), self.depth * self.width)
-        rd_clk = []
-        rd_clk_enable = 0
-        rd_transparency_mask = 0
-        for index, port in enumerate(self._read_ports):
-            if port.domain != "comb":
-                rd_clk.append(ClockSignal(port.domain))
-                rd_clk_enable |= 1 << index
-                if port.transparent:
-                    for write_index, write_port in enumerate(self._write_ports):
-                        if port.domain == write_port.domain:
-                            rd_transparency_mask |= 1 << (index * len(self._write_ports) + write_index)
-            else:
-                rd_clk.append(Const(0, 1))
-        f = Instance("$mem_v2",
-            *(("a", attr, value) for attr, value in self.attrs.items()),
-            p_SIZE=self.depth,
-            p_OFFSET=0,
-            p_ABITS=Shape.cast(range(self.depth)).width,
-            p_WIDTH=self.width,
-            p_INIT=init,
-            p_RD_PORTS=len(self._read_ports),
-            p_RD_CLK_ENABLE=Const(rd_clk_enable, len(self._read_ports)) if self._read_ports else Const(0, 1),
-            p_RD_CLK_POLARITY=Const(-1, unsigned(len(self._read_ports))) if self._read_ports else Const(0, 1),
-            p_RD_TRANSPARENCY_MASK=Const(rd_transparency_mask, max(1, len(self._read_ports) * len(self._write_ports))),
-            p_RD_COLLISION_X_MASK=Const(0, max(1, len(self._read_ports) * len(self._write_ports))),
-            p_RD_WIDE_CONTINUATION=Const(0, len(self._read_ports)) if self._read_ports else Const(0, 1),
-            p_RD_CE_OVER_SRST=Const(0, len(self._read_ports)) if self._read_ports else Const(0, 1),
-            p_RD_ARST_VALUE=Const(0, len(self._read_ports) * self.width),
-            p_RD_SRST_VALUE=Const(0, len(self._read_ports) * self.width),
-            p_RD_INIT_VALUE=Const(0, len(self._read_ports) * self.width),
-            p_WR_PORTS=len(self._write_ports),
-            p_WR_CLK_ENABLE=Const(-1, unsigned(len(self._write_ports))) if self._write_ports else Const(0, 1),
-            p_WR_CLK_POLARITY=Const(-1, unsigned(len(self._write_ports))) if self._write_ports else Const(0, 1),
-            p_WR_PRIORITY_MASK=Const(0, len(self._write_ports) * len(self._write_ports)) if self._write_ports else Const(0, 1),
-            p_WR_WIDE_CONTINUATION=Const(0, len(self._write_ports)) if self._write_ports else Const(0, 1),
-            i_RD_CLK=Cat(rd_clk),
-            i_RD_EN=Cat(port.en for port in self._read_ports),
-            i_RD_ARST=Const(0, len(self._read_ports)),
-            i_RD_SRST=Const(0, len(self._read_ports)),
-            i_RD_ADDR=Cat(port.addr for port in self._read_ports),
-            o_RD_DATA=Cat(port.data for port in self._read_ports),
-            i_WR_CLK=Cat(ClockSignal(port.domain) for port in self._write_ports),
-            i_WR_EN=Cat(Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in self._write_ports),
-            i_WR_ADDR=Cat(port.addr for port in self._write_ports),
-            i_WR_DATA=Cat(port.data for port in self._write_ports),
-            src_loc=self.src_loc,
-        )
+        f = MemoryInstance(self, self._read_ports, self._write_ports)
         for port in self._read_ports:
             port._MustUse__used = True
             if port.domain == "comb":
@@ -210,6 +162,7 @@ class Memory(Elaboratable):
             for signal in self._array:
                 f.add_driver(signal, port.domain)
         return f
+
 
 class ReadPort(Elaboratable):
     """A memory read port.
@@ -354,3 +307,12 @@ class DummyPort:
                            name=f"{name}_data", src_loc_at=1)
         self.en   = Signal(data_width // granularity,
                            name=f"{name}_en", src_loc_at=1)
+
+
+class MemoryInstance(Fragment):
+    def __init__(self, memory, read_ports, write_ports):
+        super().__init__()
+        self.memory = memory
+        self.read_ports = read_ports
+        self.write_ports = write_ports
+        self.attrs = memory.attrs
