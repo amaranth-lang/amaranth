@@ -307,6 +307,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
+        if not patterns:
+            warnings.warn("The behavior of Case() with no patterns will change to never-active "
+                          "in Amaranth 0.5; use Default() instead", SyntaxWarning, stacklevel=3)
         # This code should accept exactly the same patterns as `v.matches(...)`.
         for pattern in patterns:
             if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
@@ -353,8 +356,22 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = "Switch"
             self._statements = _outer_case
 
+    @contextmanager
     def Default(self):
-        return self.Case()
+        self._check_context("Default", context="Switch")
+        src_loc = tracer.get_src_loc(src_loc_at=1)
+        switch_data = self._get_ctrl("Switch")
+        try:
+            _outer_case, self._statements = self._statements, []
+            self._ctrl_context = None
+            yield
+            self._flush_ctrl()
+            if () not in switch_data["cases"]:
+                switch_data["cases"][()] = self._statements
+                switch_data["case_src_locs"][()] = src_loc
+        finally:
+            self._ctrl_context = "Switch"
+            self._statements = _outer_case
 
     @contextmanager
     def FSM(self, reset=None, domain="sync", name="fsm"):
