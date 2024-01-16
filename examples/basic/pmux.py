@@ -19,7 +19,7 @@ class ParMux(Elaboratable):
                 m.d.comb += self.o.eq(self.b)
             with m.Case("1--"):
                 m.d.comb += self.o.eq(self.c)
-            with m.Case():
+            with m.Default():
                 m.d.comb += self.o.eq(0)
         return m
 
