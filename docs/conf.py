@@ -1,12 +1,13 @@
 import os, sys
 sys.path.insert(0, os.path.abspath("."))
 
+import time
 import amaranth
 
-project = "Amaranth HDL toolchain"
+project = "Amaranth language & toolchain"
 version = amaranth.__version__.replace(".editable", "")
 release = version.split("+")[0]
-copyright = "2020—2023, Amaranth HDL developers"
+copyright = time.strftime("2020—%Y, Amaranth project contributors")
 
 extensions = [
 	"sphinx.ext.intersphinx",
