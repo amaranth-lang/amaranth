@@ -949,7 +949,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                 if not isinstance(subfragment, (ir.Instance, mem.MemoryInstance)):
                     for signal in value._rhs_signals():
                         compiler_state.resolve_curr(signal, prefix=sub_name)
-                if len(value) > 0:
+                if len(value) > 0 or sub_type == "$mem_v2":
                     sub_ports[port] = rhs_compiler(value)
 
             if isinstance(subfragment, ir.Instance):
