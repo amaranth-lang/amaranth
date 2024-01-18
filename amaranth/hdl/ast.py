@@ -370,10 +370,14 @@ class Value(metaclass=ABCMeta):
                 key += n
             return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
+            if isinstance(key.start, Value) or isinstance(key.stop, Value):
+                raise TypeError(f"Cannot slice value with a value; use Value.bit_select() or Value.word_select() instead")
             start, stop, step = key.indices(n)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
             return Slice(self, start, stop, src_loc_at=1)
+        elif isinstance(key, Value):
+            raise TypeError(f"Cannot index value with a value; use Value.bit_select() instead")
         else:
             raise TypeError(f"Cannot index value with {key!r}")
 

@@ -303,6 +303,15 @@ class ValueTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Cannot index value with 'str'$"):
             Const(31)["str"]
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot index value with a value; use Value.bit_select\(\) instead$"):
+            Const(31)[Signal(3)]
+        s = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot slice value with a value; use Value.bit_select\(\) or Value.word_select\(\) instead$"):
+            Const(31)[s:s+3]
+
+
 
     def test_shift_left(self):
         self.assertRepr(Const(256, unsigned(9)).shift_left(0),
