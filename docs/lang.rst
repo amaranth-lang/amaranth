@@ -1419,7 +1419,7 @@ The Amaranth standard library provides *components*: elaboratable objects that a
 Submodules
 ----------
 
-An elaboratable can be included within another elaboratable by adding it as a submodule:
+An elaboratable can be included within another elaboratable, which is called its *containing elaboratable*, by adding it as a submodule:
 
 .. testcode::
 
@@ -1520,7 +1520,58 @@ The application of control flow modifiers in it causes the behavior of the final
 Renaming domains
 ----------------
 
-.. todo:: Write this section about :class:`DomainRenamer`
+A reusable :ref:`elaboratable <lang-elaboration>` usually specifies the use of one or more :ref:`clock domains <lang-clockdomains>` while leaving the details of clocking and initialization to a later phase in the design process. :class:`DomainRenamer` can be used to alter a reusable elaboratable for integration in a specific design. Most elaboratables use a single clock domain named ``sync``, and :class:`DomainRenamer` makes it easy to place such elaboratables in any clock domain of a design.
+
+Clock domains can be renamed using the syntax :pc:`DomainRenamer(domains)(elaboratable)`, where :pc:`domains` is a mapping from clock domain names to clock domain names and :pc:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. The keys of :pc:`domains` correspond to existing clock domain names specified by :pc:`elaboratable`, and the values of :pc:`domains` correspond to the clock domain names from the containing elaboratable that will be used instead. When only the ``sync`` domain is being renamed, instead of writing :pc:`DomainRenamer({"sync": name})(elaboratable)`, the equivalent but shorter :pc:`DomainRenamer(name)(elaboratable)` syntax can be used.
+
+The result of renaming clock domains in an elaboratable is, itself, an elaboratable object. A common way to rename domains is to apply :class:`DomainRenamer` to another elaboratable while adding it as a submodule:
+
+.. testcode::
+    :hide:
+
+    m = Module()
+
+.. testcode::
+
+    m.submodules.counter = counter = DomainRenamer("video")(counter)
+
+Renaming a clock domain affects all logic within a given elaboratable and clock domain, which includes the submodules of that elaboratable. It does not affect any logic outside of that elaboratable.
+
+.. note::
+
+    Renaming domains in an elaboratable does not mutate it; a new proxy object is returned that forwards attribute accesses and method calls to the original elaboratable. Whenever this proxy object is elaborated, it manipulates the circuit defined by the original elaboratable to use the requested clock domain.
+
+.. note::
+
+    It is possible to rename domains in an elaboratable and also apply :ref:`control flow modifiers <lang-controlinserter>`.
+
+Consider the following code:
+
+.. testcode::
+    :hide:
+
+    count = Signal(8)
+    zero = Signal()
+
+.. testcode::
+
+    m = Module()
+    m.d.sync += count.eq(count + 1)
+    m.d.comb += zero.eq(count == 0)
+
+    m = DomainRenamer({"sync": "video"})(m)
+
+The renaming of the ``sync`` clock domain in it causes the behavior of the final :pc:`m` to be identical to that of this module:
+
+.. testcode::
+
+    m = Module()
+    m.d.video += count.eq(count + 1)
+    m.d.comb += zero.eq(count == 0)
+
+.. tip::
+
+    A combinatorial signal can change synchronously to a clock domain, as in the example above, in which case it may only be sampled from the same clock domain unless explicitly synchronized. Renaming a clock domain must be assumed to potentially affect any output of an elaboratable.
 
 
 .. _lang-memory:
