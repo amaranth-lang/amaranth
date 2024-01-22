@@ -432,20 +432,12 @@ Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected b
    True
 
 
-.. _lang-data:
-
-Data structures
-===============
-
-Amaranth provides aggregate data structures in the standard library module :mod:`amaranth.lib.data`.
-
-
 .. _lang-operators:
 
 Operators
 =========
 
-To describe computations, Amaranth values can be combined with each other or with :ref:`value-like <lang-valuelike>` objects using a rich array of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
+To describe computations, Amaranth values can be combined with each other or with :ref:`value-like <lang-valuelike>` objects using a rich set of arithmetic, bitwise, logical, bit sequence, and other *operators* to form *expressions*, which are themselves values.
 
 
 .. _lang-abstractexpr:
@@ -795,15 +787,56 @@ Choice operator
 The ``Mux(sel, val1, val0)`` choice expression (similar to the :ref:`conditional expression <python:if_expr>` in Python) is equal to the operand ``val1`` if ``sel`` is non-zero, and to the other operand ``val0`` otherwise. If any of ``val1`` or ``val0`` are signed, the expression itself is signed as well.
 
 
+.. _lang-array:
+
+Arrays
+======
+
+An *array* is a mutable collection that can be indexed not only with an :class:`int` or with a :ref:`value-like <lang-valuelike>` object. When indexed with an :class:`int`, it behaves like a :class:`list`. When indexed with a value-like object, it returns a proxy object containing the elements of the array that has three useful properties:
+
+* The result of accessing an attribute of the proxy object or indexing it is another proxy object that contains the elements transformed in the same way.
+* When the proxy object is :ref:`cast to a value <lang-valuelike>`, all of its elements are also cast to a value, and an element is selected using the index originally used with the array.
+* The proxy object can be used both in an expression and :ref:`as the target of an assignment <lang-assigns>`.
+
+Crucially, this means that any Python object can be added to an array; the only requirement is that the final result of any computation involving it is a value-like object. For example:
+
+.. testcode::
+
+    pixels = Array([
+        {"r": 180, "g": 92, "b": 230},
+        {"r": 74, "g": 130, "b": 128},
+        {"r": 115, "g": 58, "b": 31},
+    ])
+
+.. doctest::
+
+    >>> index = Signal(range(len(pixels)))
+    >>> pixels[index]["r"]
+    (proxy (array [180, 74, 115]) (sig index))
+
+.. note::
+
+    An array becomes immutable after it is indexed for the first time. The elements of the array do not themselves become immutable, but it is not recommended to mutate them as the behavior can become unpredictable.
+
+.. important::
+
+    Each time an array proxy object with ``n`` elements is used in an expression, it generates a multiplexer with ``n`` branches. However, using ``k`` of such array proxy objects in an expression generates a multiplexer with ``n**k`` branches. This can generate extremely large circuits that may quickly exhaust the resources of the synthesis target or even the available RAM.
+
+
+.. _lang-data:
+
+Data structures
+===============
+
+Amaranth provides aggregate data structures in the standard library module :mod:`amaranth.lib.data`.
+
+
 .. _lang-modules:
 
 Modules
 =======
 
-A *module* is a unit of the Amaranth design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control flow syntax <lang-control>`, manage clock domains, and aggregate submodules.
-
-.. TODO: link to clock domains
-.. TODO: link to submodules
+A *module* is a unit of the Amaranth design hierarchy: the smallest collection of logic that can be independently simulated, synthesized, or otherwise processed. Modules associate signals with :ref:`control domains <lang-domains>`, provide :ref:`control flow syntax <lang-control>`, manage :ref:`clock domains <lang-clockdomains>`, and aggregate :ref:`submodules <lang-submodules>`.
 
 Every Amaranth design starts with a fresh module:
 
@@ -824,8 +857,6 @@ All designs have a single predefined *combinatorial domain*, containing all sign
 A design can also have any amount of user-defined *synchronous domains*, also called :ref:`clock domains <lang-clockdomains>`, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
 
 The behavior of assignments differs for signals in :ref:`combinatorial <lang-comb>` and :ref:`synchronous <lang-sync>` domains. Collectively, signals in synchronous domains contain the state of a design, whereas signals in the combinatorial domain cannot form feedback loops or hold state.
-
-.. TODO: link to clock domains
 
 
 .. _lang-assigns:
@@ -849,9 +880,7 @@ Similar to :ref:`how Amaranth operators work <lang-abstractexpr>`, an Amaranth a
 Assignment targets
 ------------------
 
-The target of an assignment can be more complex than a single signal. It is possible to assign to any combination of signals, :ref:`bit slices <lang-seqops>`, :ref:`concatenations <lang-seqops>`, and :ref:`part selects <lang-seqops>` as long as it includes no other values:
-
-.. TODO: mention arrays, records, user values
+The target of an assignment can be more complex than a single signal. It is possible to assign to any combination of signals, :ref:`bit slices <lang-seqops>`, :ref:`concatenations <lang-seqops>`, :ref:`part selects <lang-seqops>`, and :ref:`array proxy objects <lang-array>` as long as it includes no other values:
 
 .. doctest::
 
