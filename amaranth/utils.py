@@ -2,13 +2,15 @@ import operator
 
 from ._utils import deprecated
 
+
 __all__ = ["ceil_log2", "exact_log2", "log2_int", "bits_for"]
 
 
 def ceil_log2(n):
-    """Returns the integer log2 of the smallest power-of-2 greater than or equal to `n`.
+    """Returns the integer log2 of the smallest power-of-2 greater than or equal to ``n``.
 
-    Raises a `ValueError` for negative inputs."""
+    Raises a ``ValueError`` for negative inputs.
+    """
     n = operator.index(n)
     if n < 0:
         raise ValueError("{n} is negative")
@@ -18,9 +20,10 @@ def ceil_log2(n):
 
 
 def exact_log2(n):
-    """Returns the integer log2 of `n`, which must be an exact power of two.
+    """Returns the integer log2 of ``n``, which must be an exact power of two.
 
-    Raises a `ValueError` if `n` is not a power of two."""
+    Raises a ``ValueError`` if ``n`` is not a power of two.
+    """
     n = operator.index(n)
     if n <= 0 or (n & (n - 1)):
         raise ValueError("{n} is not a power of 2")
