@@ -276,11 +276,11 @@ class FragmentTransformer:
             for port in new_fragment.read_ports:
                 port.en = self.on_value(port.en)
                 port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
+                port.data = self.on_value(Value.cast(port.data))
             for port in new_fragment.write_ports:
                 port.en = self.on_value(port.en)
                 port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
+                port.data = self.on_value(Value.cast(port.data))
 
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
@@ -408,13 +408,13 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         if isinstance(fragment, MemoryInstance):
             for port in fragment.read_ports:
                 self.on_value(port.addr)
-                self.on_value(port.data)
+                self.on_value(Value.cast(port.data))
                 self.on_value(port.en)
                 if port.domain != "comb":
                     self._add_used_domain(port.domain)
             for port in fragment.write_ports:
                 self.on_value(port.addr)
-                self.on_value(port.data)
+                self.on_value(Value.cast(port.data))
                 self.on_value(port.en)
                 self._add_used_domain(port.domain)
 

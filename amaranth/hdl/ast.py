@@ -1929,6 +1929,8 @@ class ValueSet(_MappedKeySet):
 
 class SignalKey:
     def __init__(self, signal):
+        if isinstance(signal, ValueCastable):
+            signal = Value.cast(signal)
         self.signal = signal
         if isinstance(signal, Signal):
             self._intern = (0, signal.duid)

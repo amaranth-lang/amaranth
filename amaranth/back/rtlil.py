@@ -831,7 +831,11 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
 
     if isinstance(fragment, mem.MemoryInstance):
         memory = fragment.memory
-        init = "".join(format(ast.Const(elem, ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
+        if isinstance(memory.shape, ast.ShapeCastable):
+            cast = lambda elem: ast.Value.cast(memory.shape.const(elem)).value
+        else:
+            cast = lambda elem: elem
+        init = "".join(format(ast.Const(cast(elem), ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
         init = ast.Const(int(init or "0", 2), memory.depth * memory.width)
         rd_clk = []
         rd_clk_enable = 0
