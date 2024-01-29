@@ -4,6 +4,16 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
+Documentation for past releases
+===============================
+
+Documentation for past releases of the Amaranth language and toolchain is available online:
+
+* `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
+* `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
+* `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
+
+
 Version 0.5 (unreleased)
 ========================
 
