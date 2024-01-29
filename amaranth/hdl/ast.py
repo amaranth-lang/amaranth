@@ -1170,13 +1170,14 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.reset = reset.value
         self.reset_less = bool(reset_less)
 
-        if isinstance(orig_shape, range) and self.reset == orig_shape.stop:
-            warnings.warn(
-                message="Reset value {!r} equals the non-inclusive end of the signal "
-                        "shape {!r}; this is likely an off-by-one error"
-                        .format(self.reset, orig_shape),
-                category=SyntaxWarning,
-                stacklevel=2)
+        if isinstance(orig_shape, range) and orig_reset is not None and orig_reset not in orig_shape:
+            if orig_reset == orig_shape.stop:
+                raise SyntaxError(
+                    f"Reset value {orig_reset!r} equals the non-inclusive end of the signal "
+                    f"shape {orig_shape!r}; this is likely an off-by-one error")
+            else:
+                raise SyntaxError(
+                    f"Reset value {orig_reset!r} is not within the signal shape {orig_shape!r}")
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 

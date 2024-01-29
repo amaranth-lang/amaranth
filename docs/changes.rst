@@ -50,6 +50,8 @@ Language changes
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
+* Changed: ``Signal(range(stop), reset=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
+* Changed: ``Signal(range(0))`` is now valid without a warning.
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
