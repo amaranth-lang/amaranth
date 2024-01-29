@@ -1,7 +1,7 @@
 Getting started
 ###############
 
-This section demonstrates the basic Amaranth workflow to provide a cursory overview of the language and the toolchain. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`language guide <lang>` for a detailed explanation of every language construct.
+This section demonstrates the basic Amaranth workflow to provide a cursory overview of the language and the toolchain. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`language guide <guide>` for a detailed explanation of every language construct.
 
 .. TODO: add link to build system doc
 .. TODO: add link to more complex examples?
