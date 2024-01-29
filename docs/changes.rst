@@ -27,8 +27,8 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 
 * Replace uses of ``m.Case()`` with no patterns with ``m.Default()``
 * Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
-* Update uses of :func:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`
-* Update uses of :func:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`
+* Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
+* Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
 
 
 Implemented RFCs
@@ -73,7 +73,7 @@ Platform integration changes
 * Added: :meth:`BuildPlan.execute_local_docker`.
 * Added: :meth:`BuildPlan.extract`.
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
-* Deprecated: argument `run_script=` in :meth:`BuildPlan.execute_local`
+* Deprecated: argument ``run_script=`` in :meth:`BuildPlan.execute_local`.
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
 
