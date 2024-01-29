@@ -10,7 +10,7 @@ Language guide
 
    This guide is a work in progress and is seriously incomplete!
 
-This guide introduces the Amaranth language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language.
+This guide introduces the Amaranth language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`reference <reference>` for a detailed description of the Python classes that underlie the language's syntax.
 
 .. TODO: link to a good synchronous logic tutorial and a Python tutorial?
 
