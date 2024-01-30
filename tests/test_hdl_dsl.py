@@ -497,6 +497,26 @@ class DSLTestCase(FHDLTestCase):
             with m.Case():
                 pass
 
+    def test_Case_after_Default_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Default():
+                pass
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^A case defined after the default case will never be active$"):
+                with m.Case():
+                    pass
+
+    def test_Default_after_Default_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Default():
+                pass
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^A case defined after the default case will never be active$"):
+                with m.Default():
+                    pass
+
     def test_If_inside_Switch_wrong(self):
         m = Module()
         with m.Switch(self.s1):
