@@ -2,8 +2,8 @@ import operator
 from collections import OrderedDict
 
 from .. import tracer
-from .ast import *
-from .ir import Elaboratable, Instance, Fragment
+from ._ast import *
+from ._ir import Elaboratable, Instance, Fragment
 
 
 __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]

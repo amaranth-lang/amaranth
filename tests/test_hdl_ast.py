@@ -1,7 +1,7 @@
 import warnings
 from enum import Enum, EnumMeta
 
-from amaranth.hdl.ast import *
+from amaranth.hdl._ast import *
 from amaranth.lib.enum import Enum as AmaranthEnum
 
 from .utils import *
@@ -1024,10 +1024,10 @@ class ArrayTestCase(FHDLTestCase):
             @ValueCastable.lowermethod
             def as_value(self):
                 return Signal()
-            
+
             def shape():
                 return unsigned(1)
-        
+
         a = Array([1,2,3])
         a[MyValue()]
 

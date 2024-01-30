@@ -1,7 +1,7 @@
 import inspect
 
 from ..hdl import *
-from ..hdl.ast import Statement, SignalSet, ValueCastable
+from ..hdl._ast import Statement, SignalSet, ValueCastable
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler

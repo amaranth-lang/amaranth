@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import warnings
 
-from ..hdl.ast import *
+from ..hdl._ast import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from ..hdl.rec import *

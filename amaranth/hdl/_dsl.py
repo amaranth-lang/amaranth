@@ -8,10 +8,10 @@ import sys
 from .._utils import flatten
 from ..utils import bits_for
 from .. import tracer
-from .ast import *
-from .ir import *
-from .cd import *
-from .xfrm import *
+from ._ast import *
+from ._ir import *
+from ._cd import *
+from ._xfrm import *
 
 
 __all__ = ["SyntaxError", "SyntaxWarning", "Module"]

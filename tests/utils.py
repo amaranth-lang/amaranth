@@ -6,8 +6,8 @@ import textwrap
 import traceback
 import unittest
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.ir import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._ir import *
 from amaranth.back import rtlil
 from amaranth._toolchain import require_tool
 

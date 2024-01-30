@@ -4,8 +4,8 @@ import re
 import warnings
 
 from .. import tracer
-from ..hdl.ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
-from ..hdl.ir import Elaboratable
+from ..hdl._ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
+from ..hdl._ir import Elaboratable
 from .._utils import final
 
 

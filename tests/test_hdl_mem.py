@@ -1,7 +1,7 @@
 # amaranth: UnusedElaboratable=no
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._mem import *
 
 from .utils import *
 

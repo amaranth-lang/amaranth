@@ -36,7 +36,7 @@ class FormatCustom(Format):
 
 class Repr:
     def __init__(self, format, value, *, path=()):
-        from .ast import Value # avoid a circular dependency
+        from ._ast import Value # avoid a circular dependency
         assert isinstance(format, Format)
         assert isinstance(value, Value)
         assert isinstance(path, tuple) and all(isinstance(part, (str, int)) for part in path)

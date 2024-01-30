@@ -1,5 +1,5 @@
 from .. import tracer
-from .ast import Signal
+from ._ast import Signal
 
 
 __all__ = ["ClockDomain", "DomainError"]

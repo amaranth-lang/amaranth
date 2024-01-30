@@ -86,8 +86,8 @@ Like the standard Python :class:`enum.IntEnum` and :class:`enum.IntFlag` classes
 .. doctest::
 
    >>> a = Signal(TransparentEnum)
-   >>> type(a)
-   <class 'amaranth.hdl.ast.Signal'>
+   >>> type(a) is Signal
+   True
 
 It is also possible to define a custom view class for a given enum:
 

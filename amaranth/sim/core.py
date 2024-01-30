@@ -2,8 +2,8 @@ import inspect
 import warnings
 
 from .._utils import deprecated
-from ..hdl.cd import *
-from ..hdl.ir import *
+from ..hdl._cd import *
+from ..hdl._ir import *
 from ._base import BaseEngine
 
 
@@ -130,7 +130,7 @@ class Simulator:
         if domain in self._clocked:
             raise ValueError("Domain {!r} already has a clock driving it"
                              .format(domain.name))
-        
+
         # We represent times internally in 1 ps units, but users supply float quantities of seconds
         period = int(period * 1e12)
 

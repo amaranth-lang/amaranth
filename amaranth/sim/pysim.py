@@ -6,7 +6,7 @@ from vcd.gtkw import GTKWSave
 
 from ..hdl import *
 from ..hdl._repr import *
-from ..hdl.ast import SignalDict, Slice, Operator
+from ..hdl._ast import SignalDict, Slice, Operator
 from ._base import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
