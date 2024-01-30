@@ -1,7 +1,9 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 
 
-class UpCounter(Elaboratable):
+class UpCounter(wiring.Component):
     """
     A 16-bit up counter with a fixed limit.
 
@@ -18,15 +20,15 @@ class UpCounter(Elaboratable):
     ovf : Signal, out
         ``ovf`` is asserted when the counter reaches its limit.
     """
+
+    en: In(1)
+    ovf: Out(1)
+
     def __init__(self, limit):
         self.limit = limit
-
-        # Ports
-        self.en  = Signal()
-        self.ovf = Signal()
-
-        # State
         self.count = Signal(16)
+
+        super().__init__()
 
     def elaborate(self, platform):
         m = Module()
@@ -76,4 +78,4 @@ from amaranth.back import verilog
 
 top = UpCounter(25)
 with open("up_counter.v", "w") as f:
-    f.write(verilog.convert(top, ports=[top.en, top.ovf]))
+    f.write(verilog.convert(top))
