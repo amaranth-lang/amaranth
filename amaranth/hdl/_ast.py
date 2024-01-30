@@ -839,8 +839,15 @@ class Value(metaclass=ABCMeta):
         raise NotImplementedError # :nocov:
 
 
+class _ConstMeta(ABCMeta):
+    def __call__(cls, value, shape=None, src_loc_at=0, **kwargs):
+        if isinstance(shape, ShapeCastable):
+            return shape.const(value)
+        return super().__call__(value, shape, **kwargs, src_loc_at=src_loc_at + 1)
+
+
 @final
-class Const(Value):
+class Const(Value, metaclass=_ConstMeta):
     """A constant, literal integer value.
 
     Parameters
@@ -898,7 +905,7 @@ class Const(Value):
                             "shape {!r}; this is likely an off-by-one error"
                             .format(self.value, shape),
                     category=SyntaxWarning,
-                    stacklevel=2)
+                    stacklevel=3)
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
         self.width  = shape.width
         self.signed = shape.signed
