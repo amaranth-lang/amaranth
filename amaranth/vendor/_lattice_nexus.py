@@ -1,7 +1,3 @@
-# NXOSCA and NXPLL is part of LiteX. Modified for Amaranth Nexus Platform (Nate Slager <slagernate@gmail.com>)
-# Copyright (c) 2020 David Corrigan <davidcorrigan714@gmail.com>
-# SPDX-License-Identifier: BSD-2-Clause
-
 
 from abc import abstractproperty
 
@@ -15,14 +11,7 @@ import pprint
 from math import log, log10, exp, pi
 from cmath import phase
 
-io_i2 = namedtuple('io_i2',['io', 'i2', 'IPP_CTRL', 'BW_CTL_BIAS', 'IPP_SEL'])
-nx_pll_param_permutation = namedtuple("nx_pll_param_permutation",[
-    "C1","C2","C3","C4","C5","C6",
-    "IPP_CTRL","BW_CTL_BIAS","IPP_SEL","CSET","CRIPPLE","V2I_PP_RES","IPI_CMP"])
-
 __all__ = ["LatticeNexusPlatform"]
-
-### Warning, this platform was adapted from the ECP5 and has not yet been verified
 
 class LatticeNexusPlatform(TemplatedPlatform):
     """
@@ -228,9 +217,9 @@ class LatticeNexusPlatform(TemplatedPlatform):
         "{{name}}.sdc": r"""
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
-                    create_clock  -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports "{{port_signal.name}}"]
+                    create_clock -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
                 {% else -%}
-                    create_clock -name "{{net_signal.name|tcl_escape}}" -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
+                    create_clock -name {{net_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
@@ -240,7 +229,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
                 ldc_set_location -site "{{pin_name}}" [get_ports {{port_name|tcl_escape}}]
                 {% if attrs -%}
-                ldc_set_port -iobuf "{%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %}" [get_ports {{port_name|tcl_escape}}]
+                ldc_set_port -iobuf { {%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %} } [get_ports {{port_name|tcl_escape}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
@@ -466,7 +455,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
                     o_Q1=q1[bit],
                     o_Q2=q2[bit],
                     o_Q3=q3[bit],
-                )
+                 )
 
         def get_iddr71(sclk, eclk, d, q0, q1, q2, q3, q4, q5, q6):
             for bit in range(len(d)):
@@ -483,6 +472,44 @@ class LatticeNexusPlatform(TemplatedPlatform):
                     o_Q5=q5[bit],
                     o_Q6=q6[bit],
                     #p_GSR="DISABLED",
+                )
+
+        def get_iddrx4(sclk, eclk, d, q0, q1, q2, q3, q4, q5, q6, q7):
+            for bit in range(len(d)):
+                m.submodules += Instance("IDDRX4",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_ALIGNWD=Const(0),
+                    i_D=d[bit],
+                    o_Q0=q0[bit],
+                    o_Q1=q1[bit],
+                    o_Q2=q2[bit],
+                    o_Q3=q3[bit],
+                    o_Q4=q4[bit],
+                    o_Q5=q5[bit],
+                    o_Q6=q6[bit],
+                    o_Q7=q7[bit],
+                )
+
+        def get_iddrx5(sclk, eclk, d, q0, q1, q2, q3, q4, q5, q6, q7, q8, q9):
+            for bit in range(len(d)):
+                m.submodules += Instance("IDDRX5",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_ALIGNWD=Const(0),
+                    i_D=d[bit],
+                    o_Q0=q0[bit],
+                    o_Q1=q1[bit],
+                    o_Q2=q2[bit],
+                    o_Q3=q3[bit],
+                    o_Q4=q4[bit],
+                    o_Q5=q5[bit],
+                    o_Q6=q6[bit],
+                    o_Q7=q7[bit],
+                    o_Q8=q8[bit],
+                    o_Q9=q9[bit],
                 )
 
         def get_oddr(sclk, d0, d1, q):
@@ -524,6 +551,42 @@ class LatticeNexusPlatform(TemplatedPlatform):
                     o_Q=q[bit],
                 )
 
+        def get_oddrx4(sclk, eclk, d0, d1, d2, d3, d4, d5, d6, d7, q):
+            for bit in range(len(d)):
+                m.submodules += Instance("ODDRX4",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_D0=d0[bit],
+                    i_D1=d1[bit],
+                    i_D2=d2[bit],
+                    i_D3=d3[bit],
+                    i_D4=d4[bit],
+                    i_D5=d5[bit],
+                    i_D6=d6[bit],
+                    i_D7=d7[bit],
+                    o_Q=q[bit],
+                )
+
+        def get_oddrx5(sclk, eclk, d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, q):
+            for bit in range(len(d)):
+                m.submodules += Instance("ODDRX5",
+                    i_SCLK=sclk,
+                    i_ECLK=eclk,
+                    i_RST=Const(0),
+                    i_D0=d0[bit],
+                    i_D1=d1[bit],
+                    i_D2=d2[bit],
+                    i_D3=d3[bit],
+                    i_D4=d4[bit],
+                    i_D5=d5[bit],
+                    i_D6=d6[bit],
+                    i_D7=d7[bit],
+                    i_D8=d8[bit],
+                    i_D9=d9[bit],
+                    o_Q=q[bit],
+                )
+
         def get_ineg(z, invert):
             if invert:
                 a = Signal.like(z, name_suffix="_n")
@@ -559,6 +622,26 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 pin_i4 = get_ineg(pin.i4, i_invert)
                 pin_i5 = get_ineg(pin.i5, i_invert)
                 pin_i6 = get_ineg(pin.i6, i_invert)
+            elif pin.xdr == 8:
+                pin_i0 = get_ineg(pin.i0, i_invert)
+                pin_i1 = get_ineg(pin.i1, i_invert)
+                pin_i2 = get_ineg(pin.i2, i_invert)
+                pin_i3 = get_ineg(pin.i3, i_invert)
+                pin_i4 = get_ineg(pin.i4, i_invert)
+                pin_i5 = get_ineg(pin.i5, i_invert)
+                pin_i6 = get_ineg(pin.i6, i_invert)
+                pin_i7 = get_ineg(pin.i7, i_invert)
+            elif pin.xdr == 10:
+                pin_i0 = get_ineg(pin.i0, i_invert)
+                pin_i1 = get_ineg(pin.i1, i_invert)
+                pin_i2 = get_ineg(pin.i2, i_invert)
+                pin_i3 = get_ineg(pin.i3, i_invert)
+                pin_i4 = get_ineg(pin.i4, i_invert)
+                pin_i5 = get_ineg(pin.i5, i_invert)
+                pin_i6 = get_ineg(pin.i6, i_invert)
+                pin_i7 = get_ineg(pin.i7, i_invert)
+                pin_i8 = get_ineg(pin.i8, i_invert)
+                pin_i9 = get_ineg(pin.i9, i_invert)
         if "o" in pin.dir:
             if pin.xdr < 2:
                 pin_o = get_oneg(pin.o, o_invert)
@@ -578,6 +661,26 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 pin_o4 = get_oneg(pin.o4, o_invert)
                 pin_o5 = get_oneg(pin.o5, o_invert)
                 pin_o6 = get_oneg(pin.o6, o_invert)
+            elif pin.xdr == 8:
+                pin_o0 = get_oneg(pin.o0, o_invert)
+                pin_o1 = get_oneg(pin.o1, o_invert)
+                pin_o2 = get_oneg(pin.o2, o_invert)
+                pin_o3 = get_oneg(pin.o3, o_invert)
+                pin_o4 = get_oneg(pin.o4, o_invert)
+                pin_o5 = get_oneg(pin.o5, o_invert)
+                pin_o6 = get_oneg(pin.o6, o_invert)
+                pin_o7 = get_oneg(pin.o7, o_invert)
+            elif pin.xdr == 10:
+                pin_o0 = get_oneg(pin.o0, o_invert)
+                pin_o1 = get_oneg(pin.o1, o_invert)
+                pin_o2 = get_oneg(pin.o2, o_invert)
+                pin_o3 = get_oneg(pin.o3, o_invert)
+                pin_o4 = get_oneg(pin.o4, o_invert)
+                pin_o5 = get_oneg(pin.o5, o_invert)
+                pin_o6 = get_oneg(pin.o6, o_invert)
+                pin_o7 = get_oneg(pin.o7, o_invert)
+                pin_o8 = get_oneg(pin.o8, o_invert)
+                pin_o9 = get_oneg(pin.o9, o_invert)
 
         i = o = t = None
         if "i" in pin.dir:
@@ -622,6 +725,20 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 get_oddr71(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, pin_o4, pin_o5, pin_o6, o)
             if pin.dir in ("oe", "io"):
                 get_oereg(pin.o_clk, ~pin.oe, t)
+        elif pin.xdr == 8:
+            if "i" in pin.dir:
+                get_iddrx4(pin.i_clk, pin.i_fclk, i, pin_i0, pin_i1, pin_i2, pin_i3, pin_i4, pin_i5, pin_i6, pin_i7)
+            if "o" in pin.dir:
+                get_oddrx4(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, pin_o4, pin_o5, pin_o6, pin_07, o)
+            if pin.dir in ("oe", "io"):
+                get_oereg(pin.o_clk, ~pin.oe, t)
+        elif pin.xdr == 10:
+            if "i" in pin.dir:
+                get_iddrx5(pin.i_clk, pin.i_fclk, i, pin_i0, pin_i1, pin_i2, pin_i3, pin_i4, pin_i5, pin_i6, pin_i7, pin_i8, pin_i9)
+            if "o" in pin.dir:
+                get_oddrx5(pin.o_clk, pin.o_fclk, pin_o0, pin_o1, pin_o2, pin_o3, pin_o4, pin_o5, pin_o6, pin_07, pin_o8, pin_o9, o)
+            if pin.dir in ("oe", "io"):
+                get_oereg(pin.o_clk, ~pin.oe, t)
         else:
             assert False
 
@@ -632,7 +749,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "single-ended input",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -649,7 +766,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "single-ended output",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -666,7 +783,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "single-ended tristate",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -684,7 +801,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "single-ended input/output",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -703,7 +820,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "differential input",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -720,7 +837,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "differential output",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -737,7 +854,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "differential tristate",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
@@ -755,7 +872,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             "differential input/output",
             pin,
             attrs,
-            valid_xdrs=(0, 1, 2, 4, 7),
+            valid_xdrs=(0, 1, 2, 4, 7, 8, 10),
             valid_attrs=True,
         )
         m = Module()
