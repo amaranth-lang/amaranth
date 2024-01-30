@@ -1,6 +1,6 @@
 import argparse
 
-from .hdl.ir import Fragment
+from .hdl._ir import Fragment
 from .back import rtlil, cxxrtl, verilog
 from .sim import Simulator
 

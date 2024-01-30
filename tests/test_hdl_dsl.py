@@ -3,9 +3,9 @@
 import sys
 from collections import OrderedDict
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.dsl import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._dsl import *
 from amaranth.lib.enum import Enum
 
 from .utils import *
@@ -130,25 +130,6 @@ class DSLTestCase(FHDLTestCase):
         self.assertRepr(m._statements, """
         (
             (eq (rst pix) (const 1'd1))
-        )
-        """)
-
-    @_ignore_deprecated
-    def test_sample_domain(self):
-        m = Module()
-        i = Signal()
-        o1 = Signal()
-        o2 = Signal()
-        o3 = Signal()
-        m.d.sync += o1.eq(Past(i))
-        m.d.pix  += o2.eq(Past(i))
-        m.d.pix  += o3.eq(Past(i, domain="sync"))
-        f = m.elaborate(platform=None)
-        self.assertRepr(f.statements, """
-        (
-            (eq (sig o1) (sample (sig i) @ sync[1]))
-            (eq (sig o2) (sample (sig i) @ pix[1]))
-            (eq (sig o3) (sample (sig i) @ sync[1]))
         )
         """)
 
@@ -385,7 +366,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
-    def test_Switch_default_Case(self):
+    def test_Switch_empty_Case(self):
         m = Module()
         with m.Switch(self.w1):
             with m.Case(3):
@@ -397,7 +378,6 @@ class DSLTestCase(FHDLTestCase):
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
-                (default (eq (sig c2) (const 1'd1)))
             )
         )
         """)
@@ -516,6 +496,26 @@ class DSLTestCase(FHDLTestCase):
                 r"^Case is not permitted outside of Switch$"):
             with m.Case():
                 pass
+
+    def test_Case_after_Default_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Default():
+                pass
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^A case defined after the default case will never be active$"):
+                with m.Case():
+                    pass
+
+    def test_Default_after_Default_wrong(self):
+        m = Module()
+        with m.Switch(self.w1):
+            with m.Default():
+                pass
+            with self.assertWarnsRegex(SyntaxWarning,
+                    r"^A case defined after the default case will never be active$"):
+                with m.Default():
+                    pass
 
     def test_If_inside_Switch_wrong(self):
         m = Module()

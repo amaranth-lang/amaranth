@@ -27,7 +27,7 @@ A 16-bit up counter with enable input, overflow output, and a limit fixed at des
    :lineno-match:
    :end-before: # --- TEST ---
 
-The reusable building block of Amaranth designs is an ``Elaboratable``: a Python class that includes HDL signals (``en`` and ``ovf``, in this case) as a part of its interface, and provides the ``elaborate`` method that defines its behavior.
+The reusable building block of Amaranth designs is a ``Component``: a Python class declares its interface (``en`` and ``ovf``, in this case) and implements the ``elaborate`` method that defines its behavior.
 
 .. TODO: link to Elaboratable reference
 

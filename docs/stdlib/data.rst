@@ -20,6 +20,12 @@ This module provides four related facilities:
 3. Data views via :class:`View` or its user-defined subclasses. This class is used to apply a layout description to a plain :class:`Value`, enabling structured access to its bits.
 4. Data classes :class:`Struct` and :class:`Union`. These classes are data views with a layout that is defined using Python :term:`variable annotations <python:variable annotation>` (also known as type annotations).
 
+To use this module, add the following imports to the beginning of the file:
+
+.. testcode::
+
+   from amaranth.lib import data
+
 
 Motivation
 ++++++++++
@@ -61,7 +67,7 @@ While this implementation works, it is repetitive, error-prone, hard to read, an
 
     m.d.comb += o_gray.eq((i_color.red + i_color.green + i_color.blue) << 1)
 
-The :class:`View` is :ref:`value-castable <lang-valuecasting>` and can be used anywhere a plain value can be used. For example, it can be assigned to in the usual way:
+The :class:`View` is :ref:`value-like <lang-valuelike>` and can be used anywhere a plain value can be used. For example, it can be assigned to in the usual way:
 
 .. testcode::
 
@@ -135,7 +141,7 @@ In case the data has related operations or transformations, :class:`View` can be
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the ``RGBLayout`` class itself is :ref:`shape-castable <lang-shapecasting>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
+Here, the ``RGBLayout`` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
 
 .. doctest::
 

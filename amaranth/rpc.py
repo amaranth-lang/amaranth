@@ -20,7 +20,7 @@ def _collect_modules(names):
                 py_class = py_module.__dict__[py_class_name]
                 if not issubclass(py_class, Elaboratable):
                     continue
-                modules["{}.{}".format(py_module_name, py_class_name)] = py_class
+                modules[f"{py_module_name}.{py_class_name}"] = py_class
         else:
             py_class = py_module.__dict__[py_class_name]
             if not isinstance(py_class, type) or not issubclass(py_class, Elaboratable):
@@ -77,7 +77,7 @@ def _serve_yosys(modules):
                 rtlil_text = rtlil.convert(elaboratable, name=module_name, ports=ports)
                 response = {"frontend": "ilang", "source": rtlil_text}
             except Exception as error:
-                response = {"error": "{}: {}".format(type(error).__name__, str(error))}
+                response = {"error": f"{type(error).__name__}: {str(error)}"}
 
         else:
             return {"error": "Unrecognized method {!r}".format(request["method"])}

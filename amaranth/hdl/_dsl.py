@@ -5,12 +5,13 @@ from enum import Enum
 import warnings
 import sys
 
-from .._utils import flatten, bits_for
+from .._utils import flatten
+from ..utils import bits_for
 from .. import tracer
-from .ast import *
-from .ir import *
-from .cd import *
-from .xfrm import *
+from ._ast import *
+from ._ir import *
+from ._cd import *
+from ._xfrm import *
 
 
 __all__ = ["SyntaxError", "SyntaxWarning", "Module"]
@@ -307,6 +308,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
+        if () in switch_data["cases"]:
+            warnings.warn("A case defined after the default case will never be active",
+                          SyntaxWarning, stacklevel=3)
         # This code should accept exactly the same patterns as `v.matches(...)`.
         for pattern in patterns:
             if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
@@ -342,26 +346,43 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             yield
             self._flush_ctrl()
             # If none of the provided cases can possibly be true, omit this branch completely.
-            # This needs to be differentiated from no cases being provided in the first place,
-            # which means the branch will always match.
-            if not (patterns and not new_patterns):
+            # Likewise, omit this branch if another branch with this exact set of patterns already
+            # exists (since otherwise we'd overwrite the previous branch's slot in the dict).
+            if new_patterns and new_patterns not in switch_data["cases"]:
                 switch_data["cases"][new_patterns] = self._statements
                 switch_data["case_src_locs"][new_patterns] = src_loc
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
 
+    @contextmanager
     def Default(self):
-        return self.Case()
+        self._check_context("Default", context="Switch")
+        src_loc = tracer.get_src_loc(src_loc_at=1)
+        switch_data = self._get_ctrl("Switch")
+        if () in switch_data["cases"]:
+            warnings.warn("A case defined after the default case will never be active",
+                          SyntaxWarning, stacklevel=3)
+        try:
+            _outer_case, self._statements = self._statements, []
+            self._ctrl_context = None
+            yield
+            self._flush_ctrl()
+            if () not in switch_data["cases"]:
+                switch_data["cases"][()] = self._statements
+                switch_data["case_src_locs"][()] = src_loc
+        finally:
+            self._ctrl_context = "Switch"
+            self._statements = _outer_case
 
     @contextmanager
     def FSM(self, reset=None, domain="sync", name="fsm"):
         self._check_context("FSM", context=None)
         if domain == "comb":
-            raise ValueError("FSM may not be driven by the '{}' domain".format(domain))
+            raise ValueError(f"FSM may not be driven by the '{domain}' domain")
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
-            "signal":   Signal(name="{}_state".format(name), src_loc_at=2),
+            "signal":   Signal(name=f"{name}_state", src_loc_at=2),
             "reset":    reset,
             "domain":   domain,
             "encoding": OrderedDict(),
@@ -391,7 +412,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         fsm_data = self._get_ctrl("FSM")
         if name in fsm_data["states"]:
-            raise NameError("FSM state '{}' is already defined".format(name))
+            raise NameError(f"FSM state '{name}' is already defined")
         if name not in fsm_data["encoding"]:
             fsm_data["encoding"][name] = len(fsm_data["encoding"])
         try:
@@ -468,13 +489,13 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 fsm_signal.reset = fsm_encoding[fsm_reset]
             # The FSM is encoded such that the state with encoding 0 is always the reset state.
             fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
-            fsm_signal.decoder = lambda n: "{}/{}".format(fsm_decoding[n], n)
+            fsm_signal.decoder = lambda n: f"{fsm_decoding[n]}/{n}"
             self._statements.append(Switch(fsm_signal,
                 OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items()),
                 src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
                                                 for name in fsm_states}))
 
-    def _add_statement(self, assigns, domain, depth, compat_mode=False):
+    def _add_statement(self, assigns, domain, depth):
         def domain_name(domain):
             if domain is None:
                 return "comb"
@@ -485,13 +506,12 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not compat_mode and not isinstance(stmt, (Assign, Assert, Assume, Cover)):
+            if not isinstance(stmt, (Assign, Assert, Assume, Cover)):
                 raise SyntaxError(
                     "Only assignments and property checks may be appended to d.{}"
                     .format(domain_name(domain)))
 
             stmt._MustUse__used = True
-            stmt = SampleDomainInjector(domain)(stmt)
 
             for signal in stmt._lhs_signals():
                 if signal not in self._driving:
@@ -513,18 +533,18 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._anon_submodules.append(submodule)
         else:
             if name in self._named_submodules:
-                raise NameError("Submodule named '{}' already exists".format(name))
+                raise NameError(f"Submodule named '{name}' already exists")
             self._named_submodules[name] = submodule
 
     def _get_submodule(self, name):
         if name in self._named_submodules:
             return self._named_submodules[name]
         else:
-            raise AttributeError("No submodule named '{}' exists".format(name))
+            raise AttributeError(f"No submodule named '{name}' exists")
 
     def _add_domain(self, cd):
         if cd.name in self._domains:
-            raise NameError("Clock domain named '{}' already exists".format(cd.name))
+            raise NameError(f"Clock domain named '{cd.name}' already exists")
         self._domains[cd.name] = cd
 
     def _flush(self):
@@ -539,8 +559,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
         for submodule in self._anon_submodules:
             fragment.add_subfragment(Fragment.get(submodule, platform), None)
-        statements = SampleDomainInjector("sync")(self._statements)
-        fragment.add_statements(statements)
+        fragment.add_statements(self._statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
         fragment.add_domains(self._domains.values())

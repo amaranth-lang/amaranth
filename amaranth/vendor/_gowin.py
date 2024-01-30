@@ -86,7 +86,7 @@ class GowinPlatform(TemplatedPlatform):
     def _chipdb_device(self):
         # GW1NR series does not have its own chipdb file, but works with GW1N
         if self.series == "GW1NR":
-            return "GW1N-{}{}".format(self.size, self.subseries_f)
+            return f"GW1N-{self.size}{self.subseries_f}"
         return self.family
 
     _dev_osc_mapping = {
@@ -227,7 +227,6 @@ class GowinPlatform(TemplatedPlatform):
                 read_ilang {{file}}
             {% endfor %}
             read_ilang {{name}}.il
-            delete w:$verilog_initial_trigger
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_gowin {{get_override("synth_opts")|options}} -top {{name}} -json {{name}}.syn.json
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
@@ -473,11 +472,11 @@ class GowinPlatform(TemplatedPlatform):
         i = o = t = None
 
         if "i" in pin.dir:
-            i = Signal(pin.width, name="{}_xdr_i".format(pin.name))
+            i = Signal(pin.width, name=f"{pin.name}_xdr_i")
         if "o" in pin.dir:
-            o = Signal(pin.width, name="{}_xdr_o".format(pin.name))
+            o = Signal(pin.width, name=f"{pin.name}_xdr_o")
         if pin.dir in ("oe", "io"):
-            t = Signal(1,         name="{}_xdr_t".format(pin.name))
+            t = Signal(1,         name=f"{pin.name}_xdr_t")
 
         if pin.xdr == 0:
             if "i" in pin.dir:
@@ -511,7 +510,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUF",
                 i_I=port.io[bit],
                 o_O=i[bit]
             )
@@ -523,7 +522,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, port.io, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("OBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUF",
                 i_I=o[bit],
                 o_O=port.io[bit]
             )
@@ -535,7 +534,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("TBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("TBUF",
                 i_OEN=t,
                 i_I=o[bit],
                 o_O=port.io[bit]
@@ -548,7 +547,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name, bit)] = Instance("IOBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUF",
                 i_OEN=t,
                 i_I=o[bit],
                 o_O=i[bit],
@@ -562,7 +561,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
         for bit in range(pin.wodth):
-            m.submodules["{}_{}".format(pin.name,bit)] = Instance("TLVDS_IBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_IBUF",
                 i_I=port.p[bit],
                 i_IB=port.n[bit],
                 o_O=i[bit]
@@ -575,7 +574,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name,bit)] = Instance("TLVDS_OBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_OBUF",
                 i_I=o[bit],
                 o_O=port.p[bit],
                 o_OB=port.n[bit],
@@ -588,7 +587,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name,bit)] = Instance("TLVDS_TBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_TBUF",
                 i_OEN=t,
                 i_I=o[bit],
                 o_O=port.p[bit],
@@ -602,7 +601,7 @@ class GowinPlatform(TemplatedPlatform):
         m = Module()
         i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
         for bit in range(pin.width):
-            m.submodules["{}_{}".format(pin.name,bit)] = Instance("TLVDS_IOBUF",
+            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_IOBUF",
                 i_OEN=t,
                 i_I=o[bit],
                 o_O=i[bit],

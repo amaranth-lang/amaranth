@@ -34,7 +34,7 @@ class MustUse:
             if get_linter_option(self._MustUse__context["filename"],
                                  self._MustUse__warning.__name__, bool, True):
                 warnings.warn_explicit(
-                    "{!r} created but never used".format(self), self._MustUse__warning,
+                    f"{self!r} created but never used", self._MustUse__warning,
                     **self._MustUse__context)
 
 

@@ -12,7 +12,7 @@ The ``amaranth.lib.fifo`` module provides building blocks for first-in, first-ou
 
       The :class:`FIFOInterface` class can be used directly to substitute a FIFO in tests, or inherited from in a custom FIFO implementation.
 
-.. autoclass:: SyncFIFO(*, width, depth, fwft=True)
+.. autoclass:: SyncFIFO(*, width, depth)
 .. autoclass:: SyncFIFOBuffered(*, width, depth)
 .. autoclass:: AsyncFIFO(*, width, depth, r_domain="read", w_domain="write", exact_depth=False)
 .. autoclass:: AsyncFIFOBuffered(*, width, depth, r_domain="read", w_domain="write", exact_depth=False)

@@ -3,14 +3,14 @@ import warnings
 from contextlib import contextmanager
 
 from amaranth._utils import flatten
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import  *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import  *
+from amaranth.hdl._mem import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from amaranth.hdl.rec import *
-from amaranth.hdl.dsl import  *
-from amaranth.hdl.ir import *
+from amaranth.hdl._dsl import  *
+from amaranth.hdl._ir import *
 from amaranth.sim import *
 
 from .utils import *
@@ -509,7 +509,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.m.d.sync += self.o.eq(self.a + self.b)
             with self.m.Case(1):
                 self.m.d.sync += self.o.eq(self.a - self.b)
-            with self.m.Case():
+            with self.m.Default():
                 self.m.d.sync += self.o.eq(0)
         self.m.domains += self.sync
 
@@ -686,6 +686,27 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                         r"Received unsupported command 1 from process .+?"):
                     yield 1
                 yield Settle()
+                survived = True
+            sim.add_process(process)
+        self.assertTrue(survived)
+
+    def test_value_castable(self):
+        class MyValue(ValueCastable):
+            @ValueCastable.lowermethod
+            def as_value(self):
+                return Signal()
+
+            def shape():
+                return unsigned(1)
+
+        a = Array([1,2,3])
+        a[MyValue()]
+
+        survived = False
+        with self.assertSimulation(Module()) as sim:
+            def process():
+                nonlocal survived
+                yield MyValue()
                 survived = True
             sim.add_process(process)
         self.assertTrue(survived)
@@ -910,53 +931,6 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual((yield rdport.data), 0x22776655)
             sim.add_clock(1e-6)
             sim.add_sync_process(process)
-
-    @_ignore_deprecated
-    def test_sample_helpers(self):
-        m = Module()
-        s = Signal(2)
-        def mk(x):
-            y = Signal.like(x)
-            m.d.comb += y.eq(x)
-            return y
-        p0, r0, f0, s0 = mk(Past(s, 0)), mk(Rose(s)),    mk(Fell(s)),    mk(Stable(s))
-        p1, r1, f1, s1 = mk(Past(s)),    mk(Rose(s, 1)), mk(Fell(s, 1)), mk(Stable(s, 1))
-        p2, r2, f2, s2 = mk(Past(s, 2)), mk(Rose(s, 2)), mk(Fell(s, 2)), mk(Stable(s, 2))
-        p3, r3, f3, s3 = mk(Past(s, 3)), mk(Rose(s, 3)), mk(Fell(s, 3)), mk(Stable(s, 3))
-        with self.assertSimulation(m) as sim:
-            def process_gen():
-                yield s.eq(0b10)
-                yield
-                yield
-                yield s.eq(0b01)
-                yield
-            def process_check():
-                yield
-                yield
-                yield
-
-                self.assertEqual((yield p0), 0b01)
-                self.assertEqual((yield p1), 0b10)
-                self.assertEqual((yield p2), 0b10)
-                self.assertEqual((yield p3), 0b00)
-
-                self.assertEqual((yield s0), 0b0)
-                self.assertEqual((yield s1), 0b1)
-                self.assertEqual((yield s2), 0b0)
-                self.assertEqual((yield s3), 0b1)
-
-                self.assertEqual((yield r0), 0b01)
-                self.assertEqual((yield r1), 0b00)
-                self.assertEqual((yield r2), 0b10)
-                self.assertEqual((yield r3), 0b00)
-
-                self.assertEqual((yield f0), 0b10)
-                self.assertEqual((yield f1), 0b00)
-                self.assertEqual((yield f2), 0b00)
-                self.assertEqual((yield f3), 0b00)
-            sim.add_clock(1e-6)
-            sim.add_sync_process(process_gen)
-            sim.add_sync_process(process_check)
 
     def test_vcd_wrong_nonzero_time(self):
         s = Signal()

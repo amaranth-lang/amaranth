@@ -4,14 +4,16 @@ from contextlib import contextmanager
 import sys
 
 from ..hdl import *
-from ..hdl.ast import SignalSet
-from ..hdl.xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
+from ..hdl._ast import SignalSet
+from ..hdl._xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
 from ._base import BaseProcess
 
 
 __all__ = ["PyRTLProcess"]
 
+
 _USE_PATTERN_MATCHING = (sys.version_info >= (3, 10))
+
 
 class PyRTLProcess(BaseProcess):
     __slots__ = ("is_comb", "runnable", "passive", "run")
@@ -83,11 +85,11 @@ class _ValueCompiler(ValueVisitor, _Compiler):
                                 "simulate in reasonable time"
                                 .format(src, len(value)))
 
-        v = super().on_value(value)
-        if isinstance(v, str) and len(v) > 1000:
+        code = super().on_value(value)
+        if isinstance(code, str) and len(code) > 1000:
             # Avoid parser stack overflow on older Pythons.
-            return self.emitter.def_var("intermediate", v)
-        return v
+            return self.emitter.def_var("expr_split", code)
+        return code
 
     def on_ClockSignal(self, value):
         raise NotImplementedError # :nocov:
@@ -99,9 +101,6 @@ class _ValueCompiler(ValueVisitor, _Compiler):
         raise NotImplementedError # :nocov:
 
     def on_AnySeq(self, value):
-        raise NotImplementedError # :nocov:
-
-    def on_Sample(self, value):
         raise NotImplementedError # :nocov:
 
     def on_Initial(self, value):
@@ -195,7 +194,7 @@ class _RHSValueCompiler(_ValueCompiler):
             if value.operator == "m":
                 sel, val1, val0 = value.operands
                 return f"({sign(val1)} if {mask(sel)} else {sign(val0)})"
-        raise NotImplementedError("Operator '{}' not implemented".format(value.operator)) # :nocov:
+        raise NotImplementedError(f"Operator '{value.operator}' not implemented") # :nocov:
 
     def on_Slice(self, value):
         return f"({(1 << len(value)) - 1:#x} & ({self(value.value)} >> {value.start}))"
@@ -475,7 +474,7 @@ class _FragmentCompiler:
 
         for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
             if subfragment_name is None:
-                subfragment_name = "U${}".format(subfragment_index)
+                subfragment_name = f"U${subfragment_index}"
             processes.update(self(subfragment))
 
         return processes

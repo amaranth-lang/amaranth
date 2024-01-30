@@ -1,7 +1,7 @@
 import warnings
-from enum import Enum
+from enum import Enum, EnumMeta
 
-from amaranth.hdl.ast import *
+from amaranth.hdl._ast import *
 from amaranth.lib.enum import Enum as AmaranthEnum
 
 from .utils import *
@@ -189,6 +189,44 @@ class ShapeCastableTestCase(FHDLTestCase):
         self.assertEqual(Shape.cast(sc), unsigned(1))
 
 
+class ShapeLikeTestCase(FHDLTestCase):
+    def test_construct(self):
+        with self.assertRaises(TypeError):
+            ShapeLike()
+
+    def test_subclass(self):
+        self.assertTrue(issubclass(Shape, ShapeLike))
+        self.assertTrue(issubclass(MockShapeCastable, ShapeLike))
+        self.assertTrue(issubclass(int, ShapeLike))
+        self.assertTrue(issubclass(range, ShapeLike))
+        self.assertTrue(issubclass(EnumMeta, ShapeLike))
+        self.assertFalse(issubclass(Enum, ShapeLike))
+        self.assertFalse(issubclass(str, ShapeLike))
+        self.assertTrue(issubclass(ShapeLike, ShapeLike))
+
+    def test_isinstance(self):
+        self.assertTrue(isinstance(unsigned(2), ShapeLike))
+        self.assertTrue(isinstance(MockShapeCastable(unsigned(2)), ShapeLike))
+        self.assertTrue(isinstance(2, ShapeLike))
+        self.assertTrue(isinstance(0, ShapeLike))
+        self.assertFalse(isinstance(-1, ShapeLike))
+        self.assertTrue(isinstance(range(10), ShapeLike))
+        self.assertFalse(isinstance("abc", ShapeLike))
+
+    def test_isinstance_enum(self):
+        class EnumA(Enum):
+            A = 1
+            B = 2
+        class EnumB(Enum):
+            A = "a"
+            B = "b"
+        class EnumC(Enum):
+            A = Cat(Const(1, 2), Const(0, 2))
+        self.assertTrue(isinstance(EnumA, ShapeLike))
+        self.assertFalse(isinstance(EnumB, ShapeLike))
+        self.assertTrue(isinstance(EnumC, ShapeLike))
+
+
 class ValueTestCase(FHDLTestCase):
     def test_cast(self):
         self.assertIsInstance(Value.cast(0), Const)
@@ -265,6 +303,15 @@ class ValueTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Cannot index value with 'str'$"):
             Const(31)["str"]
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot index value with a value; use Value.bit_select\(\) instead$"):
+            Const(31)[Signal(3)]
+        s = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot slice value with a value; use Value.bit_select\(\) or Value.word_select\(\) instead$"):
+            Const(31)[s:s+3]
+
+
 
     def test_shift_left(self):
         self.assertRepr(Const(256, unsigned(9)).shift_left(0),
@@ -644,7 +691,7 @@ class OperatorTestCase(FHDLTestCase):
 
     def test_matches(self):
         s = Signal(4)
-        self.assertRepr(s.matches(), "(const 1'd1)")
+        self.assertRepr(s.matches(), "(const 1'd0)")
         self.assertRepr(s.matches(1), """
         (== (sig s) (const 1'd1))
         """)
@@ -712,6 +759,11 @@ class OperatorTestCase(FHDLTestCase):
         """)
         self.assertEqual(abs(s).shape(), unsigned(4))
 
+    def test_contains(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot use 'in' with an Amaranth value$"):
+            1 in Signal(3)
+
 
 class SliceTestCase(FHDLTestCase):
     def test_shape(self):
@@ -760,6 +812,16 @@ class SliceTestCase(FHDLTestCase):
     def test_repr(self):
         s1 = Const(10)[2]
         self.assertEqual(repr(s1), "(slice (const 4'd10) 2:3)")
+
+    def test_const(self):
+        a = Const.cast(Const(0x1234, 16)[4:12])
+        self.assertEqual(a.value, 0x23)
+        self.assertEqual(a.width, 8)
+        self.assertEqual(a.signed, False)
+        a = Const.cast(Const(-4, signed(8))[1:6])
+        self.assertEqual(a.value, 0x1e)
+        self.assertEqual(a.width, 5)
+        self.assertEqual(a.signed, False)
 
 
 class BitSelectTestCase(FHDLTestCase):
@@ -856,7 +918,7 @@ class CatTestCase(FHDLTestCase):
     def test_cast(self):
         c = Cat(1, 0)
         self.assertEqual(repr(c), "(cat (const 1'd1) (const 1'd0))")
-    
+
     def test_str_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Object 'foo' cannot be converted to an Amaranth value$"):
@@ -896,6 +958,16 @@ class CatTestCase(FHDLTestCase):
                 r"^Argument #1 of Cat\(\) is a bare integer 2 used in bit vector context; "
                 r"specify the width explicitly using C\(2, 2\)$"):
             Cat(2)
+
+    def test_const(self):
+        a = Const.cast(Cat(Const(1, 1), Const(0, 1), Const(3, 2), Const(2, 2)))
+        self.assertEqual(a.value, 0x2d)
+        self.assertEqual(a.width, 6)
+        self.assertEqual(a.signed, False)
+        a = Const.cast(Cat(Const(-4, 8), Const(-3, 8)))
+        self.assertEqual(a.value, 0xfdfc)
+        self.assertEqual(a.width, 16)
+        self.assertEqual(a.signed, False)
 
 
 class ReplTestCase(FHDLTestCase):
@@ -946,6 +1018,18 @@ class ArrayTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Array can no longer be mutated after it was indexed with a value at "):
             a.insert(1, 2)
+
+    def test_index_value_castable(self):
+        class MyValue(ValueCastable):
+            @ValueCastable.lowermethod
+            def as_value(self):
+                return Signal()
+
+            def shape():
+                return unsigned(1)
+
+        a = Array([1,2,3])
+        a[MyValue()]
 
     def test_repr(self):
         a = Array([1,2,3])
@@ -1022,10 +1106,8 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s8.shape(), signed(5))
         s9 = Signal(range(-20, 16))
         self.assertEqual(s9.shape(), signed(6))
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="ignore", category=SyntaxWarning)
-            s10 = Signal(range(0))
-            self.assertEqual(s10.shape(), unsigned(0))
+        s10 = Signal(range(0))
+        self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
         self.assertEqual(s11.shape(), unsigned(1))
 
@@ -1100,10 +1182,22 @@ class SignalTestCase(FHDLTestCase):
             Signal(signed(1), reset=-2)
 
     def test_reset_wrong_fencepost(self):
-        with self.assertWarnsRegex(SyntaxWarning,
+        with self.assertRaisesRegex(SyntaxError,
                 r"^Reset value 10 equals the non-inclusive end of the signal shape "
                 r"range\(0, 10\); this is likely an off-by-one error$"):
             Signal(range(0, 10), reset=10)
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Reset value 0 equals the non-inclusive end of the signal shape "
+                r"range\(0, 0\); this is likely an off-by-one error$"):
+            Signal(range(0), reset=0)
+
+    def test_reset_wrong_range(self):
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Reset value 11 is not within the signal shape range\(0, 10\)$"):
+            Signal(range(0, 10), reset=11)
+        with self.assertRaisesRegex(SyntaxError,
+                r"^Reset value 0 is not within the signal shape range\(1, 10\)$"):
+            Signal(range(1, 10), reset=0)
 
     def test_attrs(self):
         s1 = Signal()
@@ -1148,6 +1242,12 @@ class SignalTestCase(FHDLTestCase):
         s2 = Signal(SignedEnum)
         self.assertEqual(s2.shape(), signed(2))
         self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
+
+    def test_const_wrong(self):
+        s1 = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Value \(sig s1\) cannot be converted to an Amaranth constant$"):
+            Const.cast(s1)
 
 
 class ClockSignalTestCase(FHDLTestCase):
@@ -1300,37 +1400,48 @@ class ValueCastableTestCase(FHDLTestCase):
         self.assertIsInstance(Value.cast(vc), Signal)
 
 
-class SampleTestCase(FHDLTestCase):
-    @_ignore_deprecated
-    def test_const(self):
-        s = Sample(1, 1, "sync")
-        self.assertEqual(s.shape(), unsigned(1))
+class ValueLikeTestCase(FHDLTestCase):
+    def test_construct(self):
+        with self.assertRaises(TypeError):
+            ValueLike()
 
-    @_ignore_deprecated
-    def test_signal(self):
-        s1 = Sample(Signal(2), 1, "sync")
-        self.assertEqual(s1.shape(), unsigned(2))
-        s2 = Sample(ClockSignal(), 1, "sync")
-        s3 = Sample(ResetSignal(), 1, "sync")
+    def test_subclass(self):
+        self.assertTrue(issubclass(Value, ValueLike))
+        self.assertTrue(issubclass(MockValueCastable, ValueLike))
+        self.assertTrue(issubclass(int, ValueLike))
+        self.assertFalse(issubclass(range, ValueLike))
+        self.assertFalse(issubclass(EnumMeta, ValueLike))
+        self.assertTrue(issubclass(Enum, ValueLike))
+        self.assertFalse(issubclass(str, ValueLike))
+        self.assertTrue(issubclass(ValueLike, ValueLike))
 
-    @_ignore_deprecated
-    def test_wrong_value_operator(self):
-        with self.assertRaisesRegex(TypeError,
-                (r"^Sampled value must be a signal or a constant, not "
-                r"\(\+ \(sig \$signal\) \(const 1'd1\)\)$")):
-            Sample(Signal() + 1, 1, "sync")
+    def test_isinstance(self):
+        self.assertTrue(isinstance(Const(0, 2), ValueLike))
+        self.assertTrue(isinstance(MockValueCastable(Const(0, 2)), ValueLike))
+        self.assertTrue(isinstance(2, ValueLike))
+        self.assertTrue(isinstance(-2, ValueLike))
+        self.assertFalse(isinstance(range(10), ValueLike))
 
-    @_ignore_deprecated
-    def test_wrong_clocks_neg(self):
-        with self.assertRaisesRegex(ValueError,
-                r"^Cannot sample a value 1 cycles in the future$"):
-            Sample(Signal(), -1, "sync")
-
-    @_ignore_deprecated
-    def test_wrong_domain(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Domain name must be a string or None, not 0$"):
-            Sample(Signal(), 1, 0)
+    def test_enum(self):
+        class EnumA(Enum):
+            A = 1
+            B = 2
+        class EnumB(Enum):
+            A = "a"
+            B = "b"
+        class EnumC(Enum):
+            A = Cat(Const(1, 2), Const(0, 2))
+        class EnumD(Enum):
+            A = 1
+            B = "a"
+        self.assertTrue(issubclass(EnumA, ValueLike))
+        self.assertFalse(issubclass(EnumB, ValueLike))
+        self.assertTrue(issubclass(EnumC, ValueLike))
+        self.assertFalse(issubclass(EnumD, ValueLike))
+        self.assertTrue(isinstance(EnumA.A, ValueLike))
+        self.assertFalse(isinstance(EnumB.A, ValueLike))
+        self.assertTrue(isinstance(EnumC.A, ValueLike))
+        self.assertFalse(isinstance(EnumD.A, ValueLike))
 
 
 class InitialTestCase(FHDLTestCase):

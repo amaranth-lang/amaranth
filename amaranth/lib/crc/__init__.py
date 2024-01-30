@@ -1,6 +1,6 @@
 """
-Utilities for computing cyclic redundancy checks (CRCs) in software and in
-hardware.
+The :mod:`amaranth.lib.crc` module provides utilities for computing cyclic
+redundancy checks (CRCs) in software and in hardware.
 
 CRCs are specified using the :py:class:`Algorithm` class, which contains
 settings for CRC width, polynomial, initial value, input/output reflection, and
@@ -233,7 +233,7 @@ class Parameters:
         crc = self._initial_crc << self._data_width
         for word in data:
             if not 0 <= word <= word_max:
-                raise ValueError("data word must be between 0 and {}".format(word_max - 1))
+                raise ValueError(f"data word must be between 0 and {word_max - 1}")
 
             if self._reflect_input:
                 word = self._reflect(word, self._data_width)

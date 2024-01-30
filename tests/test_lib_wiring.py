@@ -4,11 +4,11 @@ import unittest
 from types import SimpleNamespace as NS
 
 from amaranth import *
-from amaranth.hdl.ast import ValueCastable
+from amaranth.hdl._ast import ValueCastable
 from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
-from amaranth.lib.wiring import Signature, FlippedSignature, Interface, FlippedInterface
+from amaranth.lib.wiring import Signature, FlippedSignature, PureInterface, FlippedInterface
 from amaranth.lib.wiring import Component
 from amaranth.lib.wiring import ConnectionError, connect, flipped
 
@@ -25,6 +25,10 @@ class FlowTestCase(unittest.TestCase):
     def test_flow_str(self):
         self.assertEqual(str(Flow.In), "In")
         self.assertEqual(str(Flow.Out), "Out")
+
+    def test_flow_value(self):
+        self.assertEqual(Flow.In.value, "In")
+        self.assertEqual(Flow.Out.value, "Out")
 
 
 class MemberTestCase(unittest.TestCase):
@@ -178,29 +182,9 @@ class SignatureMembersTestCase(unittest.TestCase):
 
     def test_setitem(self):
         members = SignatureMembers()
-        members["a"] = In(1)
-        self.assertEqual(members["a"], In(1))
-
-    def test_setitem_existing(self):
-        members = SignatureMembers({"a": In(1)})
         with self.assertRaisesRegex(SignatureError,
-                r"^Member 'a' already exists in the signature and cannot be replaced$"):
-            members["a"] = Out(2)
-
-    def test_setitem_wrong(self):
-        members = SignatureMembers()
-        with self.assertRaisesRegex(TypeError,
-                r"^Member name must be a string, not 1$"):
-            members[1] = Out(1)
-        with self.assertRaisesRegex(TypeError,
-                r"^Assigned value 1 must be a member; did you mean In\(1\) or Out\(1\)\?$"):
-            members["a"] = 1
-        with self.assertRaisesRegex(NameError,
-                r"^Member name '_a' must be a valid, public Python attribute name$"):
-            members["_a"] = Out(1)
-        with self.assertRaisesRegex(NameError,
-                r"^Member name cannot be 'signature'$"):
-            members["signature"] = Out(1)
+                r"^Members cannot be added to a signature once constructed$"):
+            members["a"] = In(1)
 
     def test_delitem(self):
         members = SignatureMembers()
@@ -212,44 +196,15 @@ class SignatureMembersTestCase(unittest.TestCase):
         members = SignatureMembers()
         self.assertEqual(list(iter(members)), [])
         self.assertEqual(len(members), 0)
-        members["a"] = In(1)
+        members = SignatureMembers({"a": In(1)})
         self.assertEqual(list(iter(members)), ["a"])
         self.assertEqual(len(members), 1)
 
-    def test_iter_sorted(self):
+    def test_iter_insertion_order(self):
         self.assertEqual(list(iter(SignatureMembers({"a": In(1), "b": Out(1)}))),
                          ["a", "b"])
         self.assertEqual(list(iter(SignatureMembers({"b": In(1), "a": Out(1)}))),
-                         ["a", "b"])
-
-    def test_iadd(self):
-        members = SignatureMembers()
-        members += {"a": In(1)}
-        members += [("b", Out(1))]
-        self.assertEqual(members, SignatureMembers({"a": In(1), "b": Out(1)}))
-
-    def test_freeze(self):
-        members = SignatureMembers({"a": In(1)})
-        self.assertEqual(members.frozen, False)
-        members.freeze()
-        self.assertEqual(members.frozen, True)
-        with self.assertRaisesRegex(SignatureError,
-                r"^Cannot add members to a frozen signature$"):
-            members += {"b": Out(1)}
-
-    def test_freeze_rec(self):
-        sig = Signature({})
-        members = SignatureMembers({
-            "a": In(1),
-            "s": Out(sig)
-        })
-        self.assertEqual(members.frozen, False)
-        self.assertEqual(sig.frozen, False)
-        self.assertEqual(sig.members.frozen, False)
-        members.freeze()
-        self.assertEqual(members.frozen, True)
-        self.assertEqual(sig.frozen, True)
-        self.assertEqual(sig.members.frozen, True)
+                         ["b", "a"])
 
     def test_flatten(self):
         sig = Signature({
@@ -279,9 +234,9 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(list(attrs.keys()), ["a", "s"])
         self.assertIsInstance(attrs["a"], Signal)
         self.assertEqual(attrs["a"].shape(), unsigned(1))
-        self.assertEqual(attrs["a"].name, "a")
+        self.assertEqual(attrs["a"].name, "attrs__a")
         self.assertEqual(attrs["s"].b.shape(), unsigned(2))
-        self.assertEqual(attrs["s"].b.name, "s__b")
+        self.assertEqual(attrs["s"].b.name, "attrs__s__b")
 
     def test_create_reset(self):
         members = SignatureMembers({
@@ -301,7 +256,12 @@ class SignatureMembersTestCase(unittest.TestCase):
         for x in members["a"]:
             for y in x:
                 self.assertIsInstance(y, Signal)
-        self.assertEqual(members["a"][1][2].name, "a__1__2")
+        self.assertEqual(members["a"][1][2].name, "members__a__1__2")
+
+    def test_create_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Value 1 must be a member; did you mean In\(1\) or Out\(1\)\?$"):
+            SignatureMembers({"a": 1})
 
     def test_repr(self):
         self.assertEqual(repr(SignatureMembers({})),
@@ -309,9 +269,8 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(repr(SignatureMembers({"a": In(1)})),
                          "SignatureMembers({'a': In(1)})")
         members = SignatureMembers({"b": Out(2)})
-        members.freeze()
         self.assertEqual(repr(members),
-                         "SignatureMembers({'b': Out(2)}).freeze()")
+                         "SignatureMembers({'b': Out(2)})")
 
 
 class FlippedSignatureMembersTestCase(unittest.TestCase):
@@ -321,12 +280,14 @@ class FlippedSignatureMembersTestCase(unittest.TestCase):
         self.assertIsInstance(fmembers, FlippedSignatureMembers)
         self.assertIn("a", fmembers)
         self.assertEqual(fmembers["a"], Out(1))
-        fmembers["b"] = Out(2)
+        members = SignatureMembers({"a": In(1), "b": In(2)})
+        fmembers = members.flip()
         self.assertEqual(len(fmembers), 2)
-        self.assertEqual(members["b"], In(2))
+        self.assertEqual(fmembers["b"], Out(2))
         self.assertEqual(list(fmembers), ["a", "b"])
-        fmembers += {"c": In(2)}
-        self.assertEqual(members["c"], Out(2))
+        members = SignatureMembers({"a": In(1), "b": In(2), "c": Out(2)})
+        fmembers = members.flip()
+        self.assertEqual(fmembers["c"], In(2))
         self.assertIs(fmembers.flip(), members)
 
     def test_eq(self):
@@ -340,14 +301,6 @@ class FlippedSignatureMembersTestCase(unittest.TestCase):
         with self.assertRaisesRegex(SignatureError,
                 r"^Members cannot be removed from a signature$"):
             del fmembers["a"]
-
-    def test_freeze(self):
-        members = SignatureMembers({"a": In(1)})
-        fmembers = members.flip()
-        self.assertEqual(fmembers.frozen, False)
-        fmembers.freeze()
-        self.assertEqual(members.frozen, True)
-        self.assertEqual(fmembers.frozen, True)
 
     def test_repr(self):
         fmembers = SignatureMembers({"a": In(1)}).flip()
@@ -365,14 +318,10 @@ class SignatureTestCase(unittest.TestCase):
         self.assertNotEqual(Signature({"a": In(1)}),
                             Signature({"a": Out(1)}))
 
-    def test_freeze(self):
-        sig = Signature({"a": In(1)})
-        self.assertEqual(sig.frozen, False)
-        sig.freeze()
-        self.assertEqual(sig.frozen, True)
-        with self.assertRaisesRegex(SignatureError,
-                r"^Cannot add members to a frozen signature$"):
-            sig.members += {"b": Out(1)}
+    def test_members_equal_wrong(self):
+        sig = Signature({})
+        with self.assertRaises(AttributeError):
+            sig.members = SignatureMembers({})
 
     def assertFlattenedSignature(self, actual, expected):
         for (a_path, a_member, a_value), (b_path, b_member, b_value) in zip(actual, expected):
@@ -385,8 +334,8 @@ class SignatureTestCase(unittest.TestCase):
         intf = sig.create()
         self.assertFlattenedSignature(sig.flatten(intf), [
             (("a",), In(1), intf.a),
-            ((("b",), 0), Out(2), intf.b[0]),
-            ((("b",), 1), Out(2), intf.b[1])
+            (("b", 0), Out(2), intf.b[0]),
+            (("b", 1), Out(2), intf.b[1])
         ])
 
     def test_flatten_sig(self):
@@ -404,7 +353,32 @@ class SignatureTestCase(unittest.TestCase):
             (("d", "s"), In (1), intf.d.s),
         ])
 
+    def test_is_compliant_signature(self):
+        sig = Signature({})
+
+        obj1 = NS()
+        self.assertFalse(sig.is_compliant(obj1))
+        reasons = []
+        self.assertFalse(sig.is_compliant(obj1, reasons=reasons))
+        self.assertEqual(reasons, ["'obj' does not have an attribute 'signature'"])
+
+        obj = NS(signature=1)
+        self.assertFalse(sig.is_compliant(obj))
+        reasons = []
+        self.assertFalse(sig.is_compliant(obj, reasons=reasons))
+        self.assertEqual(reasons, ["'obj.signature' is expected to be a signature, but it is a 1"])
+
+        obj = NS(signature=Signature({"a": In(1)}))
+        self.assertFalse(sig.is_compliant(obj))
+        reasons = []
+        self.assertFalse(sig.is_compliant(obj, reasons=reasons))
+        self.assertEqual(reasons, [
+            "'obj.signature' is expected to be equal to this signature, "
+            "Signature({}), but it is a Signature({'a': In(1)})"
+        ])
+
     def assertNotCompliant(self, reason_regex, sig, obj):
+        obj.signature = sig
         self.assertFalse(sig.is_compliant(obj))
         reasons = []
         self.assertFalse(sig.is_compliant(obj, reasons=reasons))
@@ -462,25 +436,32 @@ class SignatureTestCase(unittest.TestCase):
         self.assertNotCompliant(
             r"^'obj\.a' does not have an attribute 'b'$",
             sig=Signature({"a": Out(Signature({"b": In(1)}))}),
-            obj=NS(a=Signal()))
+            obj=NS(a=NS(signature=Signature({"b": In(1)}))))
         self.assertTrue(
             Signature({"a": In(1)}).is_compliant(
-                NS(a=Signal())))
+                NS(signature=Signature({"a": In(1)}),
+                   a=Signal())))
         self.assertTrue(
             Signature({"a": In(1)}).is_compliant(
-                NS(a=Const(1))))
+                NS(signature=Signature({"a": In(1)}),
+                   a=Const(1))))
         self.assertTrue( # list
             Signature({"a": In(1).array(2, 2)}).is_compliant(
-                NS(a=[[Const(1), Const(1)], [Signal(), Signal()]])))
+                NS(signature=Signature({"a": In(1).array(2, 2)}),
+                   a=[[Const(1), Const(1)], [Signal(), Signal()]])))
         self.assertTrue( # tuple
             Signature({"a": In(1).array(2, 2)}).is_compliant(
-                NS(a=((Const(1), Const(1)), (Signal(), Signal())))))
+                NS(signature=Signature({"a": In(1).array(2, 2)}),
+                   a=((Const(1), Const(1)), (Signal(), Signal())))))
         self.assertTrue( # mixed list and tuple
             Signature({"a": In(1).array(2, 2)}).is_compliant(
-                NS(a=[[Const(1), Const(1)], (Signal(), Signal())])))
+                NS(signature=Signature({"a": In(1).array(2, 2)}),
+                   a=[[Const(1), Const(1)], (Signal(), Signal())])))
         self.assertTrue(
             Signature({"a": Out(Signature({"b": In(1)}))}).is_compliant(
-                NS(a=NS(b=Signal()))))
+                NS(signature=Signature({"a": Out(Signature({"b": In(1)}))}),
+                   a=NS(signature=Signature({"b": In(1)}),
+                        b=Signal()))))
 
     def test_repr(self):
         sig = Signature({"a": In(1)})
@@ -530,7 +511,7 @@ class FlippedSignatureTestCase(unittest.TestCase):
         sig = Signature({"a": In(1)}).flip()
         self.assertEqual(repr(sig), "Signature({'a': In(1)}).flip()")
 
-    def test_getattr_setattr(self):
+    def test_getsetdelattr(self):
         class S(Signature):
             def __init__(self):
                 super().__init__({})
@@ -539,16 +520,92 @@ class FlippedSignatureTestCase(unittest.TestCase):
             def f(self2):
                 self.assertIsInstance(self2, FlippedSignature)
                 return "f()"
+
         sig = S()
         fsig = sig.flip()
         self.assertEqual(fsig.x, 1)
         self.assertEqual(fsig.f(), "f()")
         fsig.y = 2
         self.assertEqual(sig.y, 2)
+        del fsig.y
+        self.assertFalse(hasattr(sig, "y"))
+
+    def test_getsetdelattr_property(self):
+        class S(Signature):
+            def __init__(self):
+                super().__init__({})
+                self.x_get_type = None
+                self.x_set_type = None
+                self.x_set_val = None
+                self.x_del_type = None
+
+            @property
+            def x(self):
+                self.x_get_type = type(self)
+
+            @x.setter
+            def x(self, val):
+                self.x_set_type = type(self)
+                self.x_set_val = val
+
+            @x.deleter
+            def x(self):
+                self.x_del_type = type(self)
+
+        sig = S()
+        fsig = sig.flip()
+        fsig.x
+        fsig.x = 1
+        del fsig.x
+        # Tests both attribute access through the descriptor, and attribute setting without one!
+        self.assertEqual(sig.x_get_type, type(fsig))
+        self.assertEqual(sig.x_set_type, type(fsig))
+        self.assertEqual(sig.x_set_val, 1)
+        self.assertEqual(sig.x_del_type, type(fsig))
+
+    def test_classmethod(self):
+        x_type = None
+        class S(Signature):
+            @classmethod
+            def x(cls):
+                nonlocal x_type
+                x_type = cls
+
+        sig = S({})
+        fsig = sig.flip()
+        fsig.x()
+        self.assertEqual(x_type, S)
+
+    def test_members_equal_wrong(self):
+        sig = Signature({})
+        with self.assertRaises(AttributeError):
+            sig.flip().members = SignatureMembers({})
 
 
-class InterfaceTestCase(unittest.TestCase):
-    pass
+class PureInterfaceTestCase(unittest.TestCase):
+    def test_construct(self):
+        sig = Signature({
+            "a": In(4),
+            "b": Out(signed(2)),
+        })
+        intf = PureInterface(sig, path=("test",))
+        self.assertIs(intf.signature, sig)
+        self.assertIsInstance(intf.a, Signal)
+        self.assertIsInstance(intf.b, Signal)
+
+    def test_repr(self):
+        sig = Signature({
+            "a": In(4),
+            "b": Out(signed(2)),
+        })
+        intf = PureInterface(sig, path=("test",))
+        self.assertEqual(repr(intf), "<PureInterface: Signature({'a': In(4), 'b': Out(signed(2))}), a=(sig test__a), b=(sig test__b)>")
+
+    def test_repr_inherit(self):
+        class CustomInterface(PureInterface):
+            pass
+        intf = CustomInterface(Signature({}), path=())
+        self.assertRegex(repr(intf), r"^<CustomInterface: .+?>$")
 
 
 class FlippedInterfaceTestCase(unittest.TestCase):
@@ -560,12 +617,11 @@ class FlippedInterfaceTestCase(unittest.TestCase):
         tintf = flipped(intf)
         self.assertEqual(tintf.signature, intf.signature.flip())
         self.assertEqual(tintf, flipped(intf))
-        self.assertRegex(repr(tintf),
-            r"^flipped\(<.+?\.Interface object at .+>\)$")
+        self.assertRegex(repr(tintf), r"^flipped\(<PureInterface: .+>\)$")
         self.assertIs(flipped(tintf), intf)
 
-    def test_getattr_setattr(self):
-        class I(Interface):
+    def test_getsetdelattr(self):
+        class I:
             signature = Signature({})
 
             def __init__(self):
@@ -574,29 +630,118 @@ class FlippedInterfaceTestCase(unittest.TestCase):
             def f(self2):
                 self.assertIsInstance(self2, FlippedInterface)
                 return "f()"
+
         intf = I()
-        tintf = flipped(intf)
-        self.assertEqual(tintf.x, 1)
-        self.assertEqual(tintf.f(), "f()")
-        tintf.y = 2
+        fintf = flipped(intf)
+        self.assertEqual(fintf.x, 1)
+        self.assertEqual(fintf.f(), "f()")
+        fintf.y = 2
         self.assertEqual(intf.y, 2)
+        del fintf.y
+        self.assertFalse(hasattr(intf, "y"))
+
+    def test_getsetdelattr_property(self):
+        class I:
+            signature = Signature({})
+
+            def __init__(self):
+                self.x_get_type = None
+                self.x_set_type = None
+                self.x_set_val = None
+                self.x_del_type = None
+
+            @property
+            def x(self):
+                self.x_get_type = type(self)
+
+            @x.setter
+            def x(self, val):
+                self.x_set_type = type(self)
+                self.x_set_val = val
+
+            @x.deleter
+            def x(self):
+                self.x_del_type = type(self)
+
+        intf = I()
+        fintf = flipped(intf)
+        fintf.x
+        fintf.x = 1
+        del fintf.x
+        # Tests both attribute access through the descriptor, and attribute setting without one!
+        self.assertEqual(intf.x_get_type, type(fintf))
+        self.assertEqual(intf.x_set_type, type(fintf))
+        self.assertEqual(intf.x_set_val, 1)
+        self.assertEqual(intf.x_del_type, type(fintf))
+
+    def test_classmethod(self):
+        x_type = None
+        class I:
+            signature = Signature({})
+
+            def __init__(self):
+                pass
+
+            @classmethod
+            def x(cls):
+                nonlocal x_type
+                x_type = cls
+
+        intf = I()
+        fintf = flipped(intf)
+        fintf.x()
+        self.assertEqual(x_type, I)
 
     def test_flipped_wrong(self):
         with self.assertRaisesRegex(TypeError,
                 r"^flipped\(\) can only flip an interface object, not Signature\({}\)$"):
             flipped(Signature({}))
-    
+
     def test_create_subclass_flipped(self):
-        class CustomInterface(Interface):
+        class CustomInterface(PureInterface):
             def custom_method(self):
                 return 69
-        
+
         class CustomSignature(Signature):
-            def create(self, *, path=()):
-                return CustomInterface(self, path=path)
-        
+            def create(self, *, path=None, src_loc_at=0):
+                return CustomInterface(self, path=path, src_loc_at=1 + src_loc_at)
+
         flipped_interface = CustomSignature({}).flip().create()
         self.assertTrue(hasattr(flipped_interface, "custom_method"))
+
+    def test_propagate_flipped(self):
+        class InterfaceWithFlippedSub(Component):
+            a: In(Signature({
+                "b": Out(Signature({
+                    "c": Out(1)
+                })),
+                "d": In(Signature({
+                    "e": Out(1)
+                })),
+                "f": Out(1)
+            }))
+
+            def __init__(self):
+                super().__init__()
+                self.g = Signature({"h": In(1)})
+
+        ifsub = InterfaceWithFlippedSub()
+        self.assertIsInstance(ifsub.a.b.signature, FlippedSignature)
+        self.assertIsInstance(ifsub.a.d.signature, Signature)
+        self.assertIsInstance(ifsub.signature.members["a"].signature.
+                              members["b"].signature, FlippedSignature)
+        self.assertIsInstance(ifsub.signature.members["a"].signature.
+                              members["d"].signature, Signature)
+        self.assertIsInstance(ifsub.a.f, Signal)
+        self.assertEqual(ifsub.signature.members["a"].signature.
+                         members["f"].flow, In)
+        self.assertIsInstance(flipped(ifsub).g, Signature)
+        self.assertEqual(ifsub.g.members["h"].flow, In)
+        self.assertEqual(flipped(ifsub).g.members["h"].flow, In)
+
+        # This should be a no-op! That requires hooking ``__setattr__``.
+        flipped(ifsub).a = flipped(ifsub).a
+        self.assertEqual(ifsub.a.signature.members["f"].flow, In)
 
 
 class ConnectTestCase(unittest.TestCase):
@@ -621,12 +766,6 @@ class ConnectTestCase(unittest.TestCase):
                 r"^Argument 0 does not match its signature:\n"
                 r"- 'arg0' does not have an attribute 'a'$"):
             connect(m, NS(signature=Signature({"a": In(1)})))
-
-    def test_signature_freeze(self):
-        m = Module()
-        intf = NS(signature=Signature({}))
-        connect(m, intf)
-        self.assertTrue(intf.signature.frozen)
 
     def test_member_missing(self):
         m = Module()
@@ -714,7 +853,8 @@ class ConnectTestCase(unittest.TestCase):
     def test_out_to_const_in(self):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
-                r"^Cannot connect to the input member 'q\.a' that has a constant value 0$"):
+                r"^Cannot connect input member 'q\.a' that has a constant value 0 to an output "
+                r"member 'p\.a' that has a varying value$"):
             connect(m,
                     p=NS(signature=Signature({"a": Out(1)}),
                          a=Signal()),
@@ -725,7 +865,7 @@ class ConnectTestCase(unittest.TestCase):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
                 r"^Cannot connect input member 'q\.a' that has a constant value 0 to an output "
-                r"member 'p\.a' that has a differing constant value 1$"):
+                r"member 'p\.a' that has a different constant value 1$"):
             connect(m,
                     p=NS(signature=Signature({"a": Out(1)}),
                          a=Const(1)),
@@ -769,11 +909,32 @@ class ConnectTestCase(unittest.TestCase):
         m = Module()
         connect(m,
                 p=NS(signature=Signature({"a": Out(Signature({"f": Out(1)}))}),
-                     a=NS(f=Signal(name='p__a'))),
+                     a=NS(signature=Signature({"f": Out(1)}), f=Signal(name='p__a'))),
                 q=NS(signature=Signature({"a": In(Signature({"f": Out(1)}))}),
-                     a=NS(f=Signal(name='q__a'))))
+                     a=NS(signature=Signature({"f": Out(1)}).flip(), f=Signal(name='q__a'))))
         self.assertEqual([repr(stmt) for stmt in m._statements], [
             '(eq (sig q__a) (sig p__a))'
+        ])
+
+    def test_unordered(self):
+        m = Module()
+        connect(m,
+                p=NS(signature=Signature({"a": Out(1),
+                                          "b": Out(Signature({"f": Out(1), "g": Out(1)}))}),
+                     a=Signal(name="p__a"),
+                     b=NS(signature=Signature({"f": Out(1), "g": Out(1)}),
+                          f=Signal(name="p__b__f"),
+                          g=Signal(name="p__b__g"))),
+                q=NS(signature=Signature({"b": In(Signature({"g": Out(1), "f": Out(1)})),
+                                          "a": In(1)}),
+                     b=NS(signature=Signature({"g": Out(1), "f": Out(1)}).flip(),
+                          g=Signal(name="q__b__g"),
+                          f=Signal(name="q__b__f")),
+                     a=Signal(name="q__a")))
+        self.assertEqual([repr(stmt) for stmt in m._statements], [
+            '(eq (sig q__a) (sig p__a))',
+            '(eq (sig q__b__f) (sig p__b__f))',
+            '(eq (sig q__b__g) (sig p__b__g))',
         ])
 
     def test_dimension(self):
@@ -826,7 +987,7 @@ class ComponentTestCase(unittest.TestCase):
         class C(Component):
             pass
 
-        with self.assertRaisesRegex(NotImplementedError,
+        with self.assertRaisesRegex(TypeError,
                 r"^Component '.+?\.C' does not have signature member annotations$"):
             C()
 
@@ -843,53 +1004,6 @@ class ComponentTestCase(unittest.TestCase):
                 r"with the same name already exists$"):
             C()
 
-    def test_missing_in_out_warning(self):
-        class C1(Component):
-            prt1 : In(1)
-            sig2 : Signal
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C1' has an annotation 'sig2: Signal', which is not a signature "
-                r"member; did you mean 'sig2: In\(Signal\)' or 'sig2: Out\(Signal\)'\?$"):
-            C1().signature
-
-        class C2(Component):
-            prt1 : In(1)
-            sig2 : Signature({})
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C2' has an annotation 'sig2: Signature\({}\)', which is not "
-                r"a signature member; did you mean 'sig2: In\(Signature\({}\)\)' or "
-                r"'sig2: Out\(Signature\({}\)\)'\?$"):
-            C2().signature
-
-        class MockValueCastable(ValueCastable):
-            def shape(self): pass
-            @ValueCastable.lowermethod
-            def as_value(self): pass
-
-        class C3(Component):
-            prt1 : In(1)
-            val2 : MockValueCastable
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.C3' has an annotation 'val2: MockValueCastable', which is not "
-                r"a signature member; did you mean 'val2: In\(MockValueCastable\)' or "
-                r"'val2: Out\(MockValueCastable\)'\?$"):
-            C3().signature
-
-    def test_bug_882(self):
-        class PageBuffer(Component):
-            rand: Signature({}).flip()
-            other: Out(1)
-
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Component '.+\.PageBuffer' has an annotation 'rand: Signature\({}\)\.flip\(\)', "
-                r"which is not a signature member; did you mean "
-                r"'rand: In\(Signature\({}\)\.flip\(\)\)' or "
-                r"'rand: Out\(Signature\({}\)\.flip\(\)\)'\?$"):
-            PageBuffer()
-
     def test_inherit(self):
         class A(Component):
             clk: In(1)
@@ -902,3 +1016,60 @@ class ComponentTestCase(unittest.TestCase):
 
         c = C()
         self.assertEqual(c.signature, Signature({"clk": In(1), "rst": In(1)}))
+
+    def test_inherit_wrong(self):
+        class A(Component):
+            a: In(1)
+
+        class B(A):
+            a: Out(1)
+
+        with self.assertRaisesRegex(NameError,
+                r"^Member 'a' is redefined in .*<locals>.B$"):
+            B()
+
+    def test_create(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__(Signature({
+                    "a": In(width)
+                }))
+
+        c = C(2)
+        self.assertEqual(c.signature, Signature({"a": In(2)}))
+        self.assertIsInstance(c.a, Signal)
+        self.assertEqual(c.a.shape(), unsigned(2))
+
+    def test_create_dict(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__({
+                    "a": In(width)
+                })
+
+        c = C(2)
+        self.assertEqual(c.signature, Signature({"a": In(2)}))
+        self.assertIsInstance(c.a, Signal)
+        self.assertEqual(c.a.shape(), unsigned(2))
+
+    def test_create_wrong(self):
+        class C(Component):
+            a: In(2)
+
+            def __init__(self, width):
+                super().__init__(Signature({
+                    "a": In(width)
+                }))
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Signature was passed as an argument, but component '.*.C' already has signature member annotations$"):
+            C(2)
+
+    def test_create_wrong_type(self):
+        class C(Component):
+            def __init__(self, width):
+                super().__init__(4)
+
+        with self.assertRaisesRegex(TypeError,
+                r"^Object 4 is not a signature nor a dict$"):
+            C(2)

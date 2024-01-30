@@ -1,7 +1,5 @@
-import warnings
-
 from .._toolchain.yosys import *
-from ..hdl import ast, ir
+from ..hdl import _ast, _ir
 from ..lib import wiring
 from . import rtlil
 
@@ -11,15 +9,13 @@ __all__ = ["YosysError", "convert", "convert_fragment"]
 
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
     # this version requirement needs to be synchronized with the one in pyproject.toml!
-    yosys = find_yosys(lambda ver: ver >= (0, 10))
-    yosys_version = yosys.version()
+    # Yosys 0.37 has a critical miscompilation in Verilog backend:
+    # https://github.com/amaranth-lang/amaranth/issues/1049
+    yosys = find_yosys(lambda ver: ver >= (0, 35) and not (0, 36, 79) <= ver <= (0, 37, 29))
 
     script = []
-    script.append("read_ilang <<rtlil\n{}\nrtlil".format(rtlil_text))
-    if yosys_version >= (0, 17):
-        script.append("proc -nomux -norom")
-    else:
-        script.append("proc -nomux")
+    script.append(f"read_ilang <<rtlil\n{rtlil_text}\nrtlil")
+    script.append("proc -nomux -norom")
     script.append("memory_collect")
 
     if strip_internal_attrs:
@@ -53,12 +49,12 @@ def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=Tru
             isinstance(elaboratable.signature, wiring.Signature)):
         ports = []
         for path, member, value in elaboratable.signature.flatten(elaboratable):
-            if isinstance(value, ast.ValueCastable):
+            if isinstance(value, _ast.ValueCastable):
                 value = value.as_value()
-            if isinstance(value, ast.Value):
+            if isinstance(value, _ast.Value):
                 ports.append(value)
     elif ports is None:
         raise TypeError("The `convert()` function requires a `ports=` argument")
-    fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
+    fragment = _ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs)
     return verilog_text

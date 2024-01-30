@@ -1,13 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
+from copy import copy
 
 from .._utils import flatten, _ignore_deprecated
 from .. import tracer
-from .ast import *
-from .ast import _StatementList
-from .cd import *
-from .ir import *
+from ._ast import *
+from ._ast import _StatementList
+from ._cd import *
+from ._ir import *
+from ._mem import MemoryInstance
 
 
 __all__ = ["ValueVisitor", "ValueTransformer",
@@ -15,7 +17,6 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
-           "SampleDomainInjector", "SampleLowerer",
            "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "EnableInserter"]
 
@@ -66,15 +67,11 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Sample(self, value):
-        pass # :nocov:
-
-    @abstractmethod
     def on_Initial(self, value):
         pass # :nocov:
 
     def on_unknown_value(self, value):
-        raise TypeError("Cannot transform value {!r}".format(value)) # :nocov:
+        raise TypeError(f"Cannot transform value {value!r}") # :nocov:
 
     def replace_value_src_loc(self, value, new_value):
         return True
@@ -86,8 +83,7 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_AnyConst(value)
         elif type(value) is AnySeq:
             new_value = self.on_AnySeq(value)
-        elif isinstance(value, Signal):
-            # Uses `isinstance()` and not `type() is` because amaranth.compat requires it.
+        elif type(value) is Signal:
             new_value = self.on_Signal(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
@@ -103,8 +99,6 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Cat(value)
         elif type(value) is ArrayProxy:
             new_value = self.on_ArrayProxy(value)
-        elif type(value) is Sample:
-            new_value = self.on_Sample(value)
         elif type(value) is Initial:
             new_value = self.on_Initial(value)
         else:
@@ -153,9 +147,6 @@ class ValueTransformer(ValueVisitor):
         return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
                           self.on_value(value.index))
 
-    def on_Sample(self, value):
-        return Sample(self.on_value(value.value), value.clocks, value.domain)
-
     def on_Initial(self, value):
         return value
 
@@ -186,7 +177,7 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     def on_unknown_statement(self, stmt):
-        raise TypeError("Cannot transform statement {!r}".format(stmt)) # :nocov:
+        raise TypeError(f"Cannot transform statement {stmt!r}") # :nocov:
 
     def replace_statement_src_loc(self, stmt, new_stmt):
         return True
@@ -200,8 +191,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_Assume(stmt)
         elif type(stmt) is Cover:
             new_stmt = self.on_Cover(stmt)
-        elif isinstance(stmt, Switch):
-            # Uses `isinstance()` and not `type() is` because amaranth.compat requires it.
+        elif type(stmt) is Switch:
             new_stmt = self.on_Switch(stmt)
         elif isinstance(stmt, Iterable):
             new_stmt = self.on_statements(stmt)
@@ -273,9 +263,31 @@ class FragmentTransformer:
         for domain, signal in fragment.iter_drivers():
             new_fragment.add_driver(signal, domain)
 
+    def map_memory_ports(self, fragment, new_fragment):
+        new_fragment.read_ports = [
+            copy(port)
+            for port in fragment.read_ports
+        ]
+        new_fragment.write_ports = [
+            copy(port)
+            for port in fragment.write_ports
+        ]
+        if hasattr(self, "on_value"):
+            for port in new_fragment.read_ports:
+                port.en = self.on_value(port.en)
+                port.addr = self.on_value(port.addr)
+                port.data = self.on_value(port.data)
+            for port in new_fragment.write_ports:
+                port.en = self.on_value(port.en)
+                port.addr = self.on_value(port.addr)
+                port.data = self.on_value(port.data)
+
     def on_fragment(self, fragment):
-        if isinstance(fragment, Instance):
-            new_fragment = Instance(fragment.type)
+        if isinstance(fragment, MemoryInstance):
+            new_fragment = MemoryInstance(fragment.memory, [], [])
+            self.map_memory_ports(fragment, new_fragment)
+        elif isinstance(fragment, Instance):
+            new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
             self.map_named_ports(fragment, new_fragment)
         else:
@@ -300,7 +312,7 @@ class FragmentTransformer:
             value._transforms_.append(self)
             return value
         else:
-            raise AttributeError("Object {!r} cannot be elaborated".format(value))
+            raise AttributeError(f"Object {value!r} cannot be elaborated")
 
 
 class TransformedElaboratable(Elaboratable):
@@ -369,9 +381,6 @@ class DomainCollector(ValueVisitor, StatementVisitor):
             self.on_value(elem)
         self.on_value(value.index)
 
-    def on_Sample(self, value):
-        self.on_value(value.value)
-
     def on_Initial(self, value):
         pass
 
@@ -396,6 +405,19 @@ class DomainCollector(ValueVisitor, StatementVisitor):
             self.on_statement(stmt)
 
     def on_fragment(self, fragment):
+        if isinstance(fragment, MemoryInstance):
+            for port in fragment.read_ports:
+                self.on_value(port.addr)
+                self.on_value(port.data)
+                self.on_value(port.en)
+                if port.domain != "comb":
+                    self._add_used_domain(port.domain)
+            for port in fragment.write_ports:
+                self.on_value(port.addr)
+                self.on_value(port.data)
+                self.on_value(port.en)
+                self._add_used_domain(port.domain)
+
         if isinstance(fragment, Instance):
             for name, (value, dir) in fragment.named_ports.items():
                 self.on_value(value)
@@ -425,9 +447,9 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
             domain_map = {"sync": domain_map}
         for src, dst in domain_map.items():
             if src == "comb":
-                raise ValueError("Domain '{}' may not be renamed".format(src))
+                raise ValueError(f"Domain '{src}' may not be renamed")
             if dst == "comb":
-                raise ValueError("Domain '{}' may not be renamed to '{}'".format(src, dst))
+                raise ValueError(f"Domain '{src}' may not be renamed to '{dst}'")
         self.domain_map = OrderedDict(domain_map)
 
     def on_ClockSignal(self, value):
@@ -458,6 +480,15 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 domain = self.domain_map[domain]
             for signal in signals:
                 new_fragment.add_driver(self.on_value(signal), domain)
+
+    def map_memory_ports(self, fragment, new_fragment):
+        super().map_memory_ports(fragment, new_fragment)
+        for port in new_fragment.read_ports:
+            if port.domain in self.domain_map:
+                port.domain = self.domain_map[port.domain]
+        for port in new_fragment.write_ports:
+            if port.domain in self.domain_map:
+                port.domain = self.domain_map[port.domain]
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
@@ -507,81 +538,6 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         new_fragment = super().on_fragment(fragment)
         self._insert_resets(new_fragment)
         return new_fragment
-
-
-class SampleDomainInjector(ValueTransformer, StatementTransformer):
-    def __init__(self, domain):
-        self.domain = domain
-
-    @_ignore_deprecated
-    def on_Sample(self, value):
-        if value.domain is not None:
-            return value
-        return Sample(value.value, value.clocks, self.domain)
-
-    def __call__(self, stmts):
-        return self.on_statement(stmts)
-
-
-class SampleLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
-    def __init__(self):
-        self.initial = None
-        self.sample_cache = None
-        self.sample_stmts = None
-
-    def _name_reset(self, value):
-        if isinstance(value, Const):
-            return "c${}".format(value.value), value.value
-        elif isinstance(value, Signal):
-            return "s${}".format(value.name), value.reset
-        elif isinstance(value, ClockSignal):
-            return "clk", 0
-        elif isinstance(value, ResetSignal):
-            return "rst", 1
-        elif isinstance(value, Initial):
-            return "init", 0 # Past(Initial()) produces 0, 1, 0, 0, ...
-        else:
-            raise NotImplementedError # :nocov:
-
-    @_ignore_deprecated
-    def on_Sample(self, value):
-        if value in self.sample_cache:
-            return self.sample_cache[value]
-
-        sampled_value = self.on_value(value.value)
-        if value.clocks == 0:
-            sample = sampled_value
-        else:
-            assert value.domain is not None
-            sampled_name, sampled_reset = self._name_reset(value.value)
-            name = "$sample${}${}${}".format(sampled_name, value.domain, value.clocks)
-            sample = Signal.like(value.value, name=name, reset_less=True, reset=sampled_reset)
-            sample.attrs["amaranth.sample_reg"] = True
-
-            prev_sample = self.on_Sample(Sample(sampled_value, value.clocks - 1, value.domain))
-            if value.domain not in self.sample_stmts:
-                self.sample_stmts[value.domain] = []
-            self.sample_stmts[value.domain].append(sample.eq(prev_sample))
-
-        self.sample_cache[value] = sample
-        return sample
-
-    def on_Initial(self, value):
-        if self.initial is None:
-            self.initial = Signal(name="init")
-        return self.initial
-
-    def map_statements(self, fragment, new_fragment):
-        self.initial = None
-        self.sample_cache = ValueDict()
-        self.sample_stmts = OrderedDict()
-        new_fragment.add_statements(map(self.on_statement, fragment.statements))
-        for domain, stmts in self.sample_stmts.items():
-            new_fragment.add_statements(stmts)
-            for stmt in stmts:
-                new_fragment.add_driver(stmt.lhs, domain)
-        if self.initial is not None:
-            new_fragment.add_subfragment(Instance("$initstate", o_Y=self.initial))
 
 
 class SwitchCleaner(StatementVisitor):
@@ -720,14 +676,11 @@ class EnableInserter(_ControlInserter):
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        if isinstance(new_fragment, Instance) and new_fragment.type == "$mem_v2":
-            for kind in ["RD", "WR"]:
-                clk_parts = new_fragment.named_ports[kind + "_CLK"][0].parts
-                en_parts = new_fragment.named_ports[kind + "_EN"][0].parts
-                new_en = []
-                for clk, en in zip(clk_parts, en_parts):
-                    if isinstance(clk, ClockSignal) and clk.domain in self.controls:
-                        en = Mux(self.controls[clk.domain], en, Const(0, len(en)))
-                    new_en.append(en)
-                new_fragment.named_ports[kind + "_EN"] = Cat(new_en), "i"
+        if isinstance(new_fragment, MemoryInstance):
+            for port in new_fragment.read_ports:
+                if port.domain in self.controls:
+                    port.en = port.en & self.controls[port.domain]
+            for port in new_fragment.write_ports:
+                if port.domain in self.controls:
+                    port.en = Mux(self.controls[port.domain], port.en, Const(0, len(port.en)))
         return new_fragment

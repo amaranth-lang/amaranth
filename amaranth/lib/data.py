@@ -1,9 +1,12 @@
 from abc import ABCMeta, abstractmethod
+from enum import Enum
 from collections.abc import Mapping, Sequence
 import warnings
 
+from amaranth._utils import final
 from amaranth.hdl import *
-from amaranth.hdl.ast import ShapeCastable, ValueCastable
+from amaranth.hdl._repr import *
+from amaranth.hdl._ast import ShapeCastable, ValueCastable
 
 
 __all__ = [
@@ -12,6 +15,7 @@ __all__ = [
 ]
 
 
+@final
 class Field:
     """Description of a data field.
 
@@ -22,7 +26,7 @@ class Field:
 
     Attributes
     ----------
-    shape : :ref:`shape-castable <lang-shapecasting>`
+    shape : :ref:`shape-like <lang-shapelike>`
         Shape of the field. When initialized or assigned, the object is stored as-is.
     offset : :class:`int`, >=0
         Index of the least significant bit of the field.
@@ -52,7 +56,7 @@ class Field:
         """Width of the field.
 
         This property should be used over ``self.shape.width`` because ``self.shape`` can be
-        an arbitrary :ref:`shape-castable <lang-shapecasting>` object, which may not have
+        an arbitrary :ref:`shape-like <lang-shapelike>` object, which may not have
         a ``width`` property.
 
         Returns
@@ -78,7 +82,7 @@ class Field:
 class Layout(ShapeCastable, metaclass=ABCMeta):
     """Description of a data layout.
 
-    The :ref:`shape-castable <lang-shapecasting>` :class:`Layout` interface associates keys
+    The :ref:`shape-like <lang-shapelike>` :class:`Layout` interface associates keys
     (string names or integer indexes) with fields, giving identifiers to spans of bits in
     an Amaranth value.
 
@@ -92,7 +96,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
 
     @staticmethod
     def cast(obj):
-        """Cast a :ref:`shape-castable <lang-shapecasting>` object to a layout.
+        """Cast a :ref:`shape-like <lang-shapelike>` object to a layout.
 
         This method performs a subset of the operations done by :meth:`Shape.cast`; it will
         recursively call ``.as_shape()``, but only until a layout is returned.
@@ -231,6 +235,21 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             int_value |= (key_value.value << field.offset) & mask
         return View(self, Const(int_value, self.as_shape()))
 
+    def _value_repr(self, value):
+        yield Repr(FormatInt(), value)
+        for key, field in self:
+            shape = Shape.cast(field.shape)
+            field_value = value[field.offset:field.offset+shape.width]
+            if shape.signed:
+                field_value = field_value.as_signed()
+            if isinstance(field.shape, ShapeCastable):
+                for repr in field.shape._value_repr(field_value):
+                    yield Repr(repr.format, repr.value, path=(key,) + repr.path)
+            elif isinstance(field.shape, type) and issubclass(field.shape, Enum):
+                yield Repr(FormatEnum(field.shape), field_value, path=(key,))
+            else:
+                yield Repr(FormatInt(), field_value, path=(key,))
+
 
 class StructLayout(Layout):
     """Description of a structure layout.
@@ -260,7 +279,7 @@ class StructLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-castable <lang-shapecasting>`
+    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
         Dictionary of structure members.
     """
 
@@ -331,7 +350,7 @@ class UnionLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-castable <lang-shapecasting>`
+    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
         Dictionary of union members.
     """
     def __init__(self, members):
@@ -406,7 +425,7 @@ class ArrayLayout(Layout):
 
     Attributes
     ----------
-    elem_shape : :ref:`shape-castable <lang-shapecasting>`
+    elem_shape : :ref:`shape-like <lang-shapelike>`
         Shape of an individual element.
     length : :class:`int`
         Amount of elements.
@@ -446,7 +465,7 @@ class ArrayLayout(Layout):
             if key < 0:
                 key += self._length
             return Field(self._elem_shape, key * Shape.cast(self._elem_shape).width)
-        raise TypeError("Cannot index array layout with {!r}".format(key))
+        raise TypeError(f"Cannot index array layout with {key!r}")
 
     @property
     def size(self):
@@ -466,7 +485,12 @@ class ArrayLayout(Layout):
 class FlexibleLayout(Layout):
     """Description of a flexible layout.
 
-    The fields of a flexible layout can be located arbitrarily, and its size is explicitly defined.
+    A flexible layout is similar to a structure layout; while fields in :class:`StructLayout` are
+    defined contiguously, the fields in a flexible layout can overlap and have gaps between them.
+
+    Because the size and field boundaries in a flexible layout can be defined arbitrarily, it
+    may also be more convenient to use a flexible layout when the layout information is derived
+    from an external data file rather than defined in Python code.
 
     For example, the following layout of a 16-bit value:
 
@@ -484,7 +508,10 @@ class FlexibleLayout(Layout):
         })
 
     Both strings and integers can be used as names of flexible layout fields, so flexible layouts
-    can be used to describe structures and arrays with arbitrary padding.
+    can be used to describe structures with arbitrary padding and arrays with arbitrary stride.
+
+    If another data structure is used as the source of truth for creating flexible layouts,
+    consider instead inheriting from the base :class:`Layout` class, which may be more convenient.
 
     Attributes
     ----------
@@ -531,7 +558,7 @@ class FlexibleLayout(Layout):
     def __getitem__(self, key):
         if isinstance(key, (int, str)):
             return self._fields[key]
-        raise TypeError("Cannot index flexible layout with {!r}".format(key))
+        raise TypeError(f"Cannot index flexible layout with {key!r}")
 
     def __repr__(self):
         return f"FlexibleLayout({self._size}, {self._fields!r})"
@@ -540,7 +567,7 @@ class FlexibleLayout(Layout):
 class View(ValueCastable):
     """A value viewed through the lens of a layout.
 
-    The :ref:`value-castable <lang-valuecasting>` class :class:`View` provides access to the fields
+    The :ref:`value-like <lang-valuelike>` class :class:`View` provides access to the fields
     of an underlying Amaranth value via the names or indexes defined in the provided layout.
 
     Creating a view
@@ -556,12 +583,16 @@ class View(ValueCastable):
     a value-castable object. If the shape of the field is a :class:`Layout`, it will be
     a :class:`View`; if it is a class deriving from :class:`Struct` or :class:`Union`, it
     will be an instance of that data class; if it is another
-    :ref:`shape-castable <lang-shapecasting>` object implementing ``__call__``, it will be
+    :ref:`shape-like <lang-shapelike>` object implementing ``__call__``, it will be
     the result of calling that method.
 
     Slicing a view whose layout is an :class:`ArrayLayout` can be done with an index that is
     an Amaranth value instead of a constant integer. The returned element is chosen dynamically
     in that case.
+
+    A view can only be compared for equality with another view of the same layout,
+    returning a single-bit value. No other operators are supported on views. If required,
+    a view can be converted back to its underlying value via :meth:`as_value`.
 
     Custom view classes
     ###################
@@ -592,7 +623,7 @@ class View(ValueCastable):
                 warnings.warn("View layout includes a field {!r} that will be shadowed by "
                               "the view attribute '{}.{}.{}'"
                               .format(name, type(self).__module__, type(self).__qualname__, name),
-                              SyntaxWarning, stacklevel=1)
+                              SyntaxWarning, stacklevel=2)
         self.__orig_layout = layout
         self.__layout = cast_layout
         self.__target = cast_target
@@ -715,6 +746,49 @@ class View(ValueCastable):
                                  .format(self.__target, name))
         return item
 
+    def __eq__(self, other):
+        if not isinstance(other, View) or self.__layout != other.__layout:
+            raise TypeError(f"View of {self.__layout!r} can only be compared to another view of the same layout, not {other!r}")
+        return self.__target == other.__target
+
+    def __ne__(self, other):
+        if not isinstance(other, View) or self.__layout != other.__layout:
+            raise TypeError(f"View of {self.__layout!r} can only be compared to another view of the same layout, not {other!r}")
+        return self.__target != other.__target
+
+    def __add__(self, other):
+        raise TypeError("Cannot perform arithmetic operations on a View")
+
+    __radd__ = __add__
+    __sub__ = __add__
+    __rsub__ = __add__
+    __mul__ = __add__
+    __rmul__ = __add__
+    __floordiv__ = __add__
+    __rfloordiv__ = __add__
+    __mod__ = __add__
+    __rmod__ = __add__
+    __lshift__ = __add__
+    __rlshift__ = __add__
+    __rshift__ = __add__
+    __rrshift__ = __add__
+    __lt__ = __add__
+    __le__ = __add__
+    __gt__ = __add__
+    __ge__ = __add__
+
+    def __and__(self, other):
+        raise TypeError("Cannot perform bitwise operations on a View")
+
+    __rand__ = __and__
+    __or__ = __and__
+    __ror__ = __and__
+    __xor__ = __and__
+    __rxor__ = __and__
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
+
 
 class _AggregateMeta(ShapeCastable, type):
     def __new__(metacls, name, bases, namespace):
@@ -774,6 +848,9 @@ class _AggregateMeta(ShapeCastable, type):
             fields.update(init or {})
             return cls.as_shape().const(fields)
 
+    def _value_repr(cls, value):
+        return cls.__layout._value_repr(value)
+
 
 class Struct(View, metaclass=_AggregateMeta):
     """Structures defined with annotations.
@@ -782,7 +859,7 @@ class Struct(View, metaclass=_AggregateMeta):
     to describe the structure layout and reset values for the fields using Python
     :term:`variable annotations <python:variable annotation>`.
 
-    Any annotations containing :ref:`shape-castable <lang-shapecasting>` objects are used,
+    Any annotations containing :ref:`shape-like <lang-shapelike>` objects are used,
     in the order in which they appear in the source code, to construct a :class:`StructLayout`.
     The values assigned to such annotations are used to populate the reset value of the signal
     created by the view. Any other annotations are kept as-is.

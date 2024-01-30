@@ -4,8 +4,83 @@ Changelog
 This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
 
 
-Version 0.4 (unreleased)
+Documentation for past releases
+===============================
+
+Documentation for past releases of the Amaranth language and toolchain is available online:
+
+* `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
+* `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
+* `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
+
+
+Version 0.5 (unreleased)
 ========================
+
+The Migen compatibility layer has been removed.
+
+
+Migrating from version 0.4
+--------------------------
+
+Apply the following changes to code written against Amaranth 0.4 to migrate it to version 0.5:
+
+* Replace uses of ``m.Case()`` with no patterns with ``m.Default()``
+* Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
+* Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
+* Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
+
+
+Implemented RFCs
+----------------
+
+.. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
+.. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
+
+* `RFC 17`_: Remove ``log2_int``
+* `RFC 39`_: Change semantics of no-argument ``m.Case()``
+
+
+Language changes
+----------------
+
+.. currentmodule:: amaranth.hdl
+
+* Added: :class:`ast.Slice` objects have been made const-castable.
+* Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
+* Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
+* Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
+* Changed: ``Signal(range(stop), reset=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
+* Changed: ``Signal(range(0))`` is now valid without a warning.
+* Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
+* Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
+* Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
+
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
+* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
+* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
+
+
+Platform integration changes
+----------------------------
+
+.. currentmodule:: amaranth.vendor
+
+* Added: :meth:`BuildPlan.execute_local_docker`.
+* Added: :meth:`BuildPlan.extract`.
+* Added: ``build.sh``  begins with ``#!/bin/sh``.
+* Deprecated: argument ``run_script=`` in :meth:`BuildPlan.execute_local`.
+* Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
+
+
+Version 0.4
+===========
 
 Support has been added for a new and improved way of defining data structures in :mod:`amaranth.lib.data` and component interfaces in :mod:`amaranth.lib.wiring`, as defined in `RFC 1`_ and `RFC 2`_. :class:`Record` has been deprecated. In a departure from the usual policy, to give designers additional time to migrate, :class:`Record` will be removed in Amaranth 0.6 (one release later than normal).
 
@@ -19,6 +94,8 @@ Support for Python 3.6 and 3.7 has been removed, and support for Python 3.11 and
 
 Features deprecated in version 0.3 have been removed. In particular, the ``nmigen.*`` namespace is not provided, ``# nmigen:`` annotations are not recognized, and ``NMIGEN_*`` envronment variables are not used.
 
+The Migen compatibility layer remains deprecated (as it had been since Amaranth 0.1), and is now scheduled to be removed in version 0.5.
+
 
 Migrating from version 0.3
 --------------------------
@@ -31,6 +108,8 @@ Apply the following changes to code written against Amaranth 0.3 to migrate it t
 * Replace uses of ``Const.normalize(value, shape)`` with ``Const(value, shape).value``.
 * Replace uses of ``Repl(value, count)`` with ``value.replicate(count)``.
 * Replace uses of ``Record`` with :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring`. The appropriate replacement depends on the use case. If ``Record`` was being used for data storage and accessing the bit-level representation, use :mod:`amaranth.lib.data`. If ``Record`` was being used for connecting design components together, use :mod:`amaranth.lib.wiring`.
+* Replace uses of ``Sample``, ``Past``, ``Stable``, ``Rose``, ``Fell`` with a manually instantiated register, e.g. ``past_x = Signal.like(x); m.d.sync += past_x.eq(x)``.
+* Remove uses of ``amaranth.compat`` by migrating to native Amaranth syntax.
 * Ensure the ``Pin`` instance returned by ``platform.request`` is not cast to value directly, but used for its fields. Replace code like ``leds = Cat(platform.request(led, n) for n in range(4))`` with ``leds = Cat(platform.request(led, n).o for n in range(4))`` (note the ``.o``).
 * Remove uses of ``amaranth.lib.scheduler.RoundRobin`` by inlining or copying the implementation of that class.
 * Remove uses of ``amaranth.lib.fifo.SyncFIFO(fwft=False)`` and ``amaranth.lib.fifo.FIFOInterface(fwft=False)`` by converting code to use ``fwft=True`` FIFOs or copying the implementation of those classes.
@@ -56,6 +135,11 @@ Implemented RFCs
 .. _RFC 20: https://amaranth-lang.org/rfcs/0020-deprecate-non-fwft-fifos.html
 .. _RFC 22: https://amaranth-lang.org/rfcs/0022-valuecastable-shape.html
 .. _RFC 28: https://amaranth-lang.org/rfcs/0028-override-value-operators.html
+.. _RFC 31: https://amaranth-lang.org/rfcs/0031-enumeration-type-safety.html
+.. _RFC 34: https://amaranth-lang.org/rfcs/0034-interface-rename.html
+.. _RFC 35: https://amaranth-lang.org/rfcs/0035-shapelike-valuelike.html
+.. _RFC 37: https://amaranth-lang.org/rfcs/0037-make-signature-immutable.html
+.. _RFC 38: https://amaranth-lang.org/rfcs/0038-component-signature-immutability.html
 
 
 * `RFC 1`_: Aggregate data structure library
@@ -73,6 +157,11 @@ Implemented RFCs
 * `RFC 20`_: Deprecate non-FWFT FIFOs
 * `RFC 22`_: Define ``ValueCastable.shape()``
 * `RFC 28`_: Allow overriding ``Value`` operators
+* `RFC 31`_: Enumeration type safety
+* `RFC 34`_: Rename ``amaranth.lib.wiring.Interface`` to ``PureInterface``
+* `RFC 35`_: Add ``ShapeLike``, ``ValueLike``
+* `RFC 37`_: Make ``Signature`` immutable
+* `RFC 38`_: ``Component.signature`` immutability
 
 
 Language changes
@@ -81,9 +170,10 @@ Language changes
 .. currentmodule:: amaranth.hdl
 
 * Added: :class:`ShapeCastable`, similar to :class:`ValueCastable`.
+* Added: :class:`ShapeLike` and :class:`ValueLike`. (`RFC 35`_)
 * Added: :meth:`Value.as_signed` and :meth:`Value.as_unsigned` can be used on left-hand side of assignment (with no difference in behavior).
 * Added: :meth:`Const.cast`. (`RFC 4`_)
-* Added: :meth:`Value.matches` and ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
+* Added: ``Signal(reset=)``, :meth:`Value.matches`, ``with m.Case():`` accept any constant-castable objects. (`RFC 4`_)
 * Added: :meth:`Value.replicate`, superseding :class:`Repl`. (`RFC 10`_)
 * Added: :class:`Memory` supports transparent read ports with read enable.
 * Changed: creating a :class:`Signal` with a shape that is a :class:`ShapeCastable` implementing :meth:`ShapeCastable.__call__` wraps the returned object using that method. (`RFC 15`_)
@@ -91,6 +181,9 @@ Language changes
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
 * Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
+* Changed: ``signed(0)`` is no longer constructible. (The semantics of this shape were never defined.)
+* Changed: :meth:`Value.__abs__` returns an unsigned value.
+* Deprecated: :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`. (Predating the RFC process.)
 * Deprecated: :meth:`Const.normalize`; use ``Const(value, shape).value`` instead of ``Const.normalize(value, shape)``. (`RFC 5`_)
 * Deprecated: :class:`Repl`; use :meth:`Value.replicate` instead. (`RFC 10`_)
 * Deprecated: :class:`Record`; use :mod:`amaranth.lib.data` and :mod:`amaranth.lib.wiring` instead. (`RFC 1`_, `RFC 2`_)
@@ -106,6 +199,7 @@ Standard library changes
 
 * Added: :mod:`amaranth.lib.enum`. (`RFC 3`_)
 * Added: :mod:`amaranth.lib.data`. (`RFC 1`_)
+* Added: :mod:`amaranth.lib.wiring`. (`RFC 2`_)
 * Added: :mod:`amaranth.lib.crc`. (`RFC 6`_)
 * Deprecated: :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Deprecated: :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
@@ -120,6 +214,7 @@ Toolchain changes
 * Changed: text files are written with LF line endings on Windows, like on other platforms.
 * Added: ``debug_verilog`` override in :class:`build.TemplatedPlatform`.
 * Added: ``env=`` argument to :meth:`build.run.BuildPlan.execute_local`.
+* Changed: :meth:`build.run.BuildPlan.add_file` rejects absolute paths.
 * Deprecated: use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 * Removed: (deprecated in 0.3) :meth:`sim.Simulator.step`.
 * Removed: (deprecated in 0.3) :mod:`back.pysim`.
@@ -135,6 +230,7 @@ Platform integration changes
 * Added: ``icepack_opts`` override in :class:`vendor.LatticeICE40Platform`.
 * Added: ``OSCH`` as ``default_clk`` clock source in :class:`vendor.LatticeMachXO2Platform`, :class:`vendor.LatticeMachXO3LPlatform`.
 * Added: Xray toolchain support in :class:`vendor.XilinxPlatform`.
+* Added: Artix UltraScale+ part support in :class:`vendor.XilinxPlatform`.
 * Added: :class:`vendor.GowinPlatform`.
 * Deprecated: :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`; import platforms directly from :mod:`vendor` instead. (`RFC 18`_)
 * Removed: (deprecated in 0.3) :mod:`lattice_machxo2`

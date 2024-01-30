@@ -3,10 +3,11 @@ from collections import defaultdict, OrderedDict
 from functools import reduce
 import warnings
 
+from .. import tracer
 from .._utils import *
 from .._unused import *
-from .ast import *
-from .cd import *
+from ._ast import *
+from ._cd import *
 
 
 __all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance"]
@@ -50,9 +51,9 @@ class Fragment:
                 code = obj.elaborate.__code__
                 new_obj = obj.elaborate(platform)
             else:
-                raise AttributeError("Object {!r} cannot be elaborated".format(obj))
+                raise AttributeError(f"Object {obj!r} cannot be elaborated")
             if new_obj is obj:
-                raise RecursionError("Object {!r} elaborates to itself".format(obj))
+                raise RecursionError(f"Object {obj!r} elaborates to itself")
             if new_obj is None and code is not None:
                 warnings.warn_explicit(
                     message=".elaborate() returned None; missing return statement?",
@@ -140,12 +141,12 @@ class Fragment:
             if name_or_index < len(self.subfragments):
                 subfragment, name = self.subfragments[name_or_index]
                 return subfragment
-            raise NameError("No subfragment at index #{}".format(name_or_index))
+            raise NameError(f"No subfragment at index #{name_or_index}")
         else:
             for subfragment, name in self.subfragments:
                 if name == name_or_index:
                     return subfragment
-            raise NameError("No subfragment with name '{}'".format(name_or_index))
+            raise NameError(f"No subfragment with name '{name_or_index}'")
 
     def find_generated(self, *path):
         if len(path) > 1:
@@ -203,7 +204,7 @@ class Fragment:
         flatten_subfrags = set()
         for i, (subfrag, name) in enumerate(self.subfragments):
             if name is None:
-                name = "<unnamed #{}>".format(i)
+                name = f"<unnamed #{i}>"
             subfrag_hierarchy = hierarchy + (name,)
 
             if subfrag.flatten:
@@ -262,16 +263,16 @@ class Fragment:
         return SignalSet(driver_subfrags.keys())
 
     def _propagate_domains_up(self, hierarchy=("top",)):
-        from .xfrm import DomainRenamer
+        from ._xfrm import DomainRenamer
 
-        domain_subfrags = defaultdict(lambda: set())
+        domain_subfrags = defaultdict(set)
 
         # For each domain defined by a subfragment, determine which subfragments define it.
         for i, (subfrag, name) in enumerate(self.subfragments):
             # First, recurse into subfragments and let them propagate domains up as well.
             hier_name = name
             if hier_name is None:
-                hier_name = "<unnamed #{}>".format(i)
+                hier_name = f"<unnamed #{i}>"
             subfrag._propagate_domains_up(hierarchy + (hier_name,))
 
             # Second, classify subfragments by domains they define.
@@ -288,7 +289,7 @@ class Fragment:
 
             names = [n for f, n, i in subfrags]
             if not all(names):
-                names = sorted("<unnamed #{}>".format(i) if n is None else "'{}'".format(n)
+                names = sorted(f"<unnamed #{i}>" if n is None else f"'{n}'"
                                for f, n, i in subfrags)
                 raise DomainError("Domain '{}' is defined by subfragments {} of fragment '{}'; "
                                   "it is necessary to either rename subfragment domains "
@@ -296,7 +297,7 @@ class Fragment:
                                   .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
             if len(names) != len(set(names)):
-                names = sorted("#{}".format(i) for f, n, i in subfrags)
+                names = sorted(f"#{i}" for f, n, i in subfrags)
                 raise DomainError("Domain '{}' is defined by subfragments {} of fragment '{}', "
                                   "some of which have identical names; it is necessary to either "
                                   "rename subfragment domains explicitly, or give distinct names "
@@ -304,7 +305,7 @@ class Fragment:
                                   .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
             for subfrag, name, i in subfrags:
-                domain_name_map = {domain_name: "{}_{}".format(name, domain_name)}
+                domain_name_map = {domain_name: f"{name}_{domain_name}"}
                 self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name)
 
         # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
@@ -326,7 +327,7 @@ class Fragment:
             subfrag._propagate_domains_down()
 
     def _create_missing_domains(self, missing_domain, *, platform=None):
-        from .xfrm import DomainCollector
+        from ._xfrm import DomainCollector
 
         collector = DomainCollector()
         collector(self)
@@ -337,7 +338,7 @@ class Fragment:
                 continue
             value = missing_domain(domain_name)
             if value is None:
-                raise DomainError("Domain '{}' is used but not defined".format(domain_name))
+                raise DomainError(f"Domain '{domain_name}' is used but not defined")
             if type(value) is ClockDomain:
                 self.add_domains(value)
                 # And expose ports on the newly added clock domain, since it is added directly
@@ -350,8 +351,8 @@ class Fragment:
                     raise DomainError(
                         "Fragment returned by missing domain callback does not define "
                         "requested domain '{}' (defines {})."
-                        .format(domain_name, ", ".join("'{}'".format(n) for n in defined)))
-                self.add_subfragment(new_fragment, "cd_{}".format(domain_name))
+                        .format(domain_name, ", ".join(f"'{n}'" for n in defined)))
+                self.add_subfragment(new_fragment, f"cd_{domain_name}")
                 self.add_domains(new_fragment.domains.values())
         return new_domains
 
@@ -506,11 +507,10 @@ class Fragment:
                 self.add_ports(sig, dir="i")
 
     def prepare(self, ports=None, missing_domain=lambda name: ClockDomain(name)):
-        from .xfrm import SampleLowerer, DomainLowerer
+        from ._xfrm import DomainLowerer
 
-        fragment = SampleLowerer()(self)
-        new_domains = fragment._propagate_domains(missing_domain)
-        fragment = DomainLowerer()(fragment)
+        new_domains = self._propagate_domains(missing_domain)
+        fragment = DomainLowerer()(self)
         if ports is None:
             fragment._propagate_ports(ports=(), all_undef_as_ports=True)
         else:
@@ -538,14 +538,93 @@ class Fragment:
             fragment._propagate_ports(ports=mapped_ports, all_undef_as_ports=False)
         return fragment
 
+    def _assign_names_to_signals(self):
+        """Assign names to signals used in this fragment.
+
+        Returns
+        -------
+        SignalDict of Signal to str
+            A mapping from signals used in this fragment to their local names. Because names are
+            deduplicated using local information only, the same signal used in a different fragment
+            may get a different name.
+        """
+
+        signal_names   = SignalDict()
+        assigned_names = set()
+
+        def add_signal_name(signal):
+            if signal not in signal_names:
+                if signal.name not in assigned_names:
+                    name = signal.name
+                else:
+                    name = f"{signal.name}${len(assigned_names)}"
+                    assert name not in assigned_names
+                signal_names[signal] = name
+                assigned_names.add(name)
+
+        for port in self.ports.keys():
+            add_signal_name(port)
+
+        for domain_name, domain_signals in self.drivers.items():
+            if domain_name is not None:
+                domain = self.domains[domain_name]
+                add_signal_name(domain.clk)
+                if domain.rst is not None:
+                    add_signal_name(domain.rst)
+
+        for statement in self.statements:
+            for signal in statement._lhs_signals() | statement._rhs_signals():
+                if not isinstance(signal, (ClockSignal, ResetSignal)):
+                    add_signal_name(signal)
+
+        return signal_names
+
+    def _assign_names_to_fragments(self, hierarchy=("top",), *, _names=None):
+        """Assign names to this fragment and its subfragments.
+
+        Subfragments may not necessarily have a name. This method assigns every such subfragment
+        a name, ``U$<number>``, where ``<number>`` is based on its location in the hierarchy.
+
+        Subfragment names may collide with signal names safely in Amaranth, but this may confuse
+        backends. This method assigns every such subfragment a name, ``<name>$U$<number>``, where
+        ``name`` is its original name, and ``<number>`` is based on its location in the hierarchy.
+
+        Arguments
+        ---------
+        hierarchy : tuple of str
+            Name of this fragment.
+
+        Returns
+        -------
+        dict of Fragment to tuple of str
+            A mapping from this fragment and its subfragments to their full hierarchical names.
+        """
+
+        if _names is None:
+            _names = dict()
+        _names[self] = hierarchy
+
+        signal_names = set(self._assign_names_to_signals().values())
+        for subfragment_index, (subfragment, subfragment_name) in enumerate(self.subfragments):
+            if subfragment_name is None:
+                subfragment_name = f"U${subfragment_index}"
+            elif subfragment_name in signal_names:
+                subfragment_name = f"{subfragment_name}$U${subfragment_index}"
+            assert subfragment_name not in signal_names
+            subfragment._assign_names_to_fragments(hierarchy=(*hierarchy, subfragment_name),
+                                                   _names=_names)
+
+        return _names
+
 
 class Instance(Fragment):
-    def __init__(self, type, *args, **kwargs):
+    def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
         super().__init__()
 
         self.type        = type
         self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
+        self.src_loc     = src_loc or tracer.get_src_loc(src_loc_at)
 
         for (kind, name, value) in args:
             if kind == "a":

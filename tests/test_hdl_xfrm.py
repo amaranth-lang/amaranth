@@ -2,11 +2,13 @@
 
 import warnings
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.ir import *
-from amaranth.hdl.xfrm import *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._dsl import *
+from amaranth.hdl._ir import *
+from amaranth.hdl._xfrm import *
+from amaranth.hdl._mem import *
+from amaranth.hdl._mem import MemoryInstance
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -113,6 +115,22 @@ class DomainRenamerTestCase(FHDLTestCase):
             "pix": cd_pix,
         })
 
+    def test_rename_mem_ports(self):
+        m = Module()
+        mem = Memory(depth=4, width=16)
+        m.submodules.mem = mem
+        mem.read_port(domain="a")
+        mem.read_port(domain="b")
+        mem.write_port(domain="c")
+
+        f = Fragment.get(m, None)
+        f = DomainRenamer({"a": "d", "c": "e"})(f)
+        mem = f.subfragments[0][0]
+        self.assertIsInstance(mem, MemoryInstance)
+        self.assertEqual(mem.read_ports[0].domain, "d")
+        self.assertEqual(mem.read_ports[1].domain, "b")
+        self.assertEqual(mem.write_ports[0].domain, "e")
+
     def test_rename_wrong_to_comb(self):
         with self.assertRaisesRegex(ValueError,
                 r"^Domain 'sync' may not be renamed to 'comb'$"):
@@ -208,54 +226,6 @@ class DomainLowererTestCase(FHDLTestCase):
         with self.assertRaisesRegex(DomainError,
                 r"^Signal \(rst sync\) refers to reset of reset-less domain 'sync'$"):
             DomainLowerer()(f)
-
-
-class SampleLowererTestCase(FHDLTestCase):
-    def setUp(self):
-        self.i = Signal()
-        self.o1 = Signal()
-        self.o2 = Signal()
-        self.o3 = Signal()
-
-    @_ignore_deprecated
-    def test_lower_signal(self):
-        f = Fragment()
-        f.add_statements(
-            self.o1.eq(Sample(self.i, 2, "sync")),
-            self.o2.eq(Sample(self.i, 1, "sync")),
-            self.o3.eq(Sample(self.i, 1, "pix")),
-        )
-
-        f = SampleLowerer()(f)
-        self.assertRepr(f.statements, """
-        (
-            (eq (sig o1) (sig $sample$s$i$sync$2))
-            (eq (sig o2) (sig $sample$s$i$sync$1))
-            (eq (sig o3) (sig $sample$s$i$pix$1))
-            (eq (sig $sample$s$i$sync$1) (sig i))
-            (eq (sig $sample$s$i$sync$2) (sig $sample$s$i$sync$1))
-            (eq (sig $sample$s$i$pix$1) (sig i))
-        )
-        """)
-        self.assertEqual(len(f.drivers["sync"]), 2)
-        self.assertEqual(len(f.drivers["pix"]), 1)
-
-    @_ignore_deprecated
-    def test_lower_const(self):
-        f = Fragment()
-        f.add_statements(
-            self.o1.eq(Sample(1, 2, "sync")),
-        )
-
-        f = SampleLowerer()(f)
-        self.assertRepr(f.statements, """
-        (
-            (eq (sig o1) (sig $sample$c$1$sync$2))
-            (eq (sig $sample$c$1$sync$1) (const 1'd1))
-            (eq (sig $sample$c$1$sync$2) (sig $sample$c$1$sync$1))
-        )
-        """)
-        self.assertEqual(len(f.drivers["sync"]), 2)
 
 
 class SwitchCleanerTestCase(FHDLTestCase):
@@ -549,31 +519,20 @@ class EnableInserterTestCase(FHDLTestCase):
         mem = Memory(width=8, depth=4)
         mem.read_port(transparent=False)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.named_ports["RD_EN"][0], """
-        (cat (m (sig c1) (sig mem_r_en) (const 1'd0)))
+        self.assertRepr(f.read_ports[0].en, """
+        (& (sig mem_r_en) (sig c1))
         """)
 
     def test_enable_write_port(self):
         mem = Memory(width=8, depth=4)
-        mem.write_port()
+        mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.named_ports["WR_EN"][0], """
-        (cat (m
+        self.assertRepr(f.write_ports[0].en, """
+        (m
             (sig c1)
-            (cat
-                (cat
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                    (slice (sig mem_w_en) 0:1)
-                )
-            )
-            (const 8'd0)
-        ))
+            (sig mem_w_en)
+            (const 4'd0)
+        )
         """)
 
 

@@ -1,7 +1,7 @@
 import inspect
 
 from ..hdl import *
-from ..hdl.ast import Statement, SignalSet
+from ..hdl._ast import Statement, SignalSet, ValueCastable
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
@@ -41,7 +41,7 @@ class PyCoroProcess(BaseProcess):
             frame = coroutine.gi_frame
         if inspect.iscoroutine(coroutine):
             frame = coroutine.cr_frame
-        return "{}:{}".format(inspect.getfile(frame), inspect.getlineno(frame))
+        return f"{inspect.getfile(frame)}:{inspect.getlineno(frame)}"
 
     def add_trigger(self, signal, trigger=None):
         self.state.add_trigger(self, signal, trigger=trigger)
@@ -66,6 +66,8 @@ class PyCoroProcess(BaseProcess):
                     command = self.default_cmd
                 response = None
 
+                if isinstance(command, ValueCastable):
+                    command = Value.cast(command)
                 if isinstance(command, Value):
                     exec(_RHSValueCompiler.compile(self.state, command, mode="curr"),
                         self.exec_locals)

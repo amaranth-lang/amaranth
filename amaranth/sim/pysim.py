@@ -5,7 +5,8 @@ from vcd import VCDWriter
 from vcd.gtkw import GTKWSave
 
 from ..hdl import *
-from ..hdl.ast import SignalDict
+from ..hdl._repr import *
+from ..hdl._ast import SignalDict, Slice, Operator
 from ._base import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
@@ -15,48 +16,32 @@ from ._pyclock import PyClockProcess
 __all__ = ["PySimEngine"]
 
 
-class _NameExtractor:
-    def __init__(self):
-        self.names = SignalDict()
-
-    def __call__(self, fragment, *, hierarchy=("bench", "top",)):
-        def add_signal_name(signal):
-            hierarchical_signal_name = (*hierarchy, signal.name)
-            if signal not in self.names:
-                self.names[signal] = {hierarchical_signal_name}
-            else:
-                self.names[signal].add(hierarchical_signal_name)
-
-        for domain_name, domain_signals in fragment.drivers.items():
-            if domain_name is not None:
-                domain = fragment.domains[domain_name]
-                add_signal_name(domain.clk)
-                if domain.rst is not None:
-                    add_signal_name(domain.rst)
-
-        for statement in fragment.statements:
-            for signal in statement._lhs_signals() | statement._rhs_signals():
-                if not isinstance(signal, (ClockSignal, ResetSignal)):
-                    add_signal_name(signal)
-
-        for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
-            if subfragment_name is None:
-                subfragment_name = "U${}".format(subfragment_index)
-            self(subfragment, hierarchy=(*hierarchy, subfragment_name))
-
-        return self.names
-
-
 class _VCDWriter:
     @staticmethod
-    def decode_to_vcd(signal, value):
-        return signal.decoder(value).expandtabs().replace(" ", "_")
+    def decode_to_vcd(format, value):
+        return format.format(value).expandtabs().replace(" ", "_")
+
+    @staticmethod
+    def eval_field(field, signal, value):
+        if isinstance(field, Signal):
+            assert field is signal
+            return value
+        elif isinstance(field, Const):
+            return field.value
+        elif isinstance(field, Slice):
+            sub = _VCDWriter.eval_field(field.value, signal, value)
+            return (sub >> field.start) & ((1 << (field.stop - field.start)) - 1)
+        elif isinstance(field, Operator) and field.operator in ('s', 'u'):
+            sub = _VCDWriter.eval_field(field.operands[0], signal, value)
+            return Const(sub, field.shape()).value
+        else:
+            raise NotImplementedError
 
     def __init__(self, fragment, *, vcd_file, gtkw_file=None, traces=()):
         if isinstance(vcd_file, str):
-            vcd_file = open(vcd_file, "wt")
+            vcd_file = open(vcd_file, "w")
         if isinstance(gtkw_file, str):
-            gtkw_file = open(gtkw_file, "wt")
+            gtkw_file = open(gtkw_file, "w")
 
         self.vcd_vars = SignalDict()
         self.vcd_file = vcd_file
@@ -69,65 +54,85 @@ class _VCDWriter:
 
         self.traces = []
 
-        signal_names = _NameExtractor()(fragment)
+        signal_names = SignalDict()
+        for subfragment, subfragment_name in \
+                fragment._assign_names_to_fragments(hierarchy=("bench", "top",)).items():
+            for signal, signal_name in subfragment._assign_names_to_signals().items():
+                if signal not in signal_names:
+                    signal_names[signal] = set()
+                signal_names[signal].add((*subfragment_name, signal_name))
 
         trace_names = SignalDict()
+        assigned_names = set()
         for trace in traces:
-            if trace not in signal_names:
-                trace_names[trace] = {('bench', trace.name)}
-            self.traces.append(trace)
+            for trace_signal in trace._rhs_signals():
+                if trace_signal not in signal_names:
+                    if trace_signal.name not in assigned_names:
+                        name = trace_signal.name
+                    else:
+                        name = f"{trace_signal.name}${len(assigned_names)}"
+                        assert name not in assigned_names
+                    trace_names[trace_signal] = {("bench", name)}
+                    assigned_names.add(name)
+                self.traces.append(trace_signal)
 
         if self.vcd_writer is None:
             return
 
         for signal, names in itertools.chain(signal_names.items(), trace_names.items()):
-            if signal.decoder:
-                var_type = "string"
-                var_size = 1
-                var_init = self.decode_to_vcd(signal, signal.reset)
-            else:
-                var_type = "wire"
-                var_size = signal.width
-                var_init = signal.reset
+            fields = []
+            self.vcd_vars[signal] = []
+            self.gtkw_names[signal] = []
+            for repr in signal._value_repr:
+                var_init = self.eval_field(repr.value, signal, signal.reset)
+                if isinstance(repr.format, FormatInt):
+                    var_type = "wire"
+                    var_size = repr.value.shape().width
+                else:
+                    var_type = "string"
+                    var_size = 1
+                    var_init = self.decode_to_vcd(repr.format, var_init)
 
-            for (*var_scope, var_name) in names:
-                if re.search(r"[ \t\r\n]", var_name):
-                    raise NameError("Signal '{}.{}' contains a whitespace character"
-                                    .format(".".join(var_scope), var_name))
+                vcd_var = None
+                for (*var_scope, var_name) in names:
+                    if re.search(r"[ \t\r\n]", var_name):
+                        raise NameError("Signal '{}.{}' contains a whitespace character"
+                                        .format(".".join(var_scope), var_name))
 
-                suffix = None
-                while True:
-                    try:
-                        if suffix is None:
-                            var_name_suffix = var_name
+                    field_name = var_name
+                    for item in repr.path:
+                        if isinstance(item, int):
+                            field_name += f"[{item}]"
                         else:
-                            var_name_suffix = "{}${}".format(var_name, suffix)
-                        if signal not in self.vcd_vars:
-                            vcd_var = self.vcd_writer.register_var(
-                                scope=var_scope, name=var_name_suffix,
-                                var_type=var_type, size=var_size, init=var_init)
-                            self.vcd_vars[signal] = vcd_var
-                        else:
-                            self.vcd_writer.register_alias(
-                                scope=var_scope, name=var_name_suffix,
-                                var=self.vcd_vars[signal])
-                        break
-                    except KeyError:
-                        suffix = (suffix or 0) + 1
+                            field_name += f".{item}"
 
-                if signal not in self.gtkw_names:
-                    self.gtkw_names[signal] = (*var_scope, var_name_suffix)
+                    if vcd_var is None:
+                        vcd_var = self.vcd_writer.register_var(
+                            scope=var_scope, name=field_name,
+                            var_type=var_type, size=var_size, init=var_init)
+                        if var_size > 1:
+                            suffix = f"[{var_size - 1}:0]"
+                        else:
+                            suffix = ""
+                        if repr.path:
+                            gtkw_field_name = '\\' + field_name
+                        else:
+                            gtkw_field_name = field_name
+                        self.gtkw_names[signal].append(".".join((*var_scope, gtkw_field_name)) + suffix)
+                    else:
+                        self.vcd_writer.register_alias(
+                            scope=var_scope, name=field_name,
+                            var=vcd_var)
+
+                self.vcd_vars[signal].append((vcd_var, repr))
+
 
     def update(self, timestamp, signal, value):
-        vcd_var = self.vcd_vars.get(signal)
-        if vcd_var is None:
-            return
-
-        if signal.decoder:
-            var_value = self.decode_to_vcd(signal, value)
-        else:
-            var_value = value
-        self.vcd_writer.change(vcd_var, timestamp, var_value)
+        for (vcd_var, repr) in self.vcd_vars.get(signal, ()):
+            var_value = self.eval_field(repr.value, signal, value)
+            if not isinstance(repr.format, FormatInt):
+                var_value = self.decode_to_vcd(repr.format, var_value)
+            self.vcd_writer.change(vcd_var, timestamp, var_value)
 
     def close(self, timestamp):
         if self.vcd_writer is not None:
@@ -139,11 +144,8 @@ class _VCDWriter:
 
             self.gtkw_save.treeopen("top")
             for signal in self.traces:
-                if len(signal) > 1 and not signal.decoder:
-                    suffix = "[{}:0]".format(len(signal) - 1)
-                else:
-                    suffix = ""
-                self.gtkw_save.trace(".".join(self.gtkw_names[signal]) + suffix)
+                for name in self.gtkw_names[signal]:
+                    self.gtkw_save.trace(name)
 
         if self.vcd_file is not None:
             self.vcd_file.close()

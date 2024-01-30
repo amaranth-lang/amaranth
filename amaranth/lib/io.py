@@ -4,7 +4,7 @@ from .. import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from ..hdl.rec import *
-from ..lib.wiring import In, Out, Signature
+from ..lib.wiring import In, Out, Signature, flipped, FlippedInterface
 
 
 __all__ = ["pin_layout", "Pin"]
@@ -31,7 +31,7 @@ def _pin_signature(width, dir, xdr=0):
             members["i"] = In(width)
         else:
             for n in range(xdr):
-                members["i{}".format(n)] = In(width)
+                members[f"i{n}"] = In(width)
     if dir in ("o", "oe", "io"):
         if xdr > 0:
             members["o_clk"] = Out(1)
@@ -41,7 +41,7 @@ def _pin_signature(width, dir, xdr=0):
             members["o"] = Out(width)
         else:
             for n in range(xdr):
-                members["o{}".format(n)] = Out(width)
+                members[f"o{n}"] = Out(width)
     if dir in ("oe", "io"):
         members["oe"] = Out(1)
     return Signature(members)
@@ -135,4 +135,7 @@ class Pin(Record):
         first_field, _, _ = next(iter(Pin(1, dir="o").layout))
         warnings.warn(f"`pin.eq(...)` is deprecated; use `pin.{first_field}.eq(...)` here",
                       DeprecationWarning, stacklevel=2)
-        return super().eq(other)
+        if isinstance(self, FlippedInterface):
+            return Record.eq(flipped(self), other)
+        else:
+            return Record.eq(self, other)

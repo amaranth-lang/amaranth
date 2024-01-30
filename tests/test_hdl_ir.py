@@ -2,10 +2,10 @@
 
 from collections import OrderedDict
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.ir import *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._ir import *
+from amaranth.hdl._mem import *
 
 from .utils import *
 
@@ -834,3 +834,71 @@ class InstanceTestCase(FHDLTestCase):
         self.assertEqual(f.attrs, OrderedDict([
             ("ATTR", 1),
         ]))
+
+    def test_assign_names_to_signals(self):
+        i = Signal()
+        rst = Signal()
+        o1 = Signal()
+        o2 = Signal()
+        o3 = Signal()
+        i1 = Signal(name="i")
+
+        f = Fragment()
+        f.add_domains(cd_sync := ClockDomain())
+        f.add_domains(cd_sync_norst := ClockDomain(reset_less=True))
+        f.add_ports((i, rst), dir="i")
+        f.add_ports((o1, o2, o3), dir="o")
+        f.add_statements([o1.eq(0)])
+        f.add_driver(o1, domain=None)
+        f.add_statements([o2.eq(i1)])
+        f.add_driver(o2, domain="sync")
+        f.add_statements([o3.eq(i1)])
+        f.add_driver(o3, domain="sync_norst")
+
+        names = f._assign_names_to_signals()
+        self.assertEqual(names, SignalDict([
+            (i, "i"),
+            (rst, "rst"),
+            (o1, "o1"),
+            (o2, "o2"),
+            (o3, "o3"),
+            (cd_sync.clk, "clk"),
+            (cd_sync.rst, "rst$6"),
+            (cd_sync_norst.clk, "sync_norst_clk"),
+            (i1, "i$8"),
+        ]))
+
+    def test_assign_names_to_fragments(self):
+        f = Fragment()
+        f.add_subfragment(a := Fragment())
+        f.add_subfragment(b := Fragment(), name="b")
+
+        names = f._assign_names_to_fragments()
+        self.assertEqual(names, {
+            f: ("top",),
+            a: ("top", "U$0"),
+            b: ("top", "b")
+        })
+
+    def test_assign_names_to_fragments_rename_top(self):
+        f = Fragment()
+        f.add_subfragment(a := Fragment())
+        f.add_subfragment(b := Fragment(), name="b")
+
+        names = f._assign_names_to_fragments(hierarchy=("bench", "cpu"))
+        self.assertEqual(names, {
+            f: ("bench", "cpu",),
+            a: ("bench", "cpu", "U$0"),
+            b: ("bench", "cpu", "b")
+        })
+
+    def test_assign_names_to_fragments_collide_with_signal(self):
+        f = Fragment()
+        f.add_subfragment(a_f := Fragment(), name="a")
+        f.add_ports((a_s := Signal(name="a"),), dir="o")
+
+        names = f._assign_names_to_fragments()
+        self.assertEqual(names, {
+            f: ("top",),
+            a_f: ("top", "a$U$0")
+        })

@@ -86,7 +86,7 @@ class FFSynchronizer(Elaboratable):
                                       .format(type(platform).__name__))
 
         m = Module()
-        flops = [Signal(self.i.shape(), name="stage{}".format(index),
+        flops = [Signal(self.i.shape(), name=f"stage{index}",
                         reset=self._reset, reset_less=self._reset_less)
                  for index in range(self._stages)]
         for i, o in zip((self.i, *flops), flops):
@@ -161,7 +161,7 @@ class AsyncFFSynchronizer(Elaboratable):
 
         m = Module()
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)
-        flops = [Signal(1, name="stage{}".format(index), reset=1)
+        flops = [Signal(1, name=f"stage{index}", reset=1)
                  for index in range(self._stages)]
         for i, o in zip((0, *flops), flops):
             m.d.async_ff += o.eq(i)

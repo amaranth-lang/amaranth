@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import warnings
 
-from ..hdl.ast import *
+from ..hdl._ast import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from ..hdl.rec import *
@@ -37,7 +37,7 @@ class ResourceManager:
     def add_resources(self, resources):
         for res in resources:
             if not isinstance(res, Resource):
-                raise TypeError("Object {!r} is not a Resource".format(res))
+                raise TypeError(f"Object {res!r} is not a Resource")
             if (res.name, res.number) in self.resources:
                 raise NameError("Trying to add {!r}, but {!r} has the same name and number"
                                 .format(res, self.resources[res.name, res.number]))
@@ -46,7 +46,7 @@ class ResourceManager:
     def add_connectors(self, connectors):
         for conn in connectors:
             if not isinstance(conn, Connector):
-                raise TypeError("Object {!r} is not a Connector".format(conn))
+                raise TypeError(f"Object {conn!r} is not a Connector")
             if (conn.name, conn.number) in self.connectors:
                 raise NameError("Trying to add {!r}, but {!r} has the same name and number"
                                 .format(conn, self.connectors[conn.name, conn.number]))
@@ -120,7 +120,7 @@ class ResourceManager:
                 fields = OrderedDict()
                 for sub in resource.ios:
                     fields[sub.name] = resolve(sub, dir[sub.name], xdr[sub.name],
-                                               name="{}__{}".format(name, sub.name),
+                                               name=f"{name}__{sub.name}",
                                                attrs={**attrs, **sub.attrs})
                 rec = Record([
                     (f_name, f.layout) for (f_name, f) in fields.items()
@@ -178,7 +178,7 @@ class ResourceManager:
 
         value = resolve(resource,
             *merge_options(resource, dir, xdr),
-            name="{}_{}".format(resource.name, resource.number),
+            name=f"{resource.name}_{resource.number}",
             attrs=resource.attrs)
         self._requested[resource.name, resource.number] = value
         return value
@@ -232,13 +232,13 @@ class ResourceManager:
                 yield port_name, pin_names[0], attrs
             else:
                 for bit, pin_name in enumerate(pin_names):
-                    yield "{}[{}]".format(port_name, bit), pin_name, attrs
+                    yield f"{port_name}[{bit}]", pin_name, attrs
 
     def add_clock_constraint(self, clock, frequency):
         if not isinstance(clock, Signal):
-            raise TypeError("Object {!r} is not a Signal".format(clock))
+            raise TypeError(f"Object {clock!r} is not a Signal")
         if not isinstance(frequency, (int, float)):
-            raise TypeError("Frequency must be a number, not {!r}".format(frequency))
+            raise TypeError(f"Frequency must be a number, not {frequency!r}")
 
         if clock in self._clocks:
             raise ValueError("Cannot add clock constraint on {!r}, which is already constrained "

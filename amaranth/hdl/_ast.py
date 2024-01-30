@@ -2,24 +2,27 @@ from abc import ABCMeta, abstractmethod
 import inspect
 import warnings
 import functools
+import operator
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
-from enum import Enum
+from enum import Enum, EnumMeta
 from itertools import chain
 
+from ._repr import *
 from .. import tracer
+from ..utils import *
 from .._utils import *
 from .._utils import _ignore_deprecated
 from .._unused import *
 
 
 __all__ = [
-    "Shape", "signed", "unsigned", "ShapeCastable",
+    "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
-    "ValueCastable",
-    "Sample", "Past", "Stable", "Rose", "Fell", "Initial",
+    "ValueCastable", "ValueLike",
+    "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
     "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
@@ -52,6 +55,9 @@ class ShapeCastable:
         if not hasattr(cls, "const"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
                             f"the `const` method")
+
+    def _value_repr(self, value):
+        return (Repr(FormatInt(), value),)
 
 
 class Shape:
@@ -130,20 +136,66 @@ class Shape:
                 # defined as subclasses of lib.enum.Enum with no explicitly specified shape.
                 return Shape._cast_plain_enum(obj)
             else:
-                raise TypeError("Object {!r} cannot be converted to an Amaranth shape".format(obj))
+                raise TypeError(f"Object {obj!r} cannot be converted to an Amaranth shape")
             if new_obj is obj:
-                raise RecursionError("Shape-castable object {!r} casts to itself".format(obj))
+                raise RecursionError(f"Shape-castable object {obj!r} casts to itself")
             obj = new_obj
 
     def __repr__(self):
         if self.signed:
-            return "signed({})".format(self.width)
+            return f"signed({self.width})"
         else:
-            return "unsigned({})".format(self.width)
+            return f"unsigned({self.width})"
 
     def __eq__(self, other):
         return (isinstance(other, Shape) and
                 self.width == other.width and self.signed == other.signed)
+
+
+class _ShapeLikeMeta(type):
+    def __subclasscheck__(cls, subclass):
+        return issubclass(subclass, (Shape, ShapeCastable, int, range, EnumMeta)) or subclass is ShapeLike
+
+    def __instancecheck__(cls, instance):
+        if isinstance(instance, (Shape, ShapeCastable, range)):
+            return True
+        if isinstance(instance, int):
+            return instance >= 0
+        if isinstance(instance, EnumMeta):
+            for member in instance:
+                if not isinstance(member.value, ValueLike):
+                    return False
+            return True
+        return False
+
+
+@final
+class ShapeLike(metaclass=_ShapeLikeMeta):
+    """An abstract class representing all objects that can be cast to a :class:`Shape`.
+
+    ``issubclass(cls, ShapeLike)`` returns ``True`` for:
+
+    - :class:`Shape`
+    - :class:`ShapeCastable` and its subclasses
+    - ``int`` and its subclasses
+    - ``range`` and its subclasses
+    - :class:`enum.EnumMeta` and its subclasses
+    - :class:`ShapeLike` itself
+
+    ``isinstance(obj, ShapeLike)`` returns ``True`` for:
+
+    - :class:`Shape` instances
+    - :class:`ShapeCastable` instances
+    - non-negative ``int`` values
+    - ``range`` instances
+    - :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`
+
+    This class is only usable for the above checks — no instances and no (non-virtual)
+    subclasses can be created.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        raise TypeError("ShapeLike is an abstract class and cannot be constructed")
 
 
 def unsigned(width):
@@ -194,9 +246,9 @@ class Value(metaclass=ABCMeta):
             elif isinstance(obj, int):
                 return Const(obj)
             else:
-                raise TypeError("Object {!r} cannot be converted to an Amaranth value".format(obj))
+                raise TypeError(f"Object {obj!r} cannot be converted to an Amaranth value")
             if new_obj is obj:
-                raise RecursionError("Value-castable object {!r} casts to itself".format(obj))
+                raise RecursionError(f"Value-castable object {obj!r} casts to itself")
             obj = new_obj
 
     def __init__(self, *, src_loc_at=0):
@@ -318,12 +370,19 @@ class Value(metaclass=ABCMeta):
                 key += n
             return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
+            if isinstance(key.start, Value) or isinstance(key.stop, Value):
+                raise TypeError(f"Cannot slice value with a value; use Value.bit_select() or Value.word_select() instead")
             start, stop, step = key.indices(n)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
             return Slice(self, start, stop, src_loc_at=1)
+        elif isinstance(key, Value):
+            raise TypeError(f"Cannot index value with a value; use Value.bit_select() instead")
         else:
-            raise TypeError("Cannot index value with {}".format(repr(key)))
+            raise TypeError(f"Cannot index value with {key!r}")
+
+    def __contains__(self, other):
+        raise TypeError("Cannot use 'in' with an Amaranth value")
 
     def as_unsigned(self):
         """Conversion to unsigned.
@@ -490,7 +549,7 @@ class Value(metaclass=ABCMeta):
                     continue
                 matches.append(self == pattern)
         if not matches:
-            return Const(1)
+            return Const(0)
         elif len(matches) == 1:
             return matches[0]
         else:
@@ -510,7 +569,7 @@ class Value(metaclass=ABCMeta):
             If the amount is positive, the input shifted left. Otherwise, the input shifted right.
         """
         if not isinstance(amount, int):
-            raise TypeError("Shift amount must be an integer, not {!r}".format(amount))
+            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
         if amount < 0:
             return self.shift_right(-amount)
         if self.shape().signed:
@@ -532,7 +591,7 @@ class Value(metaclass=ABCMeta):
             If the amount is positive, the input shifted right. Otherwise, the input shifted left.
         """
         if not isinstance(amount, int):
-            raise TypeError("Shift amount must be an integer, not {!r}".format(amount))
+            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
         if amount < 0:
             return self.shift_left(-amount)
         if self.shape().signed:
@@ -554,7 +613,7 @@ class Value(metaclass=ABCMeta):
             If the amount is positive, the input rotated left. Otherwise, the input rotated right.
         """
         if not isinstance(amount, int):
-            raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
+            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
         if len(self) != 0:
             amount %= len(self)
         return Cat(self[-amount:], self[:-amount]) # meow :3
@@ -573,7 +632,7 @@ class Value(metaclass=ABCMeta):
             If the amount is positive, the input rotated right. Otherwise, the input rotated right.
         """
         if not isinstance(amount, int):
-            raise TypeError("Rotate amount must be an integer, not {!r}".format(amount))
+            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
         if len(self) != 0:
             amount %= len(self)
         return Cat(self[amount:], self[:amount])
@@ -635,7 +694,7 @@ class Value(metaclass=ABCMeta):
         pass # :nocov:
 
     def _lhs_signals(self):
-        raise TypeError("Value {!r} cannot be used in assignments".format(self))
+        raise TypeError(f"Value {self!r} cannot be used in assignments")
 
     @abstractmethod
     def _rhs_signals(self):
@@ -661,16 +720,6 @@ class Const(Value):
     """
     src_loc = None
 
-    # TODO(amaranth-0.5): remove
-    @staticmethod
-    @deprecated("instead of `Const.normalize(value, shape)`, use `Const(value, shape).value`")
-    def normalize(value, shape):
-        mask = (1 << shape.width) - 1
-        value &= mask
-        if shape.signed and value >> (shape.width - 1):
-            value |= ~mask
-        return value
-
     @staticmethod
     def cast(obj):
         """Converts ``obj`` to an Amaranth constant.
@@ -687,15 +736,19 @@ class Const(Value):
             width = 0
             for part in obj.parts:
                 const  = Const.cast(part)
-                value |= const.value << width
+                part_value = Const(const.value, unsigned(const.width)).value
+                value |= part_value << width
                 width += len(const)
             return Const(value, width)
+        elif type(obj) is Slice:
+            value = Const.cast(obj.value)
+            return Const(value.value >> obj.start, unsigned(obj.stop - obj.start))
         else:
-            raise TypeError("Value {!r} cannot be converted to an Amaranth constant".format(obj))
+            raise TypeError(f"Value {obj!r} cannot be converted to an Amaranth constant")
 
     def __init__(self, value, shape=None, *, src_loc_at=0):
         # We deliberately do not call Value.__init__ here.
-        self.value = int(value)
+        self.value = int(operator.index(value))
         if shape is None:
             shape = Shape(bits_for(self.value), signed=self.value < 0)
         elif isinstance(shape, int):
@@ -856,27 +909,27 @@ def Mux(sel, val1, val0):
 class Slice(Value):
     def __init__(self, value, start, stop, *, src_loc_at=0):
         if not isinstance(start, int):
-            raise TypeError("Slice start must be an integer, not {!r}".format(start))
+            raise TypeError(f"Slice start must be an integer, not {start!r}")
         if not isinstance(stop, int):
-            raise TypeError("Slice stop must be an integer, not {!r}".format(stop))
+            raise TypeError(f"Slice stop must be an integer, not {stop!r}")
 
         value = Value.cast(value)
         n = len(value)
         if start not in range(-n, n+1):
-            raise IndexError("Cannot start slice {} bits into {}-bit value".format(start, n))
+            raise IndexError(f"Cannot start slice {start} bits into {n}-bit value")
         if start < 0:
             start += n
         if stop not in range(-n, n+1):
-            raise IndexError("Cannot stop slice {} bits into {}-bit value".format(stop, n))
+            raise IndexError(f"Cannot stop slice {stop} bits into {n}-bit value")
         if stop < 0:
             stop += n
         if start > stop:
-            raise IndexError("Slice start {} must be less than slice stop {}".format(start, stop))
+            raise IndexError(f"Slice start {start} must be less than slice stop {stop}")
 
         super().__init__(src_loc_at=src_loc_at)
         self.value = value
-        self.start = int(start)
-        self.stop  = int(stop)
+        self.start = int(operator.index(start))
+        self.stop  = int(operator.index(stop))
 
     def shape(self):
         return Shape(self.stop - self.start)
@@ -888,16 +941,16 @@ class Slice(Value):
         return self.value._rhs_signals()
 
     def __repr__(self):
-        return "(slice {} {}:{})".format(repr(self.value), self.start, self.stop)
+        return f"(slice {self.value!r} {self.start}:{self.stop})"
 
 
 @final
 class Part(Value):
     def __init__(self, value, offset, width, stride=1, *, src_loc_at=0):
         if not isinstance(width, int) or width < 0:
-            raise TypeError("Part width must be a non-negative integer, not {!r}".format(width))
+            raise TypeError(f"Part width must be a non-negative integer, not {width!r}")
         if not isinstance(stride, int) or stride <= 0:
-            raise TypeError("Part stride must be a positive integer, not {!r}".format(stride))
+            raise TypeError(f"Part stride must be a positive integer, not {stride!r}")
 
         value = Value.cast(value)
         offset = Value.cast(offset)
@@ -1020,7 +1073,7 @@ class _SignalMeta(ABCMeta):
         return signal
 
 
-# @final
+@final
 class Signal(Value, DUID, metaclass=_SignalMeta):
     """A varying integer value.
 
@@ -1067,7 +1120,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         super().__init__(src_loc_at=src_loc_at)
 
         if name is not None and not isinstance(name, str):
-            raise TypeError("Name must be a string, not {!r}".format(name))
+            raise TypeError(f"Name must be a string, not {name!r}")
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
 
         orig_shape = shape
@@ -1117,33 +1170,65 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.reset = reset.value
         self.reset_less = bool(reset_less)
 
-        if isinstance(orig_shape, range) and self.reset == orig_shape.stop:
-            warnings.warn(
-                message="Reset value {!r} equals the non-inclusive end of the signal "
-                        "shape {!r}; this is likely an off-by-one error"
-                        .format(self.reset, orig_shape),
-                category=SyntaxWarning,
-                stacklevel=2)
+        if isinstance(orig_shape, range) and orig_reset is not None and orig_reset not in orig_shape:
+            if orig_reset == orig_shape.stop:
+                raise SyntaxError(
+                    f"Reset value {orig_reset!r} equals the non-inclusive end of the signal "
+                    f"shape {orig_shape!r}; this is likely an off-by-one error")
+            else:
+                raise SyntaxError(
+                    f"Reset value {orig_reset!r} is not within the signal shape {orig_shape!r}")
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
-        if decoder is None and isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
-            decoder = orig_shape
-        if isinstance(decoder, type) and issubclass(decoder, Enum):
+        if decoder is not None:
+            # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
+            # this is the only way to add a custom filter to the signal right now. The setter sets
+            # `self._value_repr` as well as the compatibility `self.decoder`.
+            self.decoder = decoder
+        else:
+            # If it's an enum, expose it via `self.decoder` for compatibility, whether it's a Python
+            # enum or an Amaranth enum. This also sets the value representation, even for custom
+            # shape-castables that implement their own `_value_repr`.
+            if isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+                self.decoder = orig_shape
+            else:
+                self.decoder = None
+            # The value representation is specified implicitly in the shape of the signal.
+            if isinstance(orig_shape, ShapeCastable):
+                # A custom shape-castable always has a `_value_repr`, at least the default one.
+                self._value_repr = tuple(orig_shape._value_repr(self))
+            elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+                # A non-Amaranth enum needs a value repr constructed for it.
+                self._value_repr = (Repr(FormatEnum(orig_shape), self),)
+            else:
+                # Any other case is formatted as a plain integer.
+                self._value_repr = (Repr(FormatInt(), self),)
+
+    @property
+    def decoder(self):
+        return self._decoder
+
+    @decoder.setter
+    def decoder(self, decoder):
+        # Compute the value representation that will be used by Amaranth.
+        if decoder is None:
+            self._value_repr = (Repr(FormatInt(), self),)
+            self._decoder = None
+        elif not (isinstance(decoder, type) and issubclass(decoder, Enum)):
+            self._value_repr = (Repr(FormatCustom(decoder), self),)
+            self._decoder = decoder
+        else: # Violence. In the name of backwards compatibility!
+            self._value_repr = (Repr(FormatEnum(decoder), self),)
             def enum_decoder(value):
                 try:
                     return "{0.name:}/{0.value:}".format(decoder(value))
                 except ValueError:
                     return str(value)
-            self.decoder = enum_decoder
-            self._enum_class = decoder
-        else:
-            self.decoder = decoder
-            self._enum_class = None
+            self._decoder = enum_decoder
 
-    # Not a @classmethod because amaranth.compat requires it.
-    @staticmethod
-    def like(other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
+    @classmethod
+    def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
         """Create Signal based on another.
 
         Parameters
@@ -1166,7 +1251,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             kw.update(reset=other.reset, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
         kw.update(kwargs)
-        return Signal(**kw, src_loc_at=1 + src_loc_at)
+        return cls(**kw, src_loc_at=1 + src_loc_at)
 
     def shape(self):
         return Shape(self.width, self.signed)
@@ -1178,7 +1263,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         return SignalSet((self,))
 
     def __repr__(self):
-        return "(sig {})".format(self.name)
+        return f"(sig {self.name})"
 
 
 @final
@@ -1197,9 +1282,9 @@ class ClockSignal(Value):
     def __init__(self, domain="sync", *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
         if domain == "comb":
-            raise ValueError("Domain '{}' does not have a clock".format(domain))
+            raise ValueError(f"Domain '{domain}' does not have a clock")
         self.domain = domain
 
     def shape(self):
@@ -1212,7 +1297,7 @@ class ClockSignal(Value):
         raise NotImplementedError("ClockSignal must be lowered to a concrete signal") # :nocov:
 
     def __repr__(self):
-        return "(clk {})".format(self.domain)
+        return f"(clk {self.domain})"
 
 
 @final
@@ -1233,9 +1318,9 @@ class ResetSignal(Value):
     def __init__(self, domain="sync", allow_reset_less=False, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         if not isinstance(domain, str):
-            raise TypeError("Clock domain name must be a string, not {!r}".format(domain))
+            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
         if domain == "comb":
-            raise ValueError("Domain '{}' does not have a reset".format(domain))
+            raise ValueError(f"Domain '{domain}' does not have a reset")
         self.domain = domain
         self.allow_reset_less = allow_reset_less
 
@@ -1249,7 +1334,7 @@ class ResetSignal(Value):
         raise NotImplementedError("ResetSignal must be lowered to a concrete signal") # :nocov:
 
     def __repr__(self):
-        return "(rst {})".format(self.domain)
+        return f"(rst {self.domain})"
 
 
 class Array(MutableSequence):
@@ -1307,6 +1392,8 @@ class Array(MutableSequence):
         self._mutable  = True
 
     def __getitem__(self, index):
+        if isinstance(index, ValueCastable):
+            index = Value.cast(index)
         if isinstance(index, Value):
             if self._mutable:
                 self._proxy_at = tracer.get_src_loc()
@@ -1443,68 +1530,38 @@ class ValueCastable:
         return wrapper_memoized
 
 
-# TODO(amaranth-0.5): remove
-@final
-class Sample(Value):
-    """Value from the past.
+class _ValueLikeMeta(type):
+    """An abstract class representing all objects that can be cast to a :class:`Value`.
 
-    A ``Sample`` of an expression is equal to the value of the expression ``clocks`` clock edges
-    of the ``domain`` clock back. If that moment is before the beginning of time, it is equal
-    to the value of the expression calculated as if each signal had its reset value.
+    ``issubclass(cls, ValueLike)`` returns ``True`` for:
+
+    - :class:`Value`
+    - :class:`ValueCastable` and its subclasses
+    - ``int`` and its subclasses
+    - :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`
+    - :class:`ValueLike` itself
+
+    ``isinstance(obj, ValueLike)`` returns the same value as ``issubclass(type(obj), ValueLike)``.
+
+    This class is only usable for the above checks — no instances and no (non-virtual)
+    subclasses can be created.
     """
-    @deprecated("instead of using `Sample`, create a register explicitly")
-    def __init__(self, expr, clocks, domain, *, src_loc_at=0):
-        super().__init__(src_loc_at=1 + src_loc_at)
-        self.value  = Value.cast(expr)
-        self.clocks = int(clocks)
-        self.domain = domain
-        if not isinstance(self.value, (Const, Signal, ClockSignal, ResetSignal, Initial)):
-            raise TypeError("Sampled value must be a signal or a constant, not {!r}"
-                            .format(self.value))
-        if self.clocks < 0:
-            raise ValueError("Cannot sample a value {} cycles in the future"
-                             .format(-self.clocks))
-        if not (self.domain is None or isinstance(self.domain, str)):
-            raise TypeError("Domain name must be a string or None, not {!r}"
-                            .format(self.domain))
 
-    def shape(self):
-        return self.value.shape()
+    def __subclasscheck__(cls, subclass):
+        if issubclass(subclass, (Value, ValueCastable, int)) or subclass is ValueLike:
+            return True
+        if issubclass(subclass, Enum):
+            return isinstance(subclass, ShapeLike)
+        return False
 
-    def _rhs_signals(self):
-        return SignalSet((self,))
-
-    def __repr__(self):
-        return "(sample {!r} @ {}[{}])".format(
-            self.value, "<default>" if self.domain is None else self.domain, self.clocks)
+    def __instancecheck__(cls, instance):
+        return issubclass(type(instance), cls)
 
 
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Past`, create a register explicitly")
-def Past(expr, clocks=1, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Stable`, create registers and comparisons explicitly")
-def Stable(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks + 1, domain) == Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Rose`, create registers and comparisons explicitly")
-def Rose(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return ~Sample(expr, clocks + 1, domain) & Sample(expr, clocks, domain)
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of using `Fell`, create registers and comparisons explicitly")
-def Fell(expr, clocks=0, domain=None):
-    with _ignore_deprecated():
-        return Sample(expr, clocks + 1, domain) & ~Sample(expr, clocks, domain)
+@final
+class ValueLike(metaclass=_ValueLikeMeta):
+    def __new__(cls, *args, **kwargs):
+        raise TypeError("ValueLike is an abstract class and cannot be constructed")
 
 
 @final
@@ -1520,7 +1577,7 @@ class Initial(Value):
         return Shape(1)
 
     def _rhs_signals(self):
-        return SignalSet((self,))
+        return SignalSet()
 
     def __repr__(self):
         return "(initial)"
@@ -1543,7 +1600,7 @@ class Statement:
             if isinstance(obj, Statement):
                 return _StatementList([obj])
             else:
-                raise TypeError("Object {!r} is not an Amaranth statement".format(obj))
+                raise TypeError(f"Object {obj!r} is not an Amaranth statement")
 
 
 @final
@@ -1560,7 +1617,7 @@ class Assign(Statement):
         return self.lhs._rhs_signals() | self.rhs._rhs_signals()
 
     def __repr__(self):
-        return "(eq {!r} {!r})".format(self.lhs, self.rhs)
+        return f"(eq {self.lhs!r} {self.rhs!r})"
 
 
 class UnusedProperty(UnusedMustUse):
@@ -1580,10 +1637,10 @@ class Property(Statement, MustUse):
             raise TypeError("Property name must be a string or None, not {!r}"
                             .format(self.name))
         if self._check is None:
-            self._check = Signal(reset_less=True, name="${}$check".format(self._kind))
+            self._check = Signal(reset_less=True, name=f"${self._kind}$check")
             self._check.src_loc = self.src_loc
         if _en is None:
-            self._en = Signal(reset_less=True, name="${}$en".format(self._kind))
+            self._en = Signal(reset_less=True, name=f"${self._kind}$en")
             self._en.src_loc = self.src_loc
 
     def _lhs_signals(self):
@@ -1594,8 +1651,8 @@ class Property(Statement, MustUse):
 
     def __repr__(self):
         if self.name is not None:
-            return "({}: {} {!r})".format(self.name, self._kind, self.test)    
-        return "({} {!r})".format(self._kind, self.test)
+            return f"({self.name}: {self._kind} {self.test!r})"
+        return f"({self._kind} {self.test!r})"
 
 
 @final
@@ -1613,7 +1670,7 @@ class Cover(Property):
     _kind = "cover"
 
 
-# @final
+@final
 class Switch(Statement):
     def __init__(self, test, cases, *, src_loc=None, src_loc_at=0, case_src_locs={}):
         if src_loc is None:
@@ -1670,9 +1727,9 @@ class Switch(Statement):
         def case_repr(keys, stmts):
             stmts_repr = " ".join(map(repr, stmts))
             if keys == ():
-                return "(default {})".format(stmts_repr)
+                return f"(default {stmts_repr})"
             elif len(keys) == 1:
-                return "(case {} {})".format(keys[0], stmts_repr)
+                return f"(case {keys[0]} {stmts_repr})"
             else:
                 return "(case ({}) {})".format(" ".join(keys), stmts_repr)
         case_reprs = [case_repr(keys, stmts) for keys, stmts in self.cases.items()]
@@ -1730,7 +1787,7 @@ class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
         return len(self._storage)
 
     def __repr__(self):
-        pairs = ["({!r}, {!r})".format(k, v) for k, v in self.items()]
+        pairs = [f"({k!r}, {v!r})" for k, v in self.items()]
         return "{}.{}([{}])".format(type(self).__module__, type(self).__name__,
                                     ", ".join(pairs))
 
@@ -1789,8 +1846,6 @@ class ValueKey:
         elif isinstance(self.value, ArrayProxy):
             self._hash = hash((ValueKey(self.value.index),
                               tuple(ValueKey(e) for e in self.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            self._hash = hash((ValueKey(self.value.value), self.value.clocks, self.value.domain))
         elif isinstance(self.value, Initial):
             self._hash = 0
         else: # :nocov:
@@ -1836,10 +1891,6 @@ class ValueKey:
                     all(ValueKey(a) == ValueKey(b)
                         for a, b in zip(self.value._iter_as_values(),
                                         other.value._iter_as_values())))
-        elif isinstance(self.value, Sample):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.clocks == other.value.clocks and
-                    self.value.domain == self.value.domain)
         elif isinstance(self.value, Initial):
             return True
         else: # :nocov:
@@ -1864,7 +1915,7 @@ class ValueKey:
             raise TypeError("Object {!r} cannot be used as a key in value collections")
 
     def __repr__(self):
-        return "<{}.ValueKey {!r}>".format(__name__, self.value)
+        return f"<{__name__}.ValueKey {self.value!r}>"
 
 
 class ValueDict(_MappedKeyDict):
@@ -1887,7 +1938,7 @@ class SignalKey:
         elif type(signal) is ResetSignal:
             self._intern = (2, signal.domain)
         else:
-            raise TypeError("Object {!r} is not an Amaranth signal".format(signal))
+            raise TypeError(f"Object {signal!r} is not an Amaranth signal")
 
     def __hash__(self):
         return hash(self._intern)
@@ -1899,11 +1950,11 @@ class SignalKey:
 
     def __lt__(self, other):
         if type(other) is not SignalKey:
-            raise TypeError("Object {!r} cannot be compared to a SignalKey".format(other))
+            raise TypeError(f"Object {other!r} cannot be compared to a SignalKey")
         return self._intern < other._intern
 
     def __repr__(self):
-        return "<{}.SignalKey {!r}>".format(__name__, self.signal)
+        return f"<{__name__}.SignalKey {self.signal!r}>"
 
 
 class SignalDict(_MappedKeyDict):
@@ -1914,3 +1965,6 @@ class SignalDict(_MappedKeyDict):
 class SignalSet(_MappedKeySet):
     _map_key   = SignalKey
     _unmap_key = lambda self, key: key.signal
+
+
+from ._repr import *

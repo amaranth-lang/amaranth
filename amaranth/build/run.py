@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import warnings
 import zipfile
 import hashlib
 import pathlib
@@ -64,15 +65,10 @@ class BuildPlan:
             for filename in sorted(self.files):
                 archive.writestr(zipfile.ZipInfo(filename), self.files[filename])
 
-    def execute_local(self, root="build", *, run_script=True, env=None):
-        """
-        Execute build plan using the local strategy. Files from the build plan are placed in
-        the build root directory ``root``, and, if ``run_script`` is ``True``, the script
-        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere)
-        is executed in the build root. If ``env`` is not ``None``, the environment is replaced
-        with ``env``.
+    def extract(self, root="build"):
+        """Extracts the files from the build plan into the local build directory ``root``.
 
-        Returns :class:`LocalBuildProducts`.
+        Returns :class:`pathlib.Path`
         """
         os.makedirs(root, exist_ok=True)
         cwd = os.getcwd()
@@ -92,22 +88,63 @@ class BuildPlan:
                     content = content.encode("utf-8")
                 with open(filename, "wb") as f:
                     f.write(content)
-
-            if run_script:
-                if sys.platform.startswith("win32"):
-                    # Without "call", "cmd /c {}.bat" will return 0.
-                    # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
-                    # Running the script manually from a command prompt is unaffected.
-                    subprocess.check_call(["cmd", "/c", "call {}.bat".format(self.script)],
-                                          env=os.environ if env is None else env)
-                else:
-                    subprocess.check_call(["sh", "{}.sh".format(self.script)],
-                                          env=os.environ if env is None else env)
-
-            return LocalBuildProducts(os.getcwd())
-
+            return pathlib.Path(os.getcwd())
         finally:
             os.chdir(cwd)
+
+    def execute_local(self, root="build", *, run_script=None, env=None):
+        """
+        Execute build plan using the local strategy. Files from the build plan are placed in
+        the build root directory ``root``, and, if ``run_script`` is ``True``, the script
+        appropriate for the platform (``{script}.bat`` on Windows, ``{script}.sh`` elsewhere)
+        is executed in the build root. If ``env`` is not ``None``, the environment is replaced
+        with ``env``.
+
+        The ``run_script`` argument is deprecated. If you only want to extract the files
+        into a local folder, use the ``extract`` method.
+
+        Returns :class:`LocalBuildProducts`.
+        """
+        build_dir = self.extract(root)
+        if run_script is None or run_script:
+            if sys.platform.startswith("win32"):
+                # Without "call", "cmd /c {}.bat" will return 0.
+                # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
+                # Running the script manually from a command prompt is unaffected.
+                subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
+                                      cwd=build_dir, env=os.environ if env is None else env)
+            else:
+                subprocess.check_call(["sh", f"{self.script}.sh"],
+                                      cwd=build_dir, env=os.environ if env is None else env)
+        # TODO(amaranth-0.5): remove
+        if run_script is not None:
+            warnings.warn("The `run_script` argument is deprecated. If you only want to "
+                            "extract the files from the BuildPlan, use the .extract() method",
+                            DeprecationWarning, stacklevel=2)
+
+        return LocalBuildProducts(build_dir)
+
+
+    def execute_local_docker(self, image, *, root="build", docker_args=[]):
+        """
+        Execute build plan inside a Docker container. Files from the build plan are placed in the
+        build root directory ``root`` on the local filesystem. This directory is bind mounted to
+        ``/build`` in a container and the script ``{script}.sh`` is executed inside it.
+        ``docker_args`` is a list containing additional arguments to docker.
+
+        Returns :class:`LocalBuildProducts`.
+        """
+        build_dir = self.extract(root)
+        subprocess.check_call([
+            "docker", "run", *docker_args,
+            "--rm", # remove the container after running
+            "--mount", f"type=bind,source={build_dir},target=/build",
+            "--workdir", "/build",
+            image,
+            "sh", f"{self.script}.sh",
+        ])
+        return LocalBuildProducts(build_dir)
+
 
     def execute_remote_ssh(self, *, connect_to={}, root, run_script=True):
         """
@@ -135,7 +172,7 @@ class BuildPlan:
                 def mkdir_exist_ok(path):
                     try:
                         sftp.mkdir(str(path))
-                    except IOError as e:
+                    except OSError as e:
                         # mkdir fails if directory exists. This is fine in amaranth.build.
                         # Reraise errors containing e.errno info.
                         if e.errno:
