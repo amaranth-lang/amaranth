@@ -65,6 +65,7 @@ class _VCDWriter:
         trace_names = SignalDict()
         assigned_names = set()
         for trace in traces:
+            trace = Value.cast(trace)
             for trace_signal in trace._rhs_signals():
                 if trace_signal not in signal_names:
                     if trace_signal.name not in assigned_names:
