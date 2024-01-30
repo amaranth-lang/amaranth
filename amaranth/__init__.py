@@ -12,7 +12,7 @@ del importlib
 
 from .hdl import *
 
-
+# must be kept in sync with docs/reference.rst!
 __all__ = [
     "Shape", "unsigned", "signed",
     "Value", "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",

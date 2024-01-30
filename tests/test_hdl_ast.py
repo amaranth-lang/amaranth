@@ -167,8 +167,8 @@ class MockShapeCastable(ShapeCastable):
 class ShapeCastableTestCase(FHDLTestCase):
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
-                r"override the `as_shape` method$"):
+                r"^Class 'MockShapeCastableNoOverride' deriving from 'ShapeCastable' must "
+                r"override the 'as_shape' method$"):
             class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
                     pass

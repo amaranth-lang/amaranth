@@ -6,6 +6,8 @@
 Language guide
 ##############
 
+.. py:currentmodule:: amaranth.hdl
+
 .. warning::
 
    This guide is a work in progress and is seriously incomplete!
@@ -44,7 +46,7 @@ All of the examples below assume that a glob import is used.
 Shapes
 ======
 
-A ``Shape`` is an object with two attributes, ``.width`` and ``.signed``. It can be constructed directly:
+A :class:`Shape` describes the bit width and signedness of an Amaranth value. It can be constructed directly:
 
 .. doctest::
 
@@ -53,7 +55,7 @@ A ``Shape`` is an object with two attributes, ``.width`` and ``.signed``. It can
    >>> Shape(width=12, signed=True)
    signed(12)
 
-However, in most cases, the shape is always constructed with the same signedness, and the aliases ``signed`` and ``unsigned`` are more convenient:
+However, in most cases, the signedness of a shape is known upfront, and the convenient aliases :func:`signed` and :func:`unsigned` can be used:
 
 .. doctest::
 
@@ -126,9 +128,9 @@ The shape of the constant can be specified explicitly, in which case the number'
 Shape casting
 =============
 
-Shapes can be *cast* from other objects, which are called *shape-like*. Casting is a convenient way to specify a shape indirectly, for example, by a range of numbers representable by values with that shape.
+Shapes can be *cast* from other objects, which are called *shape-like*. Casting is a convenient way to specify a shape indirectly, for example, by a range of numbers representable by values with that shape. Shapes are shape-like objects as well.
 
-Casting to a shape can be done explicitly with ``Shape.cast``, but is usually implicit, since shape-like objects are accepted anywhere shapes are.
+Casting to a shape can be done explicitly with :meth:`Shape.cast`, but is usually implicit, since shape-like objects are accepted anywhere shapes are.
 
 
 .. _lang-shapeint:
@@ -136,7 +138,7 @@ Casting to a shape can be done explicitly with ``Shape.cast``, but is usually im
 Shapes from integers
 --------------------
 
-Casting a shape from an integer ``i`` is a shorthand for constructing a shape with ``unsigned(i)``:
+Casting a shape from an integer ``i`` is a shorthand for constructing a shape with :func:`unsigned(i) <unsigned>`:
 
 .. doctest::
 
@@ -186,7 +188,7 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
 
 .. note::
 
-   An empty range always casts to an ``unsigned(0)``, even if both of its bounds are negative.
+   An empty range always casts to an :py:`unsigned(0)`, even if both of its bounds are negative.
    This happens because, being empty, it does not contain any negative values.
 
    .. doctest::
@@ -244,22 +246,30 @@ The :mod:`amaranth.lib.enum` module extends the standard enumerations such that 
    The enumeration does not have to subclass :class:`enum.IntEnum` or have :class:`int` as one of its base classes; it only needs to have integers as values of every member. Using enumerations based on :class:`enum.Enum` rather than :class:`enum.IntEnum` prevents unwanted implicit conversion of enum members to integers.
 
 
+.. _lang-shapecustom:
+
+Custom shapes
+-------------
+
+Any Python value that implements the :class:`ShapeCastable` interface can extend the language with a custom shape-like object. For example, the standard library module :mod:`amaranth.lib.data` uses this facility to add support for aggregate data types to the language.
+
+
 .. _lang-valuelike:
 
 Value casting
 =============
 
-Like shapes, values may be *cast* from other objects, which are called *value-like*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly.
+Like shapes, values may be *cast* from other objects, which are called *value-like*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly. Values are value-like objects as well.
 
 .. TODO: link to ValueCastable
 
-Casting to a value can be done explicitly with ``Value.cast``, but is usually implicit, since value-like objects are accepted anywhere values are.
+Casting to a value can be done explicitly with :meth:`Value.cast`, but is usually implicit, since value-like objects are accepted anywhere values are.
 
 
 Values from integers
 --------------------
 
-Casting a value from an integer ``i`` is equivalent to ``Const(i)``:
+Casting a value from an integer ``i`` is equivalent to :class:`Const(i) <Const>`:
 
 .. doctest::
 
@@ -344,7 +354,7 @@ A *signal* is a value representing a (potentially) varying number. Signals can b
 Signal shapes
 -------------
 
-A signal can be created with an explicitly specified shape (any :ref:`shape-like <lang-shapelike>` object); if omitted, the shape defaults to ``unsigned(1)``. Although rarely useful, 0-bit signals are permitted.
+A signal can be created with an explicitly specified shape (any :ref:`shape-like <lang-shapelike>` object); if omitted, the shape defaults to :func:`unsigned(1) <unsigned>`. Although rarely useful, 0-bit signals are permitted.
 
 .. doctest::
 

@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-import inspect
 import warnings
 import functools
 import operator
@@ -12,7 +11,6 @@ from ._repr import *
 from .. import tracer
 from ..utils import *
 from .._utils import *
-from .._utils import _ignore_deprecated
 from .._unused import *
 
 
@@ -37,51 +35,23 @@ class DUID:
         DUID.__next_uid += 1
 
 
-class ShapeCastable:
-    """Interface of user-defined objects that can be cast to :class:`Shape` s.
-
-    An object deriving from :class:`ShapeCastable` is automatically converted to a :class:`Shape`
-    when it is used in a context where a :class:`Shape` is expected. Such objects can contain
-    a richer description of the shape than what is supported by the core Amaranth language, yet
-    still be transparently used with it.
-    """
-    def __init_subclass__(cls, **kwargs):
-        if not hasattr(cls, "as_shape"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `as_shape` method")
-        if not (hasattr(cls, "__call__") and inspect.isfunction(cls.__call__)):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `__call__` method")
-        if not hasattr(cls, "const"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ShapeCastable` must override "
-                            f"the `const` method")
-
-    def _value_repr(self, value):
-        return (Repr(FormatInt(), value),)
-
-
 class Shape:
     """Bit width and signedness of a value.
 
-    A ``Shape`` can be constructed using:
-      * explicit bit width and signedness;
-      * aliases :func:`signed` and :func:`unsigned`;
-      * casting from a variety of objects.
+    A :class:`Shape` can be obtained by:
 
-    A ``Shape`` can be cast from:
-      * an integer, where the integer specifies the bit width;
-      * a range, where the result is wide enough to represent any element of the range, and is
-        signed if any element of the range is signed;
-      * an :class:`Enum` with all integer members or :class:`IntEnum`, where the result is wide
-        enough to represent any member of the enumeration, and is signed if any member of
-        the enumeration is signed.
+    * constructing with explicit bit width and signedness;
+    * using the :func:`signed` and :func:`unsigned` aliases if the signedness is known upfront;
+    * casting from a variety of objects using the :meth:`cast` method.
 
     Parameters
     ----------
     width : int
-        The number of bits in the representation, including the sign bit (if any).
+        The number of bits in the representation of a value. This includes the sign bit for signed
+        values. Cannot be zero if the value is signed.
     signed : bool
-        If ``False``, the value is unsigned. If ``True``, the value is signed two's complement.
+        Whether the value is signed. Signed values use the
+        `two's complement <https://en.wikipedia.org/wiki/Two's_complement>`_ representation.
     """
     def __init__(self, width=1, signed=False):
         if not isinstance(width, int):
@@ -117,6 +87,27 @@ class Shape:
 
     @staticmethod
     def cast(obj, *, src_loc_at=0):
+        """Cast :pc:`obj` to a shape.
+
+        Many :ref:`shape-like <lang-shapelike>` objects can be cast to a shape:
+
+        * a :class:`Shape`, where the result is itself;
+        * an :class:`int`, where the result is :func:`unsigned(obj) <unsigned>`;
+        * a :class:`range`, where the result is wide enough to represent any element of the range,
+          and is signed if any element of the range is signed;
+        * an :class:`enum.Enum` whose members are all :ref:`constant-castable <lang-constcasting>`
+          or :class:`enum.IntEnum`, where the result is wide enough to represent any member of
+          the enumeration, and is signed if any member of the enumeration is signed;
+        * a :class:`ShapeCastable` object, where the result is obtained by repeatedly calling
+          :meth:`obj.as_shape() <ShapeCastable.as_shape>`.
+
+        Raises
+        ------
+        TypeError
+            If :pc:`obj` cannot be converted to a :class:`Shape`.
+        RecursionError
+            If :pc:`obj` is a :class:`ShapeCastable` object that casts to itself.
+        """
         while True:
             if isinstance(obj, Shape):
                 return obj
@@ -142,6 +133,10 @@ class Shape:
             obj = new_obj
 
     def __repr__(self):
+        """Python code that creates this shape.
+
+        Returns :pc:`f"signed({self.width})"` or :pc:`f"unsigned({self.width})"`.
+        """
         if self.signed:
             return f"signed({self.width})"
         else:
@@ -150,6 +145,158 @@ class Shape:
     def __eq__(self, other):
         return (isinstance(other, Shape) and
                 self.width == other.width and self.signed == other.signed)
+
+
+def unsigned(width):
+    """Returns :pc:`Shape(width, signed=False)`."""
+    return Shape(width, signed=False)
+
+
+def signed(width):
+    """Returns :pc:`Shape(width, signed=True)`."""
+    return Shape(width, signed=True)
+
+
+class ShapeCastable:
+    """Interface class for objects that can be cast to a :class:`Shape`.
+
+    Shapes of values in the Amaranth language are specified using :ref:`shape-like objects
+    <lang-shapelike>`. Inheriting a class from :class:`ShapeCastable` and implementing all of
+    the methods described below adds instances of that class to the list of shape-like objects
+    recognized by the :meth:`Shape.cast` method. This is a part of the mechanism for seamlessly
+    extending the Amaranth language in third-party code.
+
+    To illustrate their purpose, consider constructing a signal from a shape-castable object
+    :pc:`shape_castable`:
+
+    .. code::
+
+        value_like = Signal(shape_castable, reset=initializer)
+
+    The code above is equivalent to:
+
+    .. code::
+
+        value_like = shape_castable(Signal(
+            shape_castable.as_shape(),
+            reset=shape_castable.const(initializer)
+        ))
+
+    Note that the :pc:`shape_castable(x)` syntax performs :pc:`shape_castable.__call__(x)`.
+
+    .. tip::
+
+        The source code of the :mod:`amaranth.lib.data` module can be used as a reference for
+        implementing a fully featured shape-castable object.
+    """
+    def __init_subclass__(cls, **kwargs):
+        if cls.as_shape is ShapeCastable.as_shape:
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+                            f"the 'as_shape' method")
+        if cls.const is ShapeCastable.const:
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+                            f"the 'const' method")
+        if cls.__call__ is ShapeCastable.__call__:
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+                            f"the '__call__' method")
+
+    # The signatures and definitions of these methods are weird because they are present here for
+    # documentation (and error checking above) purpose only and should not affect control flow.
+    # This especially applies to `__call__`, where subclasses may call `super().__call__()` in
+    # creative ways.
+
+    def as_shape(self, *args, **kwargs):
+        """as_shape()
+
+        Convert :pc:`self` to a :ref:`shape-like object <lang-shapelike>`.
+
+        This method is called by the Amaranth language to convert :pc:`self` to a concrete
+        :class:`Shape`. It will usually return a :class:`Shape` object, but it may also return
+        another shape-like object to delegate its functionality.
+
+        This method must be idempotent: when called twice on the same object, the result must be
+        exactly the same.
+
+        This method may also be called by code that is not a part of the Amaranth language.
+
+        Returns
+        -------
+        Any other object recognized by :meth:`Shape.cast`.
+
+        Raises
+        ------
+        Exception
+            When the conversion cannot be done. This exception must be propagated by callers
+            (except when checking whether an object is shape-castable or not), either directly
+            or as a cause of another exception.
+        """
+        return super().as_shape(*args, **kwargs) # :nocov:
+
+    def const(self, *args, **kwargs):
+        """const(obj)
+
+        Convert a constant initializer :pc:`obj` to its value representation.
+
+        This method is called by the Amaranth language to convert :pc:`obj`, which may be an
+        arbitrary Python object, to a concrete :ref:`value-like object <lang-valuelike>`.
+        The object :pc:`obj` will usually be a Python literal that can conveniently represent
+        a constant value whose shape is described by :pc:`self`. While not constrained here,
+        the result will usually be an instance of the return type of :meth:`__call__`.
+
+        For any :pc:`obj`, the following condition must hold:
+
+        .. code::
+
+            Shape.cast(self) == Const.cast(self.const(obj)).shape()
+
+        This method may also be called by code that is not a part of the Amaranth language.
+
+        Returns
+        -------
+        A :ref:`value-like object <lang-valuelike>` that is :ref:`constant-castable <lang-constcasting>`.
+
+        Raises
+        ------
+        Exception
+            When the conversion cannot be done. This exception must be propagated by callers,
+            either directly or as a cause of another exception. While not constrained here,
+            usually the exception class will be :exc:`TypeError` or :exc:`ValueError`.
+        """
+        return super().const(*args, **kwargs) # :nocov:
+
+    def __call__(self, *args, **kwargs):
+        """__call__(obj)
+
+        Lift a :ref:`value-like object <lang-valuelike>` to a higher-level representation.
+
+        This method is called by the Amaranth language to lift :pc:`obj`, which may be any
+        :ref:`value-like object <lang-valuelike>` whose shape equals :pc:`Shape.cast(self)`,
+        to a higher-level representation, which may be any value-like object with the same
+        shape. While not constrained here, usually a :class:`ShapeCastable` implementation will
+        be paired with a :class:`ValueCastable` implementation, and this method will return
+        an instance of the latter.
+
+        If :pc:`obj` is not as described above, this interface does not constrain the behavior
+        of this method. This may be used to implement another call-based protocol at the same
+        time.
+
+        For any compliant :pc:`obj`, the following condition must hold:
+
+        .. code::
+
+            Value.cast(self(obj)) == Value.cast(obj)
+
+        This method may also be called by code that is not a part of the Amaranth language.
+
+        Returns
+        -------
+        A :ref:`value-like object <lang-valuelike>`.
+        """
+        return super().__call__(*args, **kwargs) # :nocov:
+
+    # TODO: write an RFC for turning this into a proper interface method
+    def _value_repr(self, value):
+        return (Repr(FormatInt(), value),)
 
 
 class _ShapeLikeMeta(type):
@@ -173,39 +320,28 @@ class _ShapeLikeMeta(type):
 class ShapeLike(metaclass=_ShapeLikeMeta):
     """An abstract class representing all objects that can be cast to a :class:`Shape`.
 
-    ``issubclass(cls, ShapeLike)`` returns ``True`` for:
+    :pc:`issubclass(cls, ShapeLike)` returns :pc:`True` for:
 
-    - :class:`Shape`
-    - :class:`ShapeCastable` and its subclasses
-    - ``int`` and its subclasses
-    - ``range`` and its subclasses
-    - :class:`enum.EnumMeta` and its subclasses
-    - :class:`ShapeLike` itself
+    * :class:`Shape`;
+    * :class:`ShapeCastable` and its subclasses;
+    * :class:`int` and its subclasses;
+    * :class:`range` and its subclasses;
+    * :class:`enum.EnumMeta` and its subclasses;
+    * :class:`ShapeLike` itself.
 
-    ``isinstance(obj, ShapeLike)`` returns ``True`` for:
+    :pc:`isinstance(obj, ShapeLike)` returns :pc:`True` for:
 
-    - :class:`Shape` instances
-    - :class:`ShapeCastable` instances
-    - non-negative ``int`` values
-    - ``range`` instances
-    - :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`
+    * :class:`Shape` instances;
+    * :class:`ShapeCastable` instances;
+    * non-negative :class:`int` values;
+    * :class:`range` instances;
+    * :class:`enum.Enum` subclasses where all values are :ref:`value-like objects <lang-valuelike>`.
 
-    This class is only usable for the above checks — no instances and no (non-virtual)
-    subclasses can be created.
+    This class cannot be instantiated or subclassed. It can only be used for checking types of
+    objects.
     """
-
     def __new__(cls, *args, **kwargs):
-        raise TypeError("ShapeLike is an abstract class and cannot be constructed")
-
-
-def unsigned(width):
-    """Shorthand for ``Shape(width, signed=False)``."""
-    return Shape(width, signed=False)
-
-
-def signed(width):
-    """Shorthand for ``Shape(width, signed=True)``."""
-    return Shape(width, signed=True)
+        raise TypeError("ShapeLike is an abstract class and cannot be instantiated")
 
 
 def _overridable_by_reflected(method_name):
