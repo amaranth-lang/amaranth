@@ -308,6 +308,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
         new_patterns = ()
+        if () in switch_data["cases"]:
+            warnings.warn("A case defined after the default case will never be active",
+                          SyntaxWarning, stacklevel=3)
         # This code should accept exactly the same patterns as `v.matches(...)`.
         for pattern in patterns:
             if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
@@ -357,6 +360,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Default", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
+        if () in switch_data["cases"]:
+            warnings.warn("A case defined after the default case will never be active",
+                          SyntaxWarning, stacklevel=3)
         try:
             _outer_case, self._statements = self._statements, []
             self._ctrl_context = None
