@@ -1,4 +1,4 @@
-from amaranth.hdl.ast import *
+from amaranth.hdl._ast import *
 from types import SimpleNamespace
 
 from .utils import *

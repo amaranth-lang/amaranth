@@ -1,4 +1,4 @@
-from amaranth.hdl.cd import *
+from amaranth.hdl._cd import *
 
 from .utils import *
 

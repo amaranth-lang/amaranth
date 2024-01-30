@@ -1,24 +1,29 @@
-import warnings
-
-from .ast import Shape, unsigned, signed
-from .ast import Value, Const, C, Mux, Cat, Repl, Array, Signal, ClockSignal, ResetSignal
-from .dsl import Module
-from .cd import ClockDomain
-from .ir import Elaboratable, Fragment, Instance
-from .mem import Memory
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from .rec import Record
-from .xfrm import DomainRenamer, ResetInserter, EnableInserter
+from ._ast import Shape, unsigned, signed, ShapeCastable, ShapeLike
+from ._ast import Value, ValueCastable, ValueLike
+from ._ast import Const, C, Mux, Cat, Repl, Array, Signal, ClockSignal, ResetSignal
+from ._dsl import SyntaxError, SyntaxWarning, Module
+from ._cd import DomainError, ClockDomain
+from ._ir import UnusedElaboratable, Elaboratable, DriverConflict, Fragment, Instance
+from ._mem import Memory, ReadPort, WritePort, DummyPort
+from ._rec import Record
+from ._xfrm import DomainRenamer, ResetInserter, EnableInserter
 
 
 __all__ = [
-    "Shape", "unsigned", "signed",
-    "Value", "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",
-    "Module",
-    "ClockDomain",
-    "Elaboratable", "Fragment", "Instance",
-    "Memory",
+    # _ast
+    "Shape", "unsigned", "signed", "ShapeCastable", "ShapeLike",
+    "Value", "ValueCastable", "ValueLike",
+    "Const", "C", "Mux", "Cat", "Repl", "Array", "Signal", "ClockSignal", "ResetSignal",
+    # _dsl
+    "SyntaxError", "SyntaxWarning", "Module",
+    # _cd
+    "DomainError", "ClockDomain",
+    # _ir
+    "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance",
+    # _mem
+    "Memory", "ReadPort", "WritePort", "DummyPort",
+    # _rec
     "Record",
+    # _xfrm
     "DomainRenamer", "ResetInserter", "EnableInserter",
 ]

@@ -6,8 +6,8 @@ import warnings
 from .. import tracer
 from .._utils import *
 from .._unused import *
-from .ast import *
-from .cd import *
+from ._ast import *
+from ._cd import *
 
 
 __all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance"]
@@ -263,7 +263,7 @@ class Fragment:
         return SignalSet(driver_subfrags.keys())
 
     def _propagate_domains_up(self, hierarchy=("top",)):
-        from .xfrm import DomainRenamer
+        from ._xfrm import DomainRenamer
 
         domain_subfrags = defaultdict(set)
 
@@ -327,7 +327,7 @@ class Fragment:
             subfrag._propagate_domains_down()
 
     def _create_missing_domains(self, missing_domain, *, platform=None):
-        from .xfrm import DomainCollector
+        from ._xfrm import DomainCollector
 
         collector = DomainCollector()
         collector(self)
@@ -507,7 +507,7 @@ class Fragment:
                 self.add_ports(sig, dir="i")
 
     def prepare(self, ports=None, missing_domain=lambda name: ClockDomain(name)):
-        from .xfrm import DomainLowerer
+        from ._xfrm import DomainLowerer
 
         new_domains = self._propagate_domains(missing_domain)
         fragment = DomainLowerer()(self)

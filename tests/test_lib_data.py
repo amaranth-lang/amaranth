@@ -3,7 +3,7 @@ import operator
 from unittest import TestCase
 
 from amaranth.hdl import *
-from amaranth.hdl.ast import ShapeCastable
+from amaranth.hdl._ast import ShapeCastable
 from amaranth.lib.data import *
 from amaranth.sim import Simulator
 

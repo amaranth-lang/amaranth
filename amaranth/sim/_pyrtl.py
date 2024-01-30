@@ -4,8 +4,8 @@ from contextlib import contextmanager
 import sys
 
 from ..hdl import *
-from ..hdl.ast import SignalSet
-from ..hdl.xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
+from ..hdl._ast import SignalSet
+from ..hdl._xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
 from ._base import BaseProcess
 
 

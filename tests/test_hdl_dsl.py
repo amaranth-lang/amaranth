@@ -3,9 +3,9 @@
 import sys
 from collections import OrderedDict
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.dsl import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._dsl import *
 from amaranth.lib.enum import Enum
 
 from .utils import *

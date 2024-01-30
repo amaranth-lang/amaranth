@@ -9,7 +9,7 @@ import jinja2
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
-from ..hdl.xfrm import DomainLowerer
+from ..hdl._xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
 from .res import *

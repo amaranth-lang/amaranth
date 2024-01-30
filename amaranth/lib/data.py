@@ -6,7 +6,7 @@ import warnings
 from amaranth._utils import final
 from amaranth.hdl import *
 from amaranth.hdl._repr import *
-from amaranth.hdl.ast import ShapeCastable, ValueCastable
+from amaranth.hdl._ast import ShapeCastable, ValueCastable
 
 
 __all__ = [

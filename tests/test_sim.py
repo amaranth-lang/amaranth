@@ -3,14 +3,14 @@ import warnings
 from contextlib import contextmanager
 
 from amaranth._utils import flatten
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import  *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import  *
+from amaranth.hdl._mem import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from amaranth.hdl.rec import *
-from amaranth.hdl.dsl import  *
-from amaranth.hdl.ir import *
+from amaranth.hdl._dsl import  *
+from amaranth.hdl._ir import *
 from amaranth.sim import *
 
 from .utils import *
@@ -695,10 +695,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             @ValueCastable.lowermethod
             def as_value(self):
                 return Signal()
-            
+
             def shape():
                 return unsigned(1)
-        
+
         a = Array([1,2,3])
         a[MyValue()]
 

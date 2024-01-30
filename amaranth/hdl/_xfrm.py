@@ -5,11 +5,11 @@ from copy import copy
 
 from .._utils import flatten, _ignore_deprecated
 from .. import tracer
-from .ast import *
-from .ast import _StatementList
-from .cd import *
-from .ir import *
-from .mem import MemoryInstance
+from ._ast import *
+from ._ast import _StatementList
+from ._cd import *
+from ._ir import *
+from ._mem import MemoryInstance
 
 
 __all__ = ["ValueVisitor", "ValueTransformer",
@@ -286,7 +286,7 @@ class FragmentTransformer:
         if isinstance(fragment, MemoryInstance):
             new_fragment = MemoryInstance(fragment.memory, [], [])
             self.map_memory_ports(fragment, new_fragment)
-        elif isinstance(fragment, Instance):            
+        elif isinstance(fragment, Instance):
             new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
             self.map_named_ports(fragment, new_fragment)

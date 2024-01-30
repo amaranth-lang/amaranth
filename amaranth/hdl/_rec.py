@@ -6,7 +6,7 @@ from functools import reduce, wraps
 
 from .. import tracer
 from .._utils import union
-from .ast import *
+from ._ast import *
 from ..lib import wiring
 
 

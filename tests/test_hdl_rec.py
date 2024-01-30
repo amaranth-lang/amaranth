@@ -2,7 +2,7 @@ import warnings
 
 from enum import Enum
 
-from amaranth.hdl.ast import *
+from amaranth.hdl._ast import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from amaranth.hdl.rec import *

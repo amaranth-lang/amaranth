@@ -6,7 +6,7 @@ import re
 
 from .._utils import flatten
 from ..utils import bits_for
-from ..hdl import ast, ir, mem, xfrm, _repr
+from ..hdl import _ast, _ir, _mem, _xfrm, _repr
 from ..lib import wiring
 
 
@@ -27,7 +27,7 @@ def _signed(value):
         return False
     elif isinstance(value, int):
         return value < 0
-    elif isinstance(value, ast.Const):
+    elif isinstance(value, _ast.Const):
         return value.signed
     else:
         assert False, f"Invalid constant {value!r}"
@@ -43,8 +43,8 @@ def _const(value):
             # This code path is only used for Instances, where Verilog-like behavior is desirable.
             # Verilog ensures that integers with unspecified width are 32 bits wide or more.
             width = max(32, bits_for(value))
-            return _const(ast.Const(value, width))
-    elif isinstance(value, ast.Const):
+            return _const(_ast.Const(value, width))
+    elif isinstance(value, _ast.Const):
         value_twos_compl = value.value & ((1 << value.width) - 1)
         return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
     else:
@@ -301,12 +301,12 @@ class _LegalizeValue(Exception):
 class _ValueCompilerState:
     def __init__(self, rtlil):
         self.rtlil  = rtlil
-        self.wires  = ast.SignalDict()
-        self.driven = ast.SignalDict()
-        self.ports  = ast.SignalDict()
-        self.anys   = ast.ValueDict()
+        self.wires  = _ast.SignalDict()
+        self.driven = _ast.SignalDict()
+        self.ports  = _ast.SignalDict()
+        self.anys   = _ast.ValueDict()
 
-        self.expansions = ast.ValueDict()
+        self.expansions = _ast.ValueDict()
 
     def add_driven(self, signal, sync):
         self.driven[signal] = sync
@@ -350,7 +350,7 @@ class _ValueCompilerState:
         # For every signal in the sync domain, assign \sig's initial value (using the \init reg
         # attribute) to the reset value.
         if is_sync_driven:
-            attrs["init"] = ast.Const(signal.reset, signal.width)
+            attrs["init"] = _ast.Const(signal.reset, signal.width)
 
         wire_curr = self.rtlil.wire(width=signal.width, name=wire_name,
                                     port_id=port_id, port_kind=port_kind,
@@ -383,7 +383,7 @@ class _ValueCompilerState:
             del self.expansions[value]
 
 
-class _ValueCompiler(xfrm.ValueVisitor):
+class _ValueCompiler(_xfrm.ValueVisitor):
     def __init__(self, state):
         self.s = state
 
@@ -419,7 +419,7 @@ class _ValueCompiler(xfrm.ValueVisitor):
 
     def on_ArrayProxy(self, value):
         index = self.s.expand(value.index)
-        if isinstance(index, ast.Const):
+        if isinstance(index, _ast.Const):
             if index.value < len(value.elems):
                 elem = value.elems[index.value]
             else:
@@ -523,12 +523,12 @@ class _RHSValueCompiler(_ValueCompiler):
         return res
 
     def match_shape(self, value, new_shape):
-        if isinstance(value, ast.Const):
-            return self(ast.Const(value.value, new_shape))
+        if isinstance(value, _ast.Const):
+            return self(_ast.Const(value.value, new_shape))
 
         value_shape = value.shape()
         if new_shape.width <= value_shape.width:
-            return self(ast.Slice(value, 0, new_shape.width))
+            return self(_ast.Slice(value, 0, new_shape.width))
 
         res = self.s.rtlil.wire(width=new_shape.width, src=_src(value.src_loc))
         self.s.rtlil.cell("$pos", ports={
@@ -548,7 +548,7 @@ class _RHSValueCompiler(_ValueCompiler):
             lhs_wire = self(lhs)
             rhs_wire = self(rhs)
         else:
-            lhs_shape = rhs_shape = ast.signed(max(lhs_shape.width + rhs_shape.signed,
+            lhs_shape = rhs_shape = _ast.signed(max(lhs_shape.width + rhs_shape.signed,
                                                    rhs_shape.width + lhs_shape.signed))
             lhs_wire = self.match_shape(lhs, lhs_shape)
             rhs_wire = self.match_shape(rhs, rhs_shape)
@@ -570,7 +570,7 @@ class _RHSValueCompiler(_ValueCompiler):
             res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
             self.s.rtlil.cell("$mux", ports={
                 "\\A": divmod_res,
-                "\\B": self(ast.Const(0, res_shape)),
+                "\\B": self(_ast.Const(0, res_shape)),
                 "\\S": self(rhs == 0),
                 "\\Y": res,
             }, params={
@@ -608,7 +608,7 @@ class _RHSValueCompiler(_ValueCompiler):
             raise TypeError # :nocov:
 
     def _prepare_value_for_Slice(self, value):
-        if isinstance(value, (ast.Signal, ast.Slice, ast.Cat)):
+        if isinstance(value, (_ast.Signal, _ast.Slice, _ast.Cat)):
             sigspec = self(value)
         else:
             sigspec = self.s.rtlil.wire(len(value), src=_src(value.src_loc))
@@ -664,7 +664,7 @@ class _LHSValueCompiler(_ValueCompiler):
         if new_shape.width == value_shape.width:
             return self(value)
         elif new_shape.width < value_shape.width:
-            return self(ast.Slice(value, 0, new_shape.width))
+            return self(_ast.Slice(value, 0, new_shape.width))
         else: # new_shape.width > value_shape.width
             dummy_bits = new_shape.width - value_shape.width
             dummy_wire = self.s.rtlil.wire(dummy_bits)
@@ -677,15 +677,15 @@ class _LHSValueCompiler(_ValueCompiler):
         return wire_next or wire_curr
 
     def _prepare_value_for_Slice(self, value):
-        assert isinstance(value, (ast.Signal, ast.Slice, ast.Cat, ast.Part))
+        assert isinstance(value, (_ast.Signal, _ast.Slice, _ast.Cat, _ast.Part))
         return self(value)
 
     def on_Part(self, value):
         offset = self.s.expand(value.offset)
-        if isinstance(offset, ast.Const):
+        if isinstance(offset, _ast.Const):
             start = offset.value * value.stride
             stop  = start + value.width
-            slice = self(ast.Slice(value.value, start, min(len(value.value), stop)))
+            slice = self(_ast.Slice(value.value, start, min(len(value.value), stop)))
             if len(value.value) >= stop:
                 return slice
             else:
@@ -701,7 +701,7 @@ class _LHSValueCompiler(_ValueCompiler):
                                  value.src_loc)
 
 
-class _StatementCompiler(xfrm.StatementVisitor):
+class _StatementCompiler(_xfrm.StatementVisitor):
     def __init__(self, state, rhs_compiler, lhs_compiler):
         self.state        = state
         self.rhs_compiler = rhs_compiler
@@ -780,7 +780,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
                 case_src = None
                 if values in stmt.case_src_locs:
                     case_src = _src(stmt.case_src_locs[values])
-                if isinstance(stmt.test, ast.Signal) and stmt.test.decoder:
+                if isinstance(stmt.test, _ast.Signal) and stmt.test.decoder:
                     decoded_values = []
                     for value in values:
                         if "-" in value:
@@ -806,7 +806,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
                 for branch, test in zip(legalize.branches, tests):
                     with self.case(switch, (test,)):
                         self._wrap_assign = False
-                        branch_value = ast.Const(branch, shape)
+                        branch_value = _ast.Const(branch, shape)
                         with self.state.expand_to(legalize.value, branch_value):
                             self.on_statement(stmt)
             self._wrap_assign = True
@@ -817,7 +817,7 @@ class _StatementCompiler(xfrm.StatementVisitor):
 
 
 def _convert_fragment(builder, fragment, name_map, hierarchy):
-    if isinstance(fragment, ir.Instance):
+    if isinstance(fragment, _ir.Instance):
         port_map = OrderedDict()
         for port_name, (value, dir) in fragment.named_ports.items():
             port_map[f"\\{port_name}"] = value
@@ -829,10 +829,10 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         else:
             return f"\\{fragment.type}", port_map, params
 
-    if isinstance(fragment, mem.MemoryInstance):
+    if isinstance(fragment, _mem.MemoryInstance):
         memory = fragment.memory
-        init = "".join(format(ast.Const(elem, ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
-        init = ast.Const(int(init or "0", 2), memory.depth * memory.width)
+        init = "".join(format(_ast.Const(elem, _ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
+        init = _ast.Const(int(init or "0", 2), memory.depth * memory.width)
         rd_clk = []
         rd_clk_enable = 0
         rd_clk_polarity = 0
@@ -849,7 +849,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         if port.domain == write_port.domain:
                             rd_transparency_mask |= 1 << (index * len(fragment.write_ports) + write_index)
             else:
-                rd_clk.append(ast.Const(0, 1))
+                rd_clk.append(_ast.Const(0, 1))
         wr_clk = []
         wr_clk_enable = 0
         wr_clk_polarity = 0
@@ -863,36 +863,36 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             "MEMID": builder._make_name(hierarchy[-1], local=False),
             "SIZE": memory.depth,
             "OFFSET": 0,
-            "ABITS": ast.Shape.cast(range(memory.depth)).width,
+            "ABITS": _ast.Shape.cast(range(memory.depth)).width,
             "WIDTH": memory.width,
             "INIT": init,
             "RD_PORTS": len(fragment.read_ports),
-            "RD_CLK_ENABLE": ast.Const(rd_clk_enable, max(1, len(fragment.read_ports))),
-            "RD_CLK_POLARITY": ast.Const(rd_clk_polarity, max(1, len(fragment.read_ports))),
-            "RD_TRANSPARENCY_MASK": ast.Const(rd_transparency_mask, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
-            "RD_COLLISION_X_MASK": ast.Const(0, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
-            "RD_WIDE_CONTINUATION": ast.Const(0, max(1, len(fragment.read_ports))),
-            "RD_CE_OVER_SRST": ast.Const(0, max(1, len(fragment.read_ports))),
-            "RD_ARST_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
-            "RD_SRST_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
-            "RD_INIT_VALUE": ast.Const(0, len(fragment.read_ports) * memory.width),
+            "RD_CLK_ENABLE": _ast.Const(rd_clk_enable, max(1, len(fragment.read_ports))),
+            "RD_CLK_POLARITY": _ast.Const(rd_clk_polarity, max(1, len(fragment.read_ports))),
+            "RD_TRANSPARENCY_MASK": _ast.Const(rd_transparency_mask, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
+            "RD_COLLISION_X_MASK": _ast.Const(0, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
+            "RD_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment.read_ports))),
+            "RD_CE_OVER_SRST": _ast.Const(0, max(1, len(fragment.read_ports))),
+            "RD_ARST_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
+            "RD_SRST_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
+            "RD_INIT_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
             "WR_PORTS": len(fragment.write_ports),
-            "WR_CLK_ENABLE": ast.Const(wr_clk_enable, max(1, len(fragment.write_ports))),
-            "WR_CLK_POLARITY": ast.Const(wr_clk_polarity, max(1, len(fragment.write_ports))),
-            "WR_PRIORITY_MASK": ast.Const(0, max(1, len(fragment.write_ports) * len(fragment.write_ports))),
-            "WR_WIDE_CONTINUATION": ast.Const(0, max(1, len(fragment.write_ports))),
+            "WR_CLK_ENABLE": _ast.Const(wr_clk_enable, max(1, len(fragment.write_ports))),
+            "WR_CLK_POLARITY": _ast.Const(wr_clk_polarity, max(1, len(fragment.write_ports))),
+            "WR_PRIORITY_MASK": _ast.Const(0, max(1, len(fragment.write_ports) * len(fragment.write_ports))),
+            "WR_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment.write_ports))),
         }
         port_map = {
-            "\\RD_CLK": ast.Cat(rd_clk),
-            "\\RD_EN": ast.Cat(port.en for port in fragment.read_ports),
-            "\\RD_ARST": ast.Const(0, len(fragment.read_ports)),
-            "\\RD_SRST": ast.Const(0, len(fragment.read_ports)),
-            "\\RD_ADDR": ast.Cat(port.addr for port in fragment.read_ports),
-            "\\RD_DATA": ast.Cat(port.data for port in fragment.read_ports),
-            "\\WR_CLK": ast.Cat(wr_clk),
-            "\\WR_EN": ast.Cat(ast.Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in fragment.write_ports),
-            "\\WR_ADDR": ast.Cat(port.addr for port in fragment.write_ports),
-            "\\WR_DATA": ast.Cat(port.data for port in fragment.write_ports),
+            "\\RD_CLK": _ast.Cat(rd_clk),
+            "\\RD_EN": _ast.Cat(port.en for port in fragment.read_ports),
+            "\\RD_ARST": _ast.Const(0, len(fragment.read_ports)),
+            "\\RD_SRST": _ast.Const(0, len(fragment.read_ports)),
+            "\\RD_ADDR": _ast.Cat(port.addr for port in fragment.read_ports),
+            "\\RD_DATA": _ast.Cat(port.data for port in fragment.read_ports),
+            "\\WR_CLK": _ast.Cat(wr_clk),
+            "\\WR_EN": _ast.Cat(_ast.Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in fragment.write_ports),
+            "\\WR_ADDR": _ast.Cat(port.addr for port in fragment.write_ports),
+            "\\WR_DATA": _ast.Cat(port.data for port in fragment.write_ports),
         }
         return "$mem_v2", port_map, params
 
@@ -931,7 +931,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # name) names.
         for subfragment, sub_name in fragment.subfragments:
             if not (subfragment.ports or subfragment.statements or subfragment.subfragments or
-                    isinstance(subfragment, (ir.Instance, mem.MemoryInstance))):
+                    isinstance(subfragment, (_ir.Instance, _mem.MemoryInstance))):
                 # If the fragment is completely empty, skip translating it, otherwise synthesis
                 # tools (including Yosys and Vivado) will treat it as a black box when it is
                 # loaded after conversion to Verilog.
@@ -946,15 +946,15 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
 
             sub_ports = OrderedDict()
             for port, value in sub_port_map.items():
-                if not isinstance(subfragment, (ir.Instance, mem.MemoryInstance)):
+                if not isinstance(subfragment, (_ir.Instance, _mem.MemoryInstance)):
                     for signal in value._rhs_signals():
                         compiler_state.resolve_curr(signal, prefix=sub_name)
                 if len(value) > 0 or sub_type == "$mem_v2":
                     sub_ports[port] = rhs_compiler(value)
 
-            if isinstance(subfragment, ir.Instance):
+            if isinstance(subfragment, _ir.Instance):
                 src = _src(subfragment.src_loc)
-            elif isinstance(subfragment, mem.MemoryInstance):
+            elif isinstance(subfragment, _mem.MemoryInstance):
                 src = _src(subfragment.memory.src_loc)
             else:
                 src = ""
@@ -969,11 +969,11 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # Therefore, we translate the fragment as many times as there are independent groups
         # of signals (a group is a transitive closure of signals that appear together on LHS),
         # splitting them into many RTLIL (and thus Verilog) processes.
-        lhs_grouper = xfrm.LHSGroupAnalyzer()
+        lhs_grouper = _xfrm.LHSGroupAnalyzer()
         lhs_grouper.on_statements(fragment.statements)
 
         for group, group_signals in lhs_grouper.groups().items():
-            lhs_group_filter = xfrm.LHSGroupFilter(group_signals)
+            lhs_group_filter = _xfrm.LHSGroupFilter(group_signals)
             group_stmts = lhs_group_filter(fragment.statements)
 
             with module.process(name=f"$group_{group}") as process:
@@ -985,7 +985,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         if signal not in group_signals:
                             continue
                         if domain is None:
-                            prev_value = ast.Const(signal.reset, signal.width)
+                            prev_value = _ast.Const(signal.reset, signal.width)
                         else:
                             prev_value = signal
                         case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
@@ -1026,8 +1026,8 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                     "\\D": wire_next,
                     "\\Q": wire_curr
                 }, params={
-                    "ARST_POLARITY": ast.Const(1),
-                    "ARST_VALUE": ast.Const(signal.reset, signal.width),
+                    "ARST_POLARITY": _ast.Const(1),
+                    "ARST_VALUE": _ast.Const(signal.reset, signal.width),
                     "CLK_POLARITY": int(cd.clk_edge == "pos"),
                     "WIDTH": signal.width
                 })
@@ -1041,7 +1041,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # alternatives are to add ports for undriven signals (which requires choosing one module
         # to drive it to reset value arbitrarily) or to replace them with their reset value (which
         # removes valuable source location information).
-        driven = ast.SignalSet()
+        driven = _ast.SignalSet()
         for domain, signals in fragment.iter_drivers():
             driven.update(flatten(signal._lhs_signals() for signal in signals))
         driven.update(fragment.iter_ports(dir="i"))
@@ -1054,7 +1054,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             if wire in driven:
                 continue
             wire_curr, _ = compiler_state.wires[wire]
-            module.connect(wire_curr, rhs_compiler(ast.Const(wire.reset, wire.width)))
+            module.connect(wire_curr, rhs_compiler(_ast.Const(wire.reset, wire.width)))
 
     # Collect the names we've given to our ports in RTLIL, and correlate these with the signals
     # represented by these ports. If we are a submodule, this will be necessary to create a cell
@@ -1075,9 +1075,9 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
 
 
 def convert_fragment(fragment, name="top", *, emit_src=True):
-    assert isinstance(fragment, ir.Fragment)
+    assert isinstance(fragment, _ir.Fragment)
     builder = _Builder(emit_src=emit_src)
-    name_map = ast.SignalDict()
+    name_map = _ast.SignalDict()
     _convert_fragment(builder, fragment, name_map, hierarchy=(name,))
     return str(builder), name_map
 
@@ -1088,12 +1088,12 @@ def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=Tru
             isinstance(elaboratable.signature, wiring.Signature)):
         ports = []
         for path, member, value in elaboratable.signature.flatten(elaboratable):
-            if isinstance(value, ast.ValueCastable):
+            if isinstance(value, _ast.ValueCastable):
                 value = value.as_value()
-            if isinstance(value, ast.Value):
+            if isinstance(value, _ast.Value):
                 ports.append(value)
     elif ports is None:
         raise TypeError("The `convert()` function requires a `ports=` argument")
-    fragment = ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
+    fragment = _ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
     il_text, name_map = convert_fragment(fragment, name, emit_src=emit_src)
     return il_text

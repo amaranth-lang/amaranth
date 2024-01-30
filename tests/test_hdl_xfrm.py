@@ -2,13 +2,13 @@
 
 import warnings
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.dsl import *
-from amaranth.hdl.ir import *
-from amaranth.hdl.xfrm import *
-from amaranth.hdl.mem import *
-from amaranth.hdl.mem import MemoryInstance
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._dsl import *
+from amaranth.hdl._ir import *
+from amaranth.hdl._xfrm import *
+from amaranth.hdl._mem import *
+from amaranth.hdl._mem import MemoryInstance
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated

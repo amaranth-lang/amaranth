@@ -2,10 +2,10 @@
 
 from collections import OrderedDict
 
-from amaranth.hdl.ast import *
-from amaranth.hdl.cd import *
-from amaranth.hdl.ir import *
-from amaranth.hdl.mem import *
+from amaranth.hdl._ast import *
+from amaranth.hdl._cd import *
+from amaranth.hdl._ir import *
+from amaranth.hdl._mem import *
 
 from .utils import *
 
