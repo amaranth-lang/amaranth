@@ -4,13 +4,6 @@ from abc import abstractproperty
 from ..hdl import *
 from ..build import *
 
-from collections import namedtuple
-import logging
-import math
-import pprint
-from math import log, log10, exp, pi
-from cmath import phase
-
 __all__ = ["LatticeNexusPlatform"]
 
 class LatticeNexusPlatform(TemplatedPlatform):
@@ -455,7 +448,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
                     o_Q1=q1[bit],
                     o_Q2=q2[bit],
                     o_Q3=q3[bit],
-                 )
+                )
 
         def get_iddr71(sclk, eclk, d, q0, q1, q2, q3, q4, q5, q6):
             for bit in range(len(d)):
