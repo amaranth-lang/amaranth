@@ -215,9 +215,6 @@ class _ProcessBuilder(_AttrBuilder, _BufferedBuilder):
     def case(self):
         return _CaseBuilder(self, indent=2)
 
-    def sync(self, kind, cond=None):
-        return _SyncBuilder(self, kind, cond)
-
 
 class _CaseBuilder(_ProxiedBuilder):
     def __init__(self, rtlil, indent):
@@ -262,26 +259,6 @@ class _SwitchBuilder(_AttrBuilder, _ProxiedBuilder):
             self._append("{}case {}\n", "  " * (self.indent + 1),
                          ", ".join(f"{len(value)}'{value}" for value in values))
         return _CaseBuilder(self.rtlil, self.indent + 2)
-
-
-class _SyncBuilder(_ProxiedBuilder):
-    def __init__(self, rtlil, kind, cond):
-        self.rtlil = rtlil
-        self.kind  = kind
-        self.cond  = cond
-
-    def __enter__(self):
-        if self.cond is None:
-            self._append("    sync {}\n", self.kind)
-        else:
-            self._append("    sync {} {}\n", self.kind, self.cond)
-        return self
-
-    def __exit__(self, *args):
-        pass
-
-    def update(self, lhs, rhs):
-        self._append("      update {} {}\n", lhs, rhs)
 
 
 def _src(src_loc):
