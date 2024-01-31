@@ -6,7 +6,7 @@ from . import _ast as __origin
 
 __all__ = [
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
-    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
+    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
