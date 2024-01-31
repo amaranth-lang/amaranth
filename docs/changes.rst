@@ -54,6 +54,7 @@ Language changes
 * Changed: ``Signal(range(0))`` is now valid without a warning.
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
+* Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
 
 
