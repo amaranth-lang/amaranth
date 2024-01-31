@@ -16,7 +16,7 @@ from .._unused import *
 
 __all__ = [
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
-    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Repl",
+    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
@@ -1168,37 +1168,6 @@ class Cat(Value):
 
     def __repr__(self):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
-
-
-# TODO(amaranth-0.5): remove
-@deprecated("instead of `Repl(value, count)`, use `value.replicate(count)`")
-def Repl(value, count):
-    """Replicate a value
-
-    An input value is replicated (repeated) several times
-    to be used on the RHS of assignments::
-
-        len(Repl(s, n)) == len(s) * n
-
-    Parameters
-    ----------
-    value : Value, in
-        Input value to be replicated.
-    count : int
-        Number of replications.
-
-    Returns
-    -------
-    Value, out
-        Replicated value.
-    """
-    if isinstance(value, int) and value not in [0, 1]:
-        warnings.warn("Value argument of Repl() is a bare integer {} used in bit vector "
-                        "context; consider specifying explicit width using C({}, {}) instead"
-                        .format(value, value, bits_for(value)),
-                        SyntaxWarning, stacklevel=3)
-
-    return Value.cast(value).replicate(count)
 
 
 class _SignalMeta(ABCMeta):

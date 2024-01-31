@@ -59,7 +59,6 @@ The prelude exports exactly the following names:
 * :func:`C`
 * :func:`Mux`
 * :class:`Cat`
-* :class:`Repl` (deprecated)
 * :class:`Array`
 * :class:`Signal`
 * :class:`ClockSignal`
