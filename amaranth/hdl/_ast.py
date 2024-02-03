@@ -93,8 +93,8 @@ class Shape:
 
         * a :class:`Shape`, where the result is itself;
         * an :class:`int`, where the result is :func:`unsigned(obj) <unsigned>`;
-        * a :class:`range`, where the result is wide enough to represent any element of the range,
-          and is signed if any element of the range is signed;
+        * a :class:`range`, where the result has minimal width required to represent all elements
+          of the range, and is signed if any element of the range is signed;
         * an :class:`enum.Enum` whose members are all :ref:`constant-castable <lang-constcasting>`
           or :class:`enum.IntEnum`, where the result is wide enough to represent any member of
           the enumeration, and is signed if any member of the enumeration is signed;
@@ -121,6 +121,8 @@ class Shape:
                 signed = obj[0] < 0 or obj[-1] < 0
                 width  = max(bits_for(obj[0], signed),
                              bits_for(obj[-1], signed))
+                if obj[0] == obj[-1] == 0:
+                    width = 0
                 return Shape(width, signed)
             elif isinstance(obj, type) and issubclass(obj, Enum):
                 # For compatibility with third party enumerations, handle them as if they were

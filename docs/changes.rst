@@ -36,9 +36,11 @@ Implemented RFCs
 
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
+.. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
+* `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 
 
 Language changes
@@ -52,6 +54,7 @@ Language changes
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
 * Changed: ``Signal(range(stop), reset=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
 * Changed: ``Signal(range(0))`` is now valid without a warning.
+* Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
