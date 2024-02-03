@@ -994,6 +994,40 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_clock(1e-6)
             sim.add_testbench(process)
 
+    def test_memory_access(self):
+        self.setUp_memory()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                self.assertEqual((yield self.memory[1]), 0x55)
+                self.assertEqual((yield self.memory[Const(1)]), 0x55)
+                self.assertEqual((yield self.memory[Const(2)]), 0x00)
+                yield self.memory[Const(1)].eq(Const(0x33))
+                self.assertEqual((yield self.memory[Const(1)]), 0x33)
+                yield self.wrport.addr.eq(3)
+                yield self.wrport.data.eq(0x22)
+                yield self.wrport.en.eq(1)
+                self.assertEqual((yield self.memory[Const(3)]), 0)
+                yield Tick()
+                self.assertEqual((yield self.memory[Const(3)]), 0x22)
+
+            sim.add_clock(1e-6)
+            sim.add_testbench(process)
+
+    def test_memory_access_sync(self):
+        self.setUp_memory()
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                self.assertEqual((yield self.memory[1]), 0x55)
+                self.assertEqual((yield self.memory[Const(1)]), 0x55)
+                self.assertEqual((yield self.memory[Const(2)]), 0x00)
+                yield self.memory[Const(1)].eq(Const(0x33))
+                self.assertEqual((yield self.memory[Const(1)]), 0x55)
+                yield
+                self.assertEqual((yield self.memory[Const(1)]), 0x33)
+
+            sim.add_clock(1e-6)
+            sim.add_sync_process(process)
+
     def test_vcd_wrong_nonzero_time(self):
         s = Signal()
         m = Module()
