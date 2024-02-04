@@ -138,9 +138,9 @@ class DomainRenamerTestCase(FHDLTestCase):
         f = DomainRenamer({"a": "d", "c": "e"})(f)
         mem = f.subfragments[0][0]
         self.assertIsInstance(mem, MemoryInstance)
-        self.assertEqual(mem.read_ports[0].domain, "d")
-        self.assertEqual(mem.read_ports[1].domain, "b")
-        self.assertEqual(mem.write_ports[0].domain, "e")
+        self.assertEqual(mem._read_ports[0]._domain, "d")
+        self.assertEqual(mem._read_ports[1]._domain, "b")
+        self.assertEqual(mem._write_ports[0]._domain, "e")
 
     def test_rename_wrong_to_comb(self):
         with self.assertRaisesRegex(ValueError,
@@ -530,7 +530,7 @@ class EnableInserterTestCase(FHDLTestCase):
         mem = Memory(width=8, depth=4)
         mem.read_port(transparent=False)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.read_ports[0].en, """
+        self.assertRepr(f._read_ports[0]._en, """
         (& (sig mem_r_en) (sig c1))
         """)
 
@@ -538,7 +538,7 @@ class EnableInserterTestCase(FHDLTestCase):
         mem = Memory(width=8, depth=4)
         mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
-        self.assertRepr(f.write_ports[0].en, """
+        self.assertRepr(f._write_ports[0]._en, """
         (m
             (sig c1)
             (sig mem_w_en)

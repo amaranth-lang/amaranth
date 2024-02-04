@@ -183,6 +183,7 @@ class Fragment:
 
     def _resolve_hierarchy_conflicts(self, hierarchy=("top",), mode="warn"):
         assert mode in ("silent", "warn", "error")
+        from ._mem import MemoryInstance
 
         driver_subfrags = SignalDict()
         def add_subfrag(registry, entity, entry):
@@ -214,7 +215,7 @@ class Fragment:
                 # Always flatten subfragments that explicitly request it.
                 flatten_subfrags.add((subfrag, subfrag_hierarchy))
 
-            if isinstance(subfrag, Instance):
+            if isinstance(subfrag, (Instance, MemoryInstance)):
                 # Never flatten instances.
                 continue
 
@@ -368,6 +369,8 @@ class Fragment:
         return new_domains
 
     def _prepare_use_def_graph(self, parent, level, uses, defs, ios, top):
+        from ._mem import MemoryInstance
+
         def add_uses(*sigs, self=self):
             for sig in flatten(sigs):
                 if sig not in uses:
@@ -416,6 +419,22 @@ class Fragment:
                     if dir == "io":
                         subfrag.add_ports(value._lhs_signals(), dir=dir)
                         add_io(value._lhs_signals())
+            elif isinstance(subfrag, MemoryInstance):
+                for port in subfrag._read_ports:
+                    subfrag.add_ports(port._data._lhs_signals(), dir="o")
+                    add_defs(port._data._lhs_signals())
+                    for value in [port._addr, port._en]:
+                        subfrag.add_ports(value._rhs_signals(), dir="i")
+                        add_uses(value._rhs_signals())
+                for port in subfrag._write_ports:
+                    for value in [port._addr, port._en, port._data]:
+                        subfrag.add_ports(value._rhs_signals(), dir="i")
+                        add_uses(value._rhs_signals())
+                for domain, _ in subfrag.iter_sync():
+                    cd = subfrag.domains[domain]
+                    add_uses(cd.clk)
+                    if cd.rst is not None:
+                        add_uses(cd.rst)
             else:
                 parent[subfrag] = self
                 level [subfrag] = level[self] + 1

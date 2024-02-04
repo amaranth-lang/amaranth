@@ -2,8 +2,9 @@ import inspect
 
 from ..hdl import *
 from ..hdl._ast import Statement, SignalSet, ValueCastable
+from ..hdl._mem import MemorySimRead, MemorySimWrite
 from .core import Tick, Settle, Delay, Passive, Active
-from ._base import BaseProcess
+from ._base import BaseProcess, BaseMemoryState
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
 
 
@@ -118,6 +119,27 @@ class PyCoroProcess(BaseProcess):
 
                 elif type(command) is Active:
                     self.passive = False
+
+                elif type(command) is MemorySimRead:
+                    exec(_RHSValueCompiler.compile(self.state, command._addr, mode="curr"),
+                        self.exec_locals)
+                    addr = Const(self.exec_locals["result"], command._addr.shape()).value
+                    index = self.state.memories[command._identity]
+                    state = self.state.slots[index]
+                    assert isinstance(state, BaseMemoryState)
+                    response = state.read(addr)
+
+                elif type(command) is MemorySimWrite:
+                    exec(_RHSValueCompiler.compile(self.state, command._addr, mode="curr"),
+                        self.exec_locals)
+                    addr = Const(self.exec_locals["result"], command._addr.shape()).value
+                    exec(_RHSValueCompiler.compile(self.state, command._data, mode="curr"),
+                        self.exec_locals)
+                    data = Const(self.exec_locals["result"], command._data.shape()).value
+                    index = self.state.memories[command._identity]
+                    state = self.state.slots[index]
+                    assert isinstance(state, BaseMemoryState)
+                    state.write(addr, data)
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "

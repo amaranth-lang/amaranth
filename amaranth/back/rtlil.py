@@ -787,69 +787,71 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             return f"\\{fragment.type}", port_map, params
 
     if isinstance(fragment, _mem.MemoryInstance):
-        memory = fragment.memory
-        init = "".join(format(_ast.Const(elem, _ast.unsigned(memory.width)).value, f"0{memory.width}b") for elem in reversed(memory.init))
-        init = _ast.Const(int(init or "0", 2), memory.depth * memory.width)
+        init = "".join(format(_ast.Const(elem, _ast.unsigned(fragment._width)).value, f"0{fragment._width}b") for elem in reversed(fragment._init))
+        init = _ast.Const(int(init or "0", 2), fragment._depth * fragment._width)
         rd_clk = []
         rd_clk_enable = 0
         rd_clk_polarity = 0
         rd_transparency_mask = 0
-        for index, port in enumerate(fragment.read_ports):
-            if port.domain != "comb":
-                cd = fragment.domains[port.domain]
+        for index, port in enumerate(fragment._read_ports):
+            if port._domain is not None:
+                cd = fragment.domains[port._domain]
                 rd_clk.append(cd.clk)
                 if cd.clk_edge == "pos":
                     rd_clk_polarity |= 1 << index
                 rd_clk_enable |= 1 << index
-                if port.transparent:
-                    for write_index, write_port in enumerate(fragment.write_ports):
-                        if port.domain == write_port.domain:
-                            rd_transparency_mask |= 1 << (index * len(fragment.write_ports) + write_index)
+                for write_index in port._transparency:
+                    rd_transparency_mask |= 1 << (index * len(fragment._write_ports) + write_index)
             else:
                 rd_clk.append(_ast.Const(0, 1))
         wr_clk = []
         wr_clk_enable = 0
         wr_clk_polarity = 0
-        for index, port in enumerate(fragment.write_ports):
-            cd = fragment.domains[port.domain]
+        for index, port in enumerate(fragment._write_ports):
+            cd = fragment.domains[port._domain]
             wr_clk.append(cd.clk)
             wr_clk_enable |= 1 << index
             if cd.clk_edge == "pos":
                 wr_clk_polarity |= 1 << index
         params = {
             "MEMID": builder._make_name(hierarchy[-1], local=False),
-            "SIZE": memory.depth,
+            "SIZE": fragment._depth,
             "OFFSET": 0,
-            "ABITS": _ast.Shape.cast(range(memory.depth)).width,
-            "WIDTH": memory.width,
+            "ABITS": _ast.Shape.cast(range(fragment._depth)).width,
+            "WIDTH": fragment._width,
             "INIT": init,
-            "RD_PORTS": len(fragment.read_ports),
-            "RD_CLK_ENABLE": _ast.Const(rd_clk_enable, max(1, len(fragment.read_ports))),
-            "RD_CLK_POLARITY": _ast.Const(rd_clk_polarity, max(1, len(fragment.read_ports))),
-            "RD_TRANSPARENCY_MASK": _ast.Const(rd_transparency_mask, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
-            "RD_COLLISION_X_MASK": _ast.Const(0, max(1, len(fragment.read_ports) * len(fragment.write_ports))),
-            "RD_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment.read_ports))),
-            "RD_CE_OVER_SRST": _ast.Const(0, max(1, len(fragment.read_ports))),
-            "RD_ARST_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
-            "RD_SRST_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
-            "RD_INIT_VALUE": _ast.Const(0, len(fragment.read_ports) * memory.width),
-            "WR_PORTS": len(fragment.write_ports),
-            "WR_CLK_ENABLE": _ast.Const(wr_clk_enable, max(1, len(fragment.write_ports))),
-            "WR_CLK_POLARITY": _ast.Const(wr_clk_polarity, max(1, len(fragment.write_ports))),
-            "WR_PRIORITY_MASK": _ast.Const(0, max(1, len(fragment.write_ports) * len(fragment.write_ports))),
-            "WR_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment.write_ports))),
+            "RD_PORTS": len(fragment._read_ports),
+            "RD_CLK_ENABLE": _ast.Const(rd_clk_enable, max(1, len(fragment._read_ports))),
+            "RD_CLK_POLARITY": _ast.Const(rd_clk_polarity, max(1, len(fragment._read_ports))),
+            "RD_TRANSPARENCY_MASK": _ast.Const(rd_transparency_mask, max(1, len(fragment._read_ports) * len(fragment._write_ports))),
+            "RD_COLLISION_X_MASK": _ast.Const(0, max(1, len(fragment._read_ports) * len(fragment._write_ports))),
+            "RD_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment._read_ports))),
+            "RD_CE_OVER_SRST": _ast.Const(0, max(1, len(fragment._read_ports))),
+            "RD_ARST_VALUE": _ast.Const(0, len(fragment._read_ports) * fragment._width),
+            "RD_SRST_VALUE": _ast.Const(0, len(fragment._read_ports) * fragment._width),
+            "RD_INIT_VALUE": _ast.Const(0, len(fragment._read_ports) * fragment._width),
+            "WR_PORTS": len(fragment._write_ports),
+            "WR_CLK_ENABLE": _ast.Const(wr_clk_enable, max(1, len(fragment._write_ports))),
+            "WR_CLK_POLARITY": _ast.Const(wr_clk_polarity, max(1, len(fragment._write_ports))),
+            "WR_PRIORITY_MASK": _ast.Const(0, max(1, len(fragment._write_ports) * len(fragment._write_ports))),
+            "WR_WIDE_CONTINUATION": _ast.Const(0, max(1, len(fragment._write_ports))),
         }
+        def make_en(port):
+            if len(port._data) == 0:
+                return _ast.Const(0, 0)
+            granularity = len(port._data) // len(port._en)
+            return _ast.Cat(en_bit.replicate(granularity) for en_bit in port._en)
         port_map = {
             "\\RD_CLK": _ast.Cat(rd_clk),
-            "\\RD_EN": _ast.Cat(port.en for port in fragment.read_ports),
-            "\\RD_ARST": _ast.Const(0, len(fragment.read_ports)),
-            "\\RD_SRST": _ast.Const(0, len(fragment.read_ports)),
-            "\\RD_ADDR": _ast.Cat(port.addr for port in fragment.read_ports),
-            "\\RD_DATA": _ast.Cat(port.data for port in fragment.read_ports),
+            "\\RD_EN": _ast.Cat(port._en for port in fragment._read_ports),
+            "\\RD_ARST": _ast.Const(0, len(fragment._read_ports)),
+            "\\RD_SRST": _ast.Const(0, len(fragment._read_ports)),
+            "\\RD_ADDR": _ast.Cat(port._addr for port in fragment._read_ports),
+            "\\RD_DATA": _ast.Cat(port._data for port in fragment._read_ports),
             "\\WR_CLK": _ast.Cat(wr_clk),
-            "\\WR_EN": _ast.Cat(_ast.Cat(en_bit.replicate(port.granularity) for en_bit in port.en) for port in fragment.write_ports),
-            "\\WR_ADDR": _ast.Cat(port.addr for port in fragment.write_ports),
-            "\\WR_DATA": _ast.Cat(port.data for port in fragment.write_ports),
+            "\\WR_EN": _ast.Cat(make_en(port) for port in fragment._write_ports),
+            "\\WR_ADDR": _ast.Cat(port._addr for port in fragment._write_ports),
+            "\\WR_DATA": _ast.Cat(port._data for port in fragment._write_ports),
         }
         return "$mem_v2", port_map, params
 
@@ -913,7 +915,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
             if isinstance(subfragment, _ir.Instance):
                 src = _src(subfragment.src_loc)
             elif isinstance(subfragment, _mem.MemoryInstance):
-                src = _src(subfragment.memory.src_loc)
+                src = _src(subfragment._src_loc)
             else:
                 src = ""
 
