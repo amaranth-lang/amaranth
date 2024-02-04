@@ -1,9 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
-from copy import copy
 
-from .._utils import flatten, _ignore_deprecated
+from .._utils import flatten
 from .. import tracer
 from ._ast import *
 from ._ast import _StatementList, AnyValue, Property
@@ -239,27 +238,45 @@ class FragmentTransformer:
             new_fragment.add_driver(signal, domain)
 
     def map_memory_ports(self, fragment, new_fragment):
-        new_fragment.read_ports = [
-            copy(port)
-            for port in fragment.read_ports
-        ]
-        new_fragment.write_ports = [
-            copy(port)
-            for port in fragment.write_ports
-        ]
         if hasattr(self, "on_value"):
-            for port in new_fragment.read_ports:
-                port.en = self.on_value(port.en)
-                port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
-            for port in new_fragment.write_ports:
-                port.en = self.on_value(port.en)
-                port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
+            for port in new_fragment._read_ports:
+                port._en = self.on_value(port._en)
+                port._addr = self.on_value(port._addr)
+                port._data = self.on_value(port._data)
+            for port in new_fragment._write_ports:
+                port._en = self.on_value(port._en)
+                port._addr = self.on_value(port._addr)
+                port._data = self.on_value(port._data)
 
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
-            new_fragment = MemoryInstance(fragment.memory, [], [])
+            new_fragment = MemoryInstance(
+                identity=fragment._identity,
+                width=fragment._width,
+                depth=fragment._depth,
+                init=fragment._init,
+                attrs=fragment._attrs,
+                src_loc=fragment._src_loc
+            )
+            new_fragment._read_ports = [
+                MemoryInstance._ReadPort(
+                    domain=port._domain,
+                    addr=port._addr,
+                    data=port._data,
+                    en=port._en,
+                    transparency=port._transparency,
+                )
+                for port in fragment._read_ports
+            ]
+            new_fragment._write_ports = [
+                MemoryInstance._WritePort(
+                    domain=port._domain,
+                    addr=port._addr,
+                    data=port._data,
+                    en=port._en,
+                )
+                for port in fragment._write_ports
+            ]
             self.map_memory_ports(fragment, new_fragment)
         elif isinstance(fragment, Instance):
             new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
@@ -376,17 +393,16 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
-            for port in fragment.read_ports:
-                self.on_value(port.addr)
-                self.on_value(port.data)
-                self.on_value(port.en)
-                if port.domain != "comb":
-                    self._add_used_domain(port.domain)
-            for port in fragment.write_ports:
-                self.on_value(port.addr)
-                self.on_value(port.data)
-                self.on_value(port.en)
-                self._add_used_domain(port.domain)
+            for port in fragment._read_ports:
+                self.on_value(port._addr)
+                self.on_value(port._data)
+                self.on_value(port._en)
+                self._add_used_domain(port._domain)
+            for port in fragment._write_ports:
+                self.on_value(port._addr)
+                self.on_value(port._data)
+                self.on_value(port._en)
+                self._add_used_domain(port._domain)
 
         if isinstance(fragment, Instance):
             for name, (value, dir) in fragment.named_ports.items():
@@ -460,12 +476,12 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
     def map_memory_ports(self, fragment, new_fragment):
         super().map_memory_ports(fragment, new_fragment)
-        for port in new_fragment.read_ports:
-            if port.domain in self.domain_map:
-                port.domain = self.domain_map[port.domain]
-        for port in new_fragment.write_ports:
-            if port.domain in self.domain_map:
-                port.domain = self.domain_map[port.domain]
+        for port in new_fragment._read_ports:
+            if port._domain in self.domain_map:
+                port._domain = self.domain_map[port._domain]
+        for port in new_fragment._write_ports:
+            if port._domain in self.domain_map:
+                port._domain = self.domain_map[port._domain]
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
@@ -645,10 +661,10 @@ class EnableInserter(_ControlInserter):
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
         if isinstance(new_fragment, MemoryInstance):
-            for port in new_fragment.read_ports:
-                if port.domain in self.controls:
-                    port.en = port.en & self.controls[port.domain]
-            for port in new_fragment.write_ports:
-                if port.domain in self.controls:
-                    port.en = Mux(self.controls[port.domain], port.en, Const(0, len(port.en)))
+            for port in new_fragment._read_ports:
+                if port._domain in self.controls:
+                    port._en = port._en & self.controls[port._domain]
+            for port in new_fragment._write_ports:
+                if port._domain in self.controls:
+                    port._en = Mux(self.controls[port._domain], port._en, Const(0, len(port._en)))
         return new_fragment

@@ -1,4 +1,4 @@
-__all__ = ["BaseProcess", "BaseSignalState", "BaseSimulation", "BaseEngine"]
+__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseSimulation", "BaseEngine"]
 
 
 class BaseProcess:
@@ -12,7 +12,7 @@ class BaseProcess:
         self.passive  = True
 
     def run(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
 
 class BaseSignalState:
@@ -24,44 +24,62 @@ class BaseSignalState:
     next = NotImplemented
 
     def set(self, value):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
+
+
+class BaseMemoryState:
+    __slots__ = ()
+
+    memory = NotImplemented
+
+    def read(self, addr):
+        raise NotImplementedError # :nocov:
+
+    def write(self, addr, value):
+        raise NotImplementedError # :nocov:
 
 
 class BaseSimulation:
     def reset(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def get_signal(self, signal):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     slots = NotImplemented
 
     def add_trigger(self, process, signal, *, trigger=None):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def remove_trigger(self, process, signal):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
+
+    def add_memory_trigger(self, process, identity):
+        raise NotImplementedError # :nocov:
+
+    def remove_memory_trigger(self, process, identity):
+        raise NotImplementedError # :nocov:
 
     def wait_interval(self, process, interval):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
 
 class BaseEngine:
     def add_coroutine_process(self, process, *, default_cmd):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def add_clock_process(self, clock, *, phase, period):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def reset(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     @property
     def now(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def advance(self):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:
 
     def write_vcd(self, *, vcd_file, gtkw_file, traces):
-        raise NotImplementedError
+        raise NotImplementedError # :nocov:

@@ -3,10 +3,102 @@ from collections import OrderedDict
 
 from .. import tracer
 from ._ast import *
-from ._ir import Elaboratable, Instance, Fragment
+from ._ir import Elaboratable, Fragment
+from ..utils import ceil_log2
 
 
 __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
+
+
+class MemoryIdentity: pass
+
+
+class MemorySimRead:
+    def __init__(self, identity, addr):
+        assert isinstance(identity, MemoryIdentity)
+        self._identity = identity
+        self._addr = Value.cast(addr)
+
+    def eq(self, value):
+        return MemorySimWrite(self._identity, self._addr, value)
+
+
+class MemorySimWrite:
+    def __init__(self, identity, addr, data):
+        assert isinstance(identity, MemoryIdentity)
+        self._identity = identity
+        self._addr = Value.cast(addr)
+        self._data = Value.cast(data)
+
+
+class MemoryInstance(Fragment):
+    class _ReadPort:
+        def __init__(self, *, domain, addr, data, en, transparency):
+            assert domain is None or isinstance(domain, str)
+            if domain == "comb":
+                domain = None
+            self._domain = domain
+            self._addr = Value.cast(addr)
+            self._data = Value.cast(data)
+            self._en = Value.cast(en)
+            self._transparency = tuple(transparency)
+            assert len(self._en) == 1
+            if domain is None:
+                assert isinstance(self._en, Const)
+                assert self._en.width == 1
+                assert self._en.value == 1
+
+    class _WritePort:
+        def __init__(self, *, domain, addr, data, en):
+            assert isinstance(domain, str)
+            assert domain != "comb"
+            self._domain = domain
+            self._addr = Value.cast(addr)
+            self._data = Value.cast(data)
+            self._en = Value.cast(en)
+            if len(self._data):
+                assert len(self._data) % len(self._en) == 0
+
+        @property
+        def _granularity(self):
+            if not len(self._data):
+                return 1
+            return len(self._data) // len(self._en)
+
+
+    def __init__(self, *, identity, width, depth, init=None, attrs=None, src_loc=None):
+        super().__init__()
+        assert isinstance(identity, MemoryIdentity)
+        self._identity = identity
+        self._width = operator.index(width)
+        self._depth = operator.index(depth)
+        self._init = tuple(init) if init is not None else ()
+        assert len(self._init) <= self._depth
+        self._init += (0,) * (self._depth - len(self._init))
+        for x in self._init:
+            assert isinstance(x, int)
+        self._attrs = attrs or {}
+        self._src_loc = src_loc
+        self._read_ports = []
+        self._write_ports = []
+
+    def read_port(self, *, domain, addr, data, en, transparency):
+        port = self._ReadPort(domain=domain, addr=addr, data=data, en=en, transparency=transparency)
+        assert len(port._data) == self._width
+        assert len(port._addr) == ceil_log2(self._depth)
+        for x in port._transparency:
+            assert isinstance(x, int)
+            assert x in range(len(self._write_ports))
+        for signal in port._data._rhs_signals():
+            self.add_driver(signal, port._domain)
+        self._read_ports.append(port)
+
+    def write_port(self, *, domain, addr, data, en):
+        port = self._WritePort(domain=domain, addr=addr, data=data, en=en)
+        assert len(port._data) == self._width
+        assert len(port._addr) == ceil_log2(self._depth)
+        self._write_ports.append(port)
+        return len(self._write_ports) - 1
 
 
 class Memory(Elaboratable):
@@ -50,16 +142,10 @@ class Memory(Elaboratable):
         self.depth = depth
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
-        # Array of signals for simulation.
-        self._array = Array()
-        if simulate:
-            for addr in range(self.depth):
-                self._array.append(Signal(self.width, name="{}({})"
-                                          .format(name or "memory", addr)))
-
         self.init = init
         self._read_ports = []
         self._write_ports = []
+        self._identity = MemoryIdentity()
 
     @property
     def init(self):
@@ -73,11 +159,8 @@ class Memory(Elaboratable):
                              .format(len(self.init), self.depth))
 
         try:
-            for addr in range(len(self._array)):
-                if addr < len(self._init):
-                    self._array[addr].reset = operator.index(self._init[addr])
-                else:
-                    self._array[addr].reset = 0
+            for addr, val in enumerate(self._init):
+                operator.index(val)
         except TypeError as e:
             raise TypeError("Memory initialization value at address {:x}: {}"
                             .format(addr, e)) from None
@@ -116,52 +199,24 @@ class Memory(Elaboratable):
 
     def __getitem__(self, index):
         """Simulation only."""
-        return self._array[index]
+        return MemorySimRead(self._identity, index)
 
     def elaborate(self, platform):
-        f = MemoryInstance(self, self._read_ports, self._write_ports)
+        f = MemoryInstance(identity=self._identity, width=self.width, depth=self.depth, init=self.init, attrs=self.attrs, src_loc=self.src_loc)
+        write_ports = {}
+        for port in self._write_ports:
+            port._MustUse__used = True
+            iport = f.write_port(domain=port.domain, addr=port.addr, data=port.data, en=port.en)
+            write_ports.setdefault(port.domain, []).append(iport)
         for port in self._read_ports:
             port._MustUse__used = True
             if port.domain == "comb":
-                # Asynchronous port
-                f.add_statements(None, port.data.eq(self._array[port.addr]))
-                f.add_driver(port.data)
+                f.read_port(domain="comb", addr=port.addr, data=port.data, en=Const(1), transparency=())
             else:
-                # Synchronous port
-                data = self._array[port.addr]
-                for write_port in self._write_ports:
-                    if port.domain == write_port.domain and port.transparent:
-                        if len(write_port.en) > 1:
-                            parts = []
-                            for index, en_bit in enumerate(write_port.en):
-                                offset = index * write_port.granularity
-                                bits   = slice(offset, offset + write_port.granularity)
-                                cond = en_bit & (port.addr == write_port.addr)
-                                parts.append(Mux(cond, write_port.data[bits], data[bits]))
-                            data = Cat(parts)
-                        else:
-                            cond = write_port.en & (port.addr == write_port.addr)
-                            data = Mux(cond, write_port.data, data)
-                f.add_statements(
-                    port.domain,
-                    Switch(port.en, {
-                        1: port.data.eq(data)
-                    })
-                )
-                f.add_driver(port.data, port.domain)
-        for port in self._write_ports:
-            port._MustUse__used = True
-            if len(port.en) > 1:
-                for index, en_bit in enumerate(port.en):
-                    offset = index * port.granularity
-                    bits   = slice(offset, offset + port.granularity)
-                    write_data = self._array[port.addr][bits].eq(port.data[bits])
-                    f.add_statements(port.domain, Switch(en_bit, { 1: write_data }))
-            else:
-                write_data = self._array[port.addr].eq(port.data)
-                f.add_statements(port.domain, Switch(port.en, { 1: write_data }))
-            for signal in self._array:
-                f.add_driver(signal, port.domain)
+                transparency = []
+                if port.transparent:
+                    transparency = write_ports.get(port.domain, [])
+                f.read_port(domain=port.domain, addr=port.addr, data=port.data, en=port.en, transparency=transparency)
         return f
 
 
@@ -308,12 +363,3 @@ class DummyPort:
                            name=f"{name}_data", src_loc_at=1)
         self.en   = Signal(data_width // granularity,
                            name=f"{name}_en", src_loc_at=1)
-
-
-class MemoryInstance(Fragment):
-    def __init__(self, memory, read_ports, write_ports):
-        super().__init__()
-        self.memory = memory
-        self.read_ports = read_ports
-        self.write_ports = write_ports
-        self.attrs = memory.attrs

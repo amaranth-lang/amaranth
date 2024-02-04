@@ -4,8 +4,9 @@ from contextlib import contextmanager
 import sys
 
 from ..hdl import *
-from ..hdl._ast import SignalSet
+from ..hdl._ast import SignalSet, _StatementList
 from ..hdl._xfrm import ValueVisitor, StatementVisitor
+from ..hdl._mem import MemoryInstance
 from ._base import BaseProcess
 
 
@@ -409,9 +410,24 @@ class _FragmentCompiler:
     def __call__(self, fragment):
         processes = set()
 
-        for domain_name, domain_stmts in fragment.statements.items():
+        domains = set(fragment.statements)
+
+        if isinstance(fragment, MemoryInstance):
+            self.state.add_memory(fragment)
+            for port in fragment._read_ports:
+                domains.add(port._domain)
+            for port in fragment._write_ports:
+                domains.add(port._domain)
+
+        for domain_name in domains:
+            domain_stmts = fragment.statements.get(domain_name, _StatementList())
             domain_process = PyRTLProcess(is_comb=domain_name is None)
             domain_signals = domain_stmts._lhs_signals()
+
+            if isinstance(fragment, MemoryInstance):
+                for port in fragment._read_ports:
+                    if port._domain == domain_name:
+                        domain_signals.update(port._data._lhs_signals())
 
             emitter = _PythonEmitter()
             emitter.append(f"def run():")
@@ -424,6 +440,21 @@ class _FragmentCompiler:
 
                 inputs = SignalSet()
                 _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)
+
+                if isinstance(fragment, MemoryInstance):
+                    self.state.add_memory_trigger(domain_process, fragment._identity)
+                    memory_index = self.state.memories[fragment._identity]
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr", inputs=inputs)
+                    lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
+
+                    for port in fragment._read_ports:
+                        if port._domain is not None:
+                            continue
+
+                        addr = rhs(port._addr)
+                        addr = f"({(1 << len(port._addr)) - 1:#x} & {addr})"
+                        data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
+                        lhs(port._data)(data)
 
                 for input in inputs:
                     self.state.add_trigger(domain_process, input)
@@ -441,6 +472,47 @@ class _FragmentCompiler:
                     emitter.append(f"next_{signal_index} = slots[{signal_index}].next")
 
                 _StatementCompiler(self.state, emitter)(domain_stmts)
+
+                if isinstance(fragment, MemoryInstance):
+                    memory_index = self.state.memories[fragment._identity]
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
+                    lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
+
+                    write_vals = {}
+
+                    for idx, port in enumerate(fragment._write_ports):
+                        if port._domain != domain_name:
+                            continue
+
+                        addr = rhs(port._addr)
+                        addr = emitter.def_var("write_addr", f"({(1 << len(port._addr)) - 1:#x} & {addr})")
+                        data = rhs(port._data)
+                        data = emitter.def_var("write_data", f"({(1 << len(port._data)) - 1:#x} & {data})")
+                        en = rhs(Cat(bit.replicate(port._granularity) for bit in port._en))
+                        en = emitter.def_var("write_en", f"({(1 << len(port._data)) - 1:#x} & {en})")
+                        emitter.append(f"slots[{memory_index}].write({addr}, {data}, {en})")
+                        write_vals[idx] = addr, data, en
+
+                    for port in fragment._read_ports:
+                        if port._domain != domain_name:
+                            continue
+
+                        en = rhs(port._en)
+                        en = f"(1 & {en})"
+                        emitter.append(f"if {en}:")
+                        with emitter.indent():
+                            addr = rhs(port._addr)
+                            addr = emitter.def_var("read_addr", f"({(1 << len(port._addr)) - 1:#x} & {addr})")
+                            data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
+
+                            for idx in port._transparency:
+                                waddr, wdata, wen = write_vals[idx]
+                                emitter.append(f"if {addr} == {waddr}:")
+                                with emitter.indent():
+                                    emitter.append(f"{data} &= ~{wen}")
+                                    emitter.append(f"{data} |= {wdata} & {wen}")
+
+                            lhs(port._data)(data)
 
             for signal in domain_signals:
                 signal_index = self.state.get_signal(signal)
