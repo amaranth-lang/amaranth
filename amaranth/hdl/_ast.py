@@ -918,32 +918,6 @@ class Const(Value):
 C = Const  # shorthand
 
 
-class AnyValue(Value, DUID):
-    def __init__(self, shape, *, src_loc_at=0):
-        super().__init__(src_loc_at=src_loc_at)
-        shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
-        self.width  = shape.width
-        self.signed = shape.signed
-
-    def shape(self):
-        return Shape(self.width, self.signed)
-
-    def _rhs_signals(self):
-        return SignalSet()
-
-
-@final
-class AnyConst(AnyValue):
-    def __repr__(self):
-        return "(anyconst {}'{})".format(self.width, "s" if self.signed else "")
-
-
-@final
-class AnySeq(AnyValue):
-    def __repr__(self):
-        return "(anyseq {}'{})".format(self.width, "s" if self.signed else "")
-
-
 @final
 class Operator(Value):
     def __init__(self, operator, operands, *, src_loc_at=0):
@@ -1442,6 +1416,37 @@ class ResetSignal(Value):
         return f"(rst {self.domain})"
 
 
+@final
+class AnyValue(Value, DUID):
+    class Kind(Enum):
+        AnyConst = "anyconst"
+        AnySeq   = "anyseq"
+
+    def __init__(self, kind, shape, *, src_loc_at=0):
+        super().__init__(src_loc_at=src_loc_at)
+        self.kind  = self.Kind(kind)
+        shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
+        self.width  = shape.width
+        self.signed = shape.signed
+
+    def shape(self):
+        return Shape(self.width, self.signed)
+
+    def _rhs_signals(self):
+        return SignalSet()
+
+    def __repr__(self):
+        return "({} {}'{})".format(self.kind.value, self.width, "s" if self.signed else "")
+
+
+def AnyConst(shape, *, src_loc_at=0):
+    return AnyValue("anyconst", shape, src_loc_at=src_loc_at+1)
+
+
+def AnySeq(shape, *, src_loc_at=0):
+    return AnyValue("anyseq", shape, src_loc_at=src_loc_at+1)
+
+
 class Array(MutableSequence):
     """Addressable multiplexer.
 
@@ -1729,11 +1734,18 @@ class UnusedProperty(UnusedMustUse):
     pass
 
 
+@final
 class Property(Statement, MustUse):
     _MustUse__warning = UnusedProperty
 
-    def __init__(self, test, *, _check=None, _en=None, name=None, src_loc_at=0):
+    class Kind(Enum):
+        Assert = "assert"
+        Assume = "assume"
+        Cover  = "cover"
+
+    def __init__(self, kind, test, *, _check=None, _en=None, name=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
+        self.kind   = self.Kind(kind)
         self.test   = Value.cast(test)
         self._check = _check
         self._en    = _en
@@ -1742,10 +1754,10 @@ class Property(Statement, MustUse):
             raise TypeError("Property name must be a string or None, not {!r}"
                             .format(self.name))
         if self._check is None:
-            self._check = Signal(reset_less=True, name=f"${self._kind}$check")
+            self._check = Signal(reset_less=True, name=f"${self.kind.value}$check")
             self._check.src_loc = self.src_loc
         if _en is None:
-            self._en = Signal(reset_less=True, name=f"${self._kind}$en")
+            self._en = Signal(reset_less=True, name=f"${self.kind.value}$en")
             self._en.src_loc = self.src_loc
 
     def _lhs_signals(self):
@@ -1756,23 +1768,20 @@ class Property(Statement, MustUse):
 
     def __repr__(self):
         if self.name is not None:
-            return f"({self.name}: {self._kind} {self.test!r})"
-        return f"({self._kind} {self.test!r})"
+            return f"({self.name}: {self.kind.value} {self.test!r})"
+        return f"({self.kind.value} {self.test!r})"
 
 
-@final
-class Assert(Property):
-    _kind = "assert"
+def Assert(test, *, name=None, src_loc_at=0):
+    return Property("assert", test, name=name, src_loc_at=src_loc_at+1)
 
 
-@final
-class Assume(Property):
-    _kind = "assume"
+def Assume(test, *, name=None, src_loc_at=0):
+    return Property("assume", test, name=name, src_loc_at=src_loc_at+1)
 
 
-@final
-class Cover(Property):
-    _kind = "cover"
+def Cover(test, *, name=None, src_loc_at=0):
+    return Property("cover", test, name=name, src_loc_at=src_loc_at+1)
 
 
 @final
