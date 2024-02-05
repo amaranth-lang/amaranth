@@ -506,7 +506,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not isinstance(stmt, (Assign, Assert, Assume, Cover)):
+            if not isinstance(stmt, (Assign, Property)):
                 raise SyntaxError(
                     "Only assignments and property checks may be appended to d.{}"
                     .format(domain_name(domain)))

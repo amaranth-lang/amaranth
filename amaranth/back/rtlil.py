@@ -442,27 +442,13 @@ class _RHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
         return _const(value)
 
-    def on_AnyConst(self, value):
+    def on_AnyValue(self, value):
         if value in self.s.anys:
             return self.s.anys[value]
 
         res_shape = value.shape()
         res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
-        self.s.rtlil.cell("$anyconst", ports={
-            "\\Y": res,
-        }, params={
-            "WIDTH": res_shape.width,
-        }, src=_src(value.src_loc))
-        self.s.anys[value] = res
-        return res
-
-    def on_AnySeq(self, value):
-        if value in self.s.anys:
-            return self.s.anys[value]
-
-        res_shape = value.shape()
-        res = self.s.rtlil.wire(width=res_shape.width, src=_src(value.src_loc))
-        self.s.rtlil.cell("$anyseq", ports={
+        self.s.rtlil.cell("$" + value.kind.value, ports={
             "\\Y": res,
         }, params={
             "WIDTH": res_shape.width,
@@ -619,10 +605,7 @@ class _LHSValueCompiler(_ValueCompiler):
     def on_Const(self, value):
         raise TypeError # :nocov:
 
-    def on_AnyConst(self, value):
-        raise TypeError # :nocov:
-
-    def on_AnySeq(self, value):
+    def on_AnyValue(self, value):
         raise TypeError # :nocov:
 
     def on_Initial(self, value):
@@ -721,20 +704,16 @@ class _StatementCompiler(_xfrm.StatementVisitor):
         else:
             self._case.assign(self.lhs_compiler(stmt.lhs), rhs_sigspec)
 
-    def on_property(self, stmt):
+    def on_Property(self, stmt):
         self(stmt._check.eq(stmt.test))
         self(stmt._en.eq(1))
 
         en_wire = self.rhs_compiler(stmt._en)
         check_wire = self.rhs_compiler(stmt._check)
-        self.state.rtlil.cell("$" + stmt._kind, ports={
+        self.state.rtlil.cell("$" + stmt.kind.value, ports={
             "\\A": check_wire,
             "\\EN": en_wire,
         }, src=_src(stmt.src_loc), name=stmt.name)
-
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
 
     def on_Switch(self, stmt):
         self._check_rhs(stmt.test)
