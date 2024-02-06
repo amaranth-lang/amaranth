@@ -59,12 +59,23 @@ class PyCoroProcess(BaseProcess):
         self.clear_triggers()
 
         response = None
+        exception = None
         while True:
             try:
-                command = self.coroutine.send(response)
+                if exception is None:
+                    command = self.coroutine.send(response)
+                else:
+                    command = self.coroutine.throw(exception)
+            except StopIteration:
+                self.passive = True
+                self.coroutine = None
+                return
+
+            try:
                 if command is None:
                     command = self.default_cmd
                 response = None
+                exception = None
 
                 if isinstance(command, ValueCastable):
                     command = Value.cast(command)
@@ -118,10 +129,6 @@ class PyCoroProcess(BaseProcess):
                     raise TypeError("Received unsupported command {!r} from process {!r}"
                                     .format(command, self.src_loc()))
 
-            except StopIteration:
-                self.passive = True
-                self.coroutine = None
-                return
-
             except Exception as exn:
-                self.coroutine.throw(exn)
+                response = None
+                exception = exn
