@@ -685,7 +685,6 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 with self.assertRaisesRegex(TypeError,
                         r"Received unsupported command 1 from process .+?"):
                     yield 1
-                yield Settle()
                 survived = True
             sim.add_process(process)
         self.assertTrue(survived)
