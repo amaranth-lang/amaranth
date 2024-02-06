@@ -116,7 +116,7 @@ class BuildPlan:
             else:
                 subprocess.check_call(["sh", f"{self.script}.sh"],
                                       cwd=build_dir, env=os.environ if env is None else env)
-        # TODO(amaranth-0.5): remove
+        # TODO(amaranth-0.6): remove
         if run_script is not None:
             warnings.warn("The `run_script` argument is deprecated. If you only want to "
                             "extract the files from the BuildPlan, use the .extract() method",

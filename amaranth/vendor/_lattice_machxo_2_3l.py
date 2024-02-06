@@ -135,14 +135,6 @@ class LatticeMachXO2Or3LPlatform(TemplatedPlatform):
             -oft -svfsingle -revd -op "FLASH Erase,Program,Verify"
             -if {{name}}_impl/{{name}}_impl.jed -of {{name}}_flash.svf
         """,
-        # TODO(amaranth-0.4): remove
-        r"""
-        {% if syntax == "bat" -%}
-        copy {{name}}_flash.svf {{name}}.svf
-        {% else -%}
-        cp {{name}}_flash.svf {{name}}.svf
-        {% endif %}
-        """,
         r"""
         {{invoke_tool("ddtcmd")}}
             -oft -svfsingle -revd -op "SRAM Fast Program"
