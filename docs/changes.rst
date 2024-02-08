@@ -82,6 +82,7 @@ Toolchain changes
 * Added: ``Simulator.add_testbench``. (`RFC 27`_)
 * Deprecated: ``Settle`` simulation command. (`RFC 27`_)
 * Deprecated: ``Simulator.add_process``. (`RFC 27`_)
+* Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
 Platform integration changes
