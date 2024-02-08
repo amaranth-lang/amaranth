@@ -59,7 +59,7 @@ class Flow(enum.Enum):
             return Out
         assert False # :nocov:
 
-    def __call__(self, description, *, reset=None):
+    def __call__(self, description, *, reset=None, src_loc_at=0):
         """Create a :class:`Member` with this data flow and the provided description and
         reset value.
 
@@ -68,7 +68,7 @@ class Flow(enum.Enum):
         :class:`Member`
             :pc:`Member(self, description, reset=reset)`
         """
-        return Member(self, description, reset=reset)
+        return Member(self, description, reset=reset, src_loc_at=src_loc_at + 1)
 
     def __repr__(self):
         return self.name
@@ -105,11 +105,12 @@ class Member:
     Although instances can be created directly, most often they will be created through
     :data:`In` and :data:`Out`, e.g. :pc:`In(unsigned(1))` or :pc:`Out(stream.Signature(RGBPixel))`.
     """
-    def __init__(self, flow, description, *, reset=None, _dimensions=()):
+    def __init__(self, flow, description, *, reset=None, _dimensions=(), src_loc_at=0):
         self._flow = flow
         self._description = description
         self._reset = reset
         self._dimensions = _dimensions
+        self.src_loc = tracer.get_src_loc(src_loc_at=src_loc_at)
 
         # Check that the description is valid, and populate derived properties.
         if self.is_port:
@@ -493,8 +494,13 @@ class SignatureMembers(Mapping):
         for name, member in self.items():
             def create_value(path, *, src_loc_at):
                 if member.is_port:
-                    return Signal(member.shape, reset=member.reset, src_loc_at=1 + src_loc_at,
-                                  name="__".join(str(item) for item in path))
+                    # Ideally we would keep both source locations here, but the .src_loc attribute
+                    # data structure doesn't currently support that, so keep the more important one:
+                    # the one with the name of the signal (the `In()`/`Out()` call site.)
+                    signal = Signal(member.shape, reset=member.reset, src_loc_at=1 + src_loc_at,
+                                    name="__".join(str(item) for item in path))
+                    signal.src_loc = member.src_loc
+                    return signal
                 if member.is_signature:
                     return member.signature.create(path=path, src_loc_at=1 + src_loc_at)
                 assert False # :nocov:
@@ -1610,7 +1616,7 @@ class Component(Elaboratable):
         If a name conflict is detected between two variable annotations, or between a member
         and an existing attribute.
     """
-    def __init__(self, signature=None):
+    def __init__(self, signature=None, *, src_loc_at=0):
         cls = type(self)
         members = {}
         for base in reversed(cls.mro()[:cls.mro().index(Component)]):
@@ -1644,7 +1650,7 @@ class Component(Elaboratable):
             if hasattr(self, name):
                 raise NameError(f"Cannot initialize attribute for signature member {name!r} "
                                 f"because an attribute with the same name already exists")
-        self.__dict__.update(signature.members.create(path=()))
+        self.__dict__.update(signature.members.create(path=(), src_loc_at=src_loc_at + 1))
 
     @property
     def signature(self):
