@@ -172,6 +172,11 @@ class XilinxPlatform(TemplatedPlatform):
             foreach cell [get_cells -quiet -hier -filter {amaranth.vivado.false_path == "TRUE"}] {
                 set_false_path -to $cell
             }
+            foreach pin [get_pins -of \
+                             [get_cells -quiet -hier -filter {amaranth.vivado.false_path_pre == "TRUE"}] \
+                             -filter {REF_PIN_NAME == PRE}] {
+                set_false_path -to $pin
+            }
             foreach cell [get_cells -quiet -hier -filter {amaranth.vivado.max_delay != ""}] {
                 set clock [get_clocks -of_objects \
                     [all_fanin -flat -startpoints_only [get_pin $cell/D]]]
@@ -179,6 +184,11 @@ class XilinxPlatform(TemplatedPlatform):
                     set_max_delay -datapath_only -from $clock \
                         -to [get_cells $cell] [get_property amaranth.vivado.max_delay $cell]
                 }
+            }
+            foreach cell [get_cells -quiet -hier -filter {amaranth.vivado.max_delay_pre != ""}] {
+                set_max_delay \
+                    -to [get_pins -of [get_cells $cell] -filter {REF_PIN_NAME == PRE}] \
+                    [get_property amaranth.vivado.max_delay_pre $cell]
             }
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             report_timing_summary -file {{name}}_timing_synth.rpt
@@ -1191,29 +1201,53 @@ class XilinxPlatform(TemplatedPlatform):
     def get_async_ff_sync(self, async_ff_sync):
         m = Module()
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)
-        flops = [Signal(1, name=f"stage{index}", reset=1,
-                        attrs={"ASYNC_REG": "TRUE"})
-                 for index in range(async_ff_sync._stages)]
-        if self.toolchain == "Vivado":
-            if async_ff_sync._max_input_delay is None:
-                flops[0].attrs["amaranth.vivado.false_path"] = "TRUE"
-            else:
-                flops[0].attrs["amaranth.vivado.max_delay"] = str(async_ff_sync._max_input_delay * 1e9)
-        elif async_ff_sync._max_input_delay is not None:
-            raise NotImplementedError("Platform '{}' does not support constraining input delay "
-                                      "for AsyncFFSynchronizer"
-                                      .format(type(self).__name__))
-        for i, o in zip((0, *flops), flops):
-            m.d.async_ff += o.eq(i)
+        # Instantiate a chain of async_ff_sync._stages FDPEs with all
+        # their PRE pins connected to either async_ff_sync.i or
+        # ~async_ff_sync.i. The D of the first FDPE in the chain is
+        # connected to GND.
+        flops_q = Signal(async_ff_sync._stages, reset_less=True)
+        flops_d = Signal(async_ff_sync._stages, reset_less=True)
+        flops_pre = Signal(reset_less=True)
+        for i in range(async_ff_sync._stages):
+            flop = Instance("FDPE", p_INIT=1, o_Q=flops_q[i],
+                            i_C=ClockSignal(async_ff_sync._o_domain),
+                            i_CE=Const(1), i_PRE=flops_pre, i_D=flops_d[i],
+                            a_ASYNC_REG="TRUE")
+            m.submodules[f"stage{i}"] = flop
+            if self.toolchain == "Vivado":
+                if async_ff_sync._max_input_delay is None:
+                    # This attribute should be used with a constraint of the form
+                    #
+                    # set_false_path -to [ \
+                    #   get_pins -of [get_cells -hier -filter {amaranth.vivado.false_path_pre == "TRUE"}] \
+                    #     -filter { REF_PIN_NAME == PRE } ]
+                    #
+                    flop.attrs["amaranth.vivado.false_path_pre"] = "TRUE"
+                else:
+                    # This attributed should be used with a constraint of the form
+                    #
+                    # set_max_delay -to [ \
+                    #   get_pins -of [get_cells -hier -filter {amaranth.vivado.max_delay_pre == "3.0"}] \
+                    #     -filter { REF_PIN_NAME == PRE } ] \
+                    #   3.0
+                    #
+                    # A different constraint must be added for each different _max_input_delay value
+                    # used. The same value should be used in the second parameter of set_max_delay
+                    # and in the -filter.
+                    flop.attrs["amaranth.vivado.max_delay_pre"] = str(async_ff_sync._max_input_delay * 1e9)
+            elif async_ff_sync._max_input_delay is not None:
+                raise NotImplementedError("Platform '{}' does not support constraining input delay "
+                                          "for AsyncFFSynchronizer"
+                                          .format(type(self).__name__))
+
+        for i, o in zip((0, *flops_q), flops_d):
+            m.d.comb += o.eq(i)
 
         if async_ff_sync._edge == "pos":
-            m.d.comb += ResetSignal("async_ff").eq(async_ff_sync.i)
+            m.d.comb += flops_pre.eq(async_ff_sync.i)
         else:
-            m.d.comb += ResetSignal("async_ff").eq(~async_ff_sync.i)
+            m.d.comb += flops_pre.eq(~async_ff_sync.i)
 
-        m.d.comb += [
-            ClockSignal("async_ff").eq(ClockSignal(async_ff_sync._o_domain)),
-            async_ff_sync.o.eq(flops[-1])
-        ]
+        m.d.comb += async_ff_sync.o.eq(flops_q[-1])
 
         return m
