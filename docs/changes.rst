@@ -29,9 +29,8 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
 * Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
 * Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
-* Update uses of ``Simulator.add_process`` to ``Simulator.add_testbench``
 * Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
-* Convert uses of ``yield Tick()`` within remaining ``Simulator.add_sync_process`` to plain ``yield``
+* Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
 
 
 Implemented RFCs
@@ -81,7 +80,7 @@ Toolchain changes
 
 * Added: ``Simulator.add_testbench``. (`RFC 27`_)
 * Deprecated: ``Settle`` simulation command. (`RFC 27`_)
-* Deprecated: ``Simulator.add_process``. (`RFC 27`_)
+* Deprecated: ``Simulator.add_sync_process``. (`RFC 27`_)
 * Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
