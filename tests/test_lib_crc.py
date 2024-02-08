@@ -243,13 +243,13 @@ class CRCTestCase(unittest.TestCase):
                     yield crc.start.eq(word == b"1")
                     yield crc.data.eq(word)
                     yield crc.valid.eq(1)
-                    yield
+                    yield Tick()
                 yield crc.valid.eq(0)
-                yield
+                yield Tick()
                 self.assertEqual((yield crc.crc), check)
 
             sim = Simulator(crc)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
             sim.add_clock(1e-6)
             sim.run()
 
@@ -283,18 +283,18 @@ class CRCTestCase(unittest.TestCase):
 
                 def process():
                     yield crc.start.eq(1)
-                    yield
+                    yield Tick()
                     yield crc.start.eq(0)
                     for word in words:
                         yield crc.data.eq(word)
                         yield crc.valid.eq(1)
-                        yield
+                        yield Tick()
                     yield crc.valid.eq(0)
-                    yield
+                    yield Tick()
                     self.assertEqual((yield crc.crc), check)
 
                 sim = Simulator(crc)
-                sim.add_sync_process(process)
+                sim.add_testbench(process)
                 sim.add_clock(1e-6)
                 sim.run()
 
@@ -334,17 +334,17 @@ class CRCTestCase(unittest.TestCase):
 
             def process():
                 yield crc.start.eq(1)
-                yield
+                yield Tick()
                 yield crc.start.eq(0)
                 for word in words:
                     yield crc.data.eq(word)
                     yield crc.valid.eq(1)
-                    yield
+                    yield Tick()
                 yield crc.valid.eq(0)
-                yield
+                yield Tick()
                 self.assertTrue((yield crc.match_detected))
 
             sim = Simulator(crc)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
             sim.add_clock(1e-6)
             sim.run()

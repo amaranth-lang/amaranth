@@ -26,13 +26,13 @@ class FFSynchronizerTestCase(FHDLTestCase):
         def process():
             self.assertEqual((yield o), 0)
             yield i.eq(1)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 1)
-        sim.add_sync_process(process)
+        sim.add_process(process)
         sim.run()
 
     def test_reset_value(self):
@@ -45,13 +45,13 @@ class FFSynchronizerTestCase(FHDLTestCase):
         def process():
             self.assertEqual((yield o), 1)
             yield i.eq(0)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield
+            yield Tick()
             self.assertEqual((yield o), 0)
-        sim.add_sync_process(process)
+        sim.add_process(process)
         sim.run()
 
 
@@ -221,17 +221,17 @@ class PulseSynchronizerTestCase(FHDLTestCase):
             yield ps.i.eq(0)
             # TODO: think about reset
             for n in range(5):
-                yield
+                yield Tick()
             # Make sure no pulses are generated in quiescent state
             for n in range(3):
-                yield
+                yield Tick()
                 self.assertEqual((yield ps.o), 0)
             # Check conservation of pulses
             accum = 0
             for n in range(10):
                 yield ps.i.eq(1 if n < 4 else 0)
-                yield
+                yield Tick()
                 accum += yield ps.o
             self.assertEqual(accum, 4)
-        sim.add_sync_process(process)
+        sim.add_process(process)
         sim.run()

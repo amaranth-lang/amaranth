@@ -80,7 +80,6 @@ class Simulator:
                             .format(process))
         return process
 
-    @deprecated("The `add_process` method is deprecated per RFC 27. Use `add_testbench` instead.")
     def add_process(self, process):
         process = self._check_process(process)
         def wrapper():
@@ -89,6 +88,7 @@ class Simulator:
             yield from process()
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
+    @deprecated("The `add_sync_process` method is deprecated per RFC 47. Use `add_process` or `add_testbench` instead.")
     def add_sync_process(self, process, *, domain="sync"):
         process = self._check_process(process)
         def wrapper():
@@ -107,25 +107,6 @@ class Simulator:
                 except StopIteration:
                     break
                 try:
-                    if isinstance(command, (Settle, Delay, Tick)):
-                        frame = generator.gi_frame
-                        module_globals = frame.f_globals
-                        if '__name__' in module_globals:
-                            module = module_globals['__name__']
-                        else:
-                            module = "<string>"
-                        # If the warning action is "error", this call will throw the warning, and
-                        # the try block will redirect it into the generator.
-                        warnings.warn_explicit(
-                            f"Using `{command.__class__.__name__}` is deprecated within "
-                            f"`add_sync_process` per RFC 27; use `add_testbench` instead.",
-                            DeprecationWarning,
-                            filename=frame.f_code.co_filename,
-                            lineno=frame.f_lineno,
-                            module=module,
-                            registry=module_globals.setdefault("__warningregistry__", {}),
-                            module_globals=module_globals,
-                        )
                     result = yield command
                     exception = None
                 except Exception as e:

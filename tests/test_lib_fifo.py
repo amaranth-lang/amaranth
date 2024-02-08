@@ -296,7 +296,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
             for i in range(10):
                 yield fifo.w_data.eq(i)
                 yield fifo.w_en.eq(1)
-                yield
+                yield Tick()
 
                 if (i - ff_syncronizer_latency) > 0:
                     self.assertEqual((yield fifo.r_level), i - ff_syncronizer_latency)
@@ -305,7 +305,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
 
         simulator = Simulator(fifo)
         simulator.add_clock(100e-6)
-        simulator.add_sync_process(testbench)
+        simulator.add_process(testbench)
         simulator.run()
 
     def check_async_fifo_level(self, fifo, fill_in, expected_level, read=False):
@@ -315,10 +315,9 @@ class AsyncFIFOSimCase(FHDLTestCase):
             for i in range(fill_in):
                 yield fifo.w_data.eq(i)
                 yield fifo.w_en.eq(1)
-                yield
+                yield Tick("write")
             yield fifo.w_en.eq(0)
-            yield
-            yield
+            yield Tick ("write")
             self.assertEqual((yield fifo.w_level), expected_level)
             yield write_done.eq(1)
 
@@ -326,14 +325,14 @@ class AsyncFIFOSimCase(FHDLTestCase):
             if read:
                 yield fifo.r_en.eq(1)
             while not (yield write_done):
-                yield
+                yield Tick("read")
             self.assertEqual((yield fifo.r_level), expected_level)
 
         simulator = Simulator(fifo)
         simulator.add_clock(100e-6, domain="write")
-        simulator.add_sync_process(write_process, domain="write")
+        simulator.add_testbench(write_process)
         simulator.add_clock(50e-6, domain="read")
-        simulator.add_sync_process(read_process, domain="read")
+        simulator.add_testbench(read_process)
         with simulator.write_vcd("test.vcd"):
             simulator.run()
 

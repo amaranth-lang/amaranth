@@ -435,29 +435,30 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_counter_process(self):
         self.setUp_counter()
-        with _ignore_deprecated():
-            with self.assertSimulation(self.m) as sim:
-                def process():
-                    self.assertEqual((yield self.count), 4)
+        with self.assertSimulation(self.m) as sim:
+            def process():
+                self.assertEqual((yield self.count), 4)
+                yield Delay(1e-6)
+                self.assertEqual((yield self.count), 4)
+                yield self.sync.clk.eq(1)
+                self.assertEqual((yield self.count), 4)
+                with _ignore_deprecated():
+                    yield Settle()
+                self.assertEqual((yield self.count), 5)
+                yield Delay(1e-6)
+                self.assertEqual((yield self.count), 5)
+                yield self.sync.clk.eq(0)
+                self.assertEqual((yield self.count), 5)
+                with _ignore_deprecated():
+                    yield Settle()
+                self.assertEqual((yield self.count), 5)
+                for _ in range(3):
                     yield Delay(1e-6)
-                    self.assertEqual((yield self.count), 4)
                     yield self.sync.clk.eq(1)
-                    self.assertEqual((yield self.count), 4)
-                    yield Settle()
-                    self.assertEqual((yield self.count), 5)
                     yield Delay(1e-6)
-                    self.assertEqual((yield self.count), 5)
                     yield self.sync.clk.eq(0)
-                    self.assertEqual((yield self.count), 5)
-                    yield Settle()
-                    self.assertEqual((yield self.count), 5)
-                    for _ in range(3):
-                        yield Delay(1e-6)
-                        yield self.sync.clk.eq(1)
-                        yield Delay(1e-6)
-                        yield self.sync.clk.eq(0)
-                    self.assertEqual((yield self.count), 0)
-                sim.add_process(process)
+                self.assertEqual((yield self.count), 0)
+            sim.add_process(process)
 
     def test_counter_clock_and_sync_process(self):
         self.setUp_counter()
@@ -472,7 +473,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 for _ in range(3):
                     yield
                 self.assertEqual((yield self.count), 0)
-            sim.add_sync_process(process)
+            with _ignore_deprecated():
+                sim.add_sync_process(process)
 
     def test_reset(self):
         self.setUp_counter()
@@ -481,14 +483,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         times = 0
         def process():
             nonlocal times
+            yield Tick()
             self.assertEqual((yield self.count), 4)
-            yield
+            yield Tick()
             self.assertEqual((yield self.count), 5)
-            yield
+            yield Tick()
             self.assertEqual((yield self.count), 6)
-            yield
+            yield Tick()
             times += 1
-        sim.add_sync_process(process)
+        sim.add_process(process)
         sim.run()
         sim.reset()
         sim.run()
@@ -520,19 +523,37 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 yield self.a.eq(5)
                 yield self.b.eq(1)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.x), 4)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.o), 6)
                 yield self.s.eq(1)
-                yield
-                yield
+                yield Tick()
+                yield Tick()
                 self.assertEqual((yield self.o), 4)
                 yield self.s.eq(2)
-                yield
-                yield
+                yield Tick()
+                yield Tick()
                 self.assertEqual((yield self.o), 0)
-            sim.add_sync_process(process)
+            sim.add_process(process)
+
+    def test_alu_bench(self):
+        self.setUp_alu()
+        with self.assertSimulation(self.m) as sim:
+            sim.add_clock(1e-6)
+            def process():
+                yield self.a.eq(5)
+                yield self.b.eq(1)
+                self.assertEqual((yield self.x), 4)
+                yield Tick()
+                self.assertEqual((yield self.o), 6)
+                yield self.s.eq(1)
+                yield Tick()
+                self.assertEqual((yield self.o), 4)
+                yield self.s.eq(2)
+                yield Tick()
+                self.assertEqual((yield self.o), 0)
+            sim.add_testbench(process)
 
     def setUp_clock_phase(self):
         self.m = Module()
@@ -543,10 +564,10 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         self.check = self.m.domains.check = ClockDomain()
 
         self.expected = [
-            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1],
-            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
         ]
 
     def test_clock_phase(self):
@@ -567,11 +588,11 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                     self.phase270.clk
                 ]
                 for i in range(16):
-                    yield
+                    yield Tick("check")
                     for j, c in enumerate(clocks):
                         self.assertEqual((yield c), self.expected[j][i])
 
-            sim.add_sync_process(proc, domain="check")
+            sim.add_process(proc)
 
     def setUp_multiclock(self):
         self.sys = ClockDomain()
@@ -588,15 +609,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
             def sys_process():
                 yield Passive()
-                yield
-                yield
+                yield Tick("sys")
+                yield Tick("sys")
                 self.fail()
             def pix_process():
-                yield
-                yield
-                yield
-            sim.add_sync_process(sys_process, domain="sys")
-            sim.add_sync_process(pix_process, domain="pix")
+                yield Tick("pix")
+                yield Tick("pix")
+                yield Tick("pix")
+            sim.add_testbench(sys_process)
+            sim.add_testbench(pix_process)
 
     def setUp_lhs_rhs(self):
         self.i = Signal(8)
@@ -644,7 +665,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
                     r"^Cannot add a process 1 because it is not a generator function$"):
-                sim.add_sync_process(1)
+                sim.add_process(1)
 
     def test_add_process_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
@@ -652,7 +673,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                     r"^Cannot add a process <.+?> because it is not a generator function$"):
                 def process():
                     yield Delay()
-                sim.add_sync_process(process())
+                sim.add_process(process())
 
     def test_add_clock_wrong_twice(self):
         m = Module()
@@ -678,31 +699,14 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_command_wrong(self):
         survived = False
-        with _ignore_deprecated():
-            with self.assertSimulation(Module()) as sim:
-                def process():
-                    nonlocal survived
-                    with self.assertRaisesRegex(TypeError,
-                            r"Received unsupported command 1 from process .+?"):
-                        yield 1
-                    survived = True
-                sim.add_process(process)
-        self.assertTrue(survived)
-
-    def test_sync_command_deprecated(self):
-        survived = False
-        m = Module()
-        dummy = Signal()
-        m.d.sync += dummy.eq(1)
-        with self.assertSimulation(m) as sim:
+        with self.assertSimulation(Module()) as sim:
             def process():
                 nonlocal survived
-                with self.assertWarnsRegex(DeprecationWarning,
-                        r"Using `Delay` is deprecated within `add_sync_process`"):
-                    yield Delay(1e-8)
+                with self.assertRaisesRegex(TypeError,
+                        r"Received unsupported command 1 from process .+?"):
+                    yield 1
                 survived = True
-            sim.add_sync_process(process)
-            sim.add_clock(1e-6)
+            sim.add_process(process)
         self.assertTrue(survived)
 
     def test_sync_command_wrong(self):
@@ -717,7 +721,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                         r"Received unsupported command 1 from process .+?"):
                     yield 1
                 survived = True
-            sim.add_sync_process(process)
+            with _ignore_deprecated():
+                sim.add_sync_process(process)
             sim.add_clock(1e-6)
         self.assertTrue(survived)
 
@@ -762,15 +767,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(self.m) as sim:
             def process():
                 yield self.rdport.addr.eq(1)
-                yield
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x55)
                 yield self.rdport.addr.eq(2)
-                yield
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x00)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_write(self):
         self.setUp_memory()
@@ -779,13 +782,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 yield self.wrport.addr.eq(4)
                 yield self.wrport.data.eq(0x33)
                 yield self.wrport.en.eq(1)
-                yield
+                yield Tick()
                 yield self.wrport.en.eq(0)
                 yield self.rdport.addr.eq(4)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x33)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_memory_write_granularity(self):
         self.setUp_memory(wr_granularity=4)
@@ -864,14 +867,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         self.m.submodules.rdport = self.rdport = self.memory.read_port()
         with self.assertSimulation(self.m) as sim:
             def process():
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0xaa)
                 yield self.rdport.addr.eq(1)
-                yield
-                yield
+                yield Tick()
                 self.assertEqual((yield self.rdport.data), 0x55)
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_testbench(process)
 
     def test_comb_bench_process(self):
         m = Module()
@@ -1022,11 +1024,11 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual((yield self.memory[Const(2)]), 0x00)
                 yield self.memory[Const(1)].eq(Const(0x33))
                 self.assertEqual((yield self.memory[Const(1)]), 0x55)
-                yield
+                yield Tick()
                 self.assertEqual((yield self.memory[Const(1)]), 0x33)
 
             sim.add_clock(1e-6)
-            sim.add_sync_process(process)
+            sim.add_process(process)
 
     def test_vcd_wrong_nonzero_time(self):
         s = Signal()
