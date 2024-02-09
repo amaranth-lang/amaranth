@@ -228,9 +228,11 @@ class FragmentTransformer:
 
     def map_statements(self, fragment, new_fragment):
         if hasattr(self, "on_statement"):
-            new_fragment.add_statements(map(self.on_statement, fragment.statements))
+            for domain, statements in fragment.statements.items():
+                new_fragment.add_statements(domain, map(self.on_statement, statements))
         else:
-            new_fragment.add_statements(fragment.statements)
+            for domain, statements in fragment.statements.items():
+                new_fragment.add_statements(domain, statements)
 
     def map_drivers(self, fragment, new_fragment):
         for domain, signal in fragment.iter_drivers():
@@ -397,9 +399,9 @@ class DomainCollector(ValueVisitor, StatementVisitor):
             else:
                 self.defined_domains.add(domain_name)
 
-        self.on_statements(fragment.statements)
-        for domain_name in fragment.drivers:
+        for domain_name, statements in fragment.statements.items():
             self._add_used_domain(domain_name)
+            self.on_statements(statements)
         for subfragment, name in fragment.subfragments:
             self.on_fragment(subfragment)
 
@@ -441,6 +443,13 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 else:
                     assert cd.name == self.domain_map[domain]
             new_fragment.add_domains(cd)
+
+    def map_statements(self, fragment, new_fragment):
+        for domain, statements in fragment.statements.items():
+            new_fragment.add_statements(
+                self.domain_map.get(domain, domain),
+                map(self.on_statement, statements)
+            )
 
     def map_drivers(self, fragment, new_fragment):
         for domain, signals in fragment.drivers.items():
@@ -499,7 +508,7 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 continue
             stmts = [signal.eq(Const(signal.reset, signal.width))
                      for signal in signals if not signal.reset_less]
-            fragment.add_statements(Switch(domain.rst, {1: stmts}))
+            fragment.add_statements(domain_name, Switch(domain.rst, {1: stmts}))
 
     def on_fragment(self, fragment):
         self.domains = fragment.domains
@@ -571,6 +580,7 @@ class LHSGroupAnalyzer(StatementVisitor):
             self.on_statements(case_stmts)
 
     def on_statements(self, stmts):
+        assert not isinstance(stmts, str)
         for stmt in stmts:
             self.on_statement(stmt)
 
@@ -624,13 +634,13 @@ class _ControlInserter(FragmentTransformer):
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(Const(s.reset, s.width)) for s in signals if not s.reset_less]
-        fragment.add_statements(Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
+        fragment.add_statements(domain, Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 
 class EnableInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(s) for s in signals]
-        fragment.add_statements(Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
+        fragment.add_statements(domain, Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)

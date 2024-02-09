@@ -1718,6 +1718,12 @@ class _StatementList(list):
     def __repr__(self):
         return "({})".format(" ".join(map(repr, self)))
 
+    def _lhs_signals(self):
+        return union((s._lhs_signals() for s in self), start=SignalSet())
+
+    def _rhs_signals(self):
+        return union((s._rhs_signals() for s in self), start=SignalSet())
+
 
 class Statement:
     def __init__(self, *, src_loc_at=0):
@@ -1849,13 +1855,10 @@ class Switch(Statement):
                 self.case_src_locs[new_keys] = case_src_locs[orig_keys]
 
     def _lhs_signals(self):
-        signals = union((s._lhs_signals() for ss in self.cases.values() for s in ss),
-                        start=SignalSet())
-        return signals
+        return union((s._lhs_signals() for s in self.cases.values()), start=SignalSet())
 
     def _rhs_signals(self):
-        signals = union((s._rhs_signals() for ss in self.cases.values() for s in ss),
-                        start=SignalSet())
+        signals = union((s._rhs_signals() for s in self.cases.values()), start=SignalSet())
         return self.test._rhs_signals() | signals
 
     def __repr__(self):

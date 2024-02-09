@@ -34,7 +34,7 @@ class DSLTestCase(FHDLTestCase):
         m.d.comb += self.c1.eq(1)
         m._flush()
         self.assertEqual(m._driving[self.c1], None)
-        self.assertRepr(m._statements, """(
+        self.assertRepr(m._statements[None], """(
             (eq (sig c1) (const 1'd1))
         )""")
 
@@ -43,7 +43,7 @@ class DSLTestCase(FHDLTestCase):
         m.d.sync += self.c1.eq(1)
         m._flush()
         self.assertEqual(m._driving[self.c1], "sync")
-        self.assertRepr(m._statements, """(
+        self.assertRepr(m._statements["sync"], """(
             (eq (sig c1) (const 1'd1))
         )""")
 
@@ -52,7 +52,7 @@ class DSLTestCase(FHDLTestCase):
         m.d.pix += self.c1.eq(1)
         m._flush()
         self.assertEqual(m._driving[self.c1], "pix")
-        self.assertRepr(m._statements, """(
+        self.assertRepr(m._statements["pix"], """(
             (eq (sig c1) (const 1'd1))
         )""")
 
@@ -61,7 +61,7 @@ class DSLTestCase(FHDLTestCase):
         m.d["pix"] += self.c1.eq(1)
         m._flush()
         self.assertEqual(m._driving[self.c1], "pix")
-        self.assertRepr(m._statements, """(
+        self.assertRepr(m._statements["pix"], """(
             (eq (sig c1) (const 1'd1))
         )""")
 
@@ -118,7 +118,7 @@ class DSLTestCase(FHDLTestCase):
     def test_clock_signal(self):
         m = Module()
         m.d.comb += ClockSignal("pix").eq(ClockSignal())
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (eq (clk pix) (clk sync))
         )
@@ -127,7 +127,7 @@ class DSLTestCase(FHDLTestCase):
     def test_reset_signal(self):
         m = Module()
         m.d.comb += ResetSignal("pix").eq(1)
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (eq (rst pix) (const 1'd1))
         )
@@ -138,7 +138,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.s1):
             m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -151,12 +151,36 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.s1):
             m.d.comb += self.c1.eq(1)
         with m.Elif(self.s2):
-            m.d.sync += self.c2.eq(0)
+            m.d.comb += self.c2.eq(0)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
+                (case 1- (eq (sig c2) (const 1'd0)))
+            )
+        )
+        """)
+
+    def test_If_Elif_multi(self):
+        m = Module()
+        with m.If(self.s1):
+            m.d.comb += self.c1.eq(1)
+        with m.Elif(self.s2):
+            m.d.sync += self.c2.eq(0)
+        m._flush()
+        self.assertRepr(m._statements[None], """
+        (
+            (switch (cat (sig s1) (sig s2))
+                (case -1 (eq (sig c1) (const 1'd1)))
+                (case 1- )
+            )
+        )
+        """)
+        self.assertRepr(m._statements["sync"], """
+        (
+            (switch (cat (sig s1) (sig s2))
+                (case -1 )
                 (case 1- (eq (sig c2) (const 1'd0)))
             )
         )
@@ -171,12 +195,21 @@ class DSLTestCase(FHDLTestCase):
         with m.Else():
             m.d.comb += self.c3.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
-                (case 1- (eq (sig c2) (const 1'd0)))
+                (case 1- )
                 (default (eq (sig c3) (const 1'd1)))
+            )
+        )
+        """)
+        self.assertRepr(m._statements["sync"], """
+        (
+            (switch (cat (sig s1) (sig s2))
+                (case -1 )
+                (case 1- (eq (sig c2) (const 1'd0)))
+                (default )
             )
         )
         """)
@@ -188,7 +221,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.s2):
             m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -206,7 +239,7 @@ class DSLTestCase(FHDLTestCase):
             with m.If(self.s2):
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1))
@@ -227,7 +260,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Else():
             m.d.comb += self.c3.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (sig s1))
                 (case 1
@@ -298,7 +331,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.w1):
             m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (b (sig w1)))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -356,7 +389,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case("1 0--"):
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -374,7 +407,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case():
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -390,7 +423,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Default():
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -405,7 +438,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case(1):
                 m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (const 1'd1)
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -422,7 +455,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Switch(se):
             with m.Case(Color.RED):
                 m.d.comb += self.c1.eq(1)
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig se)
                 (case 01 (eq (sig c1) (const 1'd1)))
@@ -439,7 +472,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Switch(se):
             with m.Case(Cat(Color.RED, Color.BLUE)):
                 m.d.comb += self.c1.eq(1)
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig se)
                 (case 10 (eq (sig c1) (const 1'd1)))
@@ -451,26 +484,23 @@ class DSLTestCase(FHDLTestCase):
         class Color(Enum):
             RED = 0b10101010
         m = Module()
+        dummy = Signal()
         with m.Switch(self.w1):
             with self.assertRaisesRegex(SyntaxError,
                     r"^Case pattern '--' must have the same width as switch value \(which is 4\)$"):
                 with m.Case("--"):
-                    pass
+                    m.d.comb += dummy.eq(0)
             with self.assertWarnsRegex(SyntaxWarning,
                     r"^Case pattern '22' \(5'10110\) is wider than switch value \(which has "
                     r"width 4\); comparison will never be true$"):
                 with m.Case(0b10110):
-                    pass
+                    m.d.comb += dummy.eq(0)
             with self.assertWarnsRegex(SyntaxWarning,
                     r"^Case pattern '<Color.RED: 170>' \(8'10101010\) is wider than switch value "
                     r"\(which has width 4\); comparison will never be true$"):
                 with m.Case(Color.RED):
-                    pass
-        self.assertRepr(m._statements, """
-        (
-            (switch (sig w1) )
-        )
-        """)
+                    m.d.comb += dummy.eq(0)
+        self.assertEqual(m._statements, {})
 
     def test_Case_bits_wrong(self):
         m = Module()
@@ -549,11 +579,20 @@ class DSLTestCase(FHDLTestCase):
                 with m.If(c):
                     m.next = "FIRST"
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig fsm_state)
                 (case 0
                     (eq (sig a) (const 1'd1))
+                )
+                (case 1 )
+            )
+        )
+        """)
+        self.assertRepr(m._statements["sync"], """
+        (
+            (switch (sig fsm_state)
+                (case 0
                     (eq (sig fsm_state) (const 1'd1))
                 )
                 (case 1
@@ -594,11 +633,20 @@ class DSLTestCase(FHDLTestCase):
             with m.State("SECOND"):
                 m.next = "FIRST"
         m._flush()
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (sig fsm_state)
                 (case 0
                     (eq (sig a) (const 1'd0))
+                )
+                (case 1 )
+            )
+        )
+        """)
+        self.assertRepr(m._statements["sync"], """
+        (
+            (switch (sig fsm_state)
+                (case 0
                     (eq (sig fsm_state) (const 1'd1))
                 )
                 (case 1
@@ -622,16 +670,10 @@ class DSLTestCase(FHDLTestCase):
         m._flush()
         self.assertEqual(m._generated["fsm"].state.reset, 1)
         self.maxDiff = 10000
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (eq (sig b) (== (sig fsm_state) (const 1'd0)))
             (eq (sig a) (== (sig fsm_state) (const 1'd1)))
-            (switch (sig fsm_state)
-                (case 1
-                )
-                (case 0
-                )
-            )
         )
         """)
 
@@ -639,9 +681,7 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.FSM():
             pass
-        self.assertRepr(m._statements, """
-        ()
-        """)
+        self.assertEqual(m._statements, {})
 
     def test_FSM_wrong_domain(self):
         m = Module()
@@ -713,7 +753,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.w1):
             m.d.comb += self.c1.eq(1)
         m.d.comb += self.c2.eq(1)
-        self.assertRepr(m._statements, """
+        self.assertRepr(m._statements[None], """
         (
             (switch (cat (b (sig w1)))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -830,7 +870,7 @@ class DSLTestCase(FHDLTestCase):
         m1.submodules.foo = m2
 
         f1 = m1.elaborate(platform=None)
-        self.assertRepr(f1.statements, """
+        self.assertRepr(f1.statements[None], """
         (
             (eq (sig c1) (sig s1))
         )
@@ -841,9 +881,13 @@ class DSLTestCase(FHDLTestCase):
         self.assertEqual(len(f1.subfragments), 1)
         (f2, f2_name), = f1.subfragments
         self.assertEqual(f2_name, "foo")
-        self.assertRepr(f2.statements, """
+        self.assertRepr(f2.statements[None], """
         (
             (eq (sig c2) (sig s2))
+        )
+        """)
+        self.assertRepr(f2.statements["sync"], """
+        (
             (eq (sig c3) (sig s3))
         )
         """)
