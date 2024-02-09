@@ -118,6 +118,8 @@ class _VCDWriter:
                             field_name += f"[{item}]"
                         else:
                             field_name += f".{item}"
+                    if repr.path:
+                        field_name = "\\" + field_name
 
                     if vcd_var is None:
                         vcd_var = self.vcd_writer.register_var(
@@ -127,11 +129,7 @@ class _VCDWriter:
                             suffix = f"[{var_size - 1}:0]"
                         else:
                             suffix = ""
-                        if repr.path:
-                            gtkw_field_name = '\\' + field_name
-                        else:
-                            gtkw_field_name = field_name
-                        self.gtkw_signal_names[signal].append(".".join((*var_scope, gtkw_field_name)) + suffix)
+                        self.gtkw_signal_names[signal].append(".".join((*var_scope, field_name)) + suffix)
                     else:
                         self.vcd_writer.register_alias(
                             scope=var_scope, name=field_name,
