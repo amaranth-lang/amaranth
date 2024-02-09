@@ -7,6 +7,7 @@ from .. import tracer
 from .._utils import *
 from .._unused import *
 from ._ast import *
+from ._ast import _StatementList
 from ._cd import *
 
 
@@ -65,7 +66,7 @@ class Fragment:
     def __init__(self):
         self.ports = SignalDict()
         self.drivers = OrderedDict()
-        self.statements = []
+        self.statements = {}
         self.domains = OrderedDict()
         self.subfragments = []
         self.attrs = OrderedDict()
@@ -127,10 +128,11 @@ class Fragment:
     def iter_domains(self):
         yield from self.domains
 
-    def add_statements(self, *stmts):
+    def add_statements(self, domain, *stmts):
+        assert domain is None or isinstance(domain, str)
         for stmt in Statement.cast(stmts):
             stmt._MustUse__used = True
-            self.statements.append(stmt)
+            self.statements.setdefault(domain, _StatementList()).append(stmt)
 
     def add_subfragment(self, subfragment, name=None):
         assert isinstance(subfragment, Fragment)
@@ -166,7 +168,8 @@ class Fragment:
         self.ports.update(subfragment.ports)
         for domain, signal in subfragment.iter_drivers():
             self.add_driver(signal, domain)
-        self.statements += subfragment.statements
+        for domain, statements in subfragment.statements.items():
+            self.statements.setdefault(domain, []).extend(statements)
         self.subfragments += subfragment.subfragments
 
         # Remove the merged subfragment.
@@ -387,9 +390,10 @@ class Fragment:
 
         # Collect all signals we're driving (on LHS of statements), and signals we're using
         # (on RHS of statements, or in clock domains).
-        for stmt in self.statements:
-            add_uses(stmt._rhs_signals())
-            add_defs(stmt._lhs_signals())
+        for stmts in self.statements.values():
+            for stmt in stmts:
+                add_uses(stmt._rhs_signals())
+                add_defs(stmt._lhs_signals())
 
         for domain, _ in self.iter_sync():
             cd = self.domains[domain]
@@ -572,10 +576,11 @@ class Fragment:
                 if domain.rst is not None:
                     add_signal_name(domain.rst)
 
-        for statement in self.statements:
-            for signal in statement._lhs_signals() | statement._rhs_signals():
-                if not isinstance(signal, (ClockSignal, ResetSignal)):
-                    add_signal_name(signal)
+        for statements in self.statements.values():
+            for statement in statements:
+                for signal in statement._lhs_signals() | statement._rhs_signals():
+                    if not isinstance(signal, (ClockSignal, ResetSignal)):
+                        add_signal_name(signal)
 
         return signal_names
 

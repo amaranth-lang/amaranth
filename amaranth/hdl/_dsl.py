@@ -170,7 +170,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self.submodules    = _ModuleBuilderSubmodules(self)
         self.domains       = _ModuleBuilderDomainSet(self)
 
-        self._statements   = Statement.cast([])
+        self._statements   = {}
         self._ctrl_context = None
         self._ctrl_stack   = []
 
@@ -234,7 +234,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             "src_locs": [],
         })
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -254,7 +254,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if if_data is None or if_data["depth"] != self.domain._depth:
             raise SyntaxError("Elif without preceding If")
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -273,7 +273,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if if_data is None or if_data["depth"] != self.domain._depth:
             raise SyntaxError("Else without preceding If/Elif")
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -341,7 +341,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     continue
                 new_patterns = (*new_patterns, pattern.value)
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
@@ -364,7 +364,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
@@ -416,7 +416,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if name not in fsm_data["encoding"]:
             fsm_data["encoding"][name] = len(fsm_data["encoding"])
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
@@ -453,28 +453,42 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             if_tests, if_bodies = data["tests"], data["bodies"]
             if_src_locs = data["src_locs"]
 
-            tests, cases = [], OrderedDict()
-            for if_test, if_case in zip(if_tests + [None], if_bodies):
-                if if_test is not None:
-                    if len(if_test) != 1:
-                        if_test = if_test.bool()
-                    tests.append(if_test)
+            domains = set()
+            for if_case in if_bodies:
+                domains |= set(if_case)
 
-                if if_test is not None:
-                    match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
-                else:
-                    match = None
-                cases[match] = if_case
+            for domain in domains:
+                tests, cases = [], OrderedDict()
+                for if_test, if_case in zip(if_tests + [None], if_bodies):
+                    if if_test is not None:
+                        if len(if_test) != 1:
+                            if_test = if_test.bool()
+                        tests.append(if_test)
 
-            self._statements.append(Switch(Cat(tests), cases,
-                src_loc=src_loc, case_src_locs=dict(zip(cases, if_src_locs))))
+                    if if_test is not None:
+                        match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
+                    else:
+                        match = None
+                    cases[match] = if_case.get(domain, [])
+
+                self._statements.setdefault(domain, []).append(Switch(Cat(tests), cases,
+                    src_loc=src_loc, case_src_locs=dict(zip(cases, if_src_locs))))
 
         if name == "Switch":
             switch_test, switch_cases = data["test"], data["cases"]
             switch_case_src_locs = data["case_src_locs"]
 
-            self._statements.append(Switch(switch_test, switch_cases,
-                src_loc=src_loc, case_src_locs=switch_case_src_locs))
+            domains = set()
+            for stmts in switch_cases.values():
+                domains |= set(stmts)
+
+            for domain in domains:
+                domain_cases = OrderedDict()
+                for patterns, stmts in switch_cases.items():
+                    domain_cases[patterns] = stmts.get(domain, [])
+
+                self._statements.setdefault(domain, []).append(Switch(switch_test, domain_cases,
+                    src_loc=src_loc, case_src_locs=switch_case_src_locs))
 
         if name == "FSM":
             fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
@@ -490,10 +504,20 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             # The FSM is encoded such that the state with encoding 0 is always the reset state.
             fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
             fsm_signal.decoder = lambda n: f"{fsm_decoding[n]}/{n}"
-            self._statements.append(Switch(fsm_signal,
-                OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items()),
-                src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
-                                                for name in fsm_states}))
+
+            domains = set()
+            for stmts in fsm_states.values():
+                domains |= set(stmts)
+
+            for domain in domains:
+                domain_states = OrderedDict()
+                for state, stmts in fsm_states.items():
+                    domain_states[state] = stmts.get(domain, [])
+
+                self._statements.setdefault(domain, []).append(Switch(fsm_signal,
+                    OrderedDict((fsm_encoding[name], stmts) for name, stmts in domain_states.items()),
+                    src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
+                                                    for name in fsm_states}))
 
     def _add_statement(self, assigns, domain, depth):
         def domain_name(domain):
@@ -523,7 +547,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                         "already driven from d.{}"
                         .format(signal, domain_name(domain), domain_name(cd_curr)))
 
-            self._statements.append(stmt)
+            self._statements.setdefault(domain, []).append(stmt)
 
     def _add_submodule(self, submodule, name=None):
         if not hasattr(submodule, "elaborate"):
@@ -559,7 +583,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
         for submodule in self._anon_submodules:
             fragment.add_subfragment(Fragment.get(submodule, platform), None)
-        fragment.add_statements(self._statements)
+        for domain, statements in self._statements.items():
+            fragment.add_statements(domain, statements)
         for signal, domain in self._driving.items():
             fragment.add_driver(signal, domain)
         fragment.add_domains(self._domains.values())

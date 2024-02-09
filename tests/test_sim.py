@@ -27,7 +27,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
         stmt = stmt(osig, *isigs)
         frag = Fragment()
-        frag.add_statements(stmt)
+        frag.add_statements(None, stmt)
         for signal in flatten(s._lhs_signals() for s in Statement.cast(stmt)):
             frag.add_driver(signal)
 
@@ -1045,9 +1045,10 @@ class SimulatorRegressionTestCase(FHDLTestCase):
 
     def test_bug_595(self):
         dut = Module()
+        dummy = Signal()
         with dut.FSM(name="name with space"):
             with dut.State(0):
-                pass
+                dut.d.comb += dummy.eq(1)
         sim = Simulator(dut)
         with self.assertRaisesRegex(NameError,
                 r"^Signal 'bench\.top\.name with space_state' contains a whitespace character$"):

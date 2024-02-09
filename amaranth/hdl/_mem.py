@@ -124,7 +124,7 @@ class Memory(Elaboratable):
             port._MustUse__used = True
             if port.domain == "comb":
                 # Asynchronous port
-                f.add_statements(port.data.eq(self._array[port.addr]))
+                f.add_statements(None, port.data.eq(self._array[port.addr]))
                 f.add_driver(port.data)
             else:
                 # Synchronous port
@@ -143,6 +143,7 @@ class Memory(Elaboratable):
                             cond = write_port.en & (port.addr == write_port.addr)
                             data = Mux(cond, write_port.data, data)
                 f.add_statements(
+                    port.domain,
                     Switch(port.en, {
                         1: port.data.eq(data)
                     })
@@ -155,10 +156,10 @@ class Memory(Elaboratable):
                     offset = index * port.granularity
                     bits   = slice(offset, offset + port.granularity)
                     write_data = self._array[port.addr][bits].eq(port.data[bits])
-                    f.add_statements(Switch(en_bit, { 1: write_data }))
+                    f.add_statements(port.domain, Switch(en_bit, { 1: write_data }))
             else:
                 write_data = self._array[port.addr].eq(port.data)
-                f.add_statements(Switch(port.en, { 1: write_data }))
+                f.add_statements(port.domain, Switch(port.en, { 1: write_data }))
             for signal in self._array:
                 f.add_driver(signal, port.domain)
         return f

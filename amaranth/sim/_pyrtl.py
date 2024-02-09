@@ -5,7 +5,7 @@ import sys
 
 from ..hdl import *
 from ..hdl._ast import SignalSet
-from ..hdl._xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
+from ..hdl._xfrm import ValueVisitor, StatementVisitor
 from ._base import BaseProcess
 
 
@@ -409,9 +409,9 @@ class _FragmentCompiler:
     def __call__(self, fragment):
         processes = set()
 
-        for domain_name, domain_signals in fragment.drivers.items():
-            domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
+        for domain_name, domain_stmts in fragment.statements.items():
             domain_process = PyRTLProcess(is_comb=domain_name is None)
+            domain_signals = domain_stmts._lhs_signals()
 
             emitter = _PythonEmitter()
             emitter.append(f"def run():")

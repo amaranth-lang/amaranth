@@ -667,6 +667,7 @@ class _StatementCompiler(_xfrm.StatementVisitor):
         self.rhs_compiler = rhs_compiler
         self.lhs_compiler = lhs_compiler
 
+        self._domain      = None
         self._case        = None
         self._test_cache  = {}
         self._has_rhs     = False
@@ -865,8 +866,9 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
 
         # Register all signals driven in the current fragment. This must be done first, as it
         # affects further codegen; e.g. whether \sig$next signals will be generated and used.
-        for domain, signal in fragment.iter_drivers():
-            compiler_state.add_driven(signal, sync=domain is not None)
+        for domain, statements in fragment.statements.items():
+            for signal in statements._lhs_signals():
+                compiler_state.add_driven(signal, sync=domain is not None)
 
         # Transform all signals used as ports in the current fragment eagerly and outside of
         # any hierarchy, to make sure they get sensible (non-prefixed) names.
@@ -925,32 +927,32 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # Therefore, we translate the fragment as many times as there are independent groups
         # of signals (a group is a transitive closure of signals that appear together on LHS),
         # splitting them into many RTLIL (and thus Verilog) processes.
-        lhs_grouper = _xfrm.LHSGroupAnalyzer()
-        lhs_grouper.on_statements(fragment.statements)
+        for domain, statements in fragment.statements.items():
+            lhs_grouper = _xfrm.LHSGroupAnalyzer()
+            lhs_grouper.on_statements(statements)
 
-        for group, group_signals in lhs_grouper.groups().items():
-            lhs_group_filter = _xfrm.LHSGroupFilter(group_signals)
-            group_stmts = lhs_group_filter(fragment.statements)
+            for group, group_signals in lhs_grouper.groups().items():
+                lhs_group_filter = _xfrm.LHSGroupFilter(group_signals)
+                group_stmts = lhs_group_filter(statements)
 
-            with module.process(name=f"$group_{group}") as process:
-                with process.case() as case:
-                    # For every signal in comb domain, assign \sig$next to the reset value.
-                    # For every signal in sync domains, assign \sig$next to the current
-                    # value (\sig).
-                    for domain, signal in fragment.iter_drivers():
-                        if signal not in group_signals:
-                            continue
-                        if domain is None:
-                            prev_value = _ast.Const(signal.reset, signal.width)
-                        else:
-                            prev_value = signal
-                        case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
+                with module.process(name=f"$group_{group}") as process:
+                    with process.case() as case:
+                        # For every signal in comb domain, assign \sig$next to the reset value.
+                        # For every signal in sync domains, assign \sig$next to the current
+                        # value (\sig).
+                        for signal in group_signals:
+                            if domain is None:
+                                prev_value = _ast.Const(signal.reset, signal.width)
+                            else:
+                                prev_value = signal
+                            case.assign(lhs_compiler(signal), rhs_compiler(prev_value))
 
-                    # Convert statements into decision trees.
-                    stmt_compiler._case = case
-                    stmt_compiler._has_rhs = False
-                    stmt_compiler._wrap_assign = False
-                    stmt_compiler(group_stmts)
+                        # Convert statements into decision trees.
+                        stmt_compiler._domain = domain
+                        stmt_compiler._case = case
+                        stmt_compiler._has_rhs = False
+                        stmt_compiler._wrap_assign = False
+                        stmt_compiler(group_stmts)
 
         # For every driven signal in the sync domain, create a flop of appropriate type. Which type
         # is appropriate depends on the domain: for domains with sync reset, it is a $dff, for
@@ -998,8 +1000,8 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # to drive it to reset value arbitrarily) or to replace them with their reset value (which
         # removes valuable source location information).
         driven = _ast.SignalSet()
-        for domain, signals in fragment.iter_drivers():
-            driven.update(flatten(signal._lhs_signals() for signal in signals))
+        for domain, statements in fragment.statements.items():
+            driven.update(statements._lhs_signals())
         driven.update(fragment.iter_ports(dir="i"))
         driven.update(fragment.iter_ports(dir="io"))
         for subfragment, sub_name in fragment.subfragments:
