@@ -191,6 +191,12 @@ class ShapeCastable:
         The source code of the :mod:`amaranth.lib.data` module can be used as a reference for
         implementing a fully featured shape-castable object.
     """
+
+    def __init__(self, *args, **kwargs):
+        if type(self) is ShapeCastable:
+            raise TypeError("Can't instantiate abstract class ShapeCastable")
+        super().__init__(*args, **kwargs)
+
     def __init_subclass__(cls, **kwargs):
         if cls.as_shape is ShapeCastable.as_shape:
             raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
@@ -1616,6 +1622,12 @@ class ValueCastable:
     from :class:`ValueCastable` is mutable, it is up to the user to ensure that it is not mutated
     in a way that changes its representation after the first call to :meth:`as_value`.
     """
+
+    def __init__(self, *args, **kwargs):
+        if type(self) is ValueCastable:
+            raise TypeError("Can't instantiate abstract class ValueCastable")
+        super().__init__(*args, **kwargs)
+
     def __init_subclass__(cls, **kwargs):
         if not hasattr(cls, "as_value"):
             raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
