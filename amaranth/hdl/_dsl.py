@@ -48,11 +48,7 @@ class _ModuleBuilderDomains(_ModuleBuilderProxy):
                           "did you mean <module>.{} instead?"
                           .format(name, name, name),
                           SyntaxWarning, stacklevel=2)
-        if name == "comb":
-            domain = None
-        else:
-            domain = name
-        return _ModuleBuilderDomain(self._builder, self._depth, domain)
+        return _ModuleBuilderDomain(self._builder, self._depth, name)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -520,20 +516,13 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                                                     for name in fsm_states}))
 
     def _add_statement(self, assigns, domain, depth):
-        def domain_name(domain):
-            if domain is None:
-                return "comb"
-            else:
-                return domain
-
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
             if not isinstance(stmt, (Assign, Property)):
                 raise SyntaxError(
-                    "Only assignments and property checks may be appended to d.{}"
-                    .format(domain_name(domain)))
+                    f"Only assignments and property checks may be appended to d.{domain}")
 
             stmt._MustUse__used = True
 
@@ -543,9 +532,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 elif self._driving[signal] != domain:
                     cd_curr = self._driving[signal]
                     raise SyntaxError(
-                        "Driver-driver conflict: trying to drive {!r} from d.{}, but it is "
-                        "already driven from d.{}"
-                        .format(signal, domain_name(domain), domain_name(cd_curr)))
+                        f"Driver-driver conflict: trying to drive {signal!r} from d.{domain}, but it is "
+                        f"already driven from d.{cd_curr}")
 
             self._statements.setdefault(domain, []).append(stmt)
 

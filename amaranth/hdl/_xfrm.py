@@ -333,7 +333,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         self._local_domains = set()
 
     def _add_used_domain(self, domain_name):
-        if domain_name is None:
+        if domain_name == "comb":
             return
         if domain_name in self._local_domains:
             return
@@ -517,7 +517,7 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
     def _insert_resets(self, fragment):
         for domain_name, signals in fragment.drivers.items():
-            if domain_name is None:
+            if domain_name == "comb":
                 continue
             domain = fragment.domains[domain_name]
             if domain.rst is None:
@@ -629,12 +629,14 @@ class _ControlInserter(FragmentTransformer):
         self.src_loc = None
         if isinstance(controls, Value):
             controls = {"sync": controls}
+        if "comb" in controls:
+            raise ValueError("Cannot add controls on the 'comb' domain")
         self.controls = OrderedDict(controls)
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
         for domain, signals in fragment.drivers.items():
-            if domain is None or domain not in self.controls:
+            if domain == "comb" or domain not in self.controls:
                 continue
             self._insert_control(new_fragment, domain, signals)
         return new_fragment

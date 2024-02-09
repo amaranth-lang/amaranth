@@ -34,16 +34,14 @@ class MemorySimWrite:
 class MemoryInstance(Fragment):
     class _ReadPort:
         def __init__(self, *, domain, addr, data, en, transparency):
-            assert domain is None or isinstance(domain, str)
-            if domain == "comb":
-                domain = None
+            assert isinstance(domain, str)
             self._domain = domain
             self._addr = Value.cast(addr)
             self._data = Value.cast(data)
             self._en = Value.cast(en)
             self._transparency = tuple(transparency)
             assert len(self._en) == 1
-            if domain is None:
+            if domain == "comb":
                 assert isinstance(self._en, Const)
                 assert self._en.width == 1
                 assert self._en.value == 1

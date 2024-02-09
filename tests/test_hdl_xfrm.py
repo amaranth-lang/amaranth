@@ -26,7 +26,7 @@ class DomainRenamerTestCase(FHDLTestCase):
     def test_rename_signals(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.s1.eq(ClockSignal()),
             ResetSignal().eq(self.s2),
             self.s4.eq(ClockSignal("other")),
@@ -36,12 +36,12 @@ class DomainRenamerTestCase(FHDLTestCase):
             "sync",
             self.s3.eq(0),
         )
-        f.add_driver(self.s1, None)
-        f.add_driver(self.s2, None)
+        f.add_driver(self.s1, "comb")
+        f.add_driver(self.s2, "comb")
         f.add_driver(self.s3, "sync")
 
         f = DomainRenamer("pix")(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s1) (clk pix))
             (eq (rst pix) (sig s2))
@@ -56,20 +56,20 @@ class DomainRenamerTestCase(FHDLTestCase):
         """)
         self.assertFalse("sync" in f.statements)
         self.assertEqual(f.drivers, {
-            None: SignalSet((self.s1, self.s2)),
+            "comb": SignalSet((self.s1, self.s2)),
             "pix": SignalSet((self.s3,)),
         })
 
     def test_rename_multi(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.s1.eq(ClockSignal()),
             self.s2.eq(ResetSignal("other")),
         )
 
         f = DomainRenamer({"sync": "pix", "other": "pix2"})(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s1) (clk pix))
             (eq (sig s2) (rst pix2))
@@ -96,13 +96,13 @@ class DomainRenamerTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(cd_pix)
         f.add_statements(
-            None,
+            "comb",
             self.s1.eq(ResetSignal(allow_reset_less=True)),
         )
 
         f = DomainRenamer("pix")(f)
         f = DomainLowerer()(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s1) (const 1'd0))
         )
@@ -162,12 +162,12 @@ class DomainLowererTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(sync)
         f.add_statements(
-            None,
+            "comb",
             self.s.eq(ClockSignal("sync"))
         )
 
         f = DomainLowerer()(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s) (sig clk))
         )
@@ -178,12 +178,12 @@ class DomainLowererTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(sync)
         f.add_statements(
-            None,
+            "comb",
             self.s.eq(ResetSignal("sync"))
         )
 
         f = DomainLowerer()(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s) (sig rst))
         )
@@ -194,12 +194,12 @@ class DomainLowererTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(sync)
         f.add_statements(
-            None,
+            "comb",
             self.s.eq(ResetSignal("sync", allow_reset_less=True))
         )
 
         f = DomainLowerer()(f)
-        self.assertRepr(f.statements[None], """
+        self.assertRepr(f.statements["comb"], """
         (
             (eq (sig s) (const 1'd0))
         )
@@ -210,19 +210,19 @@ class DomainLowererTestCase(FHDLTestCase):
         pix = ClockDomain()
         f = Fragment()
         f.add_domains(sync, pix)
-        f.add_driver(ClockSignal("pix"), None)
+        f.add_driver(ClockSignal("pix"), "comb")
         f.add_driver(ResetSignal("pix"), "sync")
 
         f = DomainLowerer()(f)
         self.assertEqual(f.drivers, {
-            None: SignalSet((pix.clk,)),
+            "comb": SignalSet((pix.clk,)),
             "sync": SignalSet((pix.rst,))
         })
 
     def test_lower_wrong_domain(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.s.eq(ClockSignal("xxx"))
         )
 
@@ -235,7 +235,7 @@ class DomainLowererTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(sync)
         f.add_statements(
-            None,
+            "comb",
             self.s.eq(ResetSignal("sync"))
         )
 

@@ -889,7 +889,7 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, src=src, snk=snk)
-        self.assertEqual([repr(stmt) for stmt in m._statements[None]], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig snk__addr) (sig src__addr))',
             '(eq (sig snk__cycle) (sig src__cycle))',
             '(eq (sig src__r_data) (sig snk__r_data))',
@@ -912,7 +912,7 @@ class ConnectTestCase(unittest.TestCase):
                      a=NS(signature=Signature({"f": Out(1)}), f=Signal(name='p__a'))),
                 q=NS(signature=Signature({"a": In(Signature({"f": Out(1)}))}),
                      a=NS(signature=Signature({"f": Out(1)}).flip(), f=Signal(name='q__a'))))
-        self.assertEqual([repr(stmt) for stmt in m._statements[None]], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a) (sig p__a))'
         ])
 
@@ -931,7 +931,7 @@ class ConnectTestCase(unittest.TestCase):
                           g=Signal(name="q__b__g"),
                           f=Signal(name="q__b__f")),
                      a=Signal(name="q__a")))
-        self.assertEqual([repr(stmt) for stmt in m._statements[None]], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a) (sig p__a))',
             '(eq (sig q__b__f) (sig p__b__f))',
             '(eq (sig q__b__g) (sig p__b__g))',
@@ -942,7 +942,7 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, p=sig.create(path=('p',)), q=sig.flip().create(path=('q',)))
-        self.assertEqual([repr(stmt) for stmt in m._statements[None]], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a__0) (sig p__a__0))',
             '(eq (sig q__a__1) (sig p__a__1))'
         ])
@@ -952,7 +952,7 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, p=sig.create(path=('p',)), q=sig.flip().create(path=('q',)))
-        self.assertEqual([repr(stmt) for stmt in m._statements[None]], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a__0__0) (sig p__a__0__0))',
         ])
 

@@ -100,7 +100,7 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_self_contained(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1),
             self.s1.eq(self.c1)
         )
@@ -111,7 +111,7 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_infer_input(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1)
         )
 
@@ -123,7 +123,7 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_request_output(self):
         f = Fragment()
         f.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1)
         )
 
@@ -136,12 +136,12 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_input_in_subfragment(self):
         f1 = Fragment()
         f1.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1)
         )
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.s1.eq(0)
         )
         f1.add_subfragment(f2)
@@ -155,7 +155,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f1 = Fragment()
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1)
         )
         f1.add_subfragment(f2)
@@ -170,12 +170,12 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_output_from_subfragment(self):
         f1 = Fragment()
         f1.add_statements(
-            None,
+            "comb",
             self.c1.eq(0)
         )
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.c2.eq(1)
         )
         f1.add_subfragment(f2)
@@ -191,18 +191,18 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_output_from_subfragment_2(self):
         f1 = Fragment()
         f1.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.s1)
         )
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.c2.eq(self.s1)
         )
         f1.add_subfragment(f2)
         f3 = Fragment()
         f3.add_statements(
-            None,
+            "comb",
             self.s1.eq(0)
         )
         f2.add_subfragment(f3)
@@ -216,13 +216,13 @@ class FragmentPortsTestCase(FHDLTestCase):
         f1 = Fragment()
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.c2)
         )
         f1.add_subfragment(f2)
         f3 = Fragment()
         f3.add_statements(
-            None,
+            "comb",
             self.c2.eq(0)
         )
         f3.add_driver(self.c2)
@@ -235,14 +235,14 @@ class FragmentPortsTestCase(FHDLTestCase):
         f1 = Fragment()
         f2 = Fragment()
         f2.add_statements(
-            None,
+            "comb",
             self.c2.eq(0)
         )
         f2.add_driver(self.c2)
         f1.add_subfragment(f2)
         f3 = Fragment()
         f3.add_statements(
-            None,
+            "comb",
             self.c1.eq(self.c2)
         )
         f1.add_subfragment(f3)
@@ -440,7 +440,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         fa.add_domains(cda)
         fb = Fragment()
         fb.add_domains(cdb)
-        fb.add_driver(ResetSignal("sync"), None)
+        fb.add_driver(ResetSignal("sync"), "comb")
         f = Fragment()
         f.add_subfragment(fa, "a")
         f.add_subfragment(fb, "b")
@@ -448,7 +448,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f._propagate_domains_up()
         fb_new, _ = f.subfragments[1]
         self.assertEqual(fb_new.drivers, OrderedDict({
-            None: SignalSet((ResetSignal("b_sync"),))
+            "comb": SignalSet((ResetSignal("b_sync"),))
         }))
 
     def test_domain_conflict_rename_drivers_before_creating_missing(self):
@@ -618,7 +618,7 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(self.f1.drivers, {
-            None:   SignalSet((self.s1,)),
+            "comb": SignalSet((self.s1,)),
             "sync": SignalSet((self.c1, self.c2)),
         })
 
@@ -646,12 +646,12 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
 
         self.f2 = Fragment()
         self.f2.add_driver(self.s1)
-        self.f2.add_statements(None, self.c1.eq(0))
+        self.f2.add_statements("comb", self.c1.eq(0))
         self.f1.add_subfragment(self.f2)
 
         self.f3 = Fragment()
         self.f3.add_driver(self.s1)
-        self.f3.add_statements(None, self.c2.eq(1))
+        self.f3.add_statements("comb", self.c2.eq(1))
         self.f1.add_subfragment(self.f3)
 
     def test_conflict_sub_sub(self):
@@ -659,7 +659,7 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
 
         self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [])
-        self.assertRepr(self.f1.statements[None], """
+        self.assertRepr(self.f1.statements["comb"], """
         (
             (eq (sig c1) (const 1'd0))
             (eq (sig c2) (const 1'd1))
@@ -675,12 +675,12 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         self.f1.add_driver(self.s1)
 
         self.f2 = Fragment()
-        self.f2.add_statements(None, self.c1.eq(0))
+        self.f2.add_statements("comb", self.c1.eq(0))
         self.f1.add_subfragment(self.f2)
 
         self.f3 = Fragment()
         self.f3.add_driver(self.s1)
-        self.f3.add_statements(None, self.c2.eq(1))
+        self.f3.add_statements("comb", self.c2.eq(1))
         self.f2.add_subfragment(self.f3)
 
     def test_conflict_self_subsub(self):
@@ -688,7 +688,7 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
 
         self.f1._resolve_hierarchy_conflicts(mode="silent")
         self.assertEqual(self.f1.subfragments, [])
-        self.assertRepr(self.f1.statements[None], """
+        self.assertRepr(self.f1.statements["comb"], """
         (
             (eq (sig c1) (const 1'd0))
             (eq (sig c2) (const 1'd1))
@@ -865,8 +865,8 @@ class InstanceTestCase(FHDLTestCase):
         f.add_domains(cd_sync_norst := ClockDomain(reset_less=True))
         f.add_ports((i, rst), dir="i")
         f.add_ports((o1, o2, o3), dir="o")
-        f.add_statements(None, [o1.eq(0)])
-        f.add_driver(o1, domain=None)
+        f.add_statements("comb", [o1.eq(0)])
+        f.add_driver(o1, domain="comb")
         f.add_statements("sync", [o2.eq(i1)])
         f.add_driver(o2, domain="sync")
         f.add_statements("sync_norst", [o3.eq(i1)])

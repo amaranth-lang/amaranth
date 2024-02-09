@@ -794,7 +794,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         rd_clk_polarity = 0
         rd_transparency_mask = 0
         for index, port in enumerate(fragment._read_ports):
-            if port._domain is not None:
+            if port._domain != "comb":
                 cd = fragment.domains[port._domain]
                 rd_clk.append(cd.clk)
                 if cd.clk_edge == "pos":
@@ -870,7 +870,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
         # affects further codegen; e.g. whether \sig$next signals will be generated and used.
         for domain, statements in fragment.statements.items():
             for signal in statements._lhs_signals():
-                compiler_state.add_driven(signal, sync=domain is not None)
+                compiler_state.add_driven(signal, sync=domain != "comb")
 
         # Transform all signals used as ports in the current fragment eagerly and outside of
         # any hierarchy, to make sure they get sensible (non-prefixed) names.
@@ -943,7 +943,7 @@ def _convert_fragment(builder, fragment, name_map, hierarchy):
                         # For every signal in sync domains, assign \sig$next to the current
                         # value (\sig).
                         for signal in group_signals:
-                            if domain is None:
+                            if domain == "comb":
                                 prev_value = _ast.Const(signal.reset, signal.width)
                             else:
                                 prev_value = signal
