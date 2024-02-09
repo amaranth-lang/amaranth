@@ -191,6 +191,11 @@ class ShapeCastableTestCase(FHDLTestCase):
         sc = MockShapeCastable(MockShapeCastable(unsigned(1)))
         self.assertEqual(Shape.cast(sc), unsigned(1))
 
+    def test_abstract(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Can't instantiate abstract class ShapeCastable$"):
+            ShapeCastable()
+
 
 class ShapeLikeTestCase(FHDLTestCase):
     def test_construct(self):
@@ -1399,6 +1404,11 @@ class ValueCastableTestCase(FHDLTestCase):
     def test_recurse(self):
         vc = MockValueCastable(MockValueCastable(Signal()))
         self.assertIsInstance(Value.cast(vc), Signal)
+
+    def test_abstract(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Can't instantiate abstract class ValueCastable$"):
+            ValueCastable()
 
 
 class ValueLikeTestCase(FHDLTestCase):
