@@ -421,7 +421,7 @@ class _FragmentCompiler:
 
         for domain_name in domains:
             domain_stmts = fragment.statements.get(domain_name, _StatementList())
-            domain_process = PyRTLProcess(is_comb=domain_name is None)
+            domain_process = PyRTLProcess(is_comb=domain_name == "comb")
             domain_signals = domain_stmts._lhs_signals()
 
             if isinstance(fragment, MemoryInstance):
@@ -433,7 +433,7 @@ class _FragmentCompiler:
             emitter.append(f"def run():")
             emitter._level += 1
 
-            if domain_name is None:
+            if domain_name == "comb":
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)
                     emitter.append(f"next_{signal_index} = {signal.reset}")
@@ -448,7 +448,7 @@ class _FragmentCompiler:
                     lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
 
                     for port in fragment._read_ports:
-                        if port._domain is not None:
+                        if port._domain != "comb":
                             continue
 
                         addr = rhs(port._addr)

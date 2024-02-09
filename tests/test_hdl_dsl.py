@@ -33,8 +33,8 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertEqual(m._driving[self.c1], None)
-        self.assertRepr(m._statements[None], """(
+        self.assertEqual(m._driving[self.c1], "comb")
+        self.assertRepr(m._statements["comb"], """(
             (eq (sig c1) (const 1'd1))
         )""")
 
@@ -118,7 +118,7 @@ class DSLTestCase(FHDLTestCase):
     def test_clock_signal(self):
         m = Module()
         m.d.comb += ClockSignal("pix").eq(ClockSignal())
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (eq (clk pix) (clk sync))
         )
@@ -127,7 +127,7 @@ class DSLTestCase(FHDLTestCase):
     def test_reset_signal(self):
         m = Module()
         m.d.comb += ResetSignal("pix").eq(1)
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (eq (rst pix) (const 1'd1))
         )
@@ -138,7 +138,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.s1):
             m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -153,7 +153,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Elif(self.s2):
             m.d.comb += self.c2.eq(0)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
@@ -169,7 +169,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Elif(self.s2):
             m.d.sync += self.c2.eq(0)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
@@ -195,7 +195,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Else():
             m.d.comb += self.c3.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1) (sig s2))
                 (case -1 (eq (sig c1) (const 1'd1)))
@@ -221,7 +221,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.s2):
             m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -239,7 +239,7 @@ class DSLTestCase(FHDLTestCase):
             with m.If(self.s2):
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1))
                 (case 1 (eq (sig c1) (const 1'd1))
@@ -260,7 +260,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Else():
             m.d.comb += self.c3.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (sig s1))
                 (case 1
@@ -331,7 +331,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.w1):
             m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (b (sig w1)))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -389,7 +389,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case("1 0--"):
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -407,7 +407,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case():
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -423,7 +423,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Default():
                 m.d.comb += self.c2.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
@@ -438,7 +438,7 @@ class DSLTestCase(FHDLTestCase):
             with m.Case(1):
                 m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (const 1'd1)
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -455,7 +455,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Switch(se):
             with m.Case(Color.RED):
                 m.d.comb += self.c1.eq(1)
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig se)
                 (case 01 (eq (sig c1) (const 1'd1)))
@@ -472,7 +472,7 @@ class DSLTestCase(FHDLTestCase):
         with m.Switch(se):
             with m.Case(Cat(Color.RED, Color.BLUE)):
                 m.d.comb += self.c1.eq(1)
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig se)
                 (case 10 (eq (sig c1) (const 1'd1)))
@@ -579,7 +579,7 @@ class DSLTestCase(FHDLTestCase):
                 with m.If(c):
                     m.next = "FIRST"
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -606,7 +606,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual({repr(k): v for k, v in m._driving.items()}, {
-            "(sig a)": None,
+            "(sig a)": "comb",
             "(sig fsm_state)": "sync",
             "(sig b)": "sync",
         })
@@ -633,7 +633,7 @@ class DSLTestCase(FHDLTestCase):
             with m.State("SECOND"):
                 m.next = "FIRST"
         m._flush()
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -670,7 +670,7 @@ class DSLTestCase(FHDLTestCase):
         m._flush()
         self.assertEqual(m._generated["fsm"].state.reset, 1)
         self.maxDiff = 10000
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (eq (sig b) (== (sig fsm_state) (const 1'd0)))
             (eq (sig a) (== (sig fsm_state) (const 1'd1)))
@@ -753,7 +753,7 @@ class DSLTestCase(FHDLTestCase):
         with m.If(self.w1):
             m.d.comb += self.c1.eq(1)
         m.d.comb += self.c2.eq(1)
-        self.assertRepr(m._statements[None], """
+        self.assertRepr(m._statements["comb"], """
         (
             (switch (cat (b (sig w1)))
                 (case 1 (eq (sig c1) (const 1'd1)))
@@ -870,18 +870,18 @@ class DSLTestCase(FHDLTestCase):
         m1.submodules.foo = m2
 
         f1 = m1.elaborate(platform=None)
-        self.assertRepr(f1.statements[None], """
+        self.assertRepr(f1.statements["comb"], """
         (
             (eq (sig c1) (sig s1))
         )
         """)
         self.assertEqual(f1.drivers, {
-            None: SignalSet((self.c1,))
+            "comb": SignalSet((self.c1,))
         })
         self.assertEqual(len(f1.subfragments), 1)
         (f2, f2_name), = f1.subfragments
         self.assertEqual(f2_name, "foo")
-        self.assertRepr(f2.statements[None], """
+        self.assertRepr(f2.statements["comb"], """
         (
             (eq (sig c2) (sig s2))
         )
@@ -892,7 +892,7 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(f2.drivers, {
-            None: SignalSet((self.c2,)),
+            "comb": SignalSet((self.c2,)),
             "sync": SignalSet((self.c3,))
         })
         self.assertEqual(len(f2.subfragments), 0)

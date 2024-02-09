@@ -86,7 +86,8 @@ class Fragment:
                 if port_dir == dir:
                     yield port
 
-    def add_driver(self, signal, domain=None):
+    def add_driver(self, signal, domain="comb"):
+        assert isinstance(domain, str)
         if domain not in self.drivers:
             self.drivers[domain] = SignalSet()
         self.drivers[domain].add(signal)
@@ -97,12 +98,12 @@ class Fragment:
                 yield domain, signal
 
     def iter_comb(self):
-        if None in self.drivers:
-            yield from self.drivers[None]
+        if "comb" in self.drivers:
+            yield from self.drivers["comb"]
 
     def iter_sync(self):
         for domain, signals in self.drivers.items():
-            if domain is None:
+            if domain == "comb":
                 continue
             for signal in signals:
                 yield domain, signal
@@ -111,7 +112,7 @@ class Fragment:
         signals = SignalSet()
         signals |= self.ports.keys()
         for domain, domain_signals in self.drivers.items():
-            if domain is not None:
+            if domain != "comb":
                 cd = self.domains[domain]
                 signals.add(cd.clk)
                 if cd.rst is not None:
@@ -129,7 +130,7 @@ class Fragment:
         yield from self.domains
 
     def add_statements(self, domain, *stmts):
-        assert domain is None or isinstance(domain, str)
+        assert isinstance(domain, str)
         for stmt in Statement.cast(stmts):
             stmt._MustUse__used = True
             self.statements.setdefault(domain, _StatementList()).append(stmt)
@@ -338,7 +339,7 @@ class Fragment:
 
         new_domains = []
         for domain_name in collector.used_domains - collector.defined_domains:
-            if domain_name is None:
+            if domain_name == "comb":
                 continue
             value = missing_domain(domain_name)
             if value is None:
@@ -589,7 +590,7 @@ class Fragment:
             add_signal_name(port)
 
         for domain_name, domain_signals in self.drivers.items():
-            if domain_name is not None:
+            if domain_name != "comb":
                 domain = self.domains[domain_name]
                 add_signal_name(domain.clk)
                 if domain.rst is not None:
