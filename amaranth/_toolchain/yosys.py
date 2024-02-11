@@ -177,6 +177,47 @@ class _SystemYosys(YosysBinary):
         return cls._process_result(popen.returncode, stdout, stderr, ignore_warnings, src_loc_at)
 
 
+class _JavaScriptYosys(YosysBinary):
+    """
+    This toolchain proxy is compatible with Pyodide_. The JavaScript environment must include
+    the following function:
+
+    .. code::
+
+        runAmaranthYosys(args: string[], stdin: string): (exit_code: int, stdout: string, stderr: string);
+
+    .. _Pyodide: https://pyodide.org/
+    """
+
+    @classmethod
+    def available(cls):
+        try:
+            return hasattr(__import__("js"), "runAmaranthYosys")
+        except ImportError:
+            return False
+
+    @classmethod
+    def version(cls):
+        version = cls.run(["-V"])
+        match = re.match(r"^Yosys (\d+)\.(\d+)(?:\+(\d+))?", version)
+        if match:
+            return (int(match[1]), int(match[2]), int(match[3] or 0))
+        else:
+            return None
+
+    @classmethod
+    def data_dir(cls):
+        # Not yet clear how this could work in a design with Wasm components. Most likely,
+        # the component would have to export its filesystem wholesale, and this method would
+        # return some kind of non-filesystem path-like object.
+        raise NotImplementedError
+
+    @classmethod
+    def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):
+        exit_code, stdout, stderr = __import__("js").runAmaranthYosys(args, stdin)
+        return cls._process_result(exit_code, stdout, stderr, ignore_warnings, src_loc_at)
+
+
 def find_yosys(requirement):
     """Find an available Yosys executable of required version.
 
@@ -202,6 +243,8 @@ def find_yosys(requirement):
             proxies.append(_BuiltinYosys)
         elif clause == "system":
             proxies.append(_SystemYosys)
+        elif clause == "javascript":
+            proxies.append(_JavaScriptYosys)
         else:
             raise YosysError("The AMARANTH_USE_YOSYS environment variable contains "
                              "an unrecognized clause {!r}"
