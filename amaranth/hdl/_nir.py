@@ -199,7 +199,7 @@ class Netlist:
             self.signals[sig] = self.resolve_value(self.signals[sig])
 
     def __repr__(self):
-        result = []
+        result = ["("]
         for module_idx, module in enumerate(self.modules):
             name = " ".join(repr(name) for name in module.name)
             ports = " ".join(
@@ -209,6 +209,7 @@ class Netlist:
             result.append(f"(module {module_idx} {module.parent} ({name}) {ports})")
         for cell_idx, cell in enumerate(self.cells):
             result.append(f"(cell {cell_idx} {cell.module_idx} {cell!r})")
+        result.append(")")
         return "\n".join(result)
 
     def add_module(self, parent, name: str, *, src_loc=None, cell_src_loc=None):
@@ -251,21 +252,21 @@ class ModuleNetFlow(enum.Enum):
     #: The net is present in the module (used in the module or needs
     #: to be routed through it between its submodules), but is not
     #: present outside its subtree and thus is not a port of this module.
-    INTERNAL = "internal"
+    Internal = "internal"
 
     #: The net is present in the module, and is not driven from
     #: the module or any of its submodules.  It is thus an input
     #: port of this module.
-    INPUT    = "input"
+    Input    = "input"
 
     #: The net is present in the module, is driven from the module or
     #: one of its submodules, and is also used outside of its subtree.
     #: It is thus an output port of this module.
-    OUTPUT   = "output"
+    Output   = "output"
 
     #: The net is a special top-level inout net that is used within
     #: this module or its submodules.  It is an inout port of this module.
-    INOUT    = "inout"
+    Inout    = "inout"
 
 
 class Module:
@@ -1039,7 +1040,7 @@ class Instance(Cell):
             items.append(f"(attr {name!r} {val!r})")
         for name, val in self.ports_i.items():
             items.append(f"(input {name!r} {val})")
-        for name, (start, width) in self.ports_i.items():
+        for name, (start, width) in self.ports_o.items():
             items.append(f"(output {name!r} {start}:{start+width})")
         for name, val in self.ports_io.items():
             items.append(f"(inout {name!r} {val})")

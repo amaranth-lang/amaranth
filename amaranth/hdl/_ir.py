@@ -1,6 +1,7 @@
 from typing import Tuple
 from collections import defaultdict, OrderedDict
 from functools import reduce
+import enum
 import warnings
 
 from .._utils import flatten, memoize
@@ -8,7 +9,10 @@ from .. import tracer, _unused
 from . import _ast, _cd, _ir, _nir
 
 
-__all__ = ["UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance"]
+__all__ = [
+    "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance",
+    "PortDirection", "Design", "build_netlist",
+]
 
 
 class UnusedElaboratable(_unused.UnusedMustUse):
@@ -65,7 +69,6 @@ class Fragment:
             obj = new_obj
 
     def __init__(self, *, src_loc=None):
-        self.ports = _ast.SignalDict()
         self.drivers = OrderedDict()
         self.statements = {}
         self.domains = OrderedDict()
@@ -75,19 +78,6 @@ class Fragment:
         self.flatten = False
         self.src_loc = src_loc
         self.origins = None
-
-    def add_ports(self, *ports, dir):
-        assert dir in ("i", "o", "io")
-        for port in flatten(ports):
-            self.ports[port] = dir
-
-    def iter_ports(self, dir=None):
-        if dir is None:
-            yield from self.ports
-        else:
-            for port, port_dir in self.ports.items():
-                if port_dir == dir:
-                    yield port
 
     def add_driver(self, signal, domain="comb"):
         assert isinstance(domain, str)
@@ -110,18 +100,6 @@ class Fragment:
                 continue
             for signal in signals:
                 yield domain, signal
-
-    def iter_signals(self):
-        signals = _ast.SignalSet()
-        signals |= self.ports.keys()
-        for domain, domain_signals in self.drivers.items():
-            if domain != "comb":
-                cd = self.domains[domain]
-                signals.add(cd.clk)
-                if cd.rst is not None:
-                    signals.add(cd.rst)
-            signals |= domain_signals
-        return signals
 
     def add_domains(self, *domains):
         for domain in flatten(domains):
@@ -169,7 +147,6 @@ class Fragment:
         # Merge subfragment's everything except clock domains into this fragment.
         # Flattening is done after clock domain propagation, so we can assume the domains
         # are already the same in every involved fragment in the first place.
-        self.ports.update(subfragment.ports)
         for domain, signal in subfragment.iter_drivers():
             self.add_driver(signal, domain)
         for domain, statements in subfragment.statements.items():
@@ -372,277 +349,78 @@ class Fragment:
         self._propagate_domains_down()
         return new_domains
 
-    def _prepare_use_def_graph(self, parent, level, uses, defs, ios, top):
-        from ._mem import MemoryInstance
-
-        def add_uses(*sigs, self=self):
-            for sig in flatten(sigs):
-                if sig not in uses:
-                    uses[sig] = set()
-                uses[sig].add(self)
-
-        def add_defs(*sigs):
-            for sig in flatten(sigs):
-                if sig not in defs:
-                    defs[sig] = self
+    def _prepare_ports(self, ports):
+        # Normalize ports to a list.
+        new_ports = []
+        if isinstance(ports, dict):
+            for port_name, (signal, dir) in ports.items():
+                new_ports.append((port_name, signal, dir))
+        elif isinstance(ports, (list, tuple)):
+            for port in ports:
+                if isinstance(port, tuple):
+                    port_name, signal, dir = port
+                    new_ports.append((port_name, signal, dir))
                 else:
-                    assert defs[sig] is self
+                    new_ports.append((None, port, None))
+        else:
+            msg = f"`ports` must be a dict, a list or a tuple, not {ports!r}"
+            if isinstance(ports, _ast.Value):
+                msg += " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"
+            raise TypeError(msg)
 
-        def add_io(*sigs):
-            for sig in flatten(sigs):
-                if sig not in ios:
-                    ios[sig] = self
+        # Validate ports.
+        prenamed_ports = set()
+        for (port_name, signal, dir) in new_ports:
+            if isinstance(port_name, str):
+                if port_name in prenamed_ports:
+                    raise TypeError(f"Duplicate port name {port_name!r}")
                 else:
-                    assert ios[sig] is self
+                    prenamed_ports.add(port_name)
+            elif port_name is not None:
+                raise TypeError(f"Port name must be a string, not {port_name!r}")
+            if dir is not None and not isinstance(dir, PortDirection):
+                raise TypeError(
+                    f"Port direction must be a `PortDirection` instance or None, not {dir!r}")
+            if not isinstance(signal, (_ast.Signal, _ast.ClockSignal, _ast.ResetSignal)):
+                raise TypeError(f"Only signals may be added as ports, not {signal!r}")
 
-        # Collect all signals we're driving (on LHS of statements), and signals we're using
-        # (on RHS of statements, or in clock domains).
-        for stmts in self.statements.values():
-            for stmt in stmts:
-                add_uses(stmt._rhs_signals())
-                add_defs(stmt._lhs_signals())
+        return new_ports
 
-        for domain, _ in self.iter_sync():
-            cd = self.domains[domain]
-            add_uses(cd.clk)
-            if cd.rst is not None:
-                add_uses(cd.rst)
-
-        # Repeat for subfragments.
-        for subfrag, name, src_loc in self.subfragments:
-            if isinstance(subfrag, Instance):
-                for port_name, (value, dir) in subfrag.named_ports.items():
-                    if dir == "i":
-                        # Prioritize defs over uses.
-                        rhs_without_outputs = value._rhs_signals() - subfrag.iter_ports(dir="o")
-                        subfrag.add_ports(rhs_without_outputs, dir=dir)
-                        add_uses(value._rhs_signals())
-                    if dir == "o":
-                        subfrag.add_ports(value._lhs_signals(), dir=dir)
-                        add_defs(value._lhs_signals())
-                    if dir == "io":
-                        subfrag.add_ports(value._lhs_signals(), dir=dir)
-                        add_io(value._lhs_signals())
-            elif isinstance(subfrag, MemoryInstance):
-                for port in subfrag._read_ports:
-                    subfrag.add_ports(port._data._lhs_signals(), dir="o")
-                    add_defs(port._data._lhs_signals())
-                    for value in [port._addr, port._en]:
-                        subfrag.add_ports(value._rhs_signals(), dir="i")
-                        add_uses(value._rhs_signals())
-                for port in subfrag._write_ports:
-                    for value in [port._addr, port._en, port._data]:
-                        subfrag.add_ports(value._rhs_signals(), dir="i")
-                        add_uses(value._rhs_signals())
-                for domain, _ in subfrag.iter_sync():
-                    cd = subfrag.domains[domain]
-                    add_uses(cd.clk)
-                    if cd.rst is not None:
-                        add_uses(cd.rst)
-            else:
-                parent[subfrag] = self
-                level [subfrag] = level[self] + 1
-
-                subfrag._prepare_use_def_graph(parent, level, uses, defs, ios, top)
-
-    def _propagate_ports(self, ports, all_undef_as_ports):
-        # Take this fragment graph:
-        #
-        #    __ B (def: q, use: p r)
-        #   /
-        #  A (def: p, use: q r)
-        #   \
-        #    \_ C (def: r, use: p q)
-        #
-        # We need to consider three cases.
-        #   1. Signal p requires an input port in B;
-        #   2. Signal r requires an output port in C;
-        #   3. Signal r requires an output port in C and an input port in B.
-        #
-        # Adding these ports can be in general done in three steps for each signal:
-        #   1. Find the least common ancestor of all uses and defs.
-        #   2. Going upwards from the single def, add output ports.
-        #   3. Going upwards from all uses, add input ports.
-
-        parent = {self: None}
-        level  = {self: 0}
-        uses   = _ast.SignalDict()
-        defs   = _ast.SignalDict()
-        ios    = _ast.SignalDict()
-        self._prepare_use_def_graph(parent, level, uses, defs, ios, self)
-
-        ports = _ast.SignalSet(ports)
-        if all_undef_as_ports:
-            for sig in uses:
-                if sig in defs:
-                    continue
-                ports.add(sig)
-        for sig in ports:
-            if sig not in uses:
-                uses[sig] = set()
-            uses[sig].add(self)
-
-        @memoize
-        def lca_of(fragu, fragv):
-            # Normalize fragu to be deeper than fragv.
-            if level[fragu] < level[fragv]:
-                fragu, fragv = fragv, fragu
-            # Find ancestor of fragu on the same level as fragv.
-            for _ in range(level[fragu] - level[fragv]):
-                fragu = parent[fragu]
-            # If fragv was the ancestor of fragv, we're done.
-            if fragu == fragv:
-                return fragu
-            # Otherwise, they are at the same level but in different branches. Step both fragu
-            # and fragv until we find the common ancestor.
-            while parent[fragu] != parent[fragv]:
-                fragu = parent[fragu]
-                fragv = parent[fragv]
-            return parent[fragu]
-
-        for sig in uses:
-            if sig in defs:
-                lca  = reduce(lca_of, uses[sig], defs[sig])
-            else:
-                lca  = reduce(lca_of, uses[sig])
-
-            for frag in uses[sig]:
-                if sig in defs and frag is defs[sig]:
-                    continue
-                while frag != lca:
-                    frag.add_ports(sig, dir="i")
-                    frag = parent[frag]
-
-            if sig in defs:
-                frag = defs[sig]
-                while frag != lca:
-                    frag.add_ports(sig, dir="o")
-                    frag = parent[frag]
-
-        for sig in ios:
-            frag = ios[sig]
-            while frag is not None:
-                frag.add_ports(sig, dir="io")
-                frag = parent[frag]
-
-        for sig in ports:
-            if sig in ios:
-                continue
-            if sig in defs:
-                self.add_ports(sig, dir="o")
-            else:
-                self.add_ports(sig, dir="i")
-
-    def prepare(self, ports=None, missing_domain=lambda name: _cd.ClockDomain(name)):
+    def prepare(self, ports=(), *, hierarchy=("top",), legalize_assignments=False, missing_domain=lambda name: _cd.ClockDomain(name)):
         from ._xfrm import DomainLowerer
 
+        ports = self._prepare_ports(ports)
+
         new_domains = self._propagate_domains(missing_domain)
+        for domain in new_domains:
+            ports.append((None, domain.clk, PortDirection.Input))
+            if domain.rst is not None:
+                ports.append((None, domain.rst, PortDirection.Input))
+
+        def resolve_signal(signal):
+            if isinstance(signal, _ast.ClockSignal):
+                domain = self.domains[signal.domain]
+                return domain.clk
+            elif isinstance(signal, _ast.ResetSignal):
+                domain = self.domains[signal.domain]
+                if domain.rst is None:
+                    raise ValueError(f"Using ResetSignal for a reset-less domain {signal.domain}")
+                return domain.rst
+            else:
+                return signal
+
+        ports = [
+            (name, resolve_signal(signal), dir)
+            for name, signal, dir in ports
+        ]
+
         fragment = DomainLowerer()(self)
-        if ports is None:
-            fragment._propagate_ports(ports=(), all_undef_as_ports=True)
-        else:
-            if not isinstance(ports, tuple) and not isinstance(ports, list):
-                msg = "`ports` must be either a list or a tuple, not {!r}"\
-                        .format(ports)
-                if isinstance(ports, _ast.Value):
-                    msg += " (did you mean `ports=(<signal>,)`, rather than `ports=<signal>`?)"
-                raise TypeError(msg)
-            mapped_ports = []
-            # Lower late bound signals like ClockSignal() to ports.
-            port_lowerer = DomainLowerer(fragment.domains)
-            for port in ports:
-                if not isinstance(port, (_ast.Signal, _ast.ClockSignal, _ast.ResetSignal)):
-                    raise TypeError("Only signals may be added as ports, not {!r}"
-                                    .format(port))
-                mapped_ports.append(port_lowerer.on_value(port))
-            # Add ports for all newly created missing clock domains, since not doing so defeats
-            # the purpose of domain auto-creation. (It's possible to refer to these ports before
-            # the domain actually exists through late binding, but it's inconvenient.)
-            for cd in new_domains:
-                mapped_ports.append(cd.clk)
-                if cd.rst is not None:
-                    mapped_ports.append(cd.rst)
-            fragment._propagate_ports(ports=mapped_ports, all_undef_as_ports=False)
-        return fragment
+        if legalize_assignments:
+            from ._xfrm import AssignmentLegalizer
+            fragment = AssignmentLegalizer()(fragment)
 
-    def _assign_names_to_signals(self):
-        """Assign names to signals used in this fragment.
-
-        Returns
-        -------
-        SignalDict of Signal to str
-            A mapping from signals used in this fragment to their local names. Because names are
-            deduplicated using local information only, the same signal used in a different fragment
-            may get a different name.
-        """
-
-        signal_names   = _ast.SignalDict()
-        assigned_names = set()
-
-        def add_signal_name(signal):
-            if signal not in signal_names:
-                if signal.name not in assigned_names:
-                    name = signal.name
-                else:
-                    name = f"{signal.name}${len(assigned_names)}"
-                    assert name not in assigned_names
-                signal_names[signal] = name
-                assigned_names.add(name)
-
-        for port in self.ports.keys():
-            add_signal_name(port)
-
-        for domain_name, domain_signals in self.drivers.items():
-            if domain_name != "comb":
-                domain = self.domains[domain_name]
-                add_signal_name(domain.clk)
-                if domain.rst is not None:
-                    add_signal_name(domain.rst)
-
-        for statements in self.statements.values():
-            for statement in statements:
-                for signal in statement._lhs_signals() | statement._rhs_signals():
-                    if not isinstance(signal, (_ast.ClockSignal, _ast.ResetSignal)):
-                        add_signal_name(signal)
-
-        return signal_names
-
-    def _assign_names_to_fragments(self, hierarchy=("top",), *, _names=None):
-        """Assign names to this fragment and its subfragments.
-
-        Subfragments may not necessarily have a name. This method assigns every such subfragment
-        a name, ``U$<number>``, where ``<number>`` is based on its location in the hierarchy.
-
-        Subfragment names may collide with signal names safely in Amaranth, but this may confuse
-        backends. This method assigns every such subfragment a name, ``<name>$U$<number>``, where
-        ``name`` is its original name, and ``<number>`` is based on its location in the hierarchy.
-
-        Arguments
-        ---------
-        hierarchy : tuple of str
-            Name of this fragment.
-
-        Returns
-        -------
-        dict of Fragment to tuple of str
-            A mapping from this fragment and its subfragments to their full hierarchical names.
-        """
-
-        if _names is None:
-            _names = dict()
-        _names[self] = hierarchy
-
-        signal_names = set(self._assign_names_to_signals().values())
-        for subfragment_index, (subfragment, subfragment_name, subfragment_src_loc) in enumerate(self.subfragments):
-            if subfragment_name is None:
-                subfragment_name = f"U${subfragment_index}"
-            elif subfragment_name in signal_names:
-                subfragment_name = f"{subfragment_name}$U${subfragment_index}"
-            assert subfragment_name not in signal_names
-            subfragment._assign_names_to_fragments(hierarchy=(*hierarchy, subfragment_name),
-                                                   _names=_names)
-
-        return _names
+        # Create design and let it do the rest.
+        return Design(fragment, ports, hierarchy=hierarchy)
 
 
 class Instance(Fragment):
@@ -682,7 +460,116 @@ class Instance(Fragment):
                                 .format(kw, arg))
 
 
+class Design:
+    """Represents a design ready for simulation or netlist building.
+
+    Returned by ``Fragment.prepare``."""
+
+    def __init__(self, fragment, ports, *, hierarchy):
+        self.fragment = fragment
+        self.ports = ports
+        self.hierarchy = hierarchy
+        # dict of Fragment to SignalDict of Signal to name
+        self.signal_names = {}
+        self.fragment_names = {}
+        self._assign_names_to_signals(fragment, ports)
+        self._assign_names_to_fragments(fragment, hierarchy)
+        # Use just-assigned signal names to name all unnamed ports.
+        top_names = self.signal_names[fragment]
+        self.ports = [
+            (name or top_names[signal], signal, dir)
+            for (name, signal, dir) in self.ports
+        ]
+
+    def _assign_names_to_signals(self, fragment, ports=None):
+        """Assign names to signals used in a given fragment.
+
+        The mapping is set in ``self.signal_names``.  Because names are deduplicated using local
+        information only, the same signal used in a different fragment may get a different name.
+        """
+
+        signal_names   = _ast.SignalDict()
+        assigned_names = set()
+
+        def add_signal_name(signal):
+            if signal not in signal_names:
+                if signal.name not in assigned_names:
+                    name = signal.name
+                else:
+                    name = f"{signal.name}${len(assigned_names)}"
+                    assert name not in assigned_names
+                signal_names[signal] = name
+                assigned_names.add(name)
+
+        if ports is not None:
+            # First pass: reserve names for pre-named top-level ports. If equal to the signal name, let the signal share it.
+            for name, signal, _dir in ports:
+                if name is not None:
+                    assigned_names.add(name)
+                    if signal.name == name:
+                        signal_names[signal] = name
+
+            # Second pass: ensure non-pre-named top-level ports are named first.
+            for name, signal, _dir in ports:
+                if name is None:
+                    add_signal_name(signal)
+
+        for domain_name, domain_signals in fragment.drivers.items():
+            if domain_name != "comb":
+                domain = fragment.domains[domain_name]
+                add_signal_name(domain.clk)
+                if domain.rst is not None:
+                    add_signal_name(domain.rst)
+
+        for statements in fragment.statements.values():
+            for statement in statements:
+                for signal in statement._lhs_signals() | statement._rhs_signals():
+                    if not isinstance(signal, (_ast.ClockSignal, _ast.ResetSignal)):
+                        add_signal_name(signal)
+
+        self.signal_names[fragment] = signal_names
+        for subfragment, _name, _src_loc in fragment.subfragments:
+            self._assign_names_to_signals(subfragment)
+
+    def _assign_names_to_fragments(self, fragment, hierarchy):
+        """Assign names to this fragment and its subfragments.
+
+        Subfragments may not necessarily have a name. This method assigns every such subfragment
+        a name, ``U$<number>``, where ``<number>`` is based on its location in the hierarchy.
+
+        Subfragment names may collide with signal names safely in Amaranth, but this may confuse
+        backends. This method assigns every such subfragment a name, ``<name>$U$<number>``, where
+        ``name`` is its original name, and ``<number>`` is based on its location in the hierarchy.
+
+        Arguments
+        ---------
+        hierarchy : tuple of str
+            Name of this fragment.
+
+        Returns
+        -------
+        dict of Fragment to tuple of str
+            A mapping from this fragment and its subfragments to their full hierarchical names.
+        """
+        self.fragment_names[fragment] = hierarchy
+
+        signal_names = set(self.signal_names[fragment].values())
+        for subfragment_index, (subfragment, subfragment_name, subfragment_src_loc) in enumerate(fragment.subfragments):
+            if subfragment_name is None:
+                subfragment_name = f"U${subfragment_index}"
+            elif subfragment_name in signal_names:
+                subfragment_name = f"{subfragment_name}$U${subfragment_index}"
+            assert subfragment_name not in signal_names
+            self._assign_names_to_fragments(subfragment, hierarchy=(*hierarchy, subfragment_name))
+
+
 ############################################################################################### >:3
+
+
+class PortDirection(enum.Enum):
+    Input = "input"
+    Output = "output"
+    Inout = "inout"
 
 
 class NetlistDriver:
@@ -710,9 +597,9 @@ class NetlistDriver:
 
 
 class NetlistEmitter:
-    def __init__(self, netlist: _nir.Netlist, fragment_names: 'dict[_ir.Fragment, str]'):
+    def __init__(self, netlist: _nir.Netlist, design):
         self.netlist = netlist
-        self.fragment_names = fragment_names
+        self.design = design
         self.drivers = _ast.SignalDict()
         self.rhs_cache: dict[int, Tuple[_nir.Value, bool, _ast.Value]] = {}
 
@@ -1153,30 +1040,54 @@ class NetlistEmitter:
             self.connect(port_conn, _nir.Value(output_nets[start_bit:start_bit + len(port_conn)]),
                          src_loc=instance.src_loc)
 
-    def emit_top_ports(self, fragment: _ir.Fragment, signal_names: _ast.SignalDict):
+    def emit_top_ports(self, fragment: _ir.Fragment):
+        inouts = set()
+        for cell in self.netlist.cells:
+            if isinstance(cell, _nir.IOBuffer):
+                inouts.update(cell.pad)
+            if isinstance(cell, _nir.Instance):
+                for value in cell.ports_io.values():
+                    inouts.update(value)
+
         next_input_bit = 2 # 0 and 1 are reserved for constants
         top = self.netlist.top
-        for signal, dir in fragment.ports.items():
-            assert signal not in self.netlist.signals
-            name = signal_names[signal]
-            if dir == 'i':
+
+        for name, signal, dir in self.design.ports:
+            signal_value = self.emit_signal(signal)
+            if dir is None:
+                is_driven = False
+                is_inout = False
+                for net in signal_value:
+                    if net in self.netlist.connections:
+                        is_driven = True
+                    if net in inouts:
+                        is_inout = True
+                if is_driven:
+                    dir = PortDirection.Output
+                elif is_inout:
+                    dir = PortDirection.Inout
+                else:
+                    dir = PortDirection.Input
+            if dir == PortDirection.Input:
                 top.ports_i[name] = (next_input_bit, signal.width)
-                nets = _nir.Value(
+                value = _nir.Value(
                     _nir.Net.from_cell(0, bit)
                     for bit in range(next_input_bit, next_input_bit + signal.width)
                 )
                 next_input_bit += signal.width
-                self.netlist.signals[signal] = nets
-            elif dir == 'o':
-                top.ports_o[name] = self.emit_signal(signal)
-            elif dir == 'io':
+                self.connect(signal_value, value, src_loc=signal.src_loc)
+            elif dir == PortDirection.Output:
+                top.ports_o[name] = signal_value
+            elif dir == PortDirection.Inout:
                 top.ports_io[name] = (next_input_bit, signal.width)
-                nets = _nir.Value(
+                value = _nir.Value(
                     _nir.Net.from_cell(0, bit)
                     for bit in range(next_input_bit, next_input_bit + signal.width)
                 )
                 next_input_bit += signal.width
-                self.netlist.signals[signal] = nets
+                self.connect(signal_value, value, src_loc=signal.src_loc)
+            else:
+                raise ValueError(f"Invalid port direction {dir!r}")
 
     def emit_drivers(self):
         for driver in self.drivers.values():
@@ -1203,6 +1114,7 @@ class NetlistEmitter:
                 src_loc = driver.signal.src_loc
             self.connect(self.emit_signal(driver.signal), value, src_loc=src_loc)
 
+    def emit_undriven(self):
         # Connect all undriven signal bits to their initial values. This can only happen for entirely
         # undriven signals, or signals that are partially driven by instances.
         for signal, value in self.netlist.signals.items():
@@ -1213,7 +1125,7 @@ class NetlistEmitter:
     def emit_fragment(self, fragment: _ir.Fragment, parent_module_idx: 'int | None', *, cell_src_loc=None):
         from . import _mem
 
-        fragment_name = self.fragment_names[fragment]
+        fragment_name = self.design.fragment_names[fragment]
         if isinstance(fragment, _ir.Instance):
             assert parent_module_idx is not None
             if fragment.type == "$tribuf":
@@ -1230,10 +1142,8 @@ class NetlistEmitter:
                 self.emit_read_port(parent_module_idx, fragment, port, memory, write_ports)
         elif type(fragment) is _ir.Fragment:
             module_idx = self.netlist.add_module(parent_module_idx, fragment_name, src_loc=fragment.src_loc, cell_src_loc=cell_src_loc)
-            signal_names = fragment._assign_names_to_signals()
+            signal_names = self.design.signal_names[fragment]
             self.netlist.modules[module_idx].signal_names = signal_names
-            if parent_module_idx is None:
-                self.emit_top_ports(fragment, signal_names)
             for signal in signal_names:
                 self.emit_signal(signal)
             for domain, stmts in fragment.statements.items():
@@ -1243,13 +1153,14 @@ class NetlistEmitter:
                 self.emit_fragment(subfragment, module_idx, cell_src_loc=sub_src_loc)
             if parent_module_idx is None:
                 self.emit_drivers()
+                self.emit_top_ports(fragment)
+                self.emit_undriven()
         else:
             assert False # :nocov:
 
 
-def _emit_netlist(netlist: _nir.Netlist, fragment, hierarchy):
-    fragment_names = fragment._assign_names_to_fragments(hierarchy)
-    NetlistEmitter(netlist, fragment_names).emit_fragment(fragment, None)
+def _emit_netlist(netlist: _nir.Netlist, design):
+    NetlistEmitter(netlist, design).emit_fragment(design.fragment, None)
 
 
 def _compute_net_flows(netlist: _nir.Netlist):
@@ -1258,39 +1169,39 @@ def _compute_net_flows(netlist: _nir.Netlist):
     # The rules for net flows are as follows:
     #
     # - the modules that have a given net in their net_flow form a subtree of the hierarchy
-    # - INTERNAL is used in the root of the subtree and nowhere else
-    # - OUTPUT is used for modules that contain the definition of the net, or are on the
+    # - Internal is used in the root of the subtree and nowhere else
+    # - Output is used for modules that contain the definition of the net, or are on the
     #   path from the definition to the root
-    # - remaining modules have a flow of INPUT (unless the net is a top-level inout port,
-    #   in which case it is INOUT)
+    # - remaining modules have a flow of Input (unless the net is a top-level inout port,
+    #   in which case it is Inout)
     #
     # In other words, the tree looks something like this:
     #
     # - [no flow] <<< top
     #   - [no flow]
-    #   - INTERNAL
-    #     - INPUT << use
+    #   - Internal
+    #     - Input << use
     #       - [no flow]
-    #     - INPUT
-    #       - INPUT << use
-    #     - OUTPUT
-    #       - INPUT << use
+    #     - Input
+    #       - Input << use
+    #     - Output
+    #       - Input << use
     #       - [no flow]
-    #       - OUTPUT << def
-    #         - INPUT
-    #           - INPUT
+    #       - Output << def
+    #         - Input
+    #           - Input
     #         - [no flow]
     #   - [no flow]
     #   - [no flow]
     #
-    # This function doesn't assign the INOUT flow — that is corrected later, in compute_ports.
+    # This function doesn't assign the Inout flow — that is corrected later, in compute_ports.
     lca = {}
 
     # Initialize by marking the definition point of every net.
     for cell_idx, cell in enumerate(netlist.cells):
         for net in cell.output_nets(cell_idx):
             lca[net] = cell.module_idx
-            netlist.modules[cell.module_idx].net_flow[net] = _nir.ModuleNetFlow.INTERNAL
+            netlist.modules[cell.module_idx].net_flow[net] = _nir.ModuleNetFlow.Internal
 
     # Marks a use of a net within a given module, and adjusts its netflows in all modules
     # as required.
@@ -1307,7 +1218,7 @@ def _compute_net_flows(netlist: _nir.Netlist):
         def_module = lca[net]
         # While def_module deeper than use_module, go up with def_module.
         while len(modules[def_module].name) > len(modules[use_module].name):
-            modules[def_module].net_flow[net] = _nir.ModuleNetFlow.OUTPUT
+            modules[def_module].net_flow[net] = _nir.ModuleNetFlow.Output
             def_module = modules[def_module].parent
         # While use_module deeper than def_module, go up with use_module.
         # If use_module is below def_module in the hierarchy, we may hit
@@ -1316,19 +1227,19 @@ def _compute_net_flows(netlist: _nir.Netlist):
         while len(modules[def_module].name) < len(modules[use_module].name):
             if net in modules[use_module].net_flow:
                 return
-            modules[use_module].net_flow[net] = _nir.ModuleNetFlow.INPUT
+            modules[use_module].net_flow[net] = _nir.ModuleNetFlow.Input
             use_module = modules[use_module].parent
         # Now both pointers should be at the same depth within the hierarchy.
         assert len(modules[def_module].name) == len(modules[use_module].name)
         # Move both pointers up until they meet.
         while def_module != use_module:
-            modules[def_module].net_flow[net] = _nir.ModuleNetFlow.OUTPUT
+            modules[def_module].net_flow[net] = _nir.ModuleNetFlow.Output
             def_module = modules[def_module].parent
-            modules[use_module].net_flow[net] = _nir.ModuleNetFlow.INPUT
+            modules[use_module].net_flow[net] = _nir.ModuleNetFlow.Input
             use_module = modules[use_module].parent
             assert len(modules[def_module].name) == len(modules[use_module].name)
         # And mark the new LCA.
-        modules[def_module].net_flow[net] = _nir.ModuleNetFlow.INTERNAL
+        modules[def_module].net_flow[net] = _nir.ModuleNetFlow.Internal
         lca[net] = def_module
 
     # Now mark all uses and flesh out the structure.
@@ -1371,14 +1282,17 @@ def _compute_ports(netlist: _nir.Netlist):
             if value not in name_table and not name.startswith('$'):
                 name_table[value] = name
 
+        # Adjust any input flows to inout as necessary.
+        for (net, flow) in module.net_flow.items():
+            if flow == _nir.ModuleNetFlow.Input and net in inouts:
+                module.net_flow[net] = _nir.ModuleNetFlow.Inout
+
         # Gather together "adjacent" nets with the same flow into ports.
         visited = set()
         for net in sorted(module.net_flow):
             flow = module.net_flow[net]
-            if flow == _nir.ModuleNetFlow.INTERNAL:
+            if flow == _nir.ModuleNetFlow.Internal:
                 continue
-            if flow == _nir.ModuleNetFlow.INPUT and net in inouts:
-                flow = module.net_flow[net] = _nir.ModuleNetFlow.INOUT
             if net in visited:
                 continue
             # We found a net that needs a port. Keep joining the next nets output by the same
@@ -1410,23 +1324,21 @@ def _compute_ports(netlist: _nir.Netlist):
     for name, (start, width) in netlist.top.ports_i.items():
         top_module.ports[name] = (
             _nir.Value(_nir.Net.from_cell(0, start + bit) for bit in range(width)),
-            _nir.ModuleNetFlow.INPUT
+            _nir.ModuleNetFlow.Input
         )
     for name, (start, width) in netlist.top.ports_io.items():
         top_module.ports[name] = (
             _nir.Value(_nir.Net.from_cell(0, start + bit) for bit in range(width)),
-            _nir.ModuleNetFlow.INOUT
+            _nir.ModuleNetFlow.Inout
         )
     for name, value in netlist.top.ports_o.items():
-        top_module.ports[name] = (value, _nir.ModuleNetFlow.OUTPUT)
+        top_module.ports[name] = (value, _nir.ModuleNetFlow.Output)
 
 
-def build_netlist(fragment, *, name="top"):
-    from ._xfrm import AssignmentLegalizer
-
-    fragment = AssignmentLegalizer()(fragment)
+def build_netlist(fragment, ports, *, name="top", **kwargs):
+    design = fragment.prepare(ports=ports, hierarchy=(name,), legalize_assignments=True, **kwargs)
     netlist = _nir.Netlist()
-    _emit_netlist(netlist, fragment, hierarchy=(name,))
+    _emit_netlist(netlist, design)
     netlist.resolve_all_nets()
     _compute_net_flows(netlist)
     _compute_ports(netlist)
