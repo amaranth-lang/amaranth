@@ -23,7 +23,7 @@ __all__ = [
     "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
-    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
+    "SignalKey", "SignalDict", "SignalSet",
 ]
 
 
@@ -1952,110 +1952,6 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
     def __repr__(self):
         return "{}.{}({})".format(type(self).__module__, type(self).__name__,
                                   ", ".join(repr(x) for x in self))
-
-
-class ValueKey:
-    def __init__(self, value):
-        self.value = Value.cast(value)
-        if isinstance(self.value, Const):
-            self._hash = hash(self.value.value)
-        elif isinstance(self.value, (Signal, AnyValue)):
-            self._hash = hash(self.value.duid)
-        elif isinstance(self.value, (ClockSignal, ResetSignal)):
-            self._hash = hash(self.value.domain)
-        elif isinstance(self.value, Operator):
-            self._hash = hash((self.value.operator,
-                               tuple(ValueKey(o) for o in self.value.operands)))
-        elif isinstance(self.value, Slice):
-            self._hash = hash((ValueKey(self.value.value), self.value.start, self.value.stop))
-        elif isinstance(self.value, Part):
-            self._hash = hash((ValueKey(self.value.value), ValueKey(self.value.offset),
-                              self.value.width, self.value.stride))
-        elif isinstance(self.value, Cat):
-            self._hash = hash(tuple(ValueKey(o) for o in self.value.parts))
-        elif isinstance(self.value, ArrayProxy):
-            self._hash = hash((ValueKey(self.value.index),
-                              tuple(ValueKey(e) for e in self.value._iter_as_values())))
-        elif isinstance(self.value, Initial):
-            self._hash = 0
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections"
-                            .format(self.value))
-
-    def __hash__(self):
-        return self._hash
-
-    def __eq__(self, other):
-        if type(other) is not ValueKey:
-            return False
-        if type(self.value) is not type(other.value):
-            return False
-
-        if isinstance(self.value, Const):
-            return self.value.value == other.value.value and self.value.width == other.value.width
-        elif isinstance(self.value, (Signal, AnyValue)):
-            return self.value is other.value
-        elif isinstance(self.value, (ClockSignal, ResetSignal)):
-            return self.value.domain == other.value.domain
-        elif isinstance(self.value, Operator):
-            return (self.value.operator == other.value.operator and
-                    len(self.value.operands) == len(other.value.operands) and
-                    all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.operands, other.value.operands)))
-        elif isinstance(self.value, Slice):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    self.value.start == other.value.start and
-                    self.value.stop == other.value.stop)
-        elif isinstance(self.value, Part):
-            return (ValueKey(self.value.value) == ValueKey(other.value.value) and
-                    ValueKey(self.value.offset) == ValueKey(other.value.offset) and
-                    self.value.width == other.value.width and
-                    self.value.stride == other.value.stride)
-        elif isinstance(self.value, Cat):
-            return (len(self.value.parts) == len(other.value.parts) and
-                    all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value.parts, other.value.parts)))
-        elif isinstance(self.value, ArrayProxy):
-            return (ValueKey(self.value.index) == ValueKey(other.value.index) and
-                    len(self.value.elems) == len(other.value.elems) and
-                    all(ValueKey(a) == ValueKey(b)
-                        for a, b in zip(self.value._iter_as_values(),
-                                        other.value._iter_as_values())))
-        elif isinstance(self.value, Initial):
-            return True
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections"
-                            .format(self.value))
-
-    def __lt__(self, other):
-        if not isinstance(other, ValueKey):
-            return False
-        if type(self.value) != type(other.value):
-            return False
-
-        if isinstance(self.value, Const):
-            return self.value < other.value
-        elif isinstance(self.value, (Signal, AnyValue)):
-            return self.value.duid < other.value.duid
-        elif isinstance(self.value, Slice):
-            return (ValueKey(self.value.value) < ValueKey(other.value.value) and
-                    self.value.start < other.value.start and
-                    self.value.end < other.value.end)
-        else: # :nocov:
-            raise TypeError("Object {!r} cannot be used as a key in value collections")
-
-    def __repr__(self):
-        return f"<{__name__}.ValueKey {self.value!r}>"
-
-
-class ValueDict(_MappedKeyDict):
-    _map_key   = ValueKey
-    _unmap_key = lambda self, key: key.value
-
-
-class ValueSet(_MappedKeySet):
-    _map_key   = ValueKey
-    _unmap_key = lambda self, key: key.value
 
 
 class SignalKey:
