@@ -45,14 +45,18 @@ def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=Tru
     if (ports is None and
             hasattr(elaboratable, "signature") and
             isinstance(elaboratable.signature, wiring.Signature)):
-        ports = []
+        ports = {}
         for path, member, value in elaboratable.signature.flatten(elaboratable):
             if isinstance(value, _ast.ValueCastable):
                 value = value.as_value()
             if isinstance(value, _ast.Value):
-                ports.append(value)
+                if member.flow == wiring.In:
+                    dir = _ir.PortDirection.Input
+                else:
+                    dir = _ir.PortDirection.Output
+                ports["__".join(path)] = (value, dir)
     elif ports is None:
         raise TypeError("The `convert()` function requires a `ports=` argument")
-    fragment = _ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
-    verilog_text, name_map = convert_fragment(fragment, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs)
+    fragment = _ir.Fragment.get(elaboratable, platform)
+    verilog_text, name_map = convert_fragment(fragment, ports, name, emit_src=emit_src, strip_internal_attrs=strip_internal_attrs, **kwargs)
     return verilog_text

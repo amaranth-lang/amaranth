@@ -36,7 +36,7 @@ class _VCDWriter:
         else:
             raise NotImplementedError
 
-    def __init__(self, fragment, *, vcd_file, gtkw_file=None, traces=()):
+    def __init__(self, design, *, vcd_file, gtkw_file=None, traces=()):
         # Although pyvcd is a mandatory dependency, be resilient and import it as needed, so that
         # the simulator is still usable if it's not installed for some reason.
         import vcd, vcd.gtkw
@@ -65,14 +65,14 @@ class _VCDWriter:
 
         signal_names = SignalDict()
         memories = {}
-        for subfragment, subfragment_name in \
-                fragment._assign_names_to_fragments(hierarchy=("bench", "top",)).items():
-            for signal, signal_name in subfragment._assign_names_to_signals().items():
+        for fragment, fragment_name in design.fragment_names.items():
+            fragment_name = ("bench", *fragment_name)
+            for signal, signal_name in design.signal_names[fragment].items():
                 if signal not in signal_names:
                     signal_names[signal] = set()
-                signal_names[signal].add((*subfragment_name, signal_name))
-            if isinstance(subfragment, MemoryInstance):
-                memories[subfragment._identity] = (subfragment, subfragment_name)
+                signal_names[signal].add((*fragment_name, signal_name))
+            if isinstance(fragment, MemoryInstance):
+                memories[fragment._identity] = (fragment, fragment_name)
 
         trace_names = SignalDict()
         assigned_names = set()
@@ -403,16 +403,16 @@ class _PySimulation(BaseSimulation):
 
 
 class PySimEngine(BaseEngine):
-    def __init__(self, fragment):
+    def __init__(self, design):
         self._state = _PySimulation()
         self._timeline = self._state.timeline
 
-        self._fragment = fragment
-        self._processes = _FragmentCompiler(self._state)(self._fragment)
+        self._design = design
+        self._processes = _FragmentCompiler(self._state)(self._design.fragment)
         self._vcd_writers = []
 
     def add_coroutine_process(self, process, *, default_cmd):
-        self._processes.add(PyCoroProcess(self._state, self._fragment.domains, process,
+        self._processes.add(PyCoroProcess(self._state, self._design.fragment.domains, process,
                                           default_cmd=default_cmd))
 
     def add_clock_process(self, clock, *, phase, period):
@@ -462,7 +462,7 @@ class PySimEngine(BaseEngine):
 
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces):
-        vcd_writer = _VCDWriter(self._fragment,
+        vcd_writer = _VCDWriter(self._design,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
         try:
             self._vcd_writers.append(vcd_writer)

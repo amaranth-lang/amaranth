@@ -88,275 +88,295 @@ class FragmentPortsTestCase(FHDLTestCase):
 
     def test_empty(self):
         f = Fragment()
-        self.assertEqual(list(f.iter_ports()), [])
+        nl = build_netlist(f, ports=[])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top'))
+            (cell 0 0 (top ))
+        )
+        """)
 
-        f._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([]))
-
-    def test_iter_signals(self):
-        f = Fragment()
-        f.add_ports(self.s1, self.s2, dir="io")
-        self.assertEqual(SignalSet((self.s1, self.s2)), f.iter_signals())
-
-    def test_self_contained(self):
+    def test_loopback(self):
         f = Fragment()
         f.add_statements(
             "comb",
             self.c1.eq(self.s1),
-            self.s1.eq(self.c1)
         )
+        nl = build_netlist(f, ports=[self.c1, self.s1])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top') (input 's1' 0.2) (output 'c1' 0.2))
+            (cell 0 0 (top (output 'c1' 0.2) (input 's1' 2:3)))
+        )
+        """)
 
-        f._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([]))
+    def test_subfragment_simple(self):
+        f1 = Fragment()
+        f2 = Fragment()
+        f2.add_statements(
+            "comb",
+            self.c1.eq(~self.s1),
+        )
+        f1.add_subfragment(f2, "f2")
+        nl = build_netlist(f1, ports=[self.c1, self.s1])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top') (input 's1' 0.2) (output 'c1' 1.0))
+            (module 1 0 ('top' 'f2') (input 's1' 0.2) (output 'c1' 1.0))
+            (cell 0 0 (top (output 'c1' 1.0) (input 's1' 2:3)))
+            (cell 1 1 (~ 0.2))
+        )
+        """)
 
-    def test_infer_input(self):
+    def test_tree(self):
         f = Fragment()
-        f.add_statements(
+        f1 = Fragment()
+        f.add_subfragment(f1, "f1")
+        f11 = Fragment()
+        f1.add_subfragment(f11, "f11")
+        f111 = Fragment()
+        f11.add_subfragment(f111, "f111")
+        f1111 = Fragment()
+        f111.add_subfragment(f1111, "f1111")
+        f12 = Fragment()
+        f1.add_subfragment(f12, "f12")
+        f13 = Fragment()
+        f1.add_subfragment(f13, "f13")
+        f131 = Fragment()
+        f13.add_subfragment(f131, "f131")
+        f2 = Fragment()
+        f.add_subfragment(f2, "f2")
+        f2.add_statements(
             "comb",
-            self.c1.eq(self.s1)
+            self.s2.eq(~self.s1),
         )
+        f131.add_statements(
+            "comb",
+            self.s3.eq(~self.s2),
+            Assert(~self.s1),
+        )
+        f12.add_statements(
+            "comb",
+            self.c1.eq(~self.s3),
+        )
+        f1111.add_statements(
+            "comb",
+            self.c2.eq(~self.s3),
+            Assert(self.s1),
+        )
+        f111.add_statements(
+            "comb",
+            self.c3.eq(~self.c2),
+        )
+        nl = build_netlist(f, ports=[self.c1, self.c2, self.c3, self.s1])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's1' 0.2)
+                (output 'c1' 5.0)
+                (output 'c2' 2.0)
+                (output 'c3' 1.0))
+            (module 1 0 ('top' 'f1')
+                (input 'port$0$2' 0.2)
+                (output 'port$1$0' 1.0)
+                (output 'port$2$0' 2.0)
+                (output 'port$5$0' 5.0)
+                (input 'port$10$0' 10.0))
+            (module 2 1 ('top' 'f1' 'f11')
+                (input 'port$0$2' 0.2)
+                (output 'port$1$0' 1.0)
+                (output 'port$2$0' 2.0)
+                (input 'port$6$0' 6.0))
+            (module 3 2 ('top' 'f1' 'f11' 'f111')
+                (input 'port$0$2' 0.2)
+                (output 'c3' 1.0)
+                (output 'c2' 2.0)
+                (input 'port$6$0' 6.0))
+            (module 4 3 ('top' 'f1' 'f11' 'f111' 'f1111')
+                (input 's1' 0.2)
+                (output 'c2' 2.0)
+                (input 's3' 6.0))
+            (module 5 1 ('top' 'f1' 'f12')
+                (output 'c1' 5.0)
+                (input 's3' 6.0))
+            (module 6 1 ('top' 'f1' 'f13')
+                (input 'port$0$2' 0.2)
+                (output 'port$6$0' 6.0)
+                (input 'port$10$0' 10.0))
+            (module 7 6 ('top' 'f1' 'f13' 'f131')
+                (input 's1' 0.2)
+                (output 's3' 6.0)
+                (input 's2' 10.0))
+            (module 8 0 ('top' 'f2')
+                (input 's1' 0.2)
+                (output 's2' 10.0))
+            (cell 0 0 (top (output 'c1' 5.0) (output 'c2' 2.0) (output 'c3' 1.0) (input 's1' 2:3)))
+            (cell 1 3 (~ 2.0))
+            (cell 2 4 (~ 6.0))
+            (cell 3 4 (assignment_list 1'd0 (1 0:1 1'd1)))
+            (cell 4 4 (assert None 0.2 3.0))
+            (cell 5 5 (~ 6.0))
+            (cell 6 7 (~ 10.0))
+            (cell 7 7 (~ 0.2))
+            (cell 8 7 (assignment_list 1'd0 (1 0:1 1'd1)))
+            (cell 9 7 (assert None 7.0 8.0))
+            (cell 10 8 (~ 0.2))
+        )
+        """)
 
-        f._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([
-            (self.s1, "i")
-        ]))
-
-    def test_request_output(self):
+    def test_port_dict(self):
         f = Fragment()
-        f.add_statements(
-            "comb",
-            self.c1.eq(self.s1)
+        nl = build_netlist(f, ports={
+            "a": (self.s1, PortDirection.Output),
+            "b": (self.s2, PortDirection.Input),
+            "c": (self.s3, PortDirection.Inout),
+        })
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top') (input 'b' 0.2) (inout 'c' 0.3) (output 'a' 1'd0))
+            (cell 0 0 (top (output 'a' 1'd0) (input 'b' 2:3) (inout 'c' 3:4)))
         )
+        """)
 
-        f._propagate_ports(ports=(self.c1,), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([
-            (self.s1, "i"),
-            (self.c1, "o")
-        ]))
-
-    def test_input_in_subfragment(self):
-        f1 = Fragment()
-        f1.add_statements(
-            "comb",
-            self.c1.eq(self.s1)
-        )
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.s1.eq(0)
-        )
-        f1.add_subfragment(f2)
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict())
-        self.assertEqual(f2.ports, SignalDict([
-            (self.s1, "o"),
-        ]))
-
-    def test_input_only_in_subfragment(self):
-        f1 = Fragment()
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.c1.eq(self.s1)
-        )
-        f1.add_subfragment(f2)
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict([
-            (self.s1, "i"),
-        ]))
-        self.assertEqual(f2.ports, SignalDict([
-            (self.s1, "i"),
-        ]))
-
-    def test_output_from_subfragment(self):
-        f1 = Fragment()
-        f1.add_statements(
-            "comb",
-            self.c1.eq(0)
-        )
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.c2.eq(1)
-        )
-        f1.add_subfragment(f2)
-
-        f1._propagate_ports(ports=(self.c2,), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict([
-            (self.c2, "o"),
-        ]))
-        self.assertEqual(f2.ports, SignalDict([
-            (self.c2, "o"),
-        ]))
-
-    def test_output_from_subfragment_2(self):
-        f1 = Fragment()
-        f1.add_statements(
-            "comb",
-            self.c1.eq(self.s1)
-        )
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.c2.eq(self.s1)
-        )
-        f1.add_subfragment(f2)
-        f3 = Fragment()
-        f3.add_statements(
-            "comb",
-            self.s1.eq(0)
-        )
-        f2.add_subfragment(f3)
-
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f2.ports, SignalDict([
-            (self.s1, "o"),
-        ]))
-
-    def test_input_output_sibling(self):
-        f1 = Fragment()
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.c1.eq(self.c2)
-        )
-        f1.add_subfragment(f2)
-        f3 = Fragment()
-        f3.add_statements(
-            "comb",
-            self.c2.eq(0)
-        )
-        f3.add_driver(self.c2)
-        f1.add_subfragment(f3)
-
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict())
-
-    def test_output_input_sibling(self):
-        f1 = Fragment()
-        f2 = Fragment()
-        f2.add_statements(
-            "comb",
-            self.c2.eq(0)
-        )
-        f2.add_driver(self.c2)
-        f1.add_subfragment(f2)
-        f3 = Fragment()
-        f3.add_statements(
-            "comb",
-            self.c1.eq(self.c2)
-        )
-        f1.add_subfragment(f3)
-
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict())
-
-    def test_input_cd(self):
-        sync = ClockDomain()
+    def test_port_domain(self):
         f = Fragment()
-        f.add_statements(
-            "sync",
-            self.c1.eq(self.s1)
+        cd_sync = ClockDomain()
+        ctr = Signal(4)
+        f.add_domains(cd_sync)
+        f.add_driver(ctr, "sync")
+        f.add_statements("sync", ctr.eq(ctr + 1))
+        nl = build_netlist(f, ports=[
+            ClockSignal("sync"),
+            ResetSignal("sync"),
+            ctr,
+        ])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top') (input 'clk' 0.2) (input 'rst' 0.3) (output 'ctr' 5.0:4))
+            (cell 0 0 (top (output 'ctr' 5.0:4) (input 'clk' 2:3) (input 'rst' 3:4)))
+            (cell 1 0 (+ (cat 5.0:4 1'd0) 5'd1))
+            (cell 2 0 (matches 0.3 1))
+            (cell 3 0 (priority_match 1 2.0))
+            (cell 4 0 (assignment_list 5.0:4 (1 0:4 1.0:4) (3.0 0:4 4'd0)))
+            (cell 5 0 (flipflop 4.0:4 0 pos 0.2 0))
         )
-        f.add_domains(sync)
-        f.add_driver(self.c1, "sync")
+        """)
 
-        f._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([
-            (self.s1,  "i"),
-            (sync.clk, "i"),
-            (sync.rst, "i"),
-        ]))
-
-    def test_input_cd_reset_less(self):
-        sync = ClockDomain(reset_less=True)
+    def test_port_autodomain(self):
         f = Fragment()
-        f.add_statements(
-            "sync",
-            self.c1.eq(self.s1)
+        ctr = Signal(4)
+        f.add_driver(ctr, "sync")
+        f.add_statements("sync", ctr.eq(ctr + 1))
+        nl = build_netlist(f, ports=[ctr])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top') (input 'clk' 0.2) (input 'rst' 0.3) (output 'ctr' 5.0:4))
+            (cell 0 0 (top (output 'ctr' 5.0:4) (input 'clk' 2:3) (input 'rst' 3:4)))
+            (cell 1 0 (+ (cat 5.0:4 1'd0) 5'd1))
+            (cell 2 0 (matches 0.3 1))
+            (cell 3 0 (priority_match 1 2.0))
+            (cell 4 0 (assignment_list 5.0:4 (1 0:4 1.0:4) (3.0 0:4 4'd0)))
+            (cell 5 0 (flipflop 4.0:4 0 pos 0.2 0))
         )
-        f.add_domains(sync)
-        f.add_driver(self.c1, "sync")
+        """)
 
-        f._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f.ports, SignalDict([
-            (self.s1,  "i"),
-            (sync.clk, "i"),
-        ]))
-
-    def test_inout(self):
-        s = Signal()
+    def test_port_partial(self):
+        f = Fragment()
         f1 = Fragment()
-        f2 = Instance("foo", io_x=s)
-        f1.add_subfragment(f2)
+        f.add_subfragment(f1, "f1")
+        a = Signal(4)
+        b = Signal(4)
+        c = Signal(3)
+        f1.add_driver(c)
+        f1.add_statements("comb", c.eq((a * b).shift_right(4)))
+        nl = build_netlist(f, ports=[a, b, c])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'a' 0.2:6)
+                (input 'b' 0.6:10)
+                (output 'c' 1.4:7))
+            (module 1 0 ('top' 'f1')
+                (input 'a' 0.2:6)
+                (input 'b' 0.6:10)
+                (output 'c' 1.4:7))
+            (cell 0 0 (top
+                (output 'c' 1.4:7)
+                (input 'a' 2:6)
+                (input 'b' 6:10)))
+            (cell 1 1 (* (cat 0.2:6 4'd0) (cat 0.6:10 4'd0)))
+        )
+        """)
 
-        f1._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict([
-            (s, "io")
-        ]))
 
-    def test_in_out_same_signal(self):
-        s = Signal()
-
-        f1 = Instance("foo", i_x=s, o_y=s)
-        f2 = Fragment()
-        f2.add_subfragment(f1)
-
-        f2._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f1.ports, SignalDict([
-            (s, "o")
-        ]))
-
-        f3 = Instance("foo", o_y=s, i_x=s)
-        f4 = Fragment()
-        f4.add_subfragment(f3)
-
-        f4._propagate_ports(ports=(), all_undef_as_ports=True)
-        self.assertEqual(f3.ports, SignalDict([
-            (s, "o")
-        ]))
-
-    def test_clk_rst(self):
-        sync = ClockDomain()
+    def test_port_instance(self):
         f = Fragment()
-        f.add_domains(sync)
-
-        f = f.prepare(ports=(ClockSignal("sync"), ResetSignal("sync")))
-        self.assertEqual(f.ports, SignalDict([
-            (sync.clk, "i"),
-            (sync.rst, "i"),
-        ]))
+        f1 = Fragment()
+        f.add_subfragment(f1, "f1")
+        a = Signal(4)
+        b = Signal(4)
+        c = Signal(4)
+        d = Signal(4)
+        f1.add_subfragment(Instance("t",
+            p_p = "meow",
+            a_a = True,
+            i_aa=a,
+            io_bb=b,
+            o_cc=c,
+            o_dd=d,
+        ), "i")
+        nl = build_netlist(f, ports=[a, b, c, d])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'a' 0.2:6)
+                (inout 'b' 0.6:10)
+                (output 'c' 1.0:4)
+                (output 'd' 1.4:8))
+            (module 1 0 ('top' 'f1')
+                (input 'port$0$2' 0.2:6)
+                (inout 'port$0$6' 0.6:10)
+                (output 'port$1$0' 1.0:4)
+                (output 'port$1$4' 1.4:8))
+            (cell 0 0 (top
+                (output 'c' 1.0:4)
+                (output 'd' 1.4:8)
+                (input 'a' 2:6)
+                (inout 'b' 6:10)))
+            (cell 1 1 (instance 't' 'i'
+                (param 'p' 'meow')
+                (attr 'a' True)
+                (input 'aa' 0.2:6)
+                (output 'cc' 0:4)
+                (output 'dd' 4:8)
+                (inout 'bb' 0.6:10)))
+        )
+        """)
 
     def test_port_wrong(self):
         f = Fragment()
+        a = Signal()
         with self.assertRaisesRegex(TypeError,
                 r"^Only signals may be added as ports, not \(const 1'd1\)$"):
-            f.prepare(ports=(Const(1),))
+            build_netlist(f, ports=(Const(1),))
+        with self.assertRaisesRegex(TypeError,
+                r"^Port name must be a string, not 1$"):
+            build_netlist(f, ports={1: (a, PortDirection.Input)})
+        with self.assertRaisesRegex(TypeError,
+                r"^Port direction must be a `PortDirection` instance or None, not 'i'$"):
+            build_netlist(f, ports={"a": (a, "i")})
 
     def test_port_not_iterable(self):
         f = Fragment()
         with self.assertRaisesRegex(TypeError,
-                r"^`ports` must be either a list or a tuple, not 1$"):
-            f.prepare(ports=1)
+                r"^`ports` must be a dict, a list or a tuple, not 1$"):
+            build_netlist(f, ports=1)
         with self.assertRaisesRegex(TypeError,
-                (r"^`ports` must be either a list or a tuple, not \(const 1'd1\)"
+                (r"^`ports` must be a dict, a list or a tuple, not \(const 1'd1\)"
                     r" \(did you mean `ports=\(<signal>,\)`, rather than `ports=<signal>`\?\)$")):
-            f.prepare(ports=Const(1))
+            build_netlist(f, ports=Const(1))
 
 class FragmentDomainsTestCase(FHDLTestCase):
-    def test_iter_signals(self):
-        cd1 = ClockDomain()
-        cd2 = ClockDomain(reset_less=True)
-        s1 = Signal()
-        s2 = Signal()
-
-        f = Fragment()
-        f.add_domains(cd1, cd2)
-        f.add_driver(s1, "cd1")
-        self.assertEqual(SignalSet((cd1.clk, cd1.rst, s1)), f.iter_signals())
-        f.add_driver(s2, "cd2")
-        self.assertEqual(SignalSet((cd1.clk, cd1.rst, cd2.clk, s1, s2)), f.iter_signals())
-
     def test_propagate_up(self):
         cd = ClockDomain()
 
@@ -810,49 +830,17 @@ class InstanceTestCase(FHDLTestCase):
         self.assertEqual(f.type, "cpu")
         self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
         self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "data", "pins"])
-        self.assertEqual(f.ports, SignalDict([]))
-
-    def test_prepare(self):
-        self.setUp_cpu()
-        f = self.wrap.prepare()
-        sync_clk = f.domains["sync"].clk
-        self.assertEqual(f.ports, SignalDict([
-            (sync_clk, "i"),
-            (self.rst, "i"),
-            (self.pins, "io"),
-        ]))
-
-    def test_prepare_explicit_ports(self):
-        self.setUp_cpu()
-        f = self.wrap.prepare(ports=[self.rst, self.stb])
-        sync_clk = f.domains["sync"].clk
-        sync_rst = f.domains["sync"].rst
-        self.assertEqual(f.ports, SignalDict([
-            (sync_clk, "i"),
-            (sync_rst, "i"),
-            (self.rst, "i"),
-            (self.stb, "o"),
-            (self.pins, "io"),
-        ]))
-
-    def test_prepare_slice_in_port(self):
-        s = Signal(2)
-        f = Fragment()
-        f.add_subfragment(Instance("foo", o_O=s[0]))
-        f.add_subfragment(Instance("foo", o_O=s[1]))
-        fp = f.prepare(ports=[s], missing_domain=lambda name: None)
-        self.assertEqual(fp.ports, SignalDict([
-            (s, "o"),
-        ]))
 
     def test_prepare_attrs(self):
         self.setUp_cpu()
         self.inst.attrs["ATTR"] = 1
-        f = self.inst.prepare()
-        self.assertEqual(f.attrs, OrderedDict([
+        design = self.inst.prepare()
+        self.assertEqual(design.fragment.attrs, OrderedDict([
             ("ATTR", 1),
         ]))
 
+
+class NamesTestCase(FHDLTestCase):
     def test_assign_names_to_signals(self):
         i = Signal()
         rst = Signal()
@@ -864,8 +852,6 @@ class InstanceTestCase(FHDLTestCase):
         f = Fragment()
         f.add_domains(cd_sync := ClockDomain())
         f.add_domains(cd_sync_norst := ClockDomain(reset_less=True))
-        f.add_ports((i, rst), dir="i")
-        f.add_ports((o1, o2, o3), dir="o")
         f.add_statements("comb", [o1.eq(0)])
         f.add_driver(o1, domain="comb")
         f.add_statements("sync", [o2.eq(i1)])
@@ -873,8 +859,15 @@ class InstanceTestCase(FHDLTestCase):
         f.add_statements("sync_norst", [o3.eq(i1)])
         f.add_driver(o3, domain="sync_norst")
 
-        names = f._assign_names_to_signals()
-        self.assertEqual(names, SignalDict([
+        ports = {
+            "i": (i, PortDirection.Input),
+            "rst": (rst, PortDirection.Input),
+            "o1": (o1, PortDirection.Output),
+            "o2": (o2, PortDirection.Output),
+            "o3": (o3, PortDirection.Output),
+        }
+        design = f.prepare(ports)
+        self.assertEqual(design.signal_names[design.fragment], SignalDict([
             (i, "i"),
             (rst, "rst"),
             (o1, "o1"),
@@ -891,8 +884,8 @@ class InstanceTestCase(FHDLTestCase):
         f.add_subfragment(a := Fragment())
         f.add_subfragment(b := Fragment(), name="b")
 
-        names = f._assign_names_to_fragments()
-        self.assertEqual(names, {
+        design = Design(f, ports=(), hierarchy=("top",))
+        self.assertEqual(design.fragment_names, {
             f: ("top",),
             a: ("top", "U$0"),
             b: ("top", "b")
@@ -903,8 +896,8 @@ class InstanceTestCase(FHDLTestCase):
         f.add_subfragment(a := Fragment())
         f.add_subfragment(b := Fragment(), name="b")
 
-        names = f._assign_names_to_fragments(hierarchy=("bench", "cpu"))
-        self.assertEqual(names, {
+        design = Design(f, ports=[], hierarchy=("bench", "cpu"))
+        self.assertEqual(design.fragment_names, {
             f: ("bench", "cpu",),
             a: ("bench", "cpu", "U$0"),
             b: ("bench", "cpu", "b")
@@ -913,10 +906,10 @@ class InstanceTestCase(FHDLTestCase):
     def test_assign_names_to_fragments_collide_with_signal(self):
         f = Fragment()
         f.add_subfragment(a_f := Fragment(), name="a")
-        f.add_ports((a_s := Signal(name="a"),), dir="o")
+        a_s = Signal(name="a")
 
-        names = f._assign_names_to_fragments()
-        self.assertEqual(names, {
+        design = Design(f, ports=[("a", a_s, None)], hierarchy=("top",))
+        self.assertEqual(design.fragment_names, {
             f: ("top",),
             a_f: ("top", "a$U$0")
         })

@@ -70,8 +70,8 @@ class Simulator:
                             "a simulation engine name"
                             .format(engine))
 
-        self._fragment = Fragment.get(fragment, platform=None).prepare()
-        self._engine   = engine(self._fragment)
+        self._design   = Fragment.get(fragment, platform=None).prepare()
+        self._engine   = engine(self._design)
         self._clocked  = set()
 
     def _check_process(self, process):
@@ -165,15 +165,15 @@ class Simulator:
             in this case.
         """
         if isinstance(domain, ClockDomain):
-            if (domain.name in self._fragment.domains and
-                    domain is not self._fragment.domains[domain.name]):
+            if (domain.name in self._design.fragment.domains and
+                    domain is not self._design.fragment.domains[domain.name]):
                 warnings.warn("Adding a clock process that drives a clock domain object "
                               "named {!r}, which is distinct from an identically named domain "
                               "in the simulated design"
                               .format(domain.name),
                               UserWarning, stacklevel=2)
-        elif domain in self._fragment.domains:
-            domain = self._fragment.domains[domain]
+        elif domain in self._design.fragment.domains:
+            domain = self._design.fragment.domains[domain]
         elif if_exists:
             return
         else:

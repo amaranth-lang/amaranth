@@ -401,7 +401,7 @@ class ModuleEmitter:
                                      port_id=port_id, port_kind=flow.value,
                                      name=name, attrs=self.value_attrs.get(value, {}))
             self.sigport_wires[name] = (wire, value)
-            if flow == _nir.ModuleNetFlow.OUTPUT:
+            if flow == _nir.ModuleNetFlow.Output:
                 continue
             # If we just emitted an input or inout port, it is driving the value.
             self.driven_sigports.add(name)
@@ -463,7 +463,7 @@ class ModuleEmitter:
         for submodule_idx in self.module.submodules:
             submodule = self.netlist.modules[submodule_idx]
             for _name, (value, flow) in submodule.ports.items():
-                if flow == _nir.ModuleNetFlow.OUTPUT:
+                if flow == _nir.ModuleNetFlow.Output:
                     self.emit_driven_wire(value)
 
     def sigspec(self, *parts: '_nir.Net | Iterable[_nir.Net]'):
@@ -989,10 +989,10 @@ class EmptyModuleChecker:
         return module_idx in self.empty
 
 
-def convert_fragment(fragment, name="top", *, emit_src=True):
+def convert_fragment(fragment, ports, name="top", *, emit_src=True, **kwargs):
     assert isinstance(fragment, _ir.Fragment)
     name_map = _ast.SignalDict()
-    netlist = _ir.build_netlist(fragment, name=name)
+    netlist = _ir.build_netlist(fragment, ports=ports, name=name, **kwargs)
     empty_checker = EmptyModuleChecker(netlist)
     builder = _Builder(emit_src=emit_src)
     for module_idx, module in enumerate(netlist.modules):
@@ -1011,14 +1011,18 @@ def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=Tru
     if (ports is None and
             hasattr(elaboratable, "signature") and
             isinstance(elaboratable.signature, wiring.Signature)):
-        ports = []
-        for _path, _member, value in elaboratable.signature.flatten(elaboratable):
+        ports = {}
+        for path, member, value in elaboratable.signature.flatten(elaboratable):
             if isinstance(value, _ast.ValueCastable):
                 value = value.as_value()
             if isinstance(value, _ast.Value):
-                ports.append(value)
+                if member.flow == wiring.In:
+                    dir = _ir.PortDirection.Input
+                else:
+                    dir = _ir.PortDirection.Output
+                ports["__".join(path)] = (value, dir)
     elif ports is None:
         raise TypeError("The `convert()` function requires a `ports=` argument")
-    fragment = _ir.Fragment.get(elaboratable, platform).prepare(ports=ports, **kwargs)
-    il_text, _name_map = convert_fragment(fragment, name, emit_src=emit_src)
+    fragment = _ir.Fragment.get(elaboratable, platform)
+    il_text, _name_map = convert_fragment(fragment, ports, name, emit_src=emit_src, **kwargs)
     return il_text

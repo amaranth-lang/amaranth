@@ -209,10 +209,6 @@ class FragmentTransformer:
         for subfragment, name, src_loc in fragment.subfragments:
             new_fragment.add_subfragment(self(subfragment), name, src_loc=src_loc)
 
-    def map_ports(self, fragment, new_fragment):
-        for port, dir in fragment.ports.items():
-            new_fragment.add_ports(port, dir=dir)
-
     def map_named_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
             for name, (value, dir) in fragment.named_ports.items():
@@ -285,7 +281,6 @@ class FragmentTransformer:
             new_fragment = Fragment(src_loc=fragment.src_loc)
             new_fragment.flatten = fragment.flatten
         new_fragment.attrs = OrderedDict(fragment.attrs)
-        self.map_ports(fragment, new_fragment)
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
