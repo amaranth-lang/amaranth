@@ -13,7 +13,7 @@ __all__ = [
     "Initial",
     "Statement", "Switch",
     "Property", "Assign", "Assert", "Assume", "Cover",
-    "ValueKey", "ValueDict", "ValueSet", "SignalKey", "SignalDict", "SignalSet",
+    "SignalKey", "SignalDict", "SignalSet",
 ]
 
 
