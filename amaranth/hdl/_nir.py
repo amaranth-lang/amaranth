@@ -849,7 +849,7 @@ class AnyValue(Cell):
 
 
 class AsyncProperty(Cell):
-    """Corresponds to ``Assert``, ``Assume``, or ``Cover`` in the "comb" domain._
+    """Corresponds to ``Assert``, ``Assume``, or ``Cover`` in the "comb" domain.
 
     Attributes
     ----------
@@ -880,7 +880,7 @@ class AsyncProperty(Cell):
 
 
 class SyncProperty(Cell):
-    """Corresponds to ``Assert``, ``Assume``, or ``Cover`` in the "comb" domain.
+    """Corresponds to ``Assert``, ``Assume``, or ``Cover`` in domains other than "comb".
 
     Attributes
     ----------
