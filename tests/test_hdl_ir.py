@@ -939,3 +939,123 @@ class OriginsTestCase(FHDLTestCase):
         elab = ElaboratesTo(inst)
         frag = Fragment.get(elab, platform=None)
         self.assertFalse(hasattr(frag, "_origins"))
+
+
+class IOBufferTestCase(FHDLTestCase):
+    def test_nir_i(self):
+        pad = Signal(4)
+        i = Signal(4)
+        f = Fragment()
+        f.add_subfragment(IOBufferInstance(pad, i=i))
+        nl = build_netlist(f, ports=[pad, i])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (inout 'pad' 0.2:6)
+                (output 'i' 1.0:4)
+            )
+            (cell 0 0 (top
+                (output 'i' 1.0:4)
+                (inout 'pad' 2:6)
+            ))
+            (cell 1 0 (iob 0.2:6 4'd0 0))
+        )
+        """)
+
+    def test_nir_o(self):
+        pad = Signal(4)
+        o = Signal(4)
+        f = Fragment()
+        f.add_subfragment(IOBufferInstance(pad, o=o))
+        nl = build_netlist(f, ports=[pad, o])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.6:10)
+                (inout 'pad' 0.2:6)
+            )
+            (cell 0 0 (top
+                (input 'o' 6:10)
+                (inout 'pad' 2:6)
+            ))
+            (cell 1 0 (iob 0.2:6 0.6:10 1))
+        )
+        """)
+
+    def test_nir_oe(self):
+        pad = Signal(4)
+        o = Signal(4)
+        oe = Signal()
+        f = Fragment()
+        f.add_subfragment(IOBufferInstance(pad, o=o, oe=oe))
+        nl = build_netlist(f, ports=[pad, o, oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.6:10)
+                (input 'oe' 0.10)
+                (inout 'pad' 0.2:6)
+            )
+            (cell 0 0 (top
+                (input 'o' 6:10)
+                (input 'oe' 10:11)
+                (inout 'pad' 2:6)
+            ))
+            (cell 1 0 (iob 0.2:6 0.6:10 0.10))
+        )
+        """)
+
+    def test_nir_io(self):
+        pad = Signal(4)
+        i = Signal(4)
+        o = Signal(4)
+        oe = Signal()
+        f = Fragment()
+        f.add_subfragment(IOBufferInstance(pad, i=i, o=o, oe=oe))
+        nl = build_netlist(f, ports=[pad, i, o, oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.6:10)
+                (input 'oe' 0.10)
+                (inout 'pad' 0.2:6)
+                (output 'i' 1.0:4)
+            )
+            (cell 0 0 (top
+                (output 'i' 1.0:4)
+                (input 'o' 6:10)
+                (input 'oe' 10:11)
+                (inout 'pad' 2:6)
+            ))
+            (cell 1 0 (iob 0.2:6 0.6:10 0.10))
+        )
+        """)
+
+    def test_wrong_i(self):
+        pad = Signal(4)
+        i = Signal()
+        with self.assertRaisesRegex(ValueError,
+                r"^`pad` length \(4\) doesn't match `i` length \(1\)"):
+            IOBufferInstance(pad, i=i)
+
+    def test_wrong_o(self):
+        pad = Signal(4)
+        o = Signal()
+        with self.assertRaisesRegex(ValueError,
+                r"^`pad` length \(4\) doesn't match `o` length \(1\)"):
+            IOBufferInstance(pad, o=o)
+
+    def test_wrong_oe(self):
+        pad = Signal(4)
+        o = Signal(4)
+        oe = Signal(4)
+        with self.assertRaisesRegex(ValueError,
+                r"^`oe` length \(4\) must be 1"):
+            IOBufferInstance(pad, o=o, oe=oe)
+
+    def test_wrong_oe_without_o(self):
+        pad = Signal(4)
+        oe = Signal()
+        with self.assertRaisesRegex(ValueError,
+                r"^`oe` must not be used if `o` is not used"):
+            IOBufferInstance(pad, oe=oe)

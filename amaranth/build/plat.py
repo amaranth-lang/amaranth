@@ -9,6 +9,7 @@ import jinja2
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
+from ..hdl._ir import IOBufferInstance
 from ..hdl._xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
@@ -221,11 +222,10 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                             valid_xdrs=(0,), valid_attrs=None)
 
         m = Module()
-        m.submodules += Instance("$tribuf",
-            p_WIDTH=pin.width,
-            i_EN=pin.oe,
-            i_A=self._invert_if(invert, pin.o),
-            o_Y=port,
+        m.submodules += IOBufferInstance(
+            pad=port,
+            o=self._invert_if(invert, pin.o),
+            oe=pin.oe,
         )
         return m
 
@@ -234,13 +234,14 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                             valid_xdrs=(0,), valid_attrs=None)
 
         m = Module()
-        m.submodules += Instance("$tribuf",
-            p_WIDTH=pin.width,
-            i_EN=pin.oe,
-            i_A=self._invert_if(invert, pin.o),
-            o_Y=port,
+        i = Signal.like(pin.i)
+        m.submodules += IOBufferInstance(
+            pad=port,
+            i=i,
+            o=self._invert_if(invert, pin.o),
+            oe=pin.oe,
         )
-        m.d.comb += pin.i.eq(self._invert_if(invert, port))
+        m.d.comb += pin.i.eq(self._invert_if(invert, i))
         return m
 
     def get_diff_input(self, pin, port, attrs, invert):
