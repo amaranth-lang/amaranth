@@ -277,6 +277,23 @@ class FragmentTransformer:
             new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
             self.map_named_ports(fragment, new_fragment)
+        elif isinstance(fragment, IOBufferInstance):
+            if hasattr(self, "on_value"):
+                new_fragment = IOBufferInstance(
+                    pad=self.on_value(fragment.pad),
+                    i=self.on_value(fragment.i) if fragment.i is not None else None,
+                    o=self.on_value(fragment.o),
+                    oe=self.on_value(fragment.oe),
+                    src_loc=fragment.src_loc,
+                )
+            else:
+                new_fragment = IOBufferInstance(
+                    pad=fragment.pad,
+                    i=fragment.i,
+                    o=fragment.o,
+                    oe=fragment.oe,
+                    src_loc=fragment.src_loc,
+                )
         else:
             new_fragment = Fragment(src_loc=fragment.src_loc)
             new_fragment.flatten = fragment.flatten

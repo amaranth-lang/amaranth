@@ -11,7 +11,7 @@ from . import _ast, _cd, _ir, _nir
 
 __all__ = [
     "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance",
-    "PortDirection", "Design", "build_netlist",
+    "IOBufferInstance", "PortDirection", "Design", "build_netlist",
 ]
 
 
@@ -196,7 +196,7 @@ class Fragment:
                 # Always flatten subfragments that explicitly request it.
                 flatten_subfrags.add((subfrag, subfrag_hierarchy))
 
-            if isinstance(subfrag, (Instance, MemoryInstance)):
+            if isinstance(subfrag, (Instance, MemoryInstance, IOBufferInstance)):
                 # Never flatten instances.
                 continue
 
@@ -458,6 +458,36 @@ class Instance(Fragment):
                 raise NameError("Instance keyword argument {}={!r} does not start with one of "
                                 "\"a_\", \"p_\", \"i_\", \"o_\", or \"io_\""
                                 .format(kw, arg))
+
+
+class IOBufferInstance(Fragment):
+    def __init__(self, pad, *, i=None, o=None, oe=None, src_loc_at=0, src_loc=None):
+        super().__init__()
+
+        self.pad = _ast.Value.cast(pad)
+        if i is None:
+            self.i = None
+        else:
+            self.i = _ast.Value.cast(i)
+            if len(self.pad) != len(self.i):
+                raise ValueError(f"`pad` length ({len(self.pad)}) doesn't match `i` length ({len(self.i)})")
+        if o is None:
+            if oe is not None:
+                raise ValueError("`oe` must not be used if `o` is not used")
+            self.o = _ast.Const(0, len(self.pad))
+            self.oe = _ast.Const(0)
+        else:
+            self.o = _ast.Value.cast(o)
+            if len(self.pad) != len(self.o):
+                raise ValueError(f"`pad` length ({len(self.pad)}) doesn't match `o` length ({len(self.o)})")
+            if oe is None:
+                self.oe = _ast.Const(1)
+            else:
+                self.oe = _ast.Value.cast(oe)
+                if len(self.oe) != 1:
+                    raise ValueError(f"`oe` length ({len(self.oe)}) must be 1")
+
+        self.src_loc     = src_loc or tracer.get_src_loc(src_loc_at)
 
 
 class Design:
@@ -943,13 +973,15 @@ class NetlistEmitter:
         else:
             assert False # :nocov:
 
-    def emit_tribuf(self, module_idx: int, instance: _ir.Instance):
-        pad = self.emit_lhs(instance.named_ports["Y"][0])
-        o, _signed = self.emit_rhs(module_idx, instance.named_ports["A"][0])
-        (oe,), _signed = self.emit_rhs(module_idx, instance.named_ports["EN"][0])
+    def emit_iobuffer(self, module_idx: int, instance: _ir.IOBufferInstance):
+        pad = self.emit_lhs(instance.pad)
+        o, _signed = self.emit_rhs(module_idx, instance.o)
+        (oe,), _signed = self.emit_rhs(module_idx, instance.oe)
         assert len(pad) == len(o)
         cell = _nir.IOBuffer(module_idx, pad=pad, o=o, oe=oe, src_loc=instance.src_loc)
-        self.netlist.add_cell(cell)
+        value = self.netlist.add_value_cell(len(pad), cell)
+        if instance.i is not None:
+            self.connect(self.emit_lhs(instance.i), value, src_loc=instance.src_loc)
 
     def emit_memory(self, module_idx: int, fragment: '_mem.MemoryInstance', name: str):
         cell = _nir.Memory(module_idx,
@@ -1130,10 +1162,7 @@ class NetlistEmitter:
         fragment_name = self.design.fragment_names[fragment]
         if isinstance(fragment, _ir.Instance):
             assert parent_module_idx is not None
-            if fragment.type == "$tribuf":
-                self.emit_tribuf(parent_module_idx, fragment)
-            else:
-                self.emit_instance(parent_module_idx, fragment, name=fragment_name[-1])
+            self.emit_instance(parent_module_idx, fragment, name=fragment_name[-1])
         elif isinstance(fragment, _mem.MemoryInstance):
             assert parent_module_idx is not None
             memory = self.emit_memory(parent_module_idx, fragment, name=fragment_name[-1])
@@ -1142,6 +1171,9 @@ class NetlistEmitter:
                 write_ports.append(self.emit_write_port(parent_module_idx, fragment, port, memory))
             for port in fragment._read_ports:
                 self.emit_read_port(parent_module_idx, fragment, port, memory, write_ports)
+        elif isinstance(fragment, _ir.IOBufferInstance):
+            assert parent_module_idx is not None
+            self.emit_iobuffer(parent_module_idx, fragment)
         elif type(fragment) is _ir.Fragment:
             module_idx = self.netlist.add_module(parent_module_idx, fragment_name, src_loc=fragment.src_loc, cell_src_loc=cell_src_loc)
             signal_names = self.design.signal_names[fragment]
