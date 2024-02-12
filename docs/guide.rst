@@ -762,19 +762,13 @@ Match operator
 
 The :pc:`val.matches(*patterns)` operator examines a value against a set of patterns. It evaluates to :pc:`Const(1)` if the value *matches* any of the patterns, and to :pc:`Const(0)` otherwise. What it means for a value to match a pattern depends on the type of the pattern.
 
-If the pattern is a :class:`str`, it is treated as a bit mask with "don't care" bits. After removing whitespace, each character of the pattern is compared to the bit of the value in the same position as the character. If the pattern character is ``'0'`` or ``'1'``, the comparison succeeds if the bit equals ``0`` or ``1`` correspondingly. If the pattern character is ``'-'``, the comparison always succeeds. Aside from spaces and tabs, which are ignored, no other characters are accepted.
+If the pattern is a :class:`str`, it is treated as a bit mask with "don't care" bits. After removing whitespace, each character of the pattern is compared to the corresponding bit of the value, where the leftmost character of the pattern (with the lowest index) corresponds to the most significant bit of the value. If the pattern character is ``'0'`` or ``'1'``, the comparison succeeds if the bit equals ``0`` or ``1`` correspondingly. If the pattern character is ``'-'``, the comparison always succeeds. Aside from spaces and tabs, which are ignored, no other characters are accepted.
 
 Otherwise, the pattern is :ref:`cast to a constant <lang-constcasting>` and compared to :pc:`val` using the :ref:`equality operator <lang-cmpops>`.
 
-For example, given a 8-bit value :pc:`val`, :pc:`val.matches(1, '---- -01-')` is equivalent to :pc:`(val == 1) | ((val & 0b0110_0000) == 0b0100_0000)`. Note that the direction in which bits are specified for the :pc:`.match()` operator (least to most significant) is the opposite of the direction in which an integer literal is written (most to least significant). Bit patterns in this operator are treated similarly to :ref:`bit sequence operators <lang-bitops>`.
+For example, given a 8-bit value :pc:`val`, :pc:`val.matches(1, '---- -01-')` is equivalent to :pc:`(val == 1) | ((val & 0b0000_0110) == 0b0000_0010)`. Bit patterns in this operator are treated similarly to :ref:`bit sequence operators <lang-bitops>`.
 
 The :ref:`Case <lang-switch>` control flow block accepts the same patterns, with the same meaning, as the match operator.
-
-.. TODO: https://github.com/amaranth-lang/amaranth/issues/1003
-
-.. warning::
-
-    Do not rely on the behavior of :pc:`val.matches()` with no patterns.
 
 
 .. _lang-convops:
@@ -1150,12 +1144,6 @@ Case comparison, where a single value is examined against several different *pat
 Within a single :pc:`Switch` block, the statements within at most one block will be active at any time. This will be the first :pc:`Case` block in the order of definition whose pattern :ref:`matches <lang-matchop>` the value, or the first :pc:`Default` block, whichever is earlier.
 
 If a :pc:`Default` block is present, or the patterns in the :pc:`Case` blocks cover every possible :pc:`Switch` value, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
-
-.. TODO: https://github.com/amaranth-lang/amaranth/issues/1003
-
-.. warning::
-
-    Do not rely on the behavior of a :pc:`with m.Case():` with no patterns.
 
 .. tip::
 
