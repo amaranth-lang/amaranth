@@ -47,6 +47,6 @@ html_css_files = ["custom.css"]
 html_logo = "_static/logo.png"
 
 rst_prolog = """
-.. role:: pc(code)
+.. role:: py(code)
    :language: python
 """

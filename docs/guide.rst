@@ -760,13 +760,13 @@ Amaranth operation        Equivalent Python code
 Match operator
 --------------
 
-The :pc:`val.matches(*patterns)` operator examines a value against a set of patterns. It evaluates to :pc:`Const(1)` if the value *matches* any of the patterns, and to :pc:`Const(0)` otherwise. What it means for a value to match a pattern depends on the type of the pattern.
+The :py:`val.matches(*patterns)` operator examines a value against a set of patterns. It evaluates to :py:`Const(1)` if the value *matches* any of the patterns, and to :py:`Const(0)` otherwise. What it means for a value to match a pattern depends on the type of the pattern.
 
 If the pattern is a :class:`str`, it is treated as a bit mask with "don't care" bits. After removing whitespace, each character of the pattern is compared to the corresponding bit of the value, where the leftmost character of the pattern (with the lowest index) corresponds to the most significant bit of the value. If the pattern character is ``'0'`` or ``'1'``, the comparison succeeds if the bit equals ``0`` or ``1`` correspondingly. If the pattern character is ``'-'``, the comparison always succeeds. Aside from spaces and tabs, which are ignored, no other characters are accepted.
 
-Otherwise, the pattern is :ref:`cast to a constant <lang-constcasting>` and compared to :pc:`val` using the :ref:`equality operator <lang-cmpops>`.
+Otherwise, the pattern is :ref:`cast to a constant <lang-constcasting>` and compared to :py:`val` using the :ref:`equality operator <lang-cmpops>`.
 
-For example, given a 8-bit value :pc:`val`, :pc:`val.matches(1, '---- -01-')` is equivalent to :pc:`(val == 1) | ((val & 0b0000_0110) == 0b0000_0010)`. Bit patterns in this operator are treated similarly to :ref:`bit sequence operators <lang-bitops>`.
+For example, given a 8-bit value :py:`val`, :py:`val.matches(1, '---- -01-')` is equivalent to :py:`(val == 1) | ((val & 0b0000_0110) == 0b0000_0010)`. Bit patterns in this operator are treated similarly to :ref:`bit sequence operators <lang-bitops>`.
 
 The :ref:`Case <lang-switch>` control flow block accepts the same patterns, with the same meaning, as the match operator.
 
@@ -997,7 +997,7 @@ Multiple assignments to the same signal bits are more useful when combined with 
 Control flow
 ============
 
-Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control flow syntax* tailored for this task: :ref:`If/Elif/Else <lang-if>`, :ref:`Switch/Case <lang-switch>`, and :ref:`FSM/State <lang-fsm>`. The control flow syntax uses :pc:`with` blocks (it is implemented using :ref:`context managers <python:context-managers>`), for example:
+Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control flow syntax* tailored for this task: :ref:`If/Elif/Else <lang-if>`, :ref:`Switch/Case <lang-switch>`, and :ref:`FSM/State <lang-fsm>`. The control flow syntax uses :py:`with` blocks (it is implemented using :ref:`context managers <python:context-managers>`), for example:
 
 .. TODO: link to relevant subsections
 
@@ -1009,14 +1009,14 @@ Although it is possible to write any decision tree as a combination of :ref:`ass
    with m.Else():
        m.d.sync += timer.eq(timer - 1)
 
-While some Amaranth control structures are superficially similar to imperative control flow statements (such as Python's :pc:`if`), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
+While some Amaranth control structures are superficially similar to imperative control flow statements (such as Python's :py:`if`), their function---together with :ref:`expressions <lang-abstractexpr>` and :ref:`assignments <lang-assigns>`---is to describe circuits. The code above is equivalent to:
 
 .. testcode::
 
    timer = Signal(8)
    m.d.sync += timer.eq(Mux(timer == 0, 10, timer - 1))
 
-Because all branches of a decision tree affect the generated circuit, all of the Python code inside Amaranth control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as :pc:`print()`:
+Because all branches of a decision tree affect the generated circuit, all of the Python code inside Amaranth control structures is always evaluated in the order in which it appears in the program. This can be observed through Python code with side effects, such as :py:`print()`:
 
 .. testcode::
 
@@ -1079,10 +1079,10 @@ Combining these cases together, the code above is equivalent to:
 
 .. _lang-if:
 
-:pc:`If`/:pc:`Elif`/:pc:`Else` control blocks
+:py:`If`/:py:`Elif`/:py:`Else` control blocks
 ---------------------------------------------
 
-Conditional control flow is described using a :pc:`with m.If(cond1):` block, which may be followed by one or more :pc:`with m.Elif(cond2):` blocks, and optionally a final :pc:`with m.Else():` block. This structure parallels Python's own :ref:`if/elif/else <python:if>` control flow syntax. For example:
+Conditional control flow is described using a :py:`with m.If(cond1):` block, which may be followed by one or more :py:`with m.Elif(cond2):` blocks, and optionally a final :py:`with m.Else():` block. This structure parallels Python's own :ref:`if/elif/else <python:if>` control flow syntax. For example:
 
 .. testcode::
     :hide:
@@ -1106,17 +1106,17 @@ Conditional control flow is described using a :pc:`with m.If(cond1):` block, whi
     with m.Else():
         m.d.sync += x_coord.eq(0)
 
-Within a single :pc:`If`/:pc:`Elif`/:pc:`Else` sequence of blocks, the statements within at most one block will be active at any time. This will be the first block in the order of definition whose condition, :ref:`converted to boolean <lang-bool>`, is true.
+Within a single :py:`If`/:py:`Elif`/:py:`Else` sequence of blocks, the statements within at most one block will be active at any time. This will be the first block in the order of definition whose condition, :ref:`converted to boolean <lang-bool>`, is true.
 
-If an :pc:`Else` block is present, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
+If an :py:`Else` block is present, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
 
 
 .. _lang-switch:
 
-:pc:`Switch`/:pc:`Case` control blocks
+:py:`Switch`/:py:`Case` control blocks
 --------------------------------------
 
-Case comparison, where a single value is examined against several different *patterns*, is described using a :pc:`with m.Switch(value):` block. This block can contain any amount of :pc:`with m.Case(*patterns)` and :pc:`with m.Default():` blocks. This structure parallels Python's own :ref:`match/case <python:match>` control flow syntax. For example:
+Case comparison, where a single value is examined against several different *patterns*, is described using a :py:`with m.Switch(value):` block. This block can contain any amount of :py:`with m.Case(*patterns)` and :py:`with m.Default():` blocks. This structure parallels Python's own :ref:`match/case <python:match>` control flow syntax. For example:
 
 .. TODO: rename `Switch` to `Match`, to mirror `Value.matches()`?
 
@@ -1141,13 +1141,13 @@ Case comparison, where a single value is examined against several different *pat
 
 .. TODO: diagnostic for `Case` blocks after `Default`?
 
-Within a single :pc:`Switch` block, the statements within at most one block will be active at any time. This will be the first :pc:`Case` block in the order of definition whose pattern :ref:`matches <lang-matchop>` the value, or the first :pc:`Default` block, whichever is earlier.
+Within a single :py:`Switch` block, the statements within at most one block will be active at any time. This will be the first :py:`Case` block in the order of definition whose pattern :ref:`matches <lang-matchop>` the value, or the first :py:`Default` block, whichever is earlier.
 
-If a :pc:`Default` block is present, or the patterns in the :pc:`Case` blocks cover every possible :pc:`Switch` value, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
+If a :py:`Default` block is present, or the patterns in the :py:`Case` blocks cover every possible :py:`Switch` value, then the statements within exactly one block will be active at any time, and the sequence as a whole is called a *full condition*.
 
 .. tip::
 
-    While all Amaranth control flow syntax can be generated programmatically, the :pc:`Switch` control block is particularly easy to use in this way:
+    While all Amaranth control flow syntax can be generated programmatically, the :py:`Switch` control block is particularly easy to use in this way:
 
     .. testcode::
 
@@ -1162,10 +1162,10 @@ If a :pc:`Default` block is present, or the patterns in the :pc:`Case` blocks co
 
 .. _lang-fsm:
 
-:pc:`FSM`/:pc:`State` control blocks
+:py:`FSM`/:py:`State` control blocks
 ------------------------------------
 
-Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machine>`_ are described using a :pc:`with m.FSM():` block. This block can contain one or more :pc:`with m.State("Name")` blocks. In addition to these blocks, the :pc:`m.next = "Name"` syntax chooses which state the FSM enters on the next clock cycle. For example, this FSM performs a bus read transaction once after reset:
+Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machine>`_ are described using a :py:`with m.FSM():` block. This block can contain one or more :py:`with m.State("Name")` blocks. In addition to these blocks, the :py:`m.next = "Name"` syntax chooses which state the FSM enters on the next clock cycle. For example, this FSM performs a bus read transaction once after reset:
 
 .. testcode::
 
@@ -1190,21 +1190,21 @@ Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machin
 
 .. TODO: FSM() should require keyword arguments, for good measure
 
-The reset state of the FSM can be provided when defining it using the :pc:`with m.FSM(reset="Name"):` argument. If not provided, it is the first state in the order of definition. For example, this definition is equivalent to the one at the beginning of this section:
+The reset state of the FSM can be provided when defining it using the :py:`with m.FSM(reset="Name"):` argument. If not provided, it is the first state in the order of definition. For example, this definition is equivalent to the one at the beginning of this section:
 
 .. testcode::
 
     with m.FSM(reset="Set Address"):
         ...
 
-The FSM belongs to a :ref:`clock domain <lang-domains>`, which is specified using the :pc:`with m.FSM(domain="dom")` argument. If not specified, it is the ``sync`` domain. For example, this definition is equivalent to the one at the beginning of this section:
+The FSM belongs to a :ref:`clock domain <lang-domains>`, which is specified using the :py:`with m.FSM(domain="dom")` argument. If not specified, it is the ``sync`` domain. For example, this definition is equivalent to the one at the beginning of this section:
 
 .. testcode::
 
     with m.FSM(domain="sync"):
         ...
 
-To determine (from code that is outside the FSM definition) whether it is currently in a particular state, the FSM can be captured; its :pc:`.ongoing("Name")` method returns a value that is true whenever the FSM is in the corresponding state. For example:
+To determine (from code that is outside the FSM definition) whether it is currently in a particular state, the FSM can be captured; its :py:`.ongoing("Name")` method returns a value that is true whenever the FSM is in the corresponding state. For example:
 
 .. testcode::
 
@@ -1214,20 +1214,20 @@ To determine (from code that is outside the FSM definition) whether it is curren
     with m.If(fsm.ongoing("Set Address")):
         ...
 
-Note that in Python, assignments made using :pc:`with x() as y:` syntax persist past the end of the block.
+Note that in Python, assignments made using :py:`with x() as y:` syntax persist past the end of the block.
 
 .. TODO: `ongoing` currently creates a state if it doesn't exist, which seems clearly wrong but maybe some depend on it? add a diagnostic here
 .. TODO: `m.next` does the same, which is worse because adding a diagnostic is harder
 
 .. warning::
 
-    If you make a typo in the state name provided to :pc:`m.next = ...` or :pc:`fsm.ongoing(...)`, an empty and unreachable state with that name will be created with no diagnostic message.
+    If you make a typo in the state name provided to :py:`m.next = ...` or :py:`fsm.ongoing(...)`, an empty and unreachable state with that name will be created with no diagnostic message.
 
     This hazard will be eliminated in the future.
 
 .. warning::
 
-    If a non-string object is provided as a state name to :pc:`with m.State(...):`, it is cast to a string first, which may lead to surprising behavior. :pc:`with m.State(...):` **does not** treat an enumeration value specially; if one is provided, it is cast to a string, and its numeric value will have no correspondence to the numeric value of the generated state signal.
+    If a non-string object is provided as a state name to :py:`with m.State(...):`, it is cast to a string first, which may lead to surprising behavior. :py:`with m.State(...):` **does not** treat an enumeration value specially; if one is provided, it is cast to a string, and its numeric value will have no correspondence to the numeric value of the generated state signal.
 
     This hazard will be eliminated in the future.
 
@@ -1235,7 +1235,7 @@ Note that in Python, assignments made using :pc:`with x() as y:` syntax persist 
 
 .. note::
 
-    If you are nesting two state machines within each other, the :pc:`m.next = ...` syntax always refers to the innermost one. To change the state of the outer state machine from within the inner one, use an intermediate signal.
+    If you are nesting two state machines within each other, the :py:`m.next = ...` syntax always refers to the innermost one. To change the state of the outer state machine from within the inner one, use an intermediate signal.
 
 
 .. _lang-comb:
@@ -1302,7 +1302,7 @@ Consider the following code:
     with m.Elif(down):
         m.d.sync += timer.eq(timer - 1)
 
-Whenever there is a transition on the clock of the ``sync`` domain, the :pc:`timer` signal is incremented by one if :pc:`up` is true, decremented by one if :pc:`down` is true, and retains its value otherwise.
+Whenever there is a transition on the clock of the ``sync`` domain, the :py:`timer` signal is incremented by one if :py:`up` is true, decremented by one if :py:`down` is true, and retains its value otherwise.
 
 
 .. _lang-clockdomains:
@@ -1310,7 +1310,7 @@ Whenever there is a transition on the clock of the ``sync`` domain, the :pc:`tim
 Clock domains
 =============
 
-A new synchronous :ref:`control domain <lang-domains>`, which is more often called a *clock domain*, can be defined in a design by creating a :class:`ClockDomain` object and adding it to the :pc:`m.domains` collection:
+A new synchronous :ref:`control domain <lang-domains>`, which is more often called a *clock domain*, can be defined in a design by creating a :class:`ClockDomain` object and adding it to the :py:`m.domains` collection:
 
 .. testcode::
 
@@ -1329,7 +1329,7 @@ If the name of the domain is not known upfront, another, less concise, syntax ca
 
 .. note::
 
-    Whenever the created :class:`ClockDomain` object is immediately assigned using the :pc:`domain_name = ClockDomain(...)` or :pc:`m.domains.domain_name = ClockDomain(...)` syntax, the name of the domain may be omitted from the :pc:`ClockDomain()` invocation. In other cases, it must be provided as the first argument.
+    Whenever the created :class:`ClockDomain` object is immediately assigned using the :py:`domain_name = ClockDomain(...)` or :py:`m.domains.domain_name = ClockDomain(...)` syntax, the name of the domain may be omitted from the :py:`ClockDomain()` invocation. In other cases, it must be provided as the first argument.
 
 A clock domain always has a clock signal, which can be accessed through the :attr:`cd.clk <ClockDomain.clk>` attribute. By default, the *active edge* of the clock domain is positive; this means that the signals in the domain change when the clock signal transitions from 0 to 1. A clock domain can be configured to have a negative active edge so that signals in it change when the clock signal transitions from 1 to 0:
 
@@ -1347,7 +1347,7 @@ If a clock domain is defined in a module, all of its submodules can refer to tha
 
 .. warning::
 
-    Always provide the :pc:`local=True` keyword argument when defining a clock domain. The behavior of clock domains defined without this keyword argument is subject to change in near future, and is intentionally left undocumented.
+    Always provide the :py:`local=True` keyword argument when defining a clock domain. The behavior of clock domains defined without this keyword argument is subject to change in near future, and is intentionally left undocumented.
 
 .. warning::
 
@@ -1384,7 +1384,7 @@ Clock domains are *late bound*, which means that their signals and properties ca
         ResetSignal().eq(~bus_rstn),
     ]
 
-In this example, once the design is processed, the clock signal of the clock domain ``sync`` found in this module or one of its containing modules will be equal to :pc:`bus_clk`. The reset signal of the same clock domain will be equal to the negated :pc:`bus_rstn`. With the ``sync`` domain created in the same module, these statements become equivalent to:
+In this example, once the design is processed, the clock signal of the clock domain ``sync`` found in this module or one of its containing modules will be equal to :py:`bus_clk`. The reset signal of the same clock domain will be equal to the negated :py:`bus_rstn`. With the ``sync`` domain created in the same module, these statements become equivalent to:
 
 .. TODO: explain the difference (or lack thereof, eventually) between m.d, m.domain, and m.domains
 
@@ -1396,13 +1396,13 @@ In this example, once the design is processed, the clock signal of the clock dom
         cd_sync.rst.eq(~bus_rstn),
     ]
 
-The :class:`ClockSignal` and :class:`ResetSignal` values may also be assigned to other signals and used in expressions. They take a single argument, which is the name of the domain; if not specified, it defaults to :pc:`"sync"`.
+The :class:`ClockSignal` and :class:`ResetSignal` values may also be assigned to other signals and used in expressions. They take a single argument, which is the name of the domain; if not specified, it defaults to :py:`"sync"`.
 
 .. warning::
 
     Be especially careful when using :class:`ClockSignal` or :attr:`cd.clk <ClockDomain.clk>` in expressions. Assigning to and from a clock signal is usually safe; any other operations may have unpredictable results. Consult the documentation for your synthesis toolchain and platform to understand which operations with a clock signal are permitted.
 
-    FPGAs usually have dedicated clocking facilities that can be used to disable, divide, or multiplex clock signals. When targeting an FPGA, these facilities should be used if at all possible, and expressions like :pc:`ClockSignal() & en` or :pc:`Mux(sel, ClockSignal("a"), ClockSignal("b"))` should be avoided.
+    FPGAs usually have dedicated clocking facilities that can be used to disable, divide, or multiplex clock signals. When targeting an FPGA, these facilities should be used if at all possible, and expressions like :py:`ClockSignal() & en` or :py:`Mux(sel, ClockSignal("a"), ClockSignal("b"))` should be avoided.
 
 
 .. _lang-elaboration:
@@ -1430,7 +1430,7 @@ The :meth:`~Elaboratable.elaborate` method must either return an instance of :cl
 
     Instances of :class:`Module` also implement the :meth:`~Elaboratable.elaborate` method, which returns a special object that represents a fragment of a netlist. Such an object cannot be constructed without using :class:`Module`.
 
-The :pc:`platform` argument received by the :meth:`~Elaboratable.elaborate` method can be :pc:`None`, an instance of :ref:`a built-in platform <platform>`, or a custom object. It is used for `dependency injection <https://en.wikipedia.org/wiki/Dependency_injection>`_ and to contain the state of a design while it is being elaborated.
+The :py:`platform` argument received by the :meth:`~Elaboratable.elaborate` method can be :py:`None`, an instance of :ref:`a built-in platform <platform>`, or a custom object. It is used for `dependency injection <https://en.wikipedia.org/wiki/Dependency_injection>`_ and to contain the state of a design while it is being elaborated.
 
 .. important::
 
@@ -1483,7 +1483,7 @@ Control flow within an elaboratable can be altered without introducing a new clo
 * :class:`ResetInserter` introduces a synchronous reset input (or inputs), updating all of the signals in the specified domains to their :ref:`initial value <lang-initial>` whenever the active edge occurs on the clock of the domain *if* the synchronous reset input is asserted.
 * :class:`EnableInserter` introduces a synchronous enable input (or inputs), preventing any of the signals in the specified domains from changing value whenever the active edge occurs on the clock of the domain *unless* the synchronous enable input is asserted.
 
-Control flow modifiers use the syntax :pc:`Modifier(controls)(elaboratable)`, where :pc:`controls` is a mapping from :ref:`clock domain <lang-clockdomains>` names to 1-wide :ref:`values <lang-values>` and :pc:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. When only the ``sync`` domain is involved, instead of writing :pc:`Modifier({"sync": input})(elaboratable)`, the equivalent but shorter :pc:`Modifier(input)(elaboratable)` syntax can be used.
+Control flow modifiers use the syntax :py:`Modifier(controls)(elaboratable)`, where :py:`controls` is a mapping from :ref:`clock domain <lang-clockdomains>` names to 1-wide :ref:`values <lang-values>` and :py:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. When only the ``sync`` domain is involved, instead of writing :py:`Modifier({"sync": input})(elaboratable)`, the equivalent but shorter :py:`Modifier(input)(elaboratable)` syntax can be used.
 
 The result of applying a control flow modifier to an elaboratable is, itself, an elaboratable object. A common way to use a control flow modifier is to apply it to another elaboratable while adding it as a submodule:
 
@@ -1526,7 +1526,7 @@ Consider the following code:
     m = ResetInserter({"sync": rst})(m)
     m = EnableInserter({"sync": en})(m)
 
-The application of control flow modifiers in it causes the behavior of the final :pc:`m` to be identical to that of this module:
+The application of control flow modifiers in it causes the behavior of the final :py:`m` to be identical to that of this module:
 
 .. testcode::
 
@@ -1551,7 +1551,7 @@ Renaming domains
 
 A reusable :ref:`elaboratable <lang-elaboration>` usually specifies the use of one or more :ref:`clock domains <lang-clockdomains>` while leaving the details of clocking and initialization to a later phase in the design process. :class:`DomainRenamer` can be used to alter a reusable elaboratable for integration in a specific design. Most elaboratables use a single clock domain named ``sync``, and :class:`DomainRenamer` makes it easy to place such elaboratables in any clock domain of a design.
 
-Clock domains can be renamed using the syntax :pc:`DomainRenamer(domains)(elaboratable)`, where :pc:`domains` is a mapping from clock domain names to clock domain names and :pc:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. The keys of :pc:`domains` correspond to existing clock domain names specified by :pc:`elaboratable`, and the values of :pc:`domains` correspond to the clock domain names from the containing elaboratable that will be used instead. When only the ``sync`` domain is being renamed, instead of writing :pc:`DomainRenamer({"sync": name})(elaboratable)`, the equivalent but shorter :pc:`DomainRenamer(name)(elaboratable)` syntax can be used.
+Clock domains can be renamed using the syntax :py:`DomainRenamer(domains)(elaboratable)`, where :py:`domains` is a mapping from clock domain names to clock domain names and :py:`elaboratable` is any :ref:`elaboratable <lang-elaboration>` object. The keys of :py:`domains` correspond to existing clock domain names specified by :py:`elaboratable`, and the values of :py:`domains` correspond to the clock domain names from the containing elaboratable that will be used instead. When only the ``sync`` domain is being renamed, instead of writing :py:`DomainRenamer({"sync": name})(elaboratable)`, the equivalent but shorter :py:`DomainRenamer(name)(elaboratable)` syntax can be used.
 
 The result of renaming clock domains in an elaboratable is, itself, an elaboratable object. A common way to rename domains is to apply :class:`DomainRenamer` to another elaboratable while adding it as a submodule:
 
@@ -1590,7 +1590,7 @@ Consider the following code:
 
     m = DomainRenamer({"sync": "video"})(m)
 
-The renaming of the ``sync`` clock domain in it causes the behavior of the final :pc:`m` to be identical to that of this module:
+The renaming of the ``sync`` clock domain in it causes the behavior of the final :py:`m` to be identical to that of this module:
 
 .. testcode::
 
@@ -1626,12 +1626,12 @@ A submodule written in a non-Amaranth language is called an *instance*. An insta
 * The *parameters* of an instance correspond to parameters of a (System)Verilog module instance, or a generic constant of a VHDL entity or component instance. Not all HDLs allow their design units to be parameterized during instantiation.
 * The *inputs* and *outputs* of an instance correspond to inputs and outputs of the external design unit.
 
-An instance can be added as a submodule using the :pc:`m.submodules.name = Instance("type", ...)` syntax, where :pc:`"type"` is the type of the instance as a string (which is passed to the synthesis toolchain uninterpreted), and :pc:`...` is a list of parameters, inputs, and outputs. Depending on whether the name of an attribute, parameter, input, or output can be written as a part of a Python identifier or not, one of two possible syntaxes is used to specify them:
+An instance can be added as a submodule using the :py:`m.submodules.name = Instance("type", ...)` syntax, where :py:`"type"` is the type of the instance as a string (which is passed to the synthesis toolchain uninterpreted), and :py:`...` is a list of parameters, inputs, and outputs. Depending on whether the name of an attribute, parameter, input, or output can be written as a part of a Python identifier or not, one of two possible syntaxes is used to specify them:
 
-* An attribute is specified using the :pc:`a_ANAME=attr` or :pc:`("a", "ANAME", attr)` syntaxes. The :pc:`attr` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
-* A parameter is specified using the :pc:`p_PNAME=param` or :pc:`("p", "PNAME", param)` syntaxes. The :pc:`param` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
-* An input is specified using the :pc:`i_INAME=in_val` or :pc:`("i", "INAME", in_val)` syntaxes. The :pc:`in_val` must be a :ref:`value-like <lang-valuelike>` object.
-* An output is specified using the :pc:`o_ONAME=out_val` or :pc:`("o", "ONAME", out_val)` syntaxes. The :pc:`out_val` must be a :ref:`value-like <lang-valuelike>` object that casts to a :class:`Signal`.
+* An attribute is specified using the :py:`a_ANAME=attr` or :py:`("a", "ANAME", attr)` syntaxes. The :py:`attr` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
+* A parameter is specified using the :py:`p_PNAME=param` or :py:`("p", "PNAME", param)` syntaxes. The :py:`param` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
+* An input is specified using the :py:`i_INAME=in_val` or :py:`("i", "INAME", in_val)` syntaxes. The :py:`in_val` must be a :ref:`value-like <lang-valuelike>` object.
+* An output is specified using the :py:`o_ONAME=out_val` or :py:`("o", "ONAME", out_val)` syntaxes. The :py:`out_val` must be a :ref:`value-like <lang-valuelike>` object that casts to a :class:`Signal`.
 
 The two following examples use both syntaxes to add the same instance of type ``external`` as a submodule named ``processor``:
 
@@ -1683,7 +1683,7 @@ Like a regular submodule, an instance can also be added without specifying a nam
 
     If a name is not explicitly specified for a submodule, one will be generated and assigned automatically. Designs with many autogenerated names can be difficult to debug, so a name should usually be supplied.
 
-Although an :class:`Instance` is not an elaboratable, as a special case, it can be returned from the :pc:`elaborate()` method. This is conveinent for implementing an elaboratable that adorns an instance with an Amaranth interface:
+Although an :class:`Instance` is not an elaboratable, as a special case, it can be returned from the :py:`elaborate()` method. This is conveinent for implementing an elaboratable that adorns an instance with an Amaranth interface:
 
 .. testcode::
 

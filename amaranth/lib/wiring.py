@@ -51,7 +51,7 @@ class Flow(enum.Enum):
         Returns
         -------
         :class:`Flow`
-            :attr:`In` if called as :pc:`Out.flip()`; :attr:`Out` if called as :pc:`In.flip()`.
+            :attr:`In` if called as :py:`Out.flip()`; :attr:`Out` if called as :py:`In.flip()`.
         """
         if self == Out:
             return In
@@ -66,7 +66,7 @@ class Flow(enum.Enum):
         Returns
         -------
         :class:`Member`
-            :pc:`Member(self, description, reset=reset)`
+            :py:`Member(self, description, reset=reset)`
         """
         return Member(self, description, reset=reset, src_loc_at=src_loc_at + 1)
 
@@ -103,7 +103,7 @@ class Member:
     will equal ``reset``.
 
     Although instances can be created directly, most often they will be created through
-    :data:`In` and :data:`Out`, e.g. :pc:`In(unsigned(1))` or :pc:`Out(stream.Signature(RGBPixel))`.
+    :data:`In` and :data:`Out`, e.g. :py:`In(unsigned(1))` or :py:`Out(stream.Signature(RGBPixel))`.
     """
     def __init__(self, flow, description, *, reset=None, _dimensions=(), src_loc_at=0):
         self._flow = flow
@@ -145,8 +145,8 @@ class Member:
         Returns
         -------
         :class:`Member`
-            A new :pc:`member` with :pc:`member.flow` equal to :pc:`self.flow.flip()`, and identical
-            to :pc:`self` other than that.
+            A new :py:`member` with :py:`member.flow` equal to :py:`self.flow.flip()`, and identical
+            to :py:`self` other than that.
         """
         return Member(self._flow.flip(), self._description, reset=self._reset,
                       _dimensions=self._dimensions)
@@ -155,21 +155,21 @@ class Member:
         """Add array dimensions to this member.
 
         The dimensions passed to this method are `prepended` to the existing dimensions.
-        For example, :pc:`Out(1).array(2)` describes an array of 2 elements, whereas both
-        :pc:`Out(1).array(2, 3)` and :pc:`Out(1).array(3).array(2)` both describe a two dimensional
+        For example, :py:`Out(1).array(2)` describes an array of 2 elements, whereas both
+        :py:`Out(1).array(2, 3)` and :py:`Out(1).array(3).array(2)` both describe a two dimensional
         array of 2 by 3 elements.
 
         Dimensions are passed to :meth:`array` in the order in which they would be indexed.
-        That is, :pc:`.array(x, y)` creates a member that can be indexed up to :pc:`[x-1][y-1]`.
+        That is, :py:`.array(x, y)` creates a member that can be indexed up to :py:`[x-1][y-1]`.
 
-        The :meth:`array` method is composable: calling :pc:`member.array(x)` describes an array of
-        :pc:`x` members even if :pc:`member` was already an array.
+        The :meth:`array` method is composable: calling :py:`member.array(x)` describes an array of
+        :py:`x` members even if :py:`member` was already an array.
 
         Returns
         -------
         :class:`Member`
-            A new :pc:`member` with :pc:`member.dimensions` extended by :pc:`dimensions`, and
-            identical to :pc:`self` other than that.
+            A new :py:`member` with :py:`member.dimensions` extended by :py:`dimensions`, and
+            identical to :py:`self` other than that.
         """
         for dimension in dimensions:
             if not (isinstance(dimension, int) and dimension >= 0):
@@ -195,8 +195,8 @@ class Member:
         Returns
         -------
         :class:`bool`
-            :pc:`True` if this is a description of a port member,
-            :pc:`False` if this is a description of a signature member.
+            :py:`True` if this is a description of a port member,
+            :py:`False` if this is a description of a signature member.
         """
         return not isinstance(self._description, Signature)
 
@@ -207,8 +207,8 @@ class Member:
         Returns
         -------
         :class:`bool`
-            :pc:`True` if this is a description of a signature member,
-            :pc:`False` if this is a description of a port member.
+            :py:`True` if this is a description of a signature member,
+            :py:`False` if this is a description of a port member.
         """
         return isinstance(self._description, Signature)
 
@@ -224,7 +224,7 @@ class Member:
         Raises
         ------
         :exc:`AttributeError`
-            If :pc:`self` describes a signature member.
+            If :py:`self` describes a signature member.
         """
         if self.is_signature:
             raise AttributeError(f"A signature member does not have a shape")
@@ -242,7 +242,7 @@ class Member:
         Raises
         ------
         :exc:`AttributeError`
-            If :pc:`self` describes a signature member.
+            If :py:`self` describes a signature member.
         """
         if self.is_signature:
             raise AttributeError(f"A signature member does not have a reset value")
@@ -260,7 +260,7 @@ class Member:
         Raises
         ------
         :exc:`AttributeError`
-            If :pc:`self` describes a port member.
+            If :py:`self` describes a port member.
         """
         if self.is_port:
             raise AttributeError(f"A port member does not have a signature")
@@ -316,7 +316,7 @@ class SignatureError(Exception):
 class SignatureMembers(Mapping):
     """Mapping of signature member names to their descriptions.
 
-    This container, a :class:`collections.abc.Mapping`, is used to implement the :pc:`members`
+    This container, a :class:`collections.abc.Mapping`, is used to implement the :py:`members`
     attribute of signature objects.
 
     The keys in this container must be valid Python attribute names that are public (do not begin
@@ -326,7 +326,7 @@ class SignatureMembers(Mapping):
     a container recursively freezes the members of any signatures inside.
 
     In addition to the use of the superscript operator, multiple members can be added at once with
-    the :pc:`+=` opreator.
+    the :py:`+=` opreator.
 
     The :meth:`create` method converts this mapping into a mapping of names to signature members
     (signals and interface objects) by creating them from their descriptions. The created mapping
@@ -348,7 +348,7 @@ class SignatureMembers(Mapping):
         Returns
         -------
         :class:`FlippedSignatureMembers`
-            Proxy collection :pc:`FlippedSignatureMembers(self)` that flips the data flow of
+            Proxy collection :py:`FlippedSignatureMembers(self)` that flips the data flow of
             the members that are accessed using it.
         """
         return FlippedSignatureMembers(self)
@@ -359,7 +359,7 @@ class SignatureMembers(Mapping):
         Returns
         -------
         :class:`bool`
-            :pc:`True` if the mappings contain the same key-value pairs, :pc:`False` otherwise.
+            :py:`True` if the mappings contain the same key-value pairs, :py:`False` otherwise.
         """
         return (isinstance(other, (SignatureMembers, FlippedSignatureMembers)) and
                 list(sorted(self.flatten())) == list(sorted(other.flatten())))
@@ -391,11 +391,11 @@ class SignatureMembers(Mapping):
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`name` is not a string.
+            If :py:`name` is not a string.
         :exc:`NameError`
-            If :pc:`name` is not a valid, public Python attribute name.
+            If :py:`name` is not a valid, public Python attribute name.
         :exc:`SignatureError`
-            If a member called :pc:`name` does not exist in the collection.
+            If a member called :py:`name` does not exist in the collection.
         """
         self._check_name(name)
         if name not in self._dict:
@@ -551,7 +551,7 @@ class FlippedSignatureMembers(Mapping):
         Returns
         -------
         :class:`SignatureMembers`
-            :pc:`unflipped`
+            :py:`unflipped`
         """
         return self.__unflipped
 
@@ -637,7 +637,7 @@ class SignatureMeta(type):
 
     def __subclasscheck__(cls, subclass):
         """
-        Override of :pc:`issubclass(cls, Signature)`.
+        Override of :py:`issubclass(cls, Signature)`.
 
         In addition to the standard behavior of :func:`issubclass`, this override makes
         :class:`FlippedSignature` a subclass of :class:`Signature` or any of its subclasses.
@@ -651,11 +651,11 @@ class SignatureMeta(type):
 
     def __instancecheck__(cls, instance):
         """
-        Override of :pc:`isinstance(obj, Signature)`.
+        Override of :py:`isinstance(obj, Signature)`.
 
         In addition to the standard behavior of :func:`isinstance`, this override makes
-        :pc:`isinstance(obj, cls)` act as :pc:`isinstance(obj.flip(), cls)` where
-        :pc:`obj` is an instance of :class:`FlippedSignature`.
+        :py:`isinstance(obj, cls)` act as :py:`isinstance(obj.flip(), cls)` where
+        :py:`obj` is an instance of :class:`FlippedSignature`.
         """
 
         # `FlippedSignature` is an instance of a `Signature` or its subclass if the unflipped
@@ -668,7 +668,7 @@ class SignatureMeta(type):
 class Signature(metaclass=SignatureMeta):
     """Description of an interface object.
 
-    An interface object is a Python object that has a :pc:`signature` attribute containing
+    An interface object is a Python object that has a :py:`signature` attribute containing
     a :class:`Signature` object, as well as an attribute for every member of its signature.
     Signatures and interface objects are tightly linked: an interface object can be created out
     of a signature, and the signature is used when :func:`connect` ing two interface objects
@@ -693,7 +693,7 @@ class Signature(metaclass=SignatureMeta):
         Returns
         -------
         :class:`FlippedSignature`
-            Proxy object :pc:`FlippedSignature(self)` that flips the data flow of the attributes
+            Proxy object :py:`FlippedSignature(self)` that flips the data flow of the attributes
             corresponding to the members that are accessed using it.
 
             See the documentation for the :class:`FlippedSignature` class for a detailed discussion
@@ -714,10 +714,10 @@ class Signature(metaclass=SignatureMeta):
     def __eq__(self, other):
         """Compare this signature with another.
 
-        The behavior of this operator depends on the types of the arguments. If both :pc:`self`
-        and :pc:`other` are instances of the base :class:`Signature` class, they are compared
-        structurally (the result is :pc:`self.members == other.members`); otherwise they are
-        compared by identity (the result is :pc:`self is other`).
+        The behavior of this operator depends on the types of the arguments. If both :py:`self`
+        and :py:`other` are instances of the base :class:`Signature` class, they are compared
+        structurally (the result is :py:`self.members == other.members`); otherwise they are
+        compared by identity (the result is :py:`self is other`).
 
         Subclasses of :class:`Signature` are expected to override this method to take into account
         the specifics of the domain. If the subclass has additional properties that do not influence
@@ -806,9 +806,9 @@ class Signature(metaclass=SignatureMeta):
 
         It verifies that:
 
-        * :pc:`obj` has a :pc:`signature` attribute whose value a :class:`Signature` instance
+        * :py:`obj` has a :py:`signature` attribute whose value a :class:`Signature` instance
           such that ``self == obj.signature``;
-        * for each member, :pc:`obj` has an attribute with the same name, whose value:
+        * for each member, :py:`obj` has an attribute with the same name, whose value:
 
           * for members with :meth:`dimensions <Member.dimensions>` specified, contains a list or
             a tuple (or several levels of nested lists or tuples, for multiple dimensions)
@@ -820,24 +820,24 @@ class Signature(metaclass=SignatureMeta):
           * for signature members, matches the description in the signature as verified by
             :meth:`Signature.is_compliant`.
 
-        If the verification fails, this method reports the reason(s) by filling the :pc:`reasons`
+        If the verification fails, this method reports the reason(s) by filling the :py:`reasons`
         container. These reasons are intended to be human-readable: more than one reason may be
         reported but only in cases where this is helpful (e.g. the same error message will not
         repeat 10 times for each of the 10 ports in a list).
 
         Arguments
         ---------
-        reasons : :class:`list` or :pc:`None`
+        reasons : :class:`list` or :py:`None`
             If provided, a container that receives diagnostic messages.
         path : :class:`tuple` of :class:`str`
-            The :ref:`path <wiring-path>` to :pc:`obj`. Could be set to improve diagnostic
-            messages if :pc:`obj` is nested within another object, or for clarity.
+            The :ref:`path <wiring-path>` to :py:`obj`. Could be set to improve diagnostic
+            messages if :py:`obj` is nested within another object, or for clarity.
 
         Returns
         -------
         :class:`bool`
-            :pc:`True` if :pc:`obj` matches the description in this signature, :pc:`False`
-            otherwise. If :pc:`False` and :pc:`reasons` was not :pc:`None`, it will contain
+            :py:`True` if :py:`obj` matches the description in this signature, :py:`False`
+            otherwise. If :py:`False` and :py:`reasons` was not :py:`None`, it will contain
             a detailed explanation why.
         """
 
@@ -952,7 +952,7 @@ class Signature(metaclass=SignatureMeta):
         This implementation creates an interface object from this signature that serves purely
         as a container for the attributes corresponding to the signature members, and implements
         no behavior. Such an implementation is sufficient for signatures created ad-hoc using
-        the :pc:`Signature({ ... })` constructor as well as simple signature subclasses.
+        the :py:`Signature({ ... })` constructor as well as simple signature subclasses.
 
         When defining a :class:`Signature` subclass that needs to customize the behavior of
         the created interface objects, override this method with a similar implementation
@@ -969,7 +969,7 @@ class Signature(metaclass=SignatureMeta):
                 def my_property(self):
                     ...
 
-        The :pc:`path` and :pc:`src_loc_at` arguments are necessary to ensure the generated signals
+        The :py:`path` and :py:`src_loc_at` arguments are necessary to ensure the generated signals
         have informative names and accurate source location information.
 
         The custom :meth:`create` method may take positional or keyword arguments in addition to
@@ -1033,9 +1033,9 @@ class FlippedSignature:
 
     It is not possible to inherit from :class:`FlippedSignature` and :meth:`Signature.flip` must not
     be overridden. If a :class:`Signature` subclass defines a method and this method is called on
-    a flipped instance of the subclass, it receives the flipped instance as its :pc:`self` argument.
+    a flipped instance of the subclass, it receives the flipped instance as its :py:`self` argument.
     To distinguish being called on the flipped instance from being called on the unflipped one, use
-    :pc:`isinstance(self, FlippedSignature)`:
+    :py:`isinstance(self, FlippedSignature)`:
 
     .. testcode::
 
@@ -1058,7 +1058,7 @@ class FlippedSignature:
         Returns
         -------
         :class:`Signature`
-            :pc:`unflipped`
+            :py:`unflipped`
         """
         return self.__unflipped
 
@@ -1089,11 +1089,11 @@ class FlippedSignature:
     # are two possible exits via `except AttributeError`: from `getattr` and from `.__get__()`.
 
     def __getattr__(self, name):
-        """Retrieves attribute or method :pc:`name` of the unflipped signature.
+        """Retrieves attribute or method :py:`name` of the unflipped signature.
 
-        Performs :pc:`getattr(unflipped, name)`, ensuring that, if :pc:`name` refers to a property
-        getter or a method, its :pc:`self` argument receives the *flipped* signature. A class
-        method's :pc:`cls` argument receives the class of the *unflipped* signature, as usual.
+        Performs :py:`getattr(unflipped, name)`, ensuring that, if :py:`name` refers to a property
+        getter or a method, its :py:`self` argument receives the *flipped* signature. A class
+        method's :py:`cls` argument receives the class of the *unflipped* signature, as usual.
         """
         try: # descriptor first
             return _gettypeattr(self.__unflipped, name).__get__(self, type(self.__unflipped))
@@ -1101,10 +1101,10 @@ class FlippedSignature:
             return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        """Assigns attribute :pc:`name` of the unflipped signature to ``value``.
+        """Assigns attribute :py:`name` of the unflipped signature to ``value``.
 
-        Performs :pc:`setattr(unflipped, name, value)`, ensuring that, if :pc:`name` refers to
-        a property setter, its :pc:`self` argument receives the flipped signature.
+        Performs :py:`setattr(unflipped, name, value)`, ensuring that, if :py:`name` refers to
+        a property setter, its :py:`self` argument receives the flipped signature.
         """
         try: # descriptor first
             _gettypeattr(self.__unflipped, name).__set__(self, value)
@@ -1112,10 +1112,10 @@ class FlippedSignature:
             setattr(self.__unflipped, name, value)
 
     def __delattr__(self, name):
-        """Removes attribute :pc:`name` of the unflipped signature.
+        """Removes attribute :py:`name` of the unflipped signature.
 
-        Performs :pc:`delattr(unflipped, name)`, ensuring that, if :pc:`name` refers to a property
-        deleter, its :pc:`self` argument receives the flipped signature.
+        Performs :py:`delattr(unflipped, name)`, ensuring that, if :py:`name` refers to a property
+        deleter, its :py:`self` argument receives the flipped signature.
         """
         try: # descriptor first
             _gettypeattr(self.__unflipped, name).__delete__(self)
@@ -1140,7 +1140,7 @@ class PureInterface:
 
     .. important::
 
-        Any object can be an interface object; it only needs a :pc:`signature` property containing
+        Any object can be an interface object; it only needs a :py:`signature` property containing
         a compliant signature. It is **not** necessary to use :class:`PureInterface` in order to
         create an interface object, but it may be used either directly or as a base class whenever
         it is convenient to do so.
@@ -1150,7 +1150,7 @@ class PureInterface:
         """Create attributes from a signature.
 
         The sole method defined by this helper is its constructor, which only defines
-        the :pc:`self.signature` attribute as well as the attributes created from the signature
+        the :py:`self.signature` attribute as well as the attributes created from the signature
         members:
 
         .. code::
@@ -1187,7 +1187,7 @@ class FlippedInterface:
     """An interface object, with its members' directions flipped.
 
     An instance of :class:`FlippedInterface` should only be created by calling :func:`flipped`,
-    which ensures that a :pc:`FlippedInterface(FlippedInterface(...))` object is never created.
+    which ensures that a :py:`FlippedInterface(FlippedInterface(...))` object is never created.
 
     This proxy wraps any interface object and forwards attribute and method access to the wrapped
     interface object while flipping its signature and the values of any attributes corresponding to
@@ -1211,9 +1211,9 @@ class FlippedInterface:
 
     It is not possible to inherit from :class:`FlippedInterface`. If an interface object class
     defines a method or a property and it is called on the flipped interface object, the method
-    receives the flipped interface object as its :pc:`self` argument. To distinguish being called
+    receives the flipped interface object as its :py:`self` argument. To distinguish being called
     on the flipped interface object from being called on the unflipped one, use
-    :pc:`isinstance(self, FlippedInterface)`:
+    :py:`isinstance(self, FlippedInterface)`:
 
     .. testcode::
 
@@ -1240,7 +1240,7 @@ class FlippedInterface:
         Returns
         -------
         Signature
-            :pc:`unflipped.signature.flip()`
+            :py:`unflipped.signature.flip()`
         """
         return self.__unflipped.signature.flip()
 
@@ -1250,8 +1250,8 @@ class FlippedInterface:
         Returns
         -------
         bool
-            :pc:`True` if :pc:`other` is an instance :pc:`FlippedInterface(other_unflipped)` where
-            :pc:`unflipped == other_unflipped`, :pc:`False` otherwise.
+            :py:`True` if :py:`other` is an instance :py:`FlippedInterface(other_unflipped)` where
+            :py:`unflipped == other_unflipped`, :py:`False` otherwise.
         """
         return type(self) is type(other) and self.__unflipped == other.__unflipped
 
@@ -1259,13 +1259,13 @@ class FlippedInterface:
     # an interface member.
 
     def __getattr__(self, name):
-        """Retrieves attribute or method :pc:`name` of the unflipped interface.
+        """Retrieves attribute or method :py:`name` of the unflipped interface.
 
-        Performs :pc:`getattr(unflipped, name)`, with the following caveats:
+        Performs :py:`getattr(unflipped, name)`, with the following caveats:
 
-        1. If :pc:`name` refers to a signature member, the returned interface object is flipped.
-        2. If :pc:`name` refers to a property getter or a method, its :pc:`self` argument receives
-           the *flipped* interface. A class method's :pc:`cls` argument receives the class of
+        1. If :py:`name` refers to a signature member, the returned interface object is flipped.
+        2. If :py:`name` refers to a property getter or a method, its :py:`self` argument receives
+           the *flipped* interface. A class method's :py:`cls` argument receives the class of
            the *unflipped* interface, as usual.
         """
         if (name in self.__unflipped.signature.members and
@@ -1278,12 +1278,12 @@ class FlippedInterface:
                 return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        """Assigns attribute :pc:`name` of the unflipped interface to ``value``.
+        """Assigns attribute :py:`name` of the unflipped interface to ``value``.
 
-        Performs :pc:`setattr(unflipped, name, value)`, with the following caveats:
+        Performs :py:`setattr(unflipped, name, value)`, with the following caveats:
 
-        1. If :pc:`name` refers to a signature member, the assigned interface object is flipped.
-        2. If :pc:`name` refers to a property setter, its :pc:`self` argument receives the flipped
+        1. If :py:`name` refers to a signature member, the assigned interface object is flipped.
+        2. If :py:`name` refers to a property setter, its :py:`self` argument receives the flipped
            interface.
         """
         if (name in self.__unflipped.signature.members and
@@ -1296,10 +1296,10 @@ class FlippedInterface:
                 setattr(self.__unflipped, name, value)
 
     def __delattr__(self, name):
-        """Removes attribute :pc:`name` of the unflipped interface.
+        """Removes attribute :py:`name` of the unflipped interface.
 
-        Performs :pc:`delattr(unflipped, name)`, ensuring that, if :pc:`name` refers to a property
-        deleter, its :pc:`self` argument receives the flipped interface.
+        Performs :py:`delattr(unflipped, name)`, ensuring that, if :py:`name` refers to a property
+        deleter, its :py:`self` argument receives the flipped interface.
         """
         try: # descriptor first
             _gettypeattr(self.__unflipped, name).__delete__(self)
@@ -1312,10 +1312,10 @@ class FlippedInterface:
 
 def flipped(interface):
     """
-    Flip the data flow of the members of the interface object :pc:`interface`.
+    Flip the data flow of the members of the interface object :py:`interface`.
 
     If an interface object is flipped twice, returns the original object:
-    :pc:`flipped(flipped(interface)) is interface`. Otherwise, wraps :pc:`interface` in
+    :py:`flipped(flipped(interface)) is interface`. Otherwise, wraps :py:`interface` in
     a :class:`FlippedInterface` proxy object that flips the directions of its members.
 
     See the documentation for the :class:`FlippedInterface` class for a detailed discussion of how
@@ -1352,11 +1352,11 @@ def connect(m, *args, **kwargs):
       to a constant value, then the rest of the interface objects must have output port members
       corresponding to the same constant value.
 
-    For example, if :pc:`obj1` is being connected to :pc:`obj2` and :pc:`obj3`, and :pc:`obj1.a.b`
-    is an output, then :pc:`obj2.a.b` and :pc:`obj2.a.b` must exist and be inputs. If :pc:`obj2.c`
-    is an input and its value is :pc:`Const(1)`, then :pc:`obj1.c` and :pc:`obj3.c` must be outputs
-    whose value is also :pc:`Const(1)`. If no ports besides :pc:`obj1.a.b` and :pc:`obj1.c` exist,
-    then no ports except for those two must exist on :pc:`obj2` and :pc:`obj3` either.
+    For example, if :py:`obj1` is being connected to :py:`obj2` and :py:`obj3`, and :py:`obj1.a.b`
+    is an output, then :py:`obj2.a.b` and :py:`obj2.a.b` must exist and be inputs. If :py:`obj2.c`
+    is an input and its value is :py:`Const(1)`, then :py:`obj1.c` and :py:`obj3.c` must be outputs
+    whose value is also :py:`Const(1)`. If no ports besides :py:`obj1.a.b` and :py:`obj1.c` exist,
+    then no ports except for those two must exist on :py:`obj2` and :py:`obj3` either.
 
     Once it is determined that the interface objects can be connected, this function performs
     an equivalent of:
@@ -1369,12 +1369,12 @@ def connect(m, *args, **kwargs):
             ...
         ]
 
-    Where :pc:`out1` is an output and :pc:`in1`, :pc:`in2`, ... are the inputs that have the same
+    Where :py:`out1` is an output and :py:`in1`, :py:`in2`, ... are the inputs that have the same
     path. (If no interface object has an output for a given path, **no connection at all** is made.)
 
-    The positions (within :pc:`args`) or names (within :pc:`kwargs`) of the arguments do not affect
-    the connections that are made. There is no difference in behavior between :pc:`connect(m, a, b)`
-    and :pc:`connect(m, b, a)` or :pc:`connect(m, arbiter=a, decoder=b)`. The names of the keyword
+    The positions (within :py:`args`) or names (within :py:`kwargs`) of the arguments do not affect
+    the connections that are made. There is no difference in behavior between :py:`connect(m, a, b)`
+    and :py:`connect(m, b, a)` or :py:`connect(m, arbiter=a, decoder=b)`. The names of the keyword
     arguments serve only a documentation purpose: they clarify the diagnostic messages when
     a connection cannot be made.
     """
@@ -1609,8 +1609,8 @@ class Component(Elaboratable):
     Raises
     ------
     :exc:`TypeError`
-        If the :pc:`signature` object is neither a :class:`Signature` nor a :class:`dict`.
-        If neither variable annotations nor the :pc:`signature` argument are present, or if
+        If the :py:`signature` object is neither a :class:`Signature` nor a :class:`dict`.
+        If neither variable annotations nor the :py:`signature` argument are present, or if
         both are present.
     :exc:`NameError`
         If a name conflict is detected between two variable annotations, or between a member
