@@ -494,6 +494,21 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
 
+    def test_Switch_zero_width(self):
+        m = Module()
+        s = Signal(0)
+        with m.Switch(s):
+            with m.Case(0):
+                m.d.comb += self.c1.eq(1)
+        m._flush()
+        self.assertRepr(m._statements, """
+        (
+            (switch (sig s)
+                (case (eq (sig c1) (const 1'd1)))
+            )
+        )
+        """)
+
     def test_Case_bits_wrong(self):
         m = Module()
         with m.Switch(self.w1):
