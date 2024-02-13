@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from amaranth.hdl._ast import *
 from amaranth.hdl._cd import *
+from amaranth.hdl._dsl import *
 from amaranth.hdl._ir import *
 from amaranth.hdl._mem import *
 
@@ -919,3 +920,29 @@ class InstanceTestCase(FHDLTestCase):
             f: ("top",),
             a_f: ("top", "a$U$0")
         })
+
+
+class ElaboratesTo(Elaboratable):
+    def __init__(self, lower):
+        self.lower = lower
+
+    def elaborate(self, platform):
+        return self.lower
+
+
+class OriginsTestCase(FHDLTestCase):
+    def test_origins(self):
+        elab1 = ElaboratesTo(elab2 := ElaboratesTo(m := Module()))
+        frag = Fragment.get(elab1, platform=None)
+        self.assertEqual(len(frag.origins), 3)
+        self.assertIsInstance(frag.origins, tuple)
+        self.assertIs(frag.origins[0], elab1)
+        self.assertIs(frag.origins[1], elab2)
+        self.assertIs(frag.origins[2], m)
+
+    def test_origins_disable(self):
+        inst = Instance("test")
+        del inst.origins
+        elab = ElaboratesTo(inst)
+        frag = Fragment.get(elab, platform=None)
+        self.assertFalse(hasattr(frag, "_origins"))

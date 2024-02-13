@@ -31,8 +31,11 @@ class Fragment:
     @staticmethod
     def get(obj, platform):
         code = None
+        origins = []
         while True:
             if isinstance(obj, Fragment):
+                if hasattr(obj, "origins"):
+                    obj.origins = tuple(origins)
                 return obj
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
@@ -58,6 +61,7 @@ class Fragment:
                     category=UserWarning,
                     filename=code.co_filename,
                     lineno=code.co_firstlineno)
+            origins.append(obj)
             obj = new_obj
 
     def __init__(self, *, src_loc=None):
@@ -70,6 +74,7 @@ class Fragment:
         self.generated = OrderedDict()
         self.flatten = False
         self.src_loc = src_loc
+        self.origins = None
 
     def add_ports(self, *ports, dir):
         assert dir in ("i", "o", "io")
