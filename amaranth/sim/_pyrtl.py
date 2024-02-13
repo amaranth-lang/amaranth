@@ -378,7 +378,7 @@ class _StatementCompiler(StatementVisitor, _Compiler):
                         value = int("".join("0" if b == "-" else  b  for b in pattern), 2)
                         gen_checks.append(f"{value} == ({mask} & {gen_test})")
                     else:
-                        value = int(pattern, 2)
+                        value = int(pattern or "0", 2)
                         gen_checks.append(f"{value} == {gen_test}")
             if index == 0:
                 self.emitter.append(f"if {' or '.join(gen_checks)}:")
