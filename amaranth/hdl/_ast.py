@@ -1262,9 +1262,6 @@ class ValueCastable:
         if cls.shape is ValueCastable.shape:
             raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must override "
                             "the 'shape' method")
-        if not hasattr(cls.as_value, "_ValueCastable__memoized"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must decorate "
-                            "the 'as_value' method with the 'ValueCastable.lowermethod' decorator")
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
@@ -1333,17 +1330,10 @@ class ValueCastable:
         """
         return super().shape(*args, **kwargs) # :nocov:
 
+    # TODO(amaranth-0.6): remove
     @staticmethod
+    @deprecated("`ValueCastable.lowermethod` is no longer required and will be removed in Amaranth 0.6")
     def lowermethod(func):
-        """Decorator to memoize lowering methods.
-
-        Ensures the decorated method is called only once, with subsequent method calls returning
-        the object returned by the first first method call.
-
-        This decorator is required to decorate the :pc:`as_value` method of :pc:`ValueCastable`
-        subclasses. This is to ensure that Amaranth's view of representation of all values stays
-        internally consistent.
-        """
         @functools.wraps(func)
         def wrapper_memoized(self, *args, **kwargs):
             # Use `in self.__dict__` instead of `hasattr` to avoid interfering with custom

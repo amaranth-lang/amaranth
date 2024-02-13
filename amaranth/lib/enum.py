@@ -232,7 +232,6 @@ class EnumView(ValueCastable):
         """Returns the underlying enum type."""
         return self.enum
 
-    @ValueCastable.lowermethod
     def as_value(self):
         """Returns the underlying value."""
         return self.target

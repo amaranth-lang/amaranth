@@ -4,7 +4,6 @@ import unittest
 from types import SimpleNamespace as NS
 
 from amaranth import *
-from amaranth.hdl._ast import ValueCastable
 from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
