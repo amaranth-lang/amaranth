@@ -1056,8 +1056,12 @@ class Value(metaclass=ABCMeta):
         """Part-select with bit granularity.
 
         Selects a constant width, variable offset part of :pc:`self`, where parts with successive
-        offsets overlap by :pc:`width - 1` bits. When :pc:`offset` is a constant integer, this
-        operation is equivalent to :pc:`self[offset:offset + width]`.
+        offsets overlap by :pc:`width - 1` bits. Bits above the most significant bit of :pc:`self`
+        may be selected; they are equal to zero if :pc:`self` is unsigned, to :pc:`self[-1]` if
+        :pc:`self` is signed, and assigning to them does nothing.
+
+        When :pc:`offset` is a constant integer and :pc:`offset + width <= len(self)`,
+        this operation is equivalent to :pc:`self[offset:offset + width]`.
 
         Parameters
         ----------
@@ -1086,8 +1090,12 @@ class Value(metaclass=ABCMeta):
         """Part-select with word granularity.
 
         Selects a constant width, variable offset part of :pc:`self`, where parts with successive
-        offsets are adjacent but do not overlap. When :pc:`offset` is a constant integer, this
-        operation is equivalent to :pc:`self[offset * width:(offset + 1) * width]`.
+        offsets are adjacent but do not overlap. Bits above the most significant bit of :pc:`self`
+        may be selected; they are equal to zero if :pc:`self` is unsigned, to :pc:`self[-1]` if
+        :pc:`self` is signed, and assigning to them does nothing.
+
+        When :pc:`offset` is a constant integer and :pc:`width:(offset + 1) * width <= len(self)`,
+        this operation is equivalent to :pc:`self[offset * width:(offset + 1) * width]`.
 
         Parameters
         ----------
