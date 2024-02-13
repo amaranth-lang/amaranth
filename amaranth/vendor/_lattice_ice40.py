@@ -426,12 +426,11 @@ class LatticeICE40Platform(TemplatedPlatform):
     def _get_io_buffer(self, m, pin, port, attrs, *, i_invert=False, o_invert=False,
                        invert_lut=False):
         def get_dff(clk, d, q):
-            m.submodules += Instance("$dff",
-                p_CLK_POLARITY=1,
-                p_WIDTH=len(d),
-                i_CLK=clk,
-                i_D=d,
-                o_Q=q)
+            for bit in range(len(d)):
+                m.submodules += Instance("SB_DFF",
+                    i_C=clk,
+                    i_D=d[bit],
+                    o_Q=q[bit])
 
         def get_ineg(y, invert):
             if invert_lut:
