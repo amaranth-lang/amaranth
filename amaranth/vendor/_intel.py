@@ -312,13 +312,15 @@ class IntelPlatform(TemplatedPlatform):
             return get_ineg(pin.i)
         elif pin.xdr == 1:
             i_sdr = Signal(pin.width, name="{}_i_sdr")
-            m.submodules += Instance("$dff",
-                p_CLK_POLARITY=1,
-                p_WIDTH=pin.width,
-                i_CLK=pin.i_clk,
-                i_D=i_sdr,
-                o_Q=get_ineg(pin.i),
-            )
+            i_neg = get_ineg(pin.i)
+            for bit in range(pin.width):
+                m.submodules += Instance("dff",
+                    i_clk=pin.i_clk,
+                    i_d=i_sdr[bit],
+                    o_q=i_neg[bit],
+                    o_clrn=Const(1),
+                    o_prn=Const(1),
+                )
             return i_sdr
         elif pin.xdr == 2:
             i_ddr = Signal(pin.width, name=f"{pin.name}_i_ddr")
@@ -346,13 +348,15 @@ class IntelPlatform(TemplatedPlatform):
             return get_oneg(pin.o)
         elif pin.xdr == 1:
             o_sdr = Signal(pin.width, name=f"{pin.name}_o_sdr")
-            m.submodules += Instance("$dff",
-                p_CLK_POLARITY=1,
-                p_WIDTH=pin.width,
-                i_CLK=pin.o_clk,
-                i_D=get_oneg(pin.o),
-                o_Q=o_sdr,
-            )
+            for bit in range(pin.width):
+                o_neg = get_oneg(pin.o)
+                m.submodules += Instance("dff",
+                    i_clk=pin.o_clk,
+                    i_d=o_neg[bit],
+                    o_q=o_sdr[bit],
+                    o_clrn=Const(1),
+                    o_prn=Const(1),
+                )
             return o_sdr
         elif pin.xdr == 2:
             o_ddr = Signal(pin.width, name=f"{pin.name}_o_ddr")
@@ -374,13 +378,14 @@ class IntelPlatform(TemplatedPlatform):
         elif pin.xdr in (1, 2):
             oe_reg = Signal(pin.width, name=f"{pin.name}_oe_reg")
             oe_reg.attrs["useioff"] = "1"
-            m.submodules += Instance("$dff",
-                p_CLK_POLARITY=1,
-                p_WIDTH=pin.width,
-                i_CLK=pin.o_clk,
-                i_D=pin.oe,
-                o_Q=oe_reg,
-            )
+            for bit in range(pin.width):
+                m.submodules += Instance("dff",
+                    i_clk=pin.o_clk,
+                    i_d=pin.oe,
+                    o_q=oe_reg[bit],
+                    o_clrn=Const(1),
+                    o_prn=Const(1),
+                )
             return oe_reg
         assert False
 
