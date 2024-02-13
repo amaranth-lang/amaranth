@@ -71,6 +71,16 @@ class Net(int):
         assert isinstance(value, cls)
         return value
 
+    def __repr__(self):
+        if self.is_late:
+            return f"(late {int(self)})"
+        elif self.is_const:
+            return f"{int(self)}"
+        else:
+            return f"{self.cell}.{self.bit}"
+
+    __str__ = __repr__
+
 
 class Value(tuple):
     def __new__(cls, nets: 'Net | Iterable[Net]' = ()):
@@ -85,6 +95,54 @@ class Value(tuple):
     @classmethod
     def ones(cls, digits=1):
         return cls(Net.from_const(1) for _ in range(digits))
+
+    def __repr__(self):
+        pos = 0
+        chunks = []
+        while pos < len(self):
+            next_pos = pos
+            if self[pos].is_const:
+                value = 0
+                while next_pos < len(self) and self[next_pos].is_const:
+                    value |= self[next_pos].const << (next_pos - pos)
+                    next_pos += 1
+                width = next_pos - pos
+                chunks.append(f"{width}'d{value}")
+            elif self[pos].is_late:
+                while (next_pos < len(self) and
+                       self[next_pos].is_late and
+                       self[next_pos] == self[pos] + (next_pos - pos)):
+                    next_pos += 1
+                width = next_pos - pos
+                start = int(self[pos])
+                end = start + width
+                if width == 1:
+                    chunks.append(f"(late {start})")
+                else:
+                    chunks.append(f"(late {start}:{end})")
+            else:
+                cell = self[pos].cell
+                start_bit = self[pos].bit
+                while (next_pos < len(self) and
+                       self[next_pos].is_cell and
+                       self[next_pos].cell == cell and
+                       self[next_pos].bit == start_bit + (next_pos - pos)):
+                    next_pos += 1
+                width = next_pos - pos
+                end_bit = start_bit + width
+                if width == 1:
+                    chunks.append(f"{cell}.{start_bit}")
+                else:
+                    chunks.append(f"{cell}.{start_bit}:{end_bit}")
+            pos = next_pos
+        if len(chunks) == 0:
+            return "(0'd0)"
+        elif len(chunks) == 1:
+            return chunks[0]
+        else:
+            return f"(cat {' '.join(chunks)})"
+
+    __str__ = __repr__
 
 
 class Netlist:
@@ -140,87 +198,17 @@ class Netlist:
         for sig in self.signals:
             self.signals[sig] = self.resolve_value(self.signals[sig])
 
-    def __str__(self):
-        def net_to_str(net):
-            net = self.resolve_net(net)
-            if net.is_const:
-                return f"{net.const}"
-            return f"{net.cell}.{net.bit}"
-        def val_to_str(val):
-            return "{" + " ".join(net_to_str(x) for x in val) + "}"
+    def __repr__(self):
         result = []
         for module_idx, module in enumerate(self.modules):
-            result.append(f"module {module_idx} [parent {module.parent}]: {' '.join(module.name)}")
-            if module.submodules:
-                result.append(f"    submodules {' '.join(str(x) for x in module.submodules)} ")
-            result.append(f"    cells {' '.join(str(x) for x in module.cells)} ")
-            for name, (val, flow) in module.ports.items():
-                result.append(f"    port {name} {val_to_str(val)}: {flow}")
+            name = " ".join(repr(name) for name in module.name)
+            ports = " ".join(
+                f"({flow.value} {name!r} {val})"
+                for name, (val, flow) in module.ports.items()
+            )
+            result.append(f"(module {module_idx} {module.parent} ({name}) {ports})")
         for cell_idx, cell in enumerate(self.cells):
-            result.append(f"cell {cell_idx} [module {cell.module_idx}]: ")
-            if isinstance(cell, Top):
-                result.append("top")
-                for name, val in cell.ports_o.items():
-                    result.append(f"    output {name}: {val_to_str(val)}")
-                for name, (start, num) in cell.ports_i.items():
-                    result.append(f"    input {name}: 0.{start}..0.{start+num-1}")
-                for name, (start, num) in cell.ports_io.items():
-                    result.append(f"    inout {name}: 0.{start}..0.{start+num-1}")
-            elif isinstance(cell, Matches):
-                result.append(f"matches {val_to_str(cell.value)}, {' | '.join(cell.patterns)}")
-            elif isinstance(cell, PriorityMatch):
-                result.append(f"priority_match {net_to_str(cell.en)}, {val_to_str(cell.inputs)}")
-            elif isinstance(cell, AssignmentList):
-                result.append(f"list {val_to_str(cell.default)}")
-                for assign in cell.assignments:
-                    result.append(f"    if {net_to_str(assign.cond)} start {assign.start} <- {val_to_str(assign.value)}")
-            elif isinstance(cell, Operator):
-                inputs = ", ".join(val_to_str(input) for input in cell.inputs)
-                result.append(f"{cell.operator} {inputs}")
-            elif isinstance(cell, Part):
-                result.append(f"part {val_to_str(cell.value)}, {val_to_str(cell.offset)}, {cell.width}, {cell.stride}, {cell.value_signed}")
-            elif isinstance(cell, ArrayMux):
-                result.append(f"array {cell.width}, {val_to_str(cell.index)}, {', '.join(val_to_str(elem) for elem in cell.elems)}")
-            elif isinstance(cell, FlipFlop):
-                result.append(f"ff {val_to_str(cell.data)} {cell.init} @{cell.clk_edge}edge {net_to_str(cell.clk)} {net_to_str(cell.arst)}")
-                for attr_name, attr_value in cell.attributes.items():
-                    result.append(f"    attribute {attr_name} {attr_value}")
-            elif isinstance(cell, Memory):
-                result.append(f"memory {cell.name} {cell.width} {cell.depth} {cell.init}")
-                for attr_name, attr_value in cell.attributes.items():
-                    result.append(f"    attribute {attr_name} {attr_value}")
-            elif isinstance(cell, SyncWritePort):
-                result.append(f"wrport {cell.memory} {val_to_str(cell.data)} {val_to_str(cell.addr)} {val_to_str(cell.en)} @{cell.clk_edge}edge {net_to_str(cell.clk)}")
-            elif isinstance(cell, AsyncReadPort):
-                result.append(f"rdport {cell.memory} {cell.width} {val_to_str(cell.addr)}")
-            elif isinstance(cell, SyncReadPort):
-                result.append(f"rdport {cell.memory} {cell.width} {val_to_str(cell.addr)} {net_to_str(cell.en)} @{cell.clk_edge}edge {net_to_str(cell.clk)}")
-                for port in cell.transparent_for:
-                    result.append(f"    transparent {port}")
-            elif isinstance(cell, Initial):
-                result.append("initial")
-            elif isinstance(cell, AnyValue):
-                result.append("{cell.kind} {cell.width}")
-            elif isinstance(cell, AsyncProperty):
-                result.append(f"{cell.kind} {cell.name!r} {net_to_str(cell.test)} {net_to_str(cell.en)}")
-            elif isinstance(cell, SyncProperty):
-                result.append(f"{cell.kind} {cell.name!r} {net_to_str(cell.test)} {net_to_str(cell.en)} @{cell.clk_edge}edge {net_to_str(cell.clk)}")
-            elif isinstance(cell, Instance):
-                result.append("instance {cell.type} {cell.name}")
-                for attr_name, attr_value in cell.attributes.items():
-                    result.append(f"    attribute {attr_name} {attr_value}")
-                for attr_name, attr_value in cell.parameters.items():
-                    result.append(f"    parameter {attr_name} {attr_value}")
-                for attr_name, (start, num) in cell.ports_o.items():
-                    result.append(f"    output {attr_name} {cell_idx}.{start}..{cell_idx}.{start+num-1}")
-                for attr_name, attr_value in cell.ports_i.items():
-                    result.append(f"    input {attr_name} {val_to_str(attr_value)}")
-                for attr_name, attr_value in cell.ports_io.items():
-                    result.append(f"    inout {attr_name} {val_to_str(attr_value)}")
-            elif isinstance(cell, IOBuffer):
-                result.append(f"iob {val_to_str(cell.pad)} {val_to_str(cell.o)} {net_to_str(cell.oe)}")
-            else:
-                assert False # :nocov:
+            result.append(f"(cell {cell_idx} {cell.module_idx} {cell!r})")
         return "\n".join(result)
 
     def add_module(self, parent, name: str):
@@ -375,6 +363,17 @@ class Top(Cell):
         for port in self.ports_o:
             self.ports_o[port] = netlist.resolve_value(self.ports_o[port])
 
+    def __repr__(self):
+        ports = []
+        for (name, val) in self.ports_o.items():
+            ports.append(f"(output {name!r} {val})")
+        for (name, (start, width)) in self.ports_i.items():
+            ports.append(f"(input {name!r} {start}:{start+width})")
+        for (name, (start, width)) in self.ports_io.items():
+            ports.append(f"(inout {name!r} {start}:{start+width})")
+        ports = " ".join(ports)
+        return f"(top {ports})"
+
 
 class Operator(Cell):
     """Roughly corresponds to ``hdl.ast.Operator``.
@@ -440,6 +439,10 @@ class Operator(Cell):
     def resolve_nets(self, netlist: Netlist):
         self.inputs = tuple(netlist.resolve_value(val) for val in self.inputs)
 
+    def __repr__(self):
+        inputs = " ".join(repr(input) for input in self.inputs)
+        return f"({self.operator} {inputs})"
+
 
 class Part(Cell):
     """Corresponds to ``hdl.ast.Part``.
@@ -475,6 +478,10 @@ class Part(Cell):
         self.value = netlist.resolve_value(self.value)
         self.offset = netlist.resolve_value(self.offset)
 
+    def __repr__(self):
+        value_signed = "signed" if self.value_signed else "unsigned"
+        return f"(part {self.value} {value_signed} {self.offset} {self.width} {self.stride})"
+
 
 class ArrayMux(Cell):
     """Corresponds to ``hdl.ast.ArrayProxy``. All values in the ``elems`` array need to have
@@ -507,6 +514,10 @@ class ArrayMux(Cell):
         self.elems = tuple(netlist.resolve_value(val) for val in self.elems)
         self.index = netlist.resolve_value(self.index)
 
+    def __repr__(self):
+        elems = " ".join(repr(elem) for elem in elems)
+        return f"(array_mux {self.width} {self.index} ({elems}))"
+
 
 class Matches(Cell):
     """A combinatorial cell performing a comparison like ``Value.matches``
@@ -532,6 +543,10 @@ class Matches(Cell):
 
     def resolve_nets(self, netlist: Netlist):
         self.value = netlist.resolve_value(self.value)
+
+    def __repr__(self):
+        patterns = " ".join(self.patterns)
+        return f"(matches {self.value} {patterns})"
 
 
 class PriorityMatch(Cell):
@@ -565,6 +580,9 @@ class PriorityMatch(Cell):
         self.en = netlist.resolve_net(self.en)
         self.inputs = netlist.resolve_value(self.inputs)
 
+    def __repr__(self):
+        return f"(priority_match {self.en} {self.inputs})"
+
 
 class Assignment:
     """A single assignment in an ``AssignmentList``.
@@ -592,6 +610,10 @@ class Assignment:
     def resolve_nets(self, netlist: Netlist):
         self.cond = netlist.resolve_net(self.cond)
         self.value = netlist.resolve_value(self.value)
+
+    def __repr__(self):
+        end = self.start + len(self.value)
+        return f"({self.cond} {self.start}:{end} {self.value})"
 
 
 class AssignmentList(Cell):
@@ -633,6 +655,10 @@ class AssignmentList(Cell):
             assign.resolve_nets(netlist)
         self.default = netlist.resolve_value(self.default)
 
+    def __repr__(self):
+        assignments = " ".join(repr(assign) for assign in self.assignments)
+        return f"(assignment_list {self.default} {assignments})"
+
 
 class FlipFlop(Cell):
     """A flip-flop. ``data`` is the data input. ``init`` is the initial and async reset value.
@@ -673,6 +699,10 @@ class FlipFlop(Cell):
         self.clk = netlist.resolve_net(self.clk)
         self.arst = netlist.resolve_net(self.arst)
 
+    def __repr__(self):
+        attributes = "".join(f" (attr {key} {val!r})" for key, val in self.attributes.items())
+        return f"(flipflop {self.data} {self.init} {self.clk_edge} {self.clk} {self.arst}{attributes})"
+
 
 class Memory(Cell):
     """Corresponds to ``Memory``.  ``init`` must have length equal to ``depth``.
@@ -704,6 +734,11 @@ class Memory(Cell):
 
     def resolve_nets(self, netlist: Netlist):
         pass
+
+    def __repr__(self):
+        init = " ".join(str(x) for x in self.init)
+        attributes = "".join(f" (attr {key} {val!r})" for key, val in self.attributes.items())
+        return f"(memory {self.name!r} {self.width} {self.depth} ({init}) {attributes})"
 
 
 class SyncWritePort(Cell):
@@ -742,6 +777,9 @@ class SyncWritePort(Cell):
         self.en = netlist.resolve_value(self.en)
         self.clk = netlist.resolve_net(self.clk)
 
+    def __repr__(self):
+        return f"(write_port {self.memory} {self.data} {self.addr} {self.en} {self.clk_edge} {self.clk})"
+
 
 class AsyncReadPort(Cell):
     """A single asynchronous read port of a memory.
@@ -768,6 +806,10 @@ class AsyncReadPort(Cell):
 
     def resolve_nets(self, netlist: Netlist):
         self.addr = netlist.resolve_value(self.addr)
+
+    def __repr__(self):
+        return f"(read_port {self.memory} {self.width} {self.addr})"
+
 
 class SyncReadPort(Cell):
     """A single synchronous read port of a memory.  The cell output is the data port.
@@ -808,6 +850,11 @@ class SyncReadPort(Cell):
         self.en = netlist.resolve_net(self.en)
         self.clk = netlist.resolve_net(self.clk)
 
+    def __repr__(self):
+        transparent_for = " ".join(str(port) for port in self.transparent_for)
+        return f"(read_port {self.memory} {self.width} {self.addr} {self.en} {self.clk_edge} {self.clk} ({transparent_for}))"
+
+
 class Initial(Cell):
     """Corresponds to ``Initial`` value."""
 
@@ -819,6 +866,9 @@ class Initial(Cell):
 
     def resolve_nets(self, netlist: Netlist):
         pass
+
+    def __repr__(self):
+        return f"(initial)"
 
 
 class AnyValue(Cell):
@@ -846,6 +896,9 @@ class AnyValue(Cell):
 
     def resolve_nets(self, netlist: Netlist):
         pass
+
+    def __repr__(self):
+        return f"({self.kind} {self.width})"
 
 
 class AsyncProperty(Cell):
@@ -877,6 +930,9 @@ class AsyncProperty(Cell):
     def resolve_nets(self, netlist: Netlist):
         self.test = netlist.resolve_net(self.test)
         self.en = netlist.resolve_net(self.en)
+
+    def __repr__(self):
+        return f"({self.kind} {self.name!r} {self.test} {self.en})"
 
 
 class SyncProperty(Cell):
@@ -915,6 +971,9 @@ class SyncProperty(Cell):
         self.test = netlist.resolve_net(self.test)
         self.en = netlist.resolve_net(self.en)
         self.clk = netlist.resolve_net(self.clk)
+
+    def __repr__(self):
+        return f"({self.kind} {self.name!r} {self.test} {self.en} {self.clk_edge} {self.clk})"
 
 
 class Instance(Cell):
@@ -969,6 +1028,21 @@ class Instance(Cell):
         for port in self.ports_io:
             self.ports_io[port] = netlist.resolve_value(self.ports_io[port])
 
+    def __repr__(self):
+        items = []
+        for name, val in self.parameters.items():
+            items.append(f"(param {name!r} {val!r})")
+        for name, val in self.attributes.items():
+            items.append(f"(attr {name!r} {val!r})")
+        for name, val in self.ports_i.items():
+            items.append(f"(input {name!r} {val})")
+        for name, (start, width) in self.ports_i.items():
+            items.append(f"(output {name!r} {start}:{start+width})")
+        for name, val in self.ports_io.items():
+            items.append(f"(inout {name!r} {val})")
+        items = " ".join(items)
+        return f"(instance {self.type!r} {self.name!r} {items})"
+
 
 class IOBuffer(Cell):
     """An IO buffer cell. ``pad`` must be connected to nets corresponding to an IO port
@@ -1001,3 +1075,6 @@ class IOBuffer(Cell):
         self.pad = netlist.resolve_value(self.pad)
         self.o = netlist.resolve_value(self.o)
         self.oe = netlist.resolve_net(self.oe)
+
+    def __repr__(self):
+        return f"(iob {self.pad} {self.o} {self.oe})"
