@@ -459,13 +459,11 @@ class Value(metaclass=ABCMeta):
         Returns
         -------
         :ref:`shape-like object <lang-shapelike>`
-
-        ..
-            TODO: while this is documented as returning a shape-like object, in practice we
-            guarantee that this is a concrete Shape. it's unclear whether we will ever want to
-            return a shape-catable object here, but there is not much harm in stating a relaxed
-            contract, as it can always be tightened later, but not vice-versa
         """
+        # TODO: while this is documented as returning a shape-like object, in practice we
+        # guarantee that this is a concrete Shape. it's unclear whether we will ever want to
+        # return a shape-catable object here, but there is not much harm in stating a relaxed
+        # contract, as it can always be tightened later, but not vice-versa
         pass # :nocov:
 
     def as_unsigned(self):
@@ -853,7 +851,7 @@ class Value(metaclass=ABCMeta):
         return Operator("^", [other, self])
 
     def xor(self):
-        """Reduction XOR; is an odd amount of bits :pc:`1`?
+        """Reduction XOR; are an odd amount of bits :pc:`1`?
 
         Returns
         -------
