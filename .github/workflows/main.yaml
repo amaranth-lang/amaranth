@@ -41,7 +41,7 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install codecov
+        pip install codecov build
         pdm install --dev
     - name: Cache YoWASP build products
       uses: actions/cache@v4
@@ -147,3 +147,32 @@ jobs:
         with:
           folder: pages/
           clean: false
+
+  publish-code:
+    needs: required
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+    steps:
+    - name: Check out source code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Build package
+      run: |
+        pip install build
+        python -m build
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: code
+        path: dist/
+    - name: Publish package to Test PyPI
+      if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && github.event.ref == 'refs/heads/main' }}
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+    - name: Publish package to PyPI
+      if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/') }}
+      uses: pypa/gh-action-pypi-publish@release/v1
