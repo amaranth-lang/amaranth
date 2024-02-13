@@ -1350,8 +1350,8 @@ class MockValueCastableCustomGetattr(ValueCastable):
 class ValueCastableTestCase(FHDLTestCase):
     def test_not_decorated(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must "
-                r"decorate the `as_value` method with the `ValueCastable.lowermethod` decorator$"):
+                r"^Class 'MockValueCastableNotDecorated' deriving from 'ValueCastable' must "
+                r"decorate the 'as_value' method with the 'ValueCastable.lowermethod' decorator$"):
             class MockValueCastableNotDecorated(ValueCastable):
                 def __init__(self):
                     pass
@@ -1364,15 +1364,15 @@ class ValueCastableTestCase(FHDLTestCase):
 
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from `ValueCastable` must "
-                r"override the `as_value` method$"):
+                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from 'ValueCastable' must "
+                r"override the 'as_value' method$"):
             class MockValueCastableNoOverrideAsValue(ValueCastable):
                 def __init__(self):
                     pass
 
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideShapec' deriving from `ValueCastable` must "
-                r"override the `shape` method$"):
+                r"^Class 'MockValueCastableNoOverrideShapec' deriving from 'ValueCastable' must "
+                r"override the 'shape' method$"):
             class MockValueCastableNoOverrideShapec(ValueCastable):
                 def __init__(self):
                     pass

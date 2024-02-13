@@ -36,7 +36,7 @@ class DUID:
 
 
 class Shape:
-    """Bit width and signedness of a value.
+    """Bit width and signedness of a :class:`Value`.
 
     A :class:`Shape` can be obtained by:
 
@@ -326,7 +326,7 @@ class _ShapeLikeMeta(type):
 
 @final
 class ShapeLike(metaclass=_ShapeLikeMeta):
-    """An abstract class representing all objects that can be cast to a :class:`Shape`.
+    """Abstract class representing all objects that can be cast to a :class:`Shape`.
 
     :pc:`issubclass(cls, ShapeLike)` returns :pc:`True` for:
 
@@ -372,13 +372,66 @@ def _overridable_by_reflected(method_name):
 
 
 class Value(metaclass=ABCMeta):
+    """Abstract representation of a bit pattern computed in a circuit.
+
+    The Amaranth language gives Python code the ability to create a circuit netlist by manipulating
+    objects representing the computations within that circuit. The :class:`Value` class represents
+    the bit pattern of a constant, or of a circuit input or output, or within a storage element; or
+    the result of an arithmetic, logical, or bit container operation.
+
+    Operations on this class interpret this bit pattern either as an integer, which can be signed
+    or unsigned depending on the value's :meth:`shape`, or as a bit container. In either case,
+    the semantics of operations that implement Python's syntax, like :pc:`+` (also known as
+    :meth:`__add__`), are identical to the corresponding operation on a Python :class:`int` (or on
+    a Python sequence container). The bitwise inversion :pc:`~` (also known as :meth:`__invert__`)
+    is the sole exception to this rule.
+
+    Data that is not conveniently representable by a single integer or a bit container can be
+    represented by wrapping a :class:`Value` in a :class:`ValueCastable` subclass that provides
+    domain-specific operations. It is possible to extend Amaranth in third-party code using
+    value-castable objects, and the Amaranth standard library provides several built-in ones:
+
+    * :mod:`amaranth.lib.enum` classes are a drop-in replacement for the standard Python
+      :class:`enum` classes that can be defined with an Amaranth shape;
+    * :mod:`amaranth.lib.data` classes allow defining complex data structures such as structures
+      and unions.
+
+    Operations on :class:`Value` instances return another :class:`Value` instance. Unless the exact
+    type and value of the result is explicitly specified below, it should be considered opaque, and
+    may change without notice between Amaranth releases as long as the semantics remains the same.
+
+    .. note::
+
+        In each of the descriptions below, you will see a line similar to:
+
+        **Return type:** :class:`Value`, :pc:`unsigned(1)`, :ref:`assignable <lang-assignable>`
+
+        The first part (:class:`Value`) indicates that the returned object's type is a subclass
+        of :class:`Value`. The second part (:pc:`unsigned(1)`) describes the shape of that value.
+        The third part, if present, indicates that the value is assignable if :pc:`self` is
+        assignable.
+    """
+
     @staticmethod
     def cast(obj):
-        """Converts ``obj`` to an Amaranth value.
+        """Cast :pc:`obj` to an Amaranth value.
 
-        Booleans and integers are wrapped into a :class:`Const`. Enumerations whose members are
-        all integers are converted to a :class:`Const` with a shape that fits every member.
-        :class:`ValueCastable` objects are recursively cast to an Amaranth value.
+        Many :ref:`value-like <lang-valuelike>` objects can be cast to a value:
+
+        * a :class:`Value` instance, where the result is itself;
+        * a :class:`bool` or :class:`int` instance, where the result is :pc:`Const(obj)`;
+        * an :class:`enum.IntEnum` instance, or a :class:`enum.Enum` instance whose members are
+          all integers, where the result is a :class:`Const(obj, enum_shape)` where :pc:`enum_shape`
+          is a shape that can represent every member of the enumeration;
+        * a :class:`ValueCastable` instance, where the result is obtained by repeatedly calling
+          :meth:`obj.as_value() <ValueCastable.as_value>`.
+
+        Raises
+        ------
+        TypeError
+            If :pc:`obj` cannot be converted to a :class:`Value`.
+        RecursionError
+            If :pc:`obj` is a :class:`ValueCastable` object that casts to itself.
         """
         while True:
             if isinstance(obj, Value):
@@ -399,44 +452,411 @@ class Value(metaclass=ABCMeta):
         super().__init__()
         self.src_loc = tracer.get_src_loc(1 + src_loc_at)
 
+    @abstractmethod
+    def shape(self):
+        """Shape of :pc:`self`.
+
+        Returns
+        -------
+        :ref:`shape-like object <lang-shapelike>`
+
+        ..
+            TODO: while this is documented as returning a shape-like object, in practice we
+            guarantee that this is a concrete Shape. it's unclear whether we will ever want to
+            return a shape-catable object here, but there is not much harm in stating a relaxed
+            contract, as it can always be tightened later, but not vice-versa
+        """
+        pass # :nocov:
+
+    def as_unsigned(self):
+        """Reinterpretation as an unsigned value.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        """
+        return Operator("u", [self])
+
+    def as_signed(self):
+        """Reinterpretation as a signed value.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`signed(len(self))`, :ref:`assignable <lang-assignable>`
+        """
+        return Operator("s", [self])
+
     def __bool__(self):
+        """Forbidden conversion to boolean.
+
+        Python uses this operator for its built-in semantics, e.g. :pc:`if`, and requires it to
+        return a :class:`bool`. Since this is not possible for Amaranth values, this operator
+        always raises an exception.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            Always.
+        """
         raise TypeError("Attempted to convert Amaranth value to Python boolean")
 
+    def bool(self):
+        """Conversion to boolean.
+
+        Performs the same operation as :meth:`any`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("b", [self])
+
     def __pos__(self):
+        """Unary position, :pc:`+self`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`self.shape()`
+            :pc:`self`
+        """
         return self
 
-    def __invert__(self):
-        return Operator("~", [self])
     def __neg__(self):
+        """Unary negation, :pc:`-self`.
+
+        ..
+            >>> C(-1).value, C(-1).shape()
+            -1, signed(1)
+            >>> C(-(-1), signed(1)).value # overflows
+            -1
+
+        Returns
+        -------
+        :class:`Value`, :pc:`signed(len(self) + 1)`
+        """
         return Operator("-", [self])
 
     @_overridable_by_reflected("__radd__")
     def __add__(self, other):
+        """Addition, :pc:`self + other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()) + 1)`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()) + 1)`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1) + 1)`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        """
         return Operator("+", [self, other], src_loc_at=1)
+
     def __radd__(self, other):
+        """Addition, :pc:`other + self` (reflected).
+
+        Like :meth:`__add__`, with operands swapped.
+        """
         return Operator("+", [other, self])
+
     @_overridable_by_reflected("__rsub__")
     def __sub__(self, other):
+        """Subtraction, :pc:`self - other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()) + 1)`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1) + 1)`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
+            If both :pc:`self` and :pc:`other` are unsigned.
+
+        Returns
+        -------
+        :class:`Value`
+        """
         return Operator("-", [self, other], src_loc_at=1)
+
     def __rsub__(self, other):
+        """Subtraction, :pc:`other - self` (reflected).
+
+        Like :meth:`__sub__`, with operands swapped.
+        """
         return Operator("-", [other, self])
 
     @_overridable_by_reflected("__rmul__")
     def __mul__(self, other):
+        """Multiplication, :pc:`self * other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self) + len(other))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(len(self) + len(other))`
+            If either :pc:`self` or :pc:`other` are signed.
+        """
         return Operator("*", [self, other], src_loc_at=1)
+
     def __rmul__(self, other):
+        """Multiplication, :pc:`other * self` (reflected).
+
+        Like :meth:`__mul__`, with operands swapped.
+        """
         return Operator("*", [other, self])
+
+    @_overridable_by_reflected("__rfloordiv__")
+    def __floordiv__(self, other):
+        """Flooring division, :pc:`self // other`.
+
+        If :pc:`other` is zero, the result of this operation is zero.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(len(self) + 1)`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(len(self))`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(len(self) + 1)`
+            If both :pc:`self` and :pc:`other` are signed.
+        """
+        return Operator("//", [self, other], src_loc_at=1)
+
+    def __rfloordiv__(self, other):
+        """Flooring division, :pc:`other // self` (reflected).
+
+        If :pc:`self` is zero, the result of this operation is zero.
+
+        Like :meth:`__floordiv__`, with operands swapped.
+        """
+        return Operator("//", [other, self])
 
     @_overridable_by_reflected("__rmod__")
     def __mod__(self, other):
+        """Flooring modulo or remainder, :pc:`self % other`.
+
+        If :pc:`other` is zero, the result of this operation is zero.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`other.shape()`
+        """
         return Operator("%", [self, other], src_loc_at=1)
+
     def __rmod__(self, other):
+        """Flooring modulo or remainder, :pc:`other % self` (reflected).
+
+        Like :meth:`__mod__`, with operands swapped.
+        """
         return Operator("%", [other, self])
-    @_overridable_by_reflected("__rfloordiv__")
-    def __floordiv__(self, other):
-        return Operator("//", [self, other], src_loc_at=1)
-    def __rfloordiv__(self, other):
-        return Operator("//", [other, self])
+
+    @_overridable_by_reflected("__eq__")
+    def __eq__(self, other):
+        """Equality comparison, :pc:`self == other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("==", [self, other], src_loc_at=1)
+
+    @_overridable_by_reflected("__ne__")
+    def __ne__(self, other):
+        """Inequality comparison, :pc:`self != other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("!=", [self, other], src_loc_at=1)
+
+    @_overridable_by_reflected("__gt__")
+    def __lt__(self, other):
+        """Less than comparison, :pc:`self < other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("<", [self, other], src_loc_at=1)
+
+    @_overridable_by_reflected("__ge__")
+    def __le__(self, other):
+        """Less than or equals comparison, :pc:`self <= other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("<=", [self, other], src_loc_at=1)
+
+    @_overridable_by_reflected("__lt__")
+    def __gt__(self, other):
+        """Greater than comparison, :pc:`self > other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator(">", [self, other], src_loc_at=1)
+
+    @_overridable_by_reflected("__le__")
+    def __ge__(self, other):
+        """Greater than or equals comparison, :pc:`self >= other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator(">=", [self, other], src_loc_at=1)
+
+    def __abs__(self):
+        """Absolute value, :pc:`abs(self)`.
+
+        ..
+            >>> abs(C(-1)).shape()
+            unsigned(1)
+            >>> C(1).shape()
+            unsigned(1)
+
+        Return
+        ------
+        :class:`Value`, :pc:`unsigned(len(self))`
+        """
+        if self.shape().signed:
+            return Mux(self >= 0, self, -self)[:len(self)]
+        else:
+            return self
+
+    def __invert__(self):
+        """Bitwise NOT, :pc:`~self`.
+
+        The shape of the result is the same as the shape of :pc:`self`, even for unsigned values.
+
+        .. important::
+
+            In Python, :pc:`~0` equals :pc:`-1`. In Amaranth, :pc:`~C(0)` equals :pc:`C(1)`.
+            This is the only case where an Amaranth operator deviates from the Python operator
+            with the same name.
+
+            This deviation is necessary because Python does not allow overriding the logical
+            :pc:`and`, :pc:`or`, and :pc:`not` operators. Amaranth uses :pc:`&`, :pc:`|`, and
+            :pc:`~` instead; if it wasn't the case that :pc:`~C(0) == C(1)`, that would have
+            been impossible.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`self.shape()`
+        """
+        return Operator("~", [self])
+
+    @_overridable_by_reflected("__rand__")
+    def __and__(self, other):
+        """Bitwise AND, :pc:`self & other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        """
+        return Operator("&", [self, other], src_loc_at=1)
+
+    def __rand__(self, other):
+        """Bitwise AND, :pc:`other & self`.
+
+        Like :meth:`__and__`, with operands swapped.
+        """
+        return Operator("&", [other, self])
+
+    def all(self):
+        """Reduction AND; are all bits :pc:`1`?
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("r&", [self])
+
+    @_overridable_by_reflected("__ror__")
+    def __or__(self, other):
+        """Bitwise OR, :pc:`self | other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        """
+        return Operator("|", [self, other], src_loc_at=1)
+
+    def __ror__(self, other):
+        """Bitwise OR, :pc:`other | self`.
+
+        Like :meth:`__or__`, with operands swapped.
+        """
+        return Operator("|", [other, self])
+
+    def any(self):
+        """Reduction OR; is any bit :pc:`1`?
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("r|", [self])
+
+    @_overridable_by_reflected("__rxor__")
+    def __xor__(self, other):
+        """Bitwise XOR, :pc:`self ^ other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
+            If :pc:`self` is unsigned and :pc:`other` is signed.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
+            If :pc:`self` is signed and :pc:`other` is unsigned.
+        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
+            If both :pc:`self` and :pc:`other` are unsigned.
+        """
+        return Operator("^", [self, other], src_loc_at=1)
+
+    def __rxor__(self, other):
+        """Bitwise XOR, :pc:`other ^ self`.
+
+        Like :meth:`__xor__`, with operands swapped.
+        """
+        return Operator("^", [other, self])
+
+    def xor(self):
+        """Reduction XOR; is an odd amount of bits :pc:`1`?
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
+        """
+        return Operator("r^", [self])
+
+    def implies(self, conclusion):
+        # TODO: should we document or just deprecate this?
+        return ~self | conclusion
 
     def __check_shamt(self):
         if self.shape().signed:
@@ -444,68 +864,152 @@ class Value(metaclass=ABCMeta):
             # by a signed value to make sure the shift amount can always be interpreted as
             # an unsigned value.
             raise TypeError("Shift amount must be unsigned")
+
     @_overridable_by_reflected("__rlshift__")
     def __lshift__(self, other):
+        """Left shift by variable amount, :pc:`self << other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self) + 2 ** len(other) - 1)`
+            If :pc:`self` is unsigned.
+        :class:`Value`, :pc:`signed(len(self) + 2 ** len(other) - 1)`
+            If :pc:`self` is signed.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            If :pc:`other` is signed.
+        """
         other = Value.cast(other)
         other.__check_shamt()
         return Operator("<<", [self, other], src_loc_at=1)
+
     def __rlshift__(self, other):
+        """Left shift by variable amount, :pc:`other << self`.
+
+        Like :meth:`__lshift__`, with operands swapped.
+        """
         self.__check_shamt()
         return Operator("<<", [other, self])
+
+    def shift_left(self, amount):
+        """Left shift by constant amount.
+
+        If :pc:`amount < 0`, performs the same operation as :pc:`self.shift_right(-amount)`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self) + amount)`
+            If :pc:`self` is unsigned.
+        :class:`Value`, :pc:`signed(len(self) + amount)`
+            If :pc:`self` is signed.
+        """
+        if not isinstance(amount, int):
+            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
+        if amount < 0:
+            return self.shift_right(-amount)
+        if self.shape().signed:
+            return Cat(Const(0, amount), self).as_signed()
+        else:
+            return Cat(Const(0, amount), self) # unsigned
+
+    def rotate_left(self, amount):
+        """Left rotate by constant amount.
+
+        If :pc:`amount < 0`, performs the same operation as :pc:`self.rotate_right(-amount)`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        """
+        if not isinstance(amount, int):
+            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
+        if len(self) != 0:
+            amount %= len(self)
+        return Cat(self[-amount:], self[:-amount]) # meow :3
+
     @_overridable_by_reflected("__rrshift__")
     def __rshift__(self, other):
+        """Right shift by variable amount, :pc:`self >> other`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self))`
+            If :pc:`self` is unsigned.
+        :class:`Value`, :pc:`signed(len(self))`
+            If :pc:`self` is signed.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            If :pc:`other` is signed.
+        """
         other = Value.cast(other)
         other.__check_shamt()
         return Operator(">>", [self, other], src_loc_at=1)
+
     def __rrshift__(self, other):
+        """Right shift by variable amount, :pc:`other >> self`.
+
+        Like :meth:`__rshift__`, with operands swapped.
+        """
         self.__check_shamt()
         return Operator(">>", [other, self])
 
-    @_overridable_by_reflected("__rand__")
-    def __and__(self, other):
-        return Operator("&", [self, other], src_loc_at=1)
-    def __rand__(self, other):
-        return Operator("&", [other, self])
-    @_overridable_by_reflected("__rxor__")
-    def __xor__(self, other):
-        return Operator("^", [self, other], src_loc_at=1)
-    def __rxor__(self, other):
-        return Operator("^", [other, self])
-    @_overridable_by_reflected("__ror__")
-    def __or__(self, other):
-        return Operator("|", [self, other], src_loc_at=1)
-    def __ror__(self, other):
-        return Operator("|", [other, self])
+    def shift_right(self, amount):
+        """Right shift by constant amount.
 
-    @_overridable_by_reflected("__eq__")
-    def __eq__(self, other):
-        return Operator("==", [self, other], src_loc_at=1)
-    @_overridable_by_reflected("__ne__")
-    def __ne__(self, other):
-        return Operator("!=", [self, other], src_loc_at=1)
-    @_overridable_by_reflected("__gt__")
-    def __lt__(self, other):
-        return Operator("<", [self, other], src_loc_at=1)
-    @_overridable_by_reflected("__ge__")
-    def __le__(self, other):
-        return Operator("<=", [self, other], src_loc_at=1)
-    @_overridable_by_reflected("__lt__")
-    def __gt__(self, other):
-        return Operator(">", [self, other], src_loc_at=1)
-    @_overridable_by_reflected("__le__")
-    def __ge__(self, other):
-        return Operator(">=", [self, other], src_loc_at=1)
+        If :pc:`amount < 0`, performs the same operation as :pc:`self.left_right(-amount)`.
 
-    def __abs__(self):
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(max(len(self) - amount, 0))`
+            If :pc:`self` is unsigned.
+        :class:`Value`, :pc:`signed(max(len(self) - amount, 1))`
+            If :pc:`self` is signed.
+        """
+        if not isinstance(amount, int):
+            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
+        if amount < 0:
+            return self.shift_left(-amount)
         if self.shape().signed:
-            return Mux(self >= 0, self, -self)[:len(self)]
+            return self[amount:].as_signed()
         else:
-            return self
+            return self[amount:] # unsigned
+
+    def rotate_right(self, amount):
+        """Right rotate by constant amount.
+
+        If :pc:`amount < 0`, performs the same operation as :pc:`self.rotate_right(-amount)`.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        """
+        if not isinstance(amount, int):
+            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
+        if len(self) != 0:
+            amount %= len(self)
+        return Cat(self[amount:], self[:amount])
 
     def __len__(self):
+        """Bit width of :pc:`self`.
+
+        Returns
+        -------
+        :class:`int`
+            :pc:`self.shape().width`
+        """
         return self.shape().width
 
     def __getitem__(self, key):
+        """Bit slicing.
+
+        .. todo::
+
+            Describe this operation.
+        """
         n = len(self)
         if isinstance(key, int):
             if key not in range(-n, n):
@@ -515,7 +1019,8 @@ class Value(metaclass=ABCMeta):
             return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
             if isinstance(key.start, Value) or isinstance(key.stop, Value):
-                raise TypeError(f"Cannot slice value with a value; use Value.bit_select() or Value.word_select() instead")
+                raise TypeError(f"Cannot slice value with a value; use Value.bit_select() or "
+                                f"Value.word_select() instead")
             start, stop, step = key.indices(n)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
@@ -526,95 +1031,44 @@ class Value(metaclass=ABCMeta):
             raise TypeError(f"Cannot index value with {key!r}")
 
     def __contains__(self, other):
+        """Forbidden membership test operator.
+
+        Python requires this operator to return a :class:`bool`. Since this is not possible
+        for Amaranth values, this operator always raises an exception.
+
+        To check membership in a set of constant integer values, use :meth:`matches` instead.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            Always.
+        """
         raise TypeError("Cannot use 'in' with an Amaranth value")
-
-    def as_unsigned(self):
-        """Conversion to unsigned.
-
-        Returns
-        -------
-        Value, out
-            This ``Value`` reinterpreted as a unsigned integer.
-        """
-        return Operator("u", [self])
-
-    def as_signed(self):
-        """Conversion to signed.
-
-        Returns
-        -------
-        Value, out
-            This ``Value`` reinterpreted as a signed integer.
-        """
-        return Operator("s", [self])
-
-    def bool(self):
-        """Conversion to boolean.
-
-        Returns
-        -------
-        Value, out
-            ``1`` if any bits are set, ``0`` otherwise.
-        """
-        return Operator("b", [self])
-
-    def any(self):
-        """Check if any bits are ``1``.
-
-        Returns
-        -------
-        Value, out
-            ``1`` if any bits are set, ``0`` otherwise.
-        """
-        return Operator("r|", [self])
-
-    def all(self):
-        """Check if all bits are ``1``.
-
-        Returns
-        -------
-        Value, out
-            ``1`` if all bits are set, ``0`` otherwise.
-        """
-        return Operator("r&", [self])
-
-    def xor(self):
-        """Compute pairwise exclusive-or of every bit.
-
-        Returns
-        -------
-        Value, out
-            ``1`` if an odd number of bits are set, ``0`` if an even number of bits are set.
-        """
-        return Operator("r^", [self])
-
-    def implies(premise, conclusion):
-        """Implication.
-
-        Returns
-        -------
-        Value, out
-            ``0`` if ``premise`` is true and ``conclusion`` is not, ``1`` otherwise.
-        """
-        return ~premise | conclusion
 
     def bit_select(self, offset, width):
         """Part-select with bit granularity.
 
-        Selects a constant width but variable offset part of a ``Value``, such that successive
-        parts overlap by all but 1 bit.
+        Selects a constant width, variable offset part of :pc:`self`, where parts with successive
+        offsets overlap by :pc:`width - 1` bits. When :pc:`offset` is a constant integer, this
+        operation is equivalent to :pc:`self[offset:offset + width]`.
 
         Parameters
         ----------
-        offset : Value, int
-            Index of first selected bit.
-        width : int
-            Number of selected bits.
+        offset: :ref:`value-like <lang-valuelike>`
+            Index of the first selected bit.
+        width: :class:`int`
+            Amount of bits to select.
 
         Returns
         -------
-        Part, out
-            Selected part of the ``Value``
+        :class:`Value`, :pc:`unsigned(width)`, :ref:`assignable <lang-assignable>`
+
+        Raises
+        ------
+        :exc:`TypeError`
+            If :pc:`offset` is signed.
+        :exc:`TypeError`
+            If :pc:`width` is negative.
         """
         offset = Value.cast(offset)
         if type(offset) is Const and isinstance(width, int):
@@ -624,41 +1078,67 @@ class Value(metaclass=ABCMeta):
     def word_select(self, offset, width):
         """Part-select with word granularity.
 
-        Selects a constant width but variable offset part of a ``Value``, such that successive
-        parts do not overlap.
+        Selects a constant width, variable offset part of :pc:`self`, where parts with successive
+        offsets are adjacent but do not overlap. When :pc:`offset` is a constant integer, this
+        operation is equivalent to :pc:`self[offset * width:(offset + 1) * width]`.
 
         Parameters
         ----------
-        offset : Value, int
-            Index of first selected word.
-        width : int
-            Number of selected bits.
+        offset: :ref:`value-like <lang-valuelike>`
+            Index of the first selected word.
+        width: :class:`int`
+            Amount of bits to select.
 
         Returns
         -------
-        Part, out
-            Selected part of the ``Value``
+        :class:`Value`, :pc:`unsigned(width)`, :ref:`assignable <lang-assignable>`
+
+        Raises
+        ------
+        :exc:`TypeError`
+            If :pc:`offset` is signed.
+        :exc:`TypeError`
+            If :pc:`width` is negative.
         """
         offset = Value.cast(offset)
         if type(offset) is Const and isinstance(width, int):
             return self[offset.value * width:(offset.value + 1) * width]
         return Part(self, offset, width, stride=width, src_loc_at=1)
 
-    def matches(self, *patterns):
-        """Pattern matching.
+    def replicate(self, count):
+        """Replication.
 
-        Matches against a set of patterns, which may be integers or bit strings, recognizing
-        the same grammar as ``Case()``.
+        Equivalent to :pc:`Cat(self for _ in range(count))`, but not assignable.
 
-        Parameters
-        ----------
-        patterns : int or str
-            Patterns to match against.
+        ..
+            Technically assignable right now, but we don't want to commit to that.
 
         Returns
         -------
-        Value, out
-            ``1`` if any pattern matches the value, ``0`` otherwise.
+        :class:`Value`, :pc:`unsigned(len(self) * count)`
+
+        Raises
+        ------
+        :exc:`TypeError`
+            If :pc:`count` is negative.
+        """
+        if not isinstance(count, int) or count < 0:
+            raise TypeError("Replication count must be a non-negative integer, not {!r}"
+                            .format(count))
+        return Cat(self for _ in range(count))
+
+    def matches(self, *patterns):
+        """Pattern matching.
+
+        Matches against a set of patterns, recognizing the same grammar as :pc:`with m.Case()`.
+
+        .. todo::
+
+            Describe the pattern language in detail.
+
+        Returns
+        -------
+        :class:`Value`, :pc:`unsigned(1)`
         """
         matches = []
         # This code should accept exactly the same patterns as `with m.Case(...):`.
@@ -699,143 +1179,38 @@ class Value(metaclass=ABCMeta):
         else:
             return Cat(*matches).any()
 
-    def shift_left(self, amount):
-        """Shift left by constant amount.
+    def eq(self, value, *, src_loc_at=0):
+        """:ref:`Assignment <lang-assigns>`.
 
-        Parameters
-        ----------
-        amount : int
-            Amount to shift by.
-
-        Returns
-        -------
-        Value, out
-            If the amount is positive, the input shifted left. Otherwise, the input shifted right.
-        """
-        if not isinstance(amount, int):
-            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
-        if amount < 0:
-            return self.shift_right(-amount)
-        if self.shape().signed:
-            return Cat(Const(0, amount), self).as_signed()
-        else:
-            return Cat(Const(0, amount), self) # unsigned
-
-    def shift_right(self, amount):
-        """Shift right by constant amount.
-
-        Parameters
-        ----------
-        amount : int
-            Amount to shift by.
+        Once it is placed in a domain, an assignment changes the bit pattern of :pc:`self` to
+        equal :pc:`value`. If the bit width of :pc:`value` is less than that of :pc:`self`,
+        it is zero-extended (for unsigned :pc:`value`\\ s) or sign-extended (for signed
+        :pc:`value`\\ s). If the bit width of :pc:`value` is greater than that of :pc:`self`,
+        it is truncated.
 
         Returns
         -------
-        Value, out
-            If the amount is positive, the input shifted right. Otherwise, the input shifted left.
+        :class:`Statement`
         """
-        if not isinstance(amount, int):
-            raise TypeError(f"Shift amount must be an integer, not {amount!r}")
-        if amount < 0:
-            return self.shift_left(-amount)
-        if self.shape().signed:
-            return self[amount:].as_signed()
-        else:
-            return self[amount:] # unsigned
+        return Assign(self, value, src_loc_at=src_loc_at + 1)
 
-    def rotate_left(self, amount):
-        """Rotate left by constant amount.
-
-        Parameters
-        ----------
-        amount : int
-            Amount to rotate by.
-
-        Returns
-        -------
-        Value, out
-            If the amount is positive, the input rotated left. Otherwise, the input rotated right.
-        """
-        if not isinstance(amount, int):
-            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
-        if len(self) != 0:
-            amount %= len(self)
-        return Cat(self[-amount:], self[:-amount]) # meow :3
-
-    def rotate_right(self, amount):
-        """Rotate right by constant amount.
-
-        Parameters
-        ----------
-        amount : int
-            Amount to rotate by.
-
-        Returns
-        -------
-        Value, out
-            If the amount is positive, the input rotated right. Otherwise, the input rotated right.
-        """
-        if not isinstance(amount, int):
-            raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
-        if len(self) != 0:
-            amount %= len(self)
-        return Cat(self[amount:], self[:amount])
-
-    def replicate(self, count):
-        """Replication.
-
-        A ``Value`` is replicated (repeated) several times to be used
-        on the RHS of assignments::
-
-            len(v.replicate(n)) == len(v) * n
-
-        Parameters
-        ----------
-        count : int
-            Number of replications.
-
-        Returns
-        -------
-        Value, out
-            Replicated value.
-        """
-        if not isinstance(count, int) or count < 0:
-            raise TypeError("Replication count must be a non-negative integer, not {!r}"
-                            .format(count))
-        return Cat(self for _ in range(count))
-
-    def eq(self, value):
-        """Assignment.
-
-        Parameters
-        ----------
-        value : Value, in
-            Value to be assigned.
-
-        Returns
-        -------
-        Assign
-            Assignment statement that can be used in combinatorial or synchronous context.
-        """
-        return Assign(self, value, src_loc_at=1)
-
-    @abstractmethod
-    def shape(self):
-        """Bit width and signedness of a value.
-
-        Returns
-        -------
-        Shape
-            See :class:`Shape`.
-
-        Examples
-        --------
-        >>> Signal(8).shape()
-        Shape(width=8, signed=False)
-        >>> Const(0xaa).shape()
-        Shape(width=8, signed=False)
-        """
-        pass # :nocov:
+    #: Forbidden hashing.
+    #:
+    #: Python objects are :term:`python:hashable` if they provide a :pc:`__hash__` method
+    #: that returns an :class:`int` and an :pc:`__eq__` method that returns a :class:`bool`.
+    #: Amaranth values define :meth:`__eq__` to return a :class:`Value`, which precludes them
+    #: from being hashable.
+    #:
+    #: To use a :class:`Value` as a key in a :class:`dict`, use the following pattern:
+    #:
+    #: .. testcode::
+    #:
+    #:      value = Signal()
+    #:      assoc = {}
+    #:      assoc[id(value)] = value, "a signal"
+    #:      _, info = assoc[id(value)]
+    #:      assert info == "a signal"
+    __hash__ = None # type: ignore
 
     def _lhs_signals(self):
         raise TypeError(f"Value {self!r} cannot be used in assignments")
@@ -843,6 +1218,178 @@ class Value(metaclass=ABCMeta):
     @abstractmethod
     def _rhs_signals(self):
         raise NotImplementedError # :nocov:
+
+
+class ValueCastable:
+    """Interface class for objects that can be cast to a :class:`Value`.
+
+    Computations in the Amaranth language are described by combining :ref:`value-like objects
+    <lang-valuelike>`. Inheriting a class from :class:`ValueCastable` and implementing
+    all of the methods described below adds instances of that class to the list of
+    value-like objects recognized by the :meth:`Value.cast` method. This is a part of the mechanism
+    for seamlessly extending the Amaranth language in third-party code.
+
+    .. note::
+
+        All methods and operators defined by the :class:`Value` class will implicitly cast
+        a :class:`ValueCastable` object to a :class:`Value`, with the exception of arithmetic
+        operators, which will prefer calling a reflected arithmetic operation on
+        the :class:`ValueCastable` argument if it defines one.
+
+        For example, if :pc:`value_castable` implements :pc:`__radd__`, then
+        :pc:`C(1) + value_castable` will perform :pc:`value_castable.__radd__(C(1))`, and otherwise
+        it will perform :pc:`C(1).__add__(value_castable.as_value())`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        if type(self) is ValueCastable:
+            raise TypeError("Can't instantiate abstract class ValueCastable")
+        super().__init__(*args, **kwargs)
+
+    def __init_subclass__(cls, **kwargs):
+        if cls.as_value is ValueCastable.as_value:
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must override "
+                            "the 'as_value' method")
+        if cls.shape is ValueCastable.shape:
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must override "
+                            "the 'shape' method")
+        if not hasattr(cls.as_value, "_ValueCastable__memoized"):
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must decorate "
+                            "the 'as_value' method with the 'ValueCastable.lowermethod' decorator")
+
+    # The signatures and definitions of these methods are weird because they are present here for
+    # documentation (and error checking above) purpose only and should not affect control flow.
+
+    def as_value(self, *args, **kwargs):
+        """as_value()
+
+        Convert :pc:`self` to a :ref:`value-like object <lang-valuelike>`.
+
+        This method is called by the Amaranth language to convert :pc:`self` to a concrete
+        :class:`Value`. It will usually return a :class:`Value` object, but it may also return
+        another value-like object to delegate its functionality.
+
+        This method must be idempotent: when called twice on the same object, the result must be
+        exactly the same.
+
+        This method may also be called by code that is not a part of the Amaranth language.
+
+        Returns
+        -------
+        Any other object recognized by :meth:`Value.cast`.
+
+        Raises
+        ------
+        Exception
+            When the conversion cannot be done. This exception must be propagated by callers,
+            either directly or as a cause of another exception.
+
+            It is recommended that, in cases where this method raises an exception,
+            the :meth:`shape` method also raises an exception.
+        """
+        return super().as_value(*args, **kwargs) # :nocov:
+
+    def shape(self, *args, **kwargs):
+        """shape()
+
+        Compute the shape of :pc:`self`.
+
+        This method is not called by the Amaranth language itself; whenever it needs to discover
+        the shape of a value-castable object, it calls :class:`self.as_value().shape()`. However,
+        that method must return a :class:`Shape`, and :class:`ValueCastable` subclasses may have
+        a richer representation of their shape provided by an instance of a :class:`ShapeCastable`
+        subclass. This method may return such a representation.
+
+        This method must be idempotent: when called twice on the same object, the result must be
+        exactly the same.
+
+        The following condition must hold:
+
+        .. code::
+
+            Shape.cast(self.shape()) == Value.cast(self).shape()
+
+        Returns
+        -------
+        A :ref:`shape-like <lang-shapelike>` object.
+
+        Raises
+        ------
+        Exception
+            When the conversion cannot be done. This exception must be propagated by callers,
+            either directly or as a cause of another exception.
+
+            It is recommended that, in cases where this method raises an exception,
+            the :meth:`as_value` method also raises an exception.
+        """
+        return super().shape(*args, **kwargs) # :nocov:
+
+    @staticmethod
+    def lowermethod(func):
+        """Decorator to memoize lowering methods.
+
+        Ensures the decorated method is called only once, with subsequent method calls returning
+        the object returned by the first first method call.
+
+        This decorator is required to decorate the :pc:`as_value` method of :pc:`ValueCastable`
+        subclasses. This is to ensure that Amaranth's view of representation of all values stays
+        internally consistent.
+        """
+        @functools.wraps(func)
+        def wrapper_memoized(self, *args, **kwargs):
+            # Use `in self.__dict__` instead of `hasattr` to avoid interfering with custom
+            # `__getattr__` implementations.
+            if not "_ValueCastable__lowered_to" in self.__dict__:
+                self.__lowered_to = func(self, *args, **kwargs)
+            return self.__lowered_to
+        wrapper_memoized.__memoized = True
+        return wrapper_memoized
+
+
+class _ValueLikeMeta(type):
+    def __subclasscheck__(cls, subclass):
+        if issubclass(subclass, (Value, ValueCastable, int)) or subclass is ValueLike:
+            return True
+        if issubclass(subclass, Enum):
+            return isinstance(subclass, ShapeLike)
+        return False
+
+    def __instancecheck__(cls, instance):
+        return issubclass(type(instance), cls)
+
+
+@final
+class ValueLike(metaclass=_ValueLikeMeta):
+    """Abstract class representing all objects that can be cast to a :class:`Value`.
+
+    :pc:`issubclass(cls, ValueLike)` returns :pc:`True` for:
+
+    * :class:`Value`;
+    * :class:`ValueCastable` and its subclasses;
+    * :class:`int` and its subclasses (including :class:`bool`);
+    * :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`;
+    * :class:`ValueLike` itself.
+
+    :pc:`isinstance(obj, ValueLike)` returns the same value as
+    :pc:`issubclass(type(obj), ValueLike)`.
+
+    This class cannot be instantiated or subclassed. It can only be used for checking types of
+    objects.
+
+    .. note::
+
+        It is possible to define an enumeration with a member that is
+        :ref:`value-like <lang-valuelike>` but not :ref:`constant-castable <lang-constcasting>`,
+        meaning that :pc:`issubclass(BadEnum, ValueLike)` returns :pc:`True`, but
+        :pc:`Value.cast(BadEnum.MEMBER)` raises an exception.
+
+        The :mod:`amaranth.lib.enum` module prevents such enumerations from being defined when
+        the shape is specified explicitly. Using :mod:`amaranth.lib.enum` and specifying the shape
+        ensures that all of your enumeration members are constant-castable and fit in the provided
+        shape.
+    """
+    def __new__(cls, *args, **kwargs):
+        raise TypeError("ValueLike is an abstract class and cannot be constructed")
 
 
 class _ConstMeta(ABCMeta):
@@ -984,7 +1531,7 @@ class Operator(Value):
                 return Shape(b_shape.width, b_shape.signed)
             if self.operator in ("<", "<=", "==", "!=", ">", ">="):
                 return Shape(1, False)
-            if self.operator in ("&", "^", "|"):
+            if self.operator in ("&", "|", "^"):
                 return _bitwise_binary_shape(*op_shapes)
             if self.operator == "<<":
                 assert not b_shape.signed
@@ -996,8 +1543,7 @@ class Operator(Value):
             if self.operator == "m":
                 s_shape, a_shape, b_shape = op_shapes
                 return _bitwise_binary_shape(a_shape, b_shape)
-        raise NotImplementedError("Operator {}/{} not implemented"
-                                  .format(self.operator, len(op_shapes))) # :nocov:
+        raise NotImplementedError # :nocov:
 
     def _lhs_signals(self):
         if self.operator in ("u", "s"):
@@ -1465,8 +2011,8 @@ def AnySeq(shape, *, src_loc_at=0):
 class Array(MutableSequence):
     """Addressable multiplexer.
 
-    An array is similar to a ``list`` that can also be indexed by ``Value``s; indexing by an integer or a slice works the same as for Python lists, but indexing by a ``Value`` results
-    in a proxy.
+    An array is similar to a ``list`` that can also be indexed by ``Value``s; indexing by an integer
+    or a slice works the same as for Python lists, but indexing by a ``Value`` results in a proxy.
 
     The array proxy can be used as an ordinary ``Value``, i.e. participate in calculations and
     assignments, provided that all elements of the array are values. The array proxy also supports
@@ -1603,96 +2149,6 @@ class ArrayProxy(Value):
 
     def __repr__(self):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
-
-
-class ValueCastable:
-    """Interface of user-defined objects that can be cast to :class:`Value` s.
-
-    An object deriving from :class:`ValueCastable`` is automatically converted to a :class:`Value`
-    when it is used in a context where a :class:`Value`` is expected. Such objects can implement
-    different or richer semantics than what is supported by the core Amaranth language, yet still
-    be transparently used with it as long as the final underlying representation is a single
-    Amaranth :class:`Value`. These objects also need not commit to a specific representation until
-    they are converted to a concrete Amaranth value.
-
-    Note that it is necessary to ensure that Amaranth's view of representation of all values stays
-    internally consistent. The class deriving from :class:`ValueCastable`` must decorate
-    the :meth:`as_value` method with the :meth:`lowermethod` decorator, which ensures that all
-    calls to :meth:`as_value` return the same :class:`Value` representation. If the class deriving
-    from :class:`ValueCastable` is mutable, it is up to the user to ensure that it is not mutated
-    in a way that changes its representation after the first call to :meth:`as_value`.
-    """
-
-    def __init__(self, *args, **kwargs):
-        if type(self) is ValueCastable:
-            raise TypeError("Can't instantiate abstract class ValueCastable")
-        super().__init__(*args, **kwargs)
-
-    def __init_subclass__(cls, **kwargs):
-        if not hasattr(cls, "as_value"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
-                            "the `as_value` method")
-        if not hasattr(cls, "shape"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must override "
-                            "the `shape` method")
-        if not hasattr(cls.as_value, "_ValueCastable__memoized"):
-            raise TypeError(f"Class '{cls.__name__}' deriving from `ValueCastable` must decorate "
-                            "the `as_value` method with the `ValueCastable.lowermethod` decorator")
-
-    @staticmethod
-    def lowermethod(func):
-        """Decorator to memoize lowering methods.
-
-        Ensures the decorated method is called only once, with subsequent method calls returning
-        the object returned by the first first method call.
-
-        This decorator is required to decorate the ``as_value`` method of ``ValueCastable``
-        subclasses. This is to ensure that Amaranth's view of representation of all values stays
-        internally consistent.
-        """
-        @functools.wraps(func)
-        def wrapper_memoized(self, *args, **kwargs):
-            # Use `in self.__dict__` instead of `hasattr` to avoid interfering with custom
-            # `__getattr__` implementations.
-            if not "_ValueCastable__lowered_to" in self.__dict__:
-                self.__lowered_to = func(self, *args, **kwargs)
-            return self.__lowered_to
-        wrapper_memoized.__memoized = True
-        return wrapper_memoized
-
-
-class _ValueLikeMeta(type):
-    """An abstract class representing all objects that can be cast to a :class:`Value`.
-
-    ``issubclass(cls, ValueLike)`` returns ``True`` for:
-
-    - :class:`Value`
-    - :class:`ValueCastable` and its subclasses
-    - ``int`` and its subclasses
-    - :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`
-    - :class:`ValueLike` itself
-
-    ``isinstance(obj, ValueLike)`` returns the same value as ``issubclass(type(obj), ValueLike)``.
-
-    This class is only usable for the above checks — no instances and no (non-virtual)
-    subclasses can be created.
-    """
-
-    def __subclasscheck__(cls, subclass):
-        if issubclass(subclass, (Value, ValueCastable, int)) or subclass is ValueLike:
-            return True
-        if issubclass(subclass, Enum):
-            return isinstance(subclass, ShapeLike)
-        return False
-
-    def __instancecheck__(cls, instance):
-        return issubclass(type(instance), cls)
-
-
-@final
-class ValueLike(metaclass=_ValueLikeMeta):
-    def __new__(cls, *args, **kwargs):
-        raise TypeError("ValueLike is an abstract class and cannot be constructed")
 
 
 @final

@@ -101,5 +101,16 @@ See also the introduction to :ref:`shapes <lang-shapes>` and :ref:`casting from 
 .. autoclass:: Shape
 .. autofunction:: unsigned
 .. autofunction:: signed
-.. autoclass:: ShapeCastable
-.. autoclass:: ShapeLike
+.. autoclass:: ShapeCastable()
+.. autoclass:: ShapeLike()
+
+
+Values
+======
+
+See also the introduction to :ref:`values <lang-values>` and :ref:`casting from value-like objects <lang-valuelike>` in the language guide.
+
+.. autoclass:: Value
+    :special-members: __bool__, __pos__, __neg__, __add__, __radd__, __sub__, __rsub__, __mul__, __rmul__, __mod__, __rmod__, __floordiv__, __rfloordiv__, __eq__, __ne__, __lt__, __le__, __gt__, __ge__, __abs__, __invert__, __and__, __rand__, __or__, __ror__, __xor__, __rxor__, __lshift__, __rlshift__, __rshift__, __rrshift__, __len__, __getitem__, __contains__, __hash__
+.. autoclass:: ValueCastable()
+.. autoclass:: ValueLike()
