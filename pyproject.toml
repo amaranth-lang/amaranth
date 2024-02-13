@@ -8,6 +8,7 @@ dynamic = ["version"]
 
 name = "amaranth"
 description = "Amaranth hardware definition language"
+readme = "README.md"
 authors = [{name = "Amaranth HDL contributors"}]
 license = {file = "LICENSE.txt"}
 

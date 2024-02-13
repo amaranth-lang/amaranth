@@ -22,7 +22,11 @@ See the [Introduction](https://amaranth-lang.org/docs/amaranth/latest/intro.html
 
 See the [Installation](https://amaranth-lang.org/docs/amaranth/latest/install.html) section of the documentation.
 
-## Supported devices
+## Usage
+
+See the [Language guide](https://amaranth-lang.org/docs/amaranth/latest/guide.html) section of the documentation.
+
+## Platform support
 
 Amaranth can be used to target any FPGA or ASIC process that accepts behavioral Verilog-2001 as input. It also offers extended support for many FPGA families, providing toolchain integration, abstractions for device-specific primitives, and more. Specifically:
 
@@ -30,10 +34,11 @@ Amaranth can be used to target any FPGA or ASIC process that accepts behavioral 
   * Lattice MachXO2 (toolchains: Diamond);
   * Lattice MachXO3L (toolchains: Diamond);
   * Lattice ECP5 (toolchains: **Yosys+nextpnr**, Diamond);
-  * Xilinx Spartan 3A (toolchains: ISE);
-  * Xilinx Spartan 6 (toolchains: ISE);
-  * Xilinx 7-series (toolchains: Vivado);
-  * Xilinx UltraScale (toolchains: Vivado);
+  * Lattice Nexus (toolchains: **Yosys+nextpnr**, Diamond);
+  * AMD Spartan 3A (toolchains: ISE);
+  * AMD Spartan 6 (toolchains: ISE);
+  * AMD 7-series (toolchains: Vivado);
+  * AMD UltraScale (toolchains: Vivado);
   * Intel (toolchains: Quartus);
   * Quicklogic EOS S3 (toolchains: **Yosys+VPR**).
 
@@ -47,4 +52,4 @@ Amaranth has a dedicated IRC channel, [#amaranth-lang at libera.chat](https://we
 
 ## License
 
-Amaranth is released under the very permissive [two-clause BSD license](LICENSE.txt). Under the terms of this license, you are authorized to use Amaranth for closed-source proprietary designs.
+Amaranth is released under the [two-clause BSD license](LICENSE.txt). You are permitted to use Amaranth for open-source and proprietary designs provided that the copyright notice in the license file is reproduced.
