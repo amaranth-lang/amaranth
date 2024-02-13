@@ -328,6 +328,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                                       "expression, not {!r}"
                                       .format(pattern)) from e
                 pattern_len = bits_for(pattern.value)
+                if pattern.value == 0:
+                    pattern_len = 0
                 if pattern_len > len(switch_data["test"]):
                     warnings.warn("Case pattern '{!r}' ({}'{:b}) is wider than switch value "
                                   "(which has width {}); comparison will never be true"

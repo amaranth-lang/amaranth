@@ -502,6 +502,21 @@ class DSLTestCase(FHDLTestCase):
                     m.d.comb += dummy.eq(0)
         self.assertEqual(m._statements, {})
 
+    def test_Switch_zero_width(self):
+        m = Module()
+        s = Signal(0)
+        with m.Switch(s):
+            with m.Case(0):
+                m.d.comb += self.c1.eq(1)
+        m._flush()
+        self.assertRepr(m._statements["comb"], """
+        (
+            (switch (sig s)
+                (case (eq (sig c1) (const 1'd1)))
+            )
+        )
+        """)
+
     def test_Case_bits_wrong(self):
         m = Module()
         with m.Switch(self.w1):
