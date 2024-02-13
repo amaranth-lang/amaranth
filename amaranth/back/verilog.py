@@ -9,7 +9,7 @@ __all__ = ["YosysError", "convert", "convert_fragment"]
 
 def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog_opts=()):
     # this version requirement needs to be synchronized with the one in pyproject.toml!
-    yosys = find_yosys(lambda ver: ver >= (0, 35))
+    yosys = find_yosys(lambda ver: ver >= (0, 38))
 
     script = []
     script.append(f"read_ilang <<rtlil\n{rtlil_text}\nrtlil")
