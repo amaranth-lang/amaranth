@@ -35,10 +35,13 @@ Amaranth can be used to target any FPGA or ASIC process that accepts behavioral 
   * Lattice MachXO3L (toolchains: Diamond);
   * Lattice ECP5 (toolchains: **Yosys+nextpnr**, Diamond);
   * Lattice Nexus (toolchains: **Yosys+nextpnr**, Diamond);
-  * AMD Spartan 3A (toolchains: ISE);
+  * AMD Virtex, Virtex E, Spartan 2, Spartan 2E (toolchains: ISE);
+  * AMD Virtex II, Virtex II Pro (toolchains: ISE);
+  * AMD Spartan 3, Spartan 3E, Spartan 3A, Spartan 3AN, Spartan 3A DSP (toolchains: ISE);
+  * AMD Virtex 4, Virtex 5, Virtex 6 (toolchains: ISE);
   * AMD Spartan 6 (toolchains: ISE);
-  * AMD 7-series (toolchains: Vivado);
-  * AMD UltraScale (toolchains: Vivado);
+  * AMD 7-series (toolchains: Vivado, ISE);
+  * AMD UltraScale, UltraScale+ (toolchains: Vivado);
   * Intel (toolchains: Quartus);
   * Quicklogic EOS S3 (toolchains: **Yosys+VPR**).
 
