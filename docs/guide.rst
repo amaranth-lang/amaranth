@@ -885,12 +885,12 @@ Assigning to signals
 Similar to :ref:`how Amaranth operators work <lang-abstractexpr>`, an Amaranth assignment is an ordinary Python object used to describe a part of a circuit. An assignment does not have any effect on the signal it changes until it is added to a control domain in a module. Once added, it introduces logic into the circuit generated from that module.
 
 
-.. _lang-assignlhs:
+.. _lang-assignable:
 
-Assignment targets
-------------------
+Assignable values
+-----------------
 
-The target of an assignment can be more complex than a single signal. It is possible to assign to any combination of signals, :ref:`bit slices <lang-seqops>`, :ref:`concatenations <lang-seqops>`, :ref:`part selects <lang-seqops>`, and :ref:`array proxy objects <lang-array>` as long as it includes no other values:
+An assignment can affect a value that is more complex than just a signal. It is possible to assign to any combination of :ref:`signals <lang-signals>`, :ref:`bit slices <lang-seqops>`, :ref:`concatenations <lang-seqops>`, :ref:`part selects <lang-seqops>`, and :ref:`array proxy objects <lang-array>` as long as it includes no other values:
 
 .. doctest::
 
