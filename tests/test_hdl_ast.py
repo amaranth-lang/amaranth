@@ -1473,6 +1473,16 @@ class SwitchTestCase(FHDLTestCase):
         s = Switch(Const(0, 8), {-10: []})
         self.assertEqual(s.cases, {("11110110",): []})
 
+    def test_int_zero_width(self):
+        s = Switch(Const(0, 0), {0: []})
+        self.assertEqual(s.cases, {("",): []})
+
+    def test_int_zero_width_enum(self):
+        class ZeroEnum(Enum):
+            A = 0
+        s = Switch(Const(0, 0), {ZeroEnum.A: []})
+        self.assertEqual(s.cases, {("",): []})
+
     def test_enum_case(self):
         s = Switch(Const(0, UnsignedEnum), {UnsignedEnum.FOO: []})
         self.assertEqual(s.cases, {("01",): []})

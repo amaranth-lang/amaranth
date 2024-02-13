@@ -2294,8 +2294,14 @@ class Switch(Statement):
                     key = "".join(key.split()) # remove whitespace
                 elif isinstance(key, int):
                     key = format(key & key_mask, "b").rjust(len(self.test), "0")
+                    # fixup for 0-width test
+                    if key_mask == 0:
+                        key = ""
                 elif isinstance(key, Enum):
                     key = format(key.value & key_mask, "b").rjust(len(self.test), "0")
+                    # fixup for 0-width test
+                    if key_mask == 0:
+                        key = ""
                 else:
                     raise TypeError("Object {!r} cannot be used as a switch key"
                                     .format(key))
