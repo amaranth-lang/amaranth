@@ -87,7 +87,7 @@ class Shape:
 
     @staticmethod
     def cast(obj, *, src_loc_at=0):
-        """Cast :pc:`obj` to a shape.
+        """Cast :py:`obj` to a shape.
 
         Many :ref:`shape-like <lang-shapelike>` objects can be cast to a shape:
 
@@ -104,9 +104,9 @@ class Shape:
         Raises
         ------
         TypeError
-            If :pc:`obj` cannot be converted to a :class:`Shape`.
+            If :py:`obj` cannot be converted to a :class:`Shape`.
         RecursionError
-            If :pc:`obj` is a :class:`ShapeCastable` object that casts to itself.
+            If :py:`obj` is a :class:`ShapeCastable` object that casts to itself.
         """
         while True:
             if isinstance(obj, Shape):
@@ -137,7 +137,7 @@ class Shape:
     def __repr__(self):
         """Python code that creates this shape.
 
-        Returns :pc:`f"signed({self.width})"` or :pc:`f"unsigned({self.width})"`.
+        Returns :py:`f"signed({self.width})"` or :py:`f"unsigned({self.width})"`.
         """
         if self.signed:
             return f"signed({self.width})"
@@ -150,12 +150,12 @@ class Shape:
 
 
 def unsigned(width):
-    """Returns :pc:`Shape(width, signed=False)`."""
+    """Returns :py:`Shape(width, signed=False)`."""
     return Shape(width, signed=False)
 
 
 def signed(width):
-    """Returns :pc:`Shape(width, signed=True)`."""
+    """Returns :py:`Shape(width, signed=True)`."""
     return Shape(width, signed=True)
 
 
@@ -169,7 +169,7 @@ class ShapeCastable:
     extending the Amaranth language in third-party code.
 
     To illustrate their purpose, consider constructing a signal from a shape-castable object
-    :pc:`shape_castable`:
+    :py:`shape_castable`:
 
     .. code::
 
@@ -184,7 +184,7 @@ class ShapeCastable:
             reset=shape_castable.const(initializer)
         ))
 
-    Note that the :pc:`shape_castable(x)` syntax performs :pc:`shape_castable.__call__(x)`.
+    Note that the :py:`shape_castable(x)` syntax performs :py:`shape_castable.__call__(x)`.
 
     .. tip::
 
@@ -216,9 +216,9 @@ class ShapeCastable:
     def as_shape(self, *args, **kwargs):
         """as_shape()
 
-        Convert :pc:`self` to a :ref:`shape-like object <lang-shapelike>`.
+        Convert :py:`self` to a :ref:`shape-like object <lang-shapelike>`.
 
-        This method is called by the Amaranth language to convert :pc:`self` to a concrete
+        This method is called by the Amaranth language to convert :py:`self` to a concrete
         :class:`Shape`. It will usually return a :class:`Shape` object, but it may also return
         another shape-like object to delegate its functionality.
 
@@ -243,15 +243,15 @@ class ShapeCastable:
     def const(self, *args, **kwargs):
         """const(obj)
 
-        Convert a constant initializer :pc:`obj` to its value representation.
+        Convert a constant initializer :py:`obj` to its value representation.
 
-        This method is called by the Amaranth language to convert :pc:`obj`, which may be an
+        This method is called by the Amaranth language to convert :py:`obj`, which may be an
         arbitrary Python object, to a concrete :ref:`value-like object <lang-valuelike>`.
-        The object :pc:`obj` will usually be a Python literal that can conveniently represent
-        a constant value whose shape is described by :pc:`self`. While not constrained here,
+        The object :py:`obj` will usually be a Python literal that can conveniently represent
+        a constant value whose shape is described by :py:`self`. While not constrained here,
         the result will usually be an instance of the return type of :meth:`__call__`.
 
-        For any :pc:`obj`, the following condition must hold:
+        For any :py:`obj`, the following condition must hold:
 
         .. code::
 
@@ -277,18 +277,18 @@ class ShapeCastable:
 
         Lift a :ref:`value-like object <lang-valuelike>` to a higher-level representation.
 
-        This method is called by the Amaranth language to lift :pc:`obj`, which may be any
-        :ref:`value-like object <lang-valuelike>` whose shape equals :pc:`Shape.cast(self)`,
+        This method is called by the Amaranth language to lift :py:`obj`, which may be any
+        :ref:`value-like object <lang-valuelike>` whose shape equals :py:`Shape.cast(self)`,
         to a higher-level representation, which may be any value-like object with the same
         shape. While not constrained here, usually a :class:`ShapeCastable` implementation will
         be paired with a :class:`ValueCastable` implementation, and this method will return
         an instance of the latter.
 
-        If :pc:`obj` is not as described above, this interface does not constrain the behavior
+        If :py:`obj` is not as described above, this interface does not constrain the behavior
         of this method. This may be used to implement another call-based protocol at the same
         time.
 
-        For any compliant :pc:`obj`, the following condition must hold:
+        For any compliant :py:`obj`, the following condition must hold:
 
         .. code::
 
@@ -328,7 +328,7 @@ class _ShapeLikeMeta(type):
 class ShapeLike(metaclass=_ShapeLikeMeta):
     """Abstract class representing all objects that can be cast to a :class:`Shape`.
 
-    :pc:`issubclass(cls, ShapeLike)` returns :pc:`True` for:
+    :py:`issubclass(cls, ShapeLike)` returns :py:`True` for:
 
     * :class:`Shape`;
     * :class:`ShapeCastable` and its subclasses;
@@ -337,7 +337,7 @@ class ShapeLike(metaclass=_ShapeLikeMeta):
     * :class:`enum.EnumMeta` and its subclasses;
     * :class:`ShapeLike` itself.
 
-    :pc:`isinstance(obj, ShapeLike)` returns :pc:`True` for:
+    :py:`isinstance(obj, ShapeLike)` returns :py:`True` for:
 
     * :class:`Shape` instances;
     * :class:`ShapeCastable` instances;
@@ -381,9 +381,9 @@ class Value(metaclass=ABCMeta):
 
     Operations on this class interpret this bit pattern either as an integer, which can be signed
     or unsigned depending on the value's :meth:`shape`, or as a bit container. In either case,
-    the semantics of operations that implement Python's syntax, like :pc:`+` (also known as
+    the semantics of operations that implement Python's syntax, like :py:`+` (also known as
     :meth:`__add__`), are identical to the corresponding operation on a Python :class:`int` (or on
-    a Python sequence container). The bitwise inversion :pc:`~` (also known as :meth:`__invert__`)
+    a Python sequence container). The bitwise inversion :py:`~` (also known as :meth:`__invert__`)
     is the sole exception to this rule.
 
     Data that is not conveniently representable by a single integer or a bit container can be
@@ -404,24 +404,24 @@ class Value(metaclass=ABCMeta):
 
         In each of the descriptions below, you will see a line similar to:
 
-        **Return type:** :class:`Value`, :pc:`unsigned(1)`, :ref:`assignable <lang-assignable>`
+        **Return type:** :class:`Value`, :py:`unsigned(1)`, :ref:`assignable <lang-assignable>`
 
         The first part (:class:`Value`) indicates that the returned object's type is a subclass
-        of :class:`Value`. The second part (:pc:`unsigned(1)`) describes the shape of that value.
-        The third part, if present, indicates that the value is assignable if :pc:`self` is
+        of :class:`Value`. The second part (:py:`unsigned(1)`) describes the shape of that value.
+        The third part, if present, indicates that the value is assignable if :py:`self` is
         assignable.
     """
 
     @staticmethod
     def cast(obj):
-        """Cast :pc:`obj` to an Amaranth value.
+        """Cast :py:`obj` to an Amaranth value.
 
         Many :ref:`value-like <lang-valuelike>` objects can be cast to a value:
 
         * a :class:`Value` instance, where the result is itself;
-        * a :class:`bool` or :class:`int` instance, where the result is :pc:`Const(obj)`;
+        * a :class:`bool` or :class:`int` instance, where the result is :py:`Const(obj)`;
         * an :class:`enum.IntEnum` instance, or a :class:`enum.Enum` instance whose members are
-          all integers, where the result is a :class:`Const(obj, enum_shape)` where :pc:`enum_shape`
+          all integers, where the result is a :class:`Const(obj, enum_shape)` where :py:`enum_shape`
           is a shape that can represent every member of the enumeration;
         * a :class:`ValueCastable` instance, where the result is obtained by repeatedly calling
           :meth:`obj.as_value() <ValueCastable.as_value>`.
@@ -429,9 +429,9 @@ class Value(metaclass=ABCMeta):
         Raises
         ------
         TypeError
-            If :pc:`obj` cannot be converted to a :class:`Value`.
+            If :py:`obj` cannot be converted to a :class:`Value`.
         RecursionError
-            If :pc:`obj` is a :class:`ValueCastable` object that casts to itself.
+            If :py:`obj` is a :class:`ValueCastable` object that casts to itself.
         """
         while True:
             if isinstance(obj, Value):
@@ -454,7 +454,7 @@ class Value(metaclass=ABCMeta):
 
     @abstractmethod
     def shape(self):
-        """Shape of :pc:`self`.
+        """Shape of :py:`self`.
 
         Returns
         -------
@@ -471,7 +471,7 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
         """
         return Operator("u", [self])
 
@@ -480,12 +480,12 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`signed(len(self))`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`signed(len(self))`, :ref:`assignable <lang-assignable>`
 
         Raises
         ------
         ValueError
-            If :pc:`len(self) == 0`.
+            If :py:`len(self) == 0`.
         """
         if len(self) == 0:
             raise ValueError("Cannot create a 0-width signed value")
@@ -494,7 +494,7 @@ class Value(metaclass=ABCMeta):
     def __bool__(self):
         """Forbidden conversion to boolean.
 
-        Python uses this operator for its built-in semantics, e.g. :pc:`if`, and requires it to
+        Python uses this operator for its built-in semantics, e.g. :py:`if`, and requires it to
         return a :class:`bool`. Since this is not possible for Amaranth values, this operator
         always raises an exception.
 
@@ -512,22 +512,22 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("b", [self])
 
     def __pos__(self):
-        """Unary position, :pc:`+self`.
+        """Unary position, :py:`+self`.
 
         Returns
         -------
-        :class:`Value`, :pc:`self.shape()`
-            :pc:`self`
+        :class:`Value`, :py:`self.shape()`
+            :py:`self`
         """
         return self
 
     def __neg__(self):
-        """Unary negation, :pc:`-self`.
+        """Unary negation, :py:`-self`.
 
         ..
             >>> C(-1).value, C(-1).shape()
@@ -537,29 +537,29 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`signed(len(self) + 1)`
+        :class:`Value`, :py:`signed(len(self) + 1)`
         """
         return Operator("-", [self])
 
     @_overridable_by_reflected("__radd__")
     def __add__(self, other):
-        """Addition, :pc:`self + other`.
+        """Addition, :py:`self + other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()) + 1)`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()) + 1)`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1) + 1)`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
-            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :py:`unsigned(max(self.width(), other.width()) + 1)`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width() + 1, other.width()) + 1)`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(max(self.width(), other.width() + 1) + 1)`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()) + 1)`
+            If both :py:`self` and :py:`other` are unsigned.
         """
         return Operator("+", [self, other], src_loc_at=1)
 
     def __radd__(self, other):
-        """Addition, :pc:`other + self` (reflected).
+        """Addition, :py:`other + self` (reflected).
 
         Like :meth:`__add__`, with operands swapped.
         """
@@ -567,18 +567,18 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rsub__")
     def __sub__(self, other):
-        """Subtraction, :pc:`self - other`.
+        """Subtraction, :py:`self - other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()) + 1)`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1) + 1)`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()) + 1)`
-            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()) + 1)`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width() + 1, other.width()) + 1)`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(max(self.width(), other.width() + 1) + 1)`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()) + 1)`
+            If both :py:`self` and :py:`other` are unsigned.
 
         Returns
         -------
@@ -587,7 +587,7 @@ class Value(metaclass=ABCMeta):
         return Operator("-", [self, other], src_loc_at=1)
 
     def __rsub__(self, other):
-        """Subtraction, :pc:`other - self` (reflected).
+        """Subtraction, :py:`other - self` (reflected).
 
         Like :meth:`__sub__`, with operands swapped.
         """
@@ -595,19 +595,19 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rmul__")
     def __mul__(self, other):
-        """Multiplication, :pc:`self * other`.
+        """Multiplication, :py:`self * other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self) + len(other))`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(len(self) + len(other))`
-            If either :pc:`self` or :pc:`other` are signed.
+        :class:`Value`, :py:`unsigned(len(self) + len(other))`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(len(self) + len(other))`
+            If either :py:`self` or :py:`other` are signed.
         """
         return Operator("*", [self, other], src_loc_at=1)
 
     def __rmul__(self, other):
-        """Multiplication, :pc:`other * self` (reflected).
+        """Multiplication, :py:`other * self` (reflected).
 
         Like :meth:`__mul__`, with operands swapped.
         """
@@ -615,27 +615,27 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rfloordiv__")
     def __floordiv__(self, other):
-        """Flooring division, :pc:`self // other`.
+        """Flooring division, :py:`self // other`.
 
-        If :pc:`other` is zero, the result of this operation is zero.
+        If :py:`other` is zero, the result of this operation is zero.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self))`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(len(self) + 1)`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(len(self))`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(len(self) + 1)`
-            If both :pc:`self` and :pc:`other` are signed.
+        :class:`Value`, :py:`unsigned(len(self))`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(len(self) + 1)`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(len(self))`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(len(self) + 1)`
+            If both :py:`self` and :py:`other` are signed.
         """
         return Operator("//", [self, other], src_loc_at=1)
 
     def __rfloordiv__(self, other):
-        """Flooring division, :pc:`other // self` (reflected).
+        """Flooring division, :py:`other // self` (reflected).
 
-        If :pc:`self` is zero, the result of this operation is zero.
+        If :py:`self` is zero, the result of this operation is zero.
 
         Like :meth:`__floordiv__`, with operands swapped.
         """
@@ -643,18 +643,18 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rmod__")
     def __mod__(self, other):
-        """Flooring modulo or remainder, :pc:`self % other`.
+        """Flooring modulo or remainder, :py:`self % other`.
 
-        If :pc:`other` is zero, the result of this operation is zero.
+        If :py:`other` is zero, the result of this operation is zero.
 
         Returns
         -------
-        :class:`Value`, :pc:`other.shape()`
+        :class:`Value`, :py:`other.shape()`
         """
         return Operator("%", [self, other], src_loc_at=1)
 
     def __rmod__(self, other):
-        """Flooring modulo or remainder, :pc:`other % self` (reflected).
+        """Flooring modulo or remainder, :py:`other % self` (reflected).
 
         Like :meth:`__mod__`, with operands swapped.
         """
@@ -662,66 +662,66 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__eq__")
     def __eq__(self, other):
-        """Equality comparison, :pc:`self == other`.
+        """Equality comparison, :py:`self == other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("==", [self, other], src_loc_at=1)
 
     @_overridable_by_reflected("__ne__")
     def __ne__(self, other):
-        """Inequality comparison, :pc:`self != other`.
+        """Inequality comparison, :py:`self != other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("!=", [self, other], src_loc_at=1)
 
     @_overridable_by_reflected("__gt__")
     def __lt__(self, other):
-        """Less than comparison, :pc:`self < other`.
+        """Less than comparison, :py:`self < other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("<", [self, other], src_loc_at=1)
 
     @_overridable_by_reflected("__ge__")
     def __le__(self, other):
-        """Less than or equals comparison, :pc:`self <= other`.
+        """Less than or equals comparison, :py:`self <= other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("<=", [self, other], src_loc_at=1)
 
     @_overridable_by_reflected("__lt__")
     def __gt__(self, other):
-        """Greater than comparison, :pc:`self > other`.
+        """Greater than comparison, :py:`self > other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator(">", [self, other], src_loc_at=1)
 
     @_overridable_by_reflected("__le__")
     def __ge__(self, other):
-        """Greater than or equals comparison, :pc:`self >= other`.
+        """Greater than or equals comparison, :py:`self >= other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator(">=", [self, other], src_loc_at=1)
 
     def __abs__(self):
-        """Absolute value, :pc:`abs(self)`.
+        """Absolute value, :py:`abs(self)`.
 
         ..
             >>> abs(C(-1)).shape()
@@ -731,7 +731,7 @@ class Value(metaclass=ABCMeta):
 
         Return
         ------
-        :class:`Value`, :pc:`unsigned(len(self))`
+        :class:`Value`, :py:`unsigned(len(self))`
         """
         if self.shape().signed:
             return Mux(self >= 0, self, -self)[:len(self)]
@@ -739,123 +739,123 @@ class Value(metaclass=ABCMeta):
             return self
 
     def __invert__(self):
-        """Bitwise NOT, :pc:`~self`.
+        """Bitwise NOT, :py:`~self`.
 
-        The shape of the result is the same as the shape of :pc:`self`, even for unsigned values.
+        The shape of the result is the same as the shape of :py:`self`, even for unsigned values.
 
         .. important::
 
-            In Python, :pc:`~0` equals :pc:`-1`. In Amaranth, :pc:`~C(0)` equals :pc:`C(1)`.
+            In Python, :py:`~0` equals :py:`-1`. In Amaranth, :py:`~C(0)` equals :py:`C(1)`.
             This is the only case where an Amaranth operator deviates from the Python operator
             with the same name.
 
             This deviation is necessary because Python does not allow overriding the logical
-            :pc:`and`, :pc:`or`, and :pc:`not` operators. Amaranth uses :pc:`&`, :pc:`|`, and
-            :pc:`~` instead; if it wasn't the case that :pc:`~C(0) == C(1)`, that would have
+            :py:`and`, :py:`or`, and :py:`not` operators. Amaranth uses :py:`&`, :py:`|`, and
+            :py:`~` instead; if it wasn't the case that :py:`~C(0) == C(1)`, that would have
             been impossible.
 
         Returns
         -------
-        :class:`Value`, :pc:`self.shape()`
+        :class:`Value`, :py:`self.shape()`
         """
         return Operator("~", [self])
 
     @_overridable_by_reflected("__rand__")
     def __and__(self, other):
-        """Bitwise AND, :pc:`self & other`.
+        """Bitwise AND, :py:`self & other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :py:`unsigned(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width() + 1, other.width()))`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(max(self.width(), other.width() + 1))`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
         """
         return Operator("&", [self, other], src_loc_at=1)
 
     def __rand__(self, other):
-        """Bitwise AND, :pc:`other & self`.
+        """Bitwise AND, :py:`other & self`.
 
         Like :meth:`__and__`, with operands swapped.
         """
         return Operator("&", [other, self])
 
     def all(self):
-        """Reduction AND; are all bits :pc:`1`?
+        """Reduction AND; are all bits :py:`1`?
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("r&", [self])
 
     @_overridable_by_reflected("__ror__")
     def __or__(self, other):
-        """Bitwise OR, :pc:`self | other`.
+        """Bitwise OR, :py:`self | other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :py:`unsigned(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width() + 1, other.width()))`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(max(self.width(), other.width() + 1))`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
         """
         return Operator("|", [self, other], src_loc_at=1)
 
     def __ror__(self, other):
-        """Bitwise OR, :pc:`other | self`.
+        """Bitwise OR, :py:`other | self`.
 
         Like :meth:`__or__`, with operands swapped.
         """
         return Operator("|", [other, self])
 
     def any(self):
-        """Reduction OR; is any bit :pc:`1`?
+        """Reduction OR; is any bit :py:`1`?
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("r|", [self])
 
     @_overridable_by_reflected("__rxor__")
     def __xor__(self, other):
-        """Bitwise XOR, :pc:`self ^ other`.
+        """Bitwise XOR, :py:`self ^ other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
-        :class:`Value`, :pc:`signed(max(self.width() + 1, other.width()))`
-            If :pc:`self` is unsigned and :pc:`other` is signed.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width() + 1))`
-            If :pc:`self` is signed and :pc:`other` is unsigned.
-        :class:`Value`, :pc:`signed(max(self.width(), other.width()))`
-            If both :pc:`self` and :pc:`other` are unsigned.
+        :class:`Value`, :py:`unsigned(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
+        :class:`Value`, :py:`signed(max(self.width() + 1, other.width()))`
+            If :py:`self` is unsigned and :py:`other` is signed.
+        :class:`Value`, :py:`signed(max(self.width(), other.width() + 1))`
+            If :py:`self` is signed and :py:`other` is unsigned.
+        :class:`Value`, :py:`signed(max(self.width(), other.width()))`
+            If both :py:`self` and :py:`other` are unsigned.
         """
         return Operator("^", [self, other], src_loc_at=1)
 
     def __rxor__(self, other):
-        """Bitwise XOR, :pc:`other ^ self`.
+        """Bitwise XOR, :py:`other ^ self`.
 
         Like :meth:`__xor__`, with operands swapped.
         """
         return Operator("^", [other, self])
 
     def xor(self):
-        """Reduction XOR; are an odd amount of bits :pc:`1`?
+        """Reduction XOR; are an odd amount of bits :py:`1`?
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         return Operator("r^", [self])
 
@@ -872,26 +872,26 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rlshift__")
     def __lshift__(self, other):
-        """Left shift by variable amount, :pc:`self << other`.
+        """Left shift by variable amount, :py:`self << other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self) + 2 ** len(other) - 1)`
-            If :pc:`self` is unsigned.
-        :class:`Value`, :pc:`signed(len(self) + 2 ** len(other) - 1)`
-            If :pc:`self` is signed.
+        :class:`Value`, :py:`unsigned(len(self) + 2 ** len(other) - 1)`
+            If :py:`self` is unsigned.
+        :class:`Value`, :py:`signed(len(self) + 2 ** len(other) - 1)`
+            If :py:`self` is signed.
 
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`other` is signed.
+            If :py:`other` is signed.
         """
         other = Value.cast(other)
         other.__check_shamt()
         return Operator("<<", [self, other], src_loc_at=1)
 
     def __rlshift__(self, other):
-        """Left shift by variable amount, :pc:`other << self`.
+        """Left shift by variable amount, :py:`other << self`.
 
         Like :meth:`__lshift__`, with operands swapped.
         """
@@ -901,14 +901,14 @@ class Value(metaclass=ABCMeta):
     def shift_left(self, amount):
         """Left shift by constant amount.
 
-        If :pc:`amount < 0`, performs the same operation as :pc:`self.shift_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.shift_right(-amount)`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(len(self) + amount, 0))`
-            If :pc:`self` is unsigned.
-        :class:`Value`, :pc:`signed(max(len(self) + amount, 1))`
-            If :pc:`self` is signed.
+        :class:`Value`, :py:`unsigned(max(len(self) + amount, 0))`
+            If :py:`self` is unsigned.
+        :class:`Value`, :py:`signed(max(len(self) + amount, 1))`
+            If :py:`self` is signed.
         """
         if not isinstance(amount, int):
             raise TypeError(f"Shift amount must be an integer, not {amount!r}")
@@ -922,11 +922,11 @@ class Value(metaclass=ABCMeta):
     def rotate_left(self, amount):
         """Left rotate by constant amount.
 
-        If :pc:`amount < 0`, performs the same operation as :pc:`self.rotate_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.rotate_right(-amount)`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
         """
         if not isinstance(amount, int):
             raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
@@ -936,26 +936,26 @@ class Value(metaclass=ABCMeta):
 
     @_overridable_by_reflected("__rrshift__")
     def __rshift__(self, other):
-        """Right shift by variable amount, :pc:`self >> other`.
+        """Right shift by variable amount, :py:`self >> other`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self))`
-            If :pc:`self` is unsigned.
-        :class:`Value`, :pc:`signed(len(self))`
-            If :pc:`self` is signed.
+        :class:`Value`, :py:`unsigned(len(self))`
+            If :py:`self` is unsigned.
+        :class:`Value`, :py:`signed(len(self))`
+            If :py:`self` is signed.
 
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`other` is signed.
+            If :py:`other` is signed.
         """
         other = Value.cast(other)
         other.__check_shamt()
         return Operator(">>", [self, other], src_loc_at=1)
 
     def __rrshift__(self, other):
-        """Right shift by variable amount, :pc:`other >> self`.
+        """Right shift by variable amount, :py:`other >> self`.
 
         Like :meth:`__rshift__`, with operands swapped.
         """
@@ -965,14 +965,14 @@ class Value(metaclass=ABCMeta):
     def shift_right(self, amount):
         """Right shift by constant amount.
 
-        If :pc:`amount < 0`, performs the same operation as :pc:`self.left_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.left_right(-amount)`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(max(len(self) - amount, 0))`
-            If :pc:`self` is unsigned.
-        :class:`Value`, :pc:`signed(max(len(self) - amount, 1))`
-            If :pc:`self` is signed.
+        :class:`Value`, :py:`unsigned(max(len(self) - amount, 0))`
+            If :py:`self` is unsigned.
+        :class:`Value`, :py:`signed(max(len(self) - amount, 1))`
+            If :py:`self` is signed.
         """
         if not isinstance(amount, int):
             raise TypeError(f"Shift amount must be an integer, not {amount!r}")
@@ -988,11 +988,11 @@ class Value(metaclass=ABCMeta):
     def rotate_right(self, amount):
         """Right rotate by constant amount.
 
-        If :pc:`amount < 0`, performs the same operation as :pc:`self.rotate_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.rotate_right(-amount)`.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`unsigned(len(self))`, :ref:`assignable <lang-assignable>`
         """
         if not isinstance(amount, int):
             raise TypeError(f"Rotate amount must be an integer, not {amount!r}")
@@ -1001,12 +1001,12 @@ class Value(metaclass=ABCMeta):
         return Cat(self[amount:], self[:amount])
 
     def __len__(self):
-        """Bit width of :pc:`self`.
+        """Bit width of :py:`self`.
 
         Returns
         -------
         :class:`int`
-            :pc:`self.shape().width`
+            :py:`self.shape().width`
         """
         return self.shape().width
 
@@ -1055,13 +1055,13 @@ class Value(metaclass=ABCMeta):
     def bit_select(self, offset, width):
         """Part-select with bit granularity.
 
-        Selects a constant width, variable offset part of :pc:`self`, where parts with successive
-        offsets overlap by :pc:`width - 1` bits. Bits above the most significant bit of :pc:`self`
-        may be selected; they are equal to zero if :pc:`self` is unsigned, to :pc:`self[-1]` if
-        :pc:`self` is signed, and assigning to them does nothing.
+        Selects a constant width, variable offset part of :py:`self`, where parts with successive
+        offsets overlap by :py:`width - 1` bits. Bits above the most significant bit of :py:`self`
+        may be selected; they are equal to zero if :py:`self` is unsigned, to :py:`self[-1]` if
+        :py:`self` is signed, and assigning to them does nothing.
 
-        When :pc:`offset` is a constant integer and :pc:`offset + width <= len(self)`,
-        this operation is equivalent to :pc:`self[offset:offset + width]`.
+        When :py:`offset` is a constant integer and :py:`offset + width <= len(self)`,
+        this operation is equivalent to :py:`self[offset:offset + width]`.
 
         Parameters
         ----------
@@ -1072,14 +1072,14 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(width)`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`unsigned(width)`, :ref:`assignable <lang-assignable>`
 
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`offset` is signed.
+            If :py:`offset` is signed.
         :exc:`TypeError`
-            If :pc:`width` is negative.
+            If :py:`width` is negative.
         """
         offset = Value.cast(offset)
         if type(offset) is Const and isinstance(width, int):
@@ -1089,13 +1089,13 @@ class Value(metaclass=ABCMeta):
     def word_select(self, offset, width):
         """Part-select with word granularity.
 
-        Selects a constant width, variable offset part of :pc:`self`, where parts with successive
-        offsets are adjacent but do not overlap. Bits above the most significant bit of :pc:`self`
-        may be selected; they are equal to zero if :pc:`self` is unsigned, to :pc:`self[-1]` if
-        :pc:`self` is signed, and assigning to them does nothing.
+        Selects a constant width, variable offset part of :py:`self`, where parts with successive
+        offsets are adjacent but do not overlap. Bits above the most significant bit of :py:`self`
+        may be selected; they are equal to zero if :py:`self` is unsigned, to :py:`self[-1]` if
+        :py:`self` is signed, and assigning to them does nothing.
 
-        When :pc:`offset` is a constant integer and :pc:`width:(offset + 1) * width <= len(self)`,
-        this operation is equivalent to :pc:`self[offset * width:(offset + 1) * width]`.
+        When :py:`offset` is a constant integer and :py:`width:(offset + 1) * width <= len(self)`,
+        this operation is equivalent to :py:`self[offset * width:(offset + 1) * width]`.
 
         Parameters
         ----------
@@ -1106,14 +1106,14 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(width)`, :ref:`assignable <lang-assignable>`
+        :class:`Value`, :py:`unsigned(width)`, :ref:`assignable <lang-assignable>`
 
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`offset` is signed.
+            If :py:`offset` is signed.
         :exc:`TypeError`
-            If :pc:`width` is negative.
+            If :py:`width` is negative.
         """
         offset = Value.cast(offset)
         if type(offset) is Const and isinstance(width, int):
@@ -1123,19 +1123,19 @@ class Value(metaclass=ABCMeta):
     def replicate(self, count):
         """Replication.
 
-        Equivalent to :pc:`Cat(self for _ in range(count))`, but not assignable.
+        Equivalent to :py:`Cat(self for _ in range(count))`, but not assignable.
 
         ..
             Technically assignable right now, but we don't want to commit to that.
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self) * count)`
+        :class:`Value`, :py:`unsigned(len(self) * count)`
 
         Raises
         ------
         :exc:`TypeError`
-            If :pc:`count` is negative.
+            If :py:`count` is negative.
         """
         if not isinstance(count, int) or count < 0:
             raise TypeError("Replication count must be a non-negative integer, not {!r}"
@@ -1145,7 +1145,7 @@ class Value(metaclass=ABCMeta):
     def matches(self, *patterns):
         """Pattern matching.
 
-        Matches against a set of patterns, recognizing the same grammar as :pc:`with m.Case()`.
+        Matches against a set of patterns, recognizing the same grammar as :py:`with m.Case()`.
 
         .. todo::
 
@@ -1153,7 +1153,7 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(1)`
+        :class:`Value`, :py:`unsigned(1)`
         """
         matches = []
         # This code should accept exactly the same patterns as `with m.Case(...):`.
@@ -1197,10 +1197,10 @@ class Value(metaclass=ABCMeta):
     def eq(self, value, *, src_loc_at=0):
         """:ref:`Assignment <lang-assigns>`.
 
-        Once it is placed in a domain, an assignment changes the bit pattern of :pc:`self` to
-        equal :pc:`value`. If the bit width of :pc:`value` is less than that of :pc:`self`,
-        it is zero-extended (for unsigned :pc:`value`\\ s) or sign-extended (for signed
-        :pc:`value`\\ s). If the bit width of :pc:`value` is greater than that of :pc:`self`,
+        Once it is placed in a domain, an assignment changes the bit pattern of :py:`self` to
+        equal :py:`value`. If the bit width of :py:`value` is less than that of :py:`self`,
+        it is zero-extended (for unsigned :py:`value`\\ s) or sign-extended (for signed
+        :py:`value`\\ s). If the bit width of :py:`value` is greater than that of :py:`self`,
         it is truncated.
 
         Returns
@@ -1211,8 +1211,8 @@ class Value(metaclass=ABCMeta):
 
     #: Forbidden hashing.
     #:
-    #: Python objects are :term:`python:hashable` if they provide a :pc:`__hash__` method
-    #: that returns an :class:`int` and an :pc:`__eq__` method that returns a :class:`bool`.
+    #: Python objects are :term:`python:hashable` if they provide a :py:`__hash__` method
+    #: that returns an :class:`int` and an :py:`__eq__` method that returns a :class:`bool`.
     #: Amaranth values define :meth:`__eq__` to return a :class:`Value`, which precludes them
     #: from being hashable.
     #:
@@ -1251,9 +1251,9 @@ class ValueCastable:
         operators, which will prefer calling a reflected arithmetic operation on
         the :class:`ValueCastable` argument if it defines one.
 
-        For example, if :pc:`value_castable` implements :pc:`__radd__`, then
-        :pc:`C(1) + value_castable` will perform :pc:`value_castable.__radd__(C(1))`, and otherwise
-        it will perform :pc:`C(1).__add__(value_castable.as_value())`.
+        For example, if :py:`value_castable` implements :py:`__radd__`, then
+        :py:`C(1) + value_castable` will perform :py:`value_castable.__radd__(C(1))`, and otherwise
+        it will perform :py:`C(1).__add__(value_castable.as_value())`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -1275,9 +1275,9 @@ class ValueCastable:
     def as_value(self, *args, **kwargs):
         """as_value()
 
-        Convert :pc:`self` to a :ref:`value-like object <lang-valuelike>`.
+        Convert :py:`self` to a :ref:`value-like object <lang-valuelike>`.
 
-        This method is called by the Amaranth language to convert :pc:`self` to a concrete
+        This method is called by the Amaranth language to convert :py:`self` to a concrete
         :class:`Value`. It will usually return a :class:`Value` object, but it may also return
         another value-like object to delegate its functionality.
 
@@ -1304,7 +1304,7 @@ class ValueCastable:
     def shape(self, *args, **kwargs):
         """shape()
 
-        Compute the shape of :pc:`self`.
+        Compute the shape of :py:`self`.
 
         This method is not called by the Amaranth language itself; whenever it needs to discover
         the shape of a value-castable object, it calls :class:`self.as_value().shape()`. However,
@@ -1367,7 +1367,7 @@ class _ValueLikeMeta(type):
 class ValueLike(metaclass=_ValueLikeMeta):
     """Abstract class representing all objects that can be cast to a :class:`Value`.
 
-    :pc:`issubclass(cls, ValueLike)` returns :pc:`True` for:
+    :py:`issubclass(cls, ValueLike)` returns :py:`True` for:
 
     * :class:`Value`;
     * :class:`ValueCastable` and its subclasses;
@@ -1375,8 +1375,8 @@ class ValueLike(metaclass=_ValueLikeMeta):
     * :class:`enum.Enum` subclasses where all values are :ref:`value-like <lang-valuelike>`;
     * :class:`ValueLike` itself.
 
-    :pc:`isinstance(obj, ValueLike)` returns the same value as
-    :pc:`issubclass(type(obj), ValueLike)`.
+    :py:`isinstance(obj, ValueLike)` returns the same value as
+    :py:`issubclass(type(obj), ValueLike)`.
 
     This class cannot be instantiated or subclassed. It can only be used for checking types of
     objects.
@@ -1385,8 +1385,8 @@ class ValueLike(metaclass=_ValueLikeMeta):
 
         It is possible to define an enumeration with a member that is
         :ref:`value-like <lang-valuelike>` but not :ref:`constant-castable <lang-constcasting>`,
-        meaning that :pc:`issubclass(BadEnum, ValueLike)` returns :pc:`True`, but
-        :pc:`Value.cast(BadEnum.MEMBER)` raises an exception.
+        meaning that :py:`issubclass(BadEnum, ValueLike)` returns :py:`True`, but
+        :py:`Value.cast(BadEnum.MEMBER)` raises an exception.
 
         The :mod:`amaranth.lib.enum` module prevents such enumerations from being defined when
         the shape is specified explicitly. Using :mod:`amaranth.lib.enum` and specifying the shape

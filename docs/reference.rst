@@ -80,9 +80,9 @@ The prelude exports exactly the following names:
 Source locations
 ================
 
-Many functions and methods in Amaranth take the :pc:`src_loc_at=0` keyword argument. These language constructs may inspect the call stack to determine the file and line of its call site, which will be used to annotate generated code when a netlist is generated or to improve diagnostic messages.
+Many functions and methods in Amaranth take the :py:`src_loc_at=0` keyword argument. These language constructs may inspect the call stack to determine the file and line of its call site, which will be used to annotate generated code when a netlist is generated or to improve diagnostic messages.
 
-Some call sites are not relevant for an Amaranth designer; e.g. when an Amaranth language construct is called from a user-defined utility function, the source location of the call site within this utility function is usually not interesting to the designer. In these cases, one or more levels of function calls can be removed from consideration using the :pc:`src_loc_at` argument as follows (using :meth:`Shape.cast` to demonstrate the concept):
+Some call sites are not relevant for an Amaranth designer; e.g. when an Amaranth language construct is called from a user-defined utility function, the source location of the call site within this utility function is usually not interesting to the designer. In these cases, one or more levels of function calls can be removed from consideration using the :py:`src_loc_at` argument as follows (using :meth:`Shape.cast` to demonstrate the concept):
 
 .. testcode::
 
@@ -90,7 +90,7 @@ Some call sites are not relevant for an Amaranth designer; e.g. when an Amaranth
         ... # additionally process `obj`...
         return Shape.cast(obj, src_loc_at=1 + src_loc_at)
 
-The number :pc:`1` corresponds to the number of call stack frames that should be skipped.
+The number :py:`1` corresponds to the number of call stack frames that should be skipped.
 
 
 Shapes
