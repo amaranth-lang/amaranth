@@ -394,6 +394,8 @@ class Value(metaclass=ABCMeta):
         Value, out
             This ``Value`` reinterpreted as a signed integer.
         """
+        if len(self) == 0:
+            raise ValueError("Cannot create a 0-width signed value")
         return Operator("s", [self])
 
     def bool(self):
@@ -589,6 +591,8 @@ class Value(metaclass=ABCMeta):
         if amount < 0:
             return self.shift_left(-amount)
         if self.shape().signed:
+            if amount >= len(self):
+                amount = len(self) - 1
             return self[amount:].as_signed()
         else:
             return self[amount:] # unsigned
