@@ -483,7 +483,14 @@ class Value(metaclass=ABCMeta):
         Returns
         -------
         :class:`Value`, :pc:`signed(len(self))`, :ref:`assignable <lang-assignable>`
+
+        Raises
+        ------
+        ValueError
+            If :pc:`len(self) == 0`.
         """
+        if len(self) == 0:
+            raise ValueError("Cannot create a 0-width signed value")
         return Operator("s", [self])
 
     def __bool__(self):
@@ -900,9 +907,9 @@ class Value(metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Value`, :pc:`unsigned(len(self) + amount)`
+        :class:`Value`, :pc:`unsigned(max(len(self) + amount, 0))`
             If :pc:`self` is unsigned.
-        :class:`Value`, :pc:`signed(len(self) + amount)`
+        :class:`Value`, :pc:`signed(max(len(self) + amount, 1))`
             If :pc:`self` is signed.
         """
         if not isinstance(amount, int):
@@ -974,6 +981,8 @@ class Value(metaclass=ABCMeta):
         if amount < 0:
             return self.shift_left(-amount)
         if self.shape().signed:
+            if amount >= len(self):
+                amount = len(self) - 1
             return self[amount:].as_signed()
         else:
             return self[amount:] # unsigned
