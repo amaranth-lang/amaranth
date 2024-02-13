@@ -638,7 +638,6 @@ class View(ValueCastable):
         """
         return self.__orig_layout
 
-    @ValueCastable.lowermethod
     def as_value(self):
         """Get underlying value.
 

@@ -728,7 +728,6 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_value_castable(self):
         class MyValue(ValueCastable):
-            @ValueCastable.lowermethod
             def as_value(self):
                 return Signal()
 

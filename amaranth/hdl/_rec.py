@@ -178,7 +178,6 @@ class Record(ValueCastable):
                 raise AttributeError("{} does not have a field '{}'. Did you mean one of: {}?"
                                      .format(reference, item, ", ".join(self.fields))) from None
 
-    @ValueCastable.lowermethod
     def as_value(self):
         return Cat(self.fields.values())
 
