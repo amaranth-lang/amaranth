@@ -4,6 +4,9 @@ We love contributions from the community. Please send pull requests and raise
 issues! All code submissions require review. We use GitHub pull requests for
 this purpose.
 
+See the "Contributing" section of the documentation manual for more details
+about contributing to Amaranth.
+
 
 COPYRIGHTS and LICENSE
 

@@ -46,6 +46,13 @@ build-backend = "pdm.backend"
 # Add a workaround to improve experience for people upgrading from old checkouts.
 includes = ["amaranth/"]
 
+source-includes = [
+  ".gitignore",
+  ".coveragerc",
+  ".env.toolchain",
+  "CONTRIBUTING.txt",
+]
+
 # Development workflow configuration
 
 [tool.pdm.dev-dependencies]
