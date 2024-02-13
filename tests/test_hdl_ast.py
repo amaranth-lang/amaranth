@@ -326,7 +326,7 @@ class ValueTestCase(FHDLTestCase):
         self.assertRepr(Const(256, signed(9)).shift_left(-5),
                         "(s (slice (const 9'sd-256) 5:9))")
         self.assertRepr(Const(256, signed(9)).shift_left(-15),
-                        "(s (slice (const 9'sd-256) 9:9))")
+                        "(s (slice (const 9'sd-256) 8:9))")
 
     def test_shift_left_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -350,12 +350,20 @@ class ValueTestCase(FHDLTestCase):
                         "(slice (const 9'd256) 1:9)")
         self.assertRepr(Const(256, unsigned(9)).shift_right(5),
                         "(slice (const 9'd256) 5:9)")
+        self.assertRepr(Const(256, unsigned(9)).shift_right(15),
+                        "(slice (const 9'd256) 9:9)")
         self.assertRepr(Const(256, signed(9)).shift_right(1),
                         "(s (slice (const 9'sd-256) 1:9))")
         self.assertRepr(Const(256, signed(9)).shift_right(5),
                         "(s (slice (const 9'sd-256) 5:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(7),
+                        "(s (slice (const 9'sd-256) 7:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(8),
+                        "(s (slice (const 9'sd-256) 8:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(9),
+                        "(s (slice (const 9'sd-256) 8:9))")
         self.assertRepr(Const(256, signed(9)).shift_right(15),
-                        "(s (slice (const 9'sd-256) 9:9))")
+                        "(s (slice (const 9'sd-256) 8:9))")
 
     def test_shift_right_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -479,6 +487,11 @@ class OperatorTestCase(FHDLTestCase):
         v = Const(1, unsigned(4)).as_signed()
         self.assertEqual(repr(v), "(s (const 4'd1))")
         self.assertEqual(v.shape(), signed(4))
+
+    def test_as_signed_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot create a 0-width signed value$"):
+            Const(0, 0).as_signed()
 
     def test_pos(self):
         self.assertRepr(+Const(10), "(const 4'd10)")
