@@ -168,6 +168,10 @@ jobs:
       with:
         name: code
         path: dist/
+    - name: Verify package metadata
+      run: |
+        pip install twine
+        twine check dist/*
     - name: Publish package to Test PyPI
       if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && github.event.ref == 'refs/heads/main' }}
       uses: pypa/gh-action-pypi-publish@release/v1
