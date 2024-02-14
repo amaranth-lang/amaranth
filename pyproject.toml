@@ -57,7 +57,7 @@ source-includes = [
 
 [tool.pdm.dev-dependencies]
 test = [
-  "yowasp-yosys!=0.37.0.*",
+  "yowasp-yosys>=0.38",
   "coverage",
 ]
 docs = [
