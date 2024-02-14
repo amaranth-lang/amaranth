@@ -374,14 +374,21 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._statements = _outer_case
 
     @contextmanager
-    def FSM(self, reset=None, domain="sync", name="fsm"):
+    def FSM(self, init=None, domain="sync", name="fsm", *, reset=None):
         self._check_context("FSM", context=None)
         if domain == "comb":
             raise ValueError(f"FSM may not be driven by the '{domain}' domain")
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
             "signal":   Signal(name=f"{name}_state", src_loc_at=2),
-            "reset":    reset,
+            "init":     init,
             "domain":   domain,
             "encoding": OrderedDict(),
             "decoding": OrderedDict(),
@@ -489,17 +496,17 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     src_loc=src_loc, case_src_locs=switch_case_src_locs))
 
         if name == "FSM":
-            fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
-                data["signal"], data["reset"], data["encoding"], data["decoding"], data["states"]
+            fsm_signal, fsm_init, fsm_encoding, fsm_decoding, fsm_states = \
+                data["signal"], data["init"], data["encoding"], data["decoding"], data["states"]
             fsm_state_src_locs = data["state_src_locs"]
             if not fsm_states:
                 return
             fsm_signal.width = bits_for(len(fsm_encoding) - 1)
-            if fsm_reset is None:
-                fsm_signal.reset = fsm_encoding[next(iter(fsm_states))]
+            if fsm_init is None:
+                fsm_signal.init = fsm_encoding[next(iter(fsm_states))]
             else:
-                fsm_signal.reset = fsm_encoding[fsm_reset]
-            # The FSM is encoded such that the state with encoding 0 is always the reset state.
+                fsm_signal.init = fsm_encoding[fsm_init]
+            # The FSM is encoded such that the state with encoding 0 is always the init state.
             fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
             fsm_signal.decoder = lambda n: f"{fsm_decoding[n]}/{n}"
 

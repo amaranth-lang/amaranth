@@ -691,8 +691,8 @@ class NetlistDriver:
 
     def emit_value(self, builder):
         if self.domain is None:
-            reset = _ast.Const(self.signal.reset, self.signal.width)
-            default, _signed = builder.emit_rhs(self.module_idx, reset)
+            init = _ast.Const(self.signal.init, self.signal.width)
+            default, _signed = builder.emit_rhs(self.module_idx, init)
         else:
             default = builder.emit_signal(self.signal)
         if len(self.assignments) == 1:
@@ -1184,7 +1184,7 @@ class NetlistEmitter:
                     arst = _nir.Net.from_const(0)
                 cell = _nir.FlipFlop(driver.module_idx,
                     data=value,
-                    init=driver.signal.reset,
+                    init=driver.signal.init,
                     clk=clk,
                     clk_edge=driver.domain.clk_edge,
                     arst=arst,
@@ -1198,12 +1198,12 @@ class NetlistEmitter:
                 src_loc = driver.signal.src_loc
             self.connect(self.emit_signal(driver.signal), value, src_loc=src_loc)
 
-        # Connect all undriven signal bits to their reset values. This can only happen for entirely
+        # Connect all undriven signal bits to their initial values. This can only happen for entirely
         # undriven signals, or signals that are partially driven by instances.
         for signal, value in self.netlist.signals.items():
             for bit, net in enumerate(value):
                 if net.is_late and net not in self.netlist.connections:
-                    self.netlist.connections[net] = _nir.Net.from_const((signal.reset >> bit) & 1)
+                    self.netlist.connections[net] = _nir.Net.from_const((signal.init >> bit) & 1)
 
     def emit_fragment(self, fragment: _ir.Fragment, parent_module_idx: 'int | None'):
         from . import _mem

@@ -32,7 +32,7 @@ class UART(Elaboratable):
         m = Module()
 
         tx_phase = Signal(range(self.divisor))
-        tx_shreg = Signal(1 + self.data_bits + 1, reset=-1)
+        tx_shreg = Signal(1 + self.data_bits + 1, init=-1)
         tx_count = Signal(range(len(tx_shreg) + 1))
 
         m.d.comb += self.tx_o.eq(tx_shreg[0])
@@ -55,7 +55,7 @@ class UART(Elaboratable):
                 ]
 
         rx_phase = Signal(range(self.divisor))
-        rx_shreg = Signal(1 + self.data_bits + 1, reset=-1)
+        rx_shreg = Signal(1 + self.data_bits + 1, init=-1)
         rx_count = Signal(range(len(rx_shreg) + 1))
 
         m.d.comb += self.rx_data.eq(rx_shreg[1:-1])

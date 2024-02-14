@@ -29,6 +29,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
 * Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
 * Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
+* Update uses of ``reset=`` keyword argument to ``init=``
 * Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
 * Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
 
@@ -39,11 +40,13 @@ Implemented RFCs
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
 .. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
+.. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
+* `RFC 43`_: Rename ``reset=`` to ``init=``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 
 
@@ -56,9 +59,10 @@ Language changes
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
-* Changed: ``Signal(range(stop), reset=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
+* Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
 * Changed: ``Signal(range(0))`` is now valid without a warning.
 * Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
+* Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)

@@ -83,7 +83,7 @@ class Simulator:
     def add_process(self, process):
         process = self._check_process(process)
         def wrapper():
-            # Only start a bench process after comb settling, so that the reset values are correct.
+            # Only start a bench process after comb settling, so that the initial values are correct.
             yield object.__new__(Settle)
             yield from process()
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
@@ -188,7 +188,7 @@ class Simulator:
 
         if phase is None:
             # By default, delay the first edge by half period. This causes any synchronous activity
-            # to happen at a non-zero time, distinguishing it from the reset values in the waveform
+            # to happen at a non-zero time, distinguishing it from the initial values in the waveform
             # viewer.
             phase = period // 2
         else:
@@ -199,7 +199,7 @@ class Simulator:
     def reset(self):
         """Reset the simulation.
 
-        Assign the reset value to every signal in the simulation, and restart every user process.
+        Assign the initial value to every signal and memory in the simulation, and restart every user process.
         """
         self._engine.reset()
 

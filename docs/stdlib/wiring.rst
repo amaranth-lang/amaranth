@@ -555,7 +555,7 @@ Signatures
 .. autodata:: Out
 .. autodata:: In
 
-.. autoclass:: Member(flow, description, *, reset=None)
+.. autoclass:: Member(flow, description, *, init=None)
 
 .. autoexception:: SignatureError
 

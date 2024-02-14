@@ -451,7 +451,7 @@ class DSLTestCase(FHDLTestCase):
             RED  = 1
             BLUE = 2
         m = Module()
-        se = Signal(Color, reset=Color.RED)
+        se = Signal(Color, init=Color.RED)
         with m.Switch(se):
             with m.Case(Color.RED):
                 m.d.comb += self.c1.eq(1)
@@ -638,10 +638,10 @@ class DSLTestCase(FHDLTestCase):
             1: "SECOND"
         }))
 
-    def test_FSM_reset(self):
+    def test_FSM_init(self):
         a = Signal()
         m = Module()
-        with m.FSM(reset="SECOND"):
+        with m.FSM(init="SECOND"):
             with m.State("FIRST"):
                 m.d.comb += a.eq(0)
                 m.next = "SECOND"
@@ -670,6 +670,55 @@ class DSLTestCase(FHDLTestCase):
             )
         )
         """)
+        self.assertEqual(m._generated["fsm"].state.init, 1)
+
+    def test_FSM_reset(self):
+        a = Signal()
+        m = Module()
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            with m.FSM(reset="SECOND"):
+                with m.State("FIRST"):
+                    m.d.comb += a.eq(0)
+                    m.next = "SECOND"
+                with m.State("SECOND"):
+                    m.next = "FIRST"
+        m._flush()
+        self.assertRepr(m._statements["comb"], """
+        (
+            (switch (sig fsm_state)
+                (case 0
+                    (eq (sig a) (const 1'd0))
+                )
+                (case 1 )
+            )
+        )
+        """)
+        self.assertRepr(m._statements["sync"], """
+        (
+            (switch (sig fsm_state)
+                (case 0
+                    (eq (sig fsm_state) (const 1'd1))
+                )
+                (case 1
+                    (eq (sig fsm_state) (const 1'd0))
+                )
+            )
+        )
+        """)
+        self.assertEqual(m._generated["fsm"].state.init, 1)
+
+    def test_FSM_reset_wrong(self):
+        a = Signal()
+        m = Module()
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            with m.FSM(reset="SECOND", init="SECOND"):
+                with m.State("FIRST"):
+                    m.d.comb += a.eq(0)
+                    m.next = "SECOND"
+                with m.State("SECOND"):
+                    m.next = "FIRST"
 
     def test_FSM_ongoing(self):
         a = Signal()
@@ -683,7 +732,7 @@ class DSLTestCase(FHDLTestCase):
             with m.State("SECOND"):
                 pass
         m._flush()
-        self.assertEqual(m._generated["fsm"].state.reset, 1)
+        self.assertEqual(m._generated["fsm"].state.init, 1)
         self.maxDiff = 10000
         self.assertRepr(m._statements["comb"], """
         (
