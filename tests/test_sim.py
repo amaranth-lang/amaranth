@@ -5,13 +5,13 @@ from contextlib import contextmanager
 from amaranth._utils import flatten
 from amaranth.hdl._ast import *
 from amaranth.hdl._cd import  *
-from amaranth.hdl._mem import *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from amaranth.hdl.rec import *
 from amaranth.hdl._dsl import  *
 from amaranth.hdl._ir import *
 from amaranth.sim import *
+from amaranth.lib.memory import Memory
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -752,14 +752,12 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.add_testbench(process)
         self.assertTrue(survived)
 
-    def setUp_memory(self, rd_synchronous=True, rd_transparent=True, wr_granularity=None):
+    def setUp_memory(self, rd_synchronous=True, rd_transparent=False, wr_granularity=None):
         self.m = Module()
-        self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
-        self.m.submodules.rdport = self.rdport = \
-            self.memory.read_port(domain="sync" if rd_synchronous else "comb",
-                                  transparent=rd_transparent)
-        self.m.submodules.wrport = self.wrport = \
-            self.memory.write_port(granularity=wr_granularity)
+        self.memory = self.m.submodules.memory = Memory(shape=8, depth=4, init=[0xaa, 0x55])
+        self.wrport = self.memory.write_port(granularity=wr_granularity)
+        self.rdport = self.memory.read_port(domain="sync" if rd_synchronous else "comb",
+                                            transparent_for=[self.wrport] if rd_transparent else [])
 
     def test_memory_init(self):
         self.setUp_memory()
@@ -862,8 +860,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_memory_read_only(self):
         self.m = Module()
-        self.memory = Memory(width=8, depth=4, init=[0xaa, 0x55])
-        self.m.submodules.rdport = self.rdport = self.memory.read_port()
+        self.m.submodules.memory = self.memory = Memory(shape=8, depth=4, init=[0xaa, 0x55])
+        self.rdport = self.memory.read_port()
         with self.assertSimulation(self.m) as sim:
             def process():
                 yield Tick()
@@ -920,9 +918,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_memory_transparency_simple(self):
         m = Module()
         init = [0x11, 0x22, 0x33, 0x44]
-        m.submodules.memory = memory = Memory(width=8, depth=4, init=init)
-        rdport = memory.read_port()
+        m.submodules.memory = memory = Memory(shape=8, depth=4, init=init)
         wrport = memory.write_port(granularity=8)
+        rdport = memory.read_port(transparent_for=[wrport])
         with self.assertSimulation(m) as sim:
             def process():
                 yield rdport.addr.eq(0)
@@ -959,9 +957,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_memory_transparency_multibit(self):
         m = Module()
         init = [0x11111111, 0x22222222, 0x33333333, 0x44444444]
-        m.submodules.memory = memory = Memory(width=32, depth=4, init=init)
-        rdport = memory.read_port()
+        m.submodules.memory = memory = Memory(shape=32, depth=4, init=init)
         wrport = memory.write_port(granularity=8)
+        rdport = memory.read_port(transparent_for=[wrport])
         with self.assertSimulation(m) as sim:
             def process():
                 yield rdport.addr.eq(0)

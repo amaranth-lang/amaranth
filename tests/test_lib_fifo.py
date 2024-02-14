@@ -6,6 +6,7 @@ from amaranth.hdl import *
 from amaranth.asserts import *
 from amaranth.sim import *
 from amaranth.lib.fifo import *
+from amaranth.lib.memory import *
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -81,9 +82,9 @@ class FIFOModel(Elaboratable, FIFOInterface):
     def elaborate(self, platform):
         m = Module()
 
-        storage = Memory(width=self.width, depth=self.depth)
-        w_port  = m.submodules.w_port = storage.write_port(domain=self.w_domain)
-        r_port  = m.submodules.r_port = storage.read_port (domain="comb")
+        storage = m.submodules.storage = Memory(shape=self.width, depth=self.depth, init=[])
+        w_port  = storage.write_port(domain=self.w_domain)
+        r_port  = storage.read_port (domain="comb")
 
         produce = Signal(range(self.depth))
         consume = Signal(range(self.depth))

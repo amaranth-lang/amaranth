@@ -505,7 +505,7 @@ class _FragmentCompiler:
                             addr = emitter.def_var("read_addr", f"({(1 << len(port._addr)) - 1:#x} & {addr})")
                             data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
 
-                            for idx in port._transparency:
+                            for idx in port._transparent_for:
                                 waddr, wdata, wen = write_vals[idx]
                                 emitter.append(f"if {addr} == {waddr}:")
                                 with emitter.indent():

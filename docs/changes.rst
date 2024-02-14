@@ -32,6 +32,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Update uses of ``reset=`` keyword argument to ``init=``
 * Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
 * Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
+* Replace uses of ``amaranth.hdl.Memory`` with ``amaranth.lib.memory.Memory``
 
 
 Implemented RFCs
@@ -41,12 +42,14 @@ Implemented RFCs
 .. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 .. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
+.. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
 * `RFC 43`_: Rename ``reset=`` to ``init=``
+* `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 
 
@@ -65,6 +68,7 @@ Language changes
 * Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
 * Changed: :class:`Shape` has been made immutable and hashable.
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
+* Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
@@ -75,6 +79,7 @@ Standard library changes
 
 .. currentmodule:: amaranth.lib
 
+* Added: :mod:`amaranth.lib.memory`. (`RFC 45`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)

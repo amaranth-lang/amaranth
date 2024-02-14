@@ -128,7 +128,8 @@ class DomainRenamerTestCase(FHDLTestCase):
 
     def test_rename_mem_ports(self):
         m = Module()
-        mem = Memory(depth=4, width=16)
+        with _ignore_deprecated():
+            mem = Memory(depth=4, width=16)
         m.submodules.mem = mem
         mem.read_port(domain="a")
         mem.read_port(domain="b")
@@ -397,7 +398,8 @@ class EnableInserterTestCase(FHDLTestCase):
         """)
 
     def test_enable_read_port(self):
-        mem = Memory(width=8, depth=4)
+        with _ignore_deprecated():
+            mem = Memory(width=8, depth=4)
         mem.read_port(transparent=False)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
         self.assertRepr(f._read_ports[0]._en, """
@@ -405,7 +407,8 @@ class EnableInserterTestCase(FHDLTestCase):
         """)
 
     def test_enable_write_port(self):
-        mem = Memory(width=8, depth=4)
+        with _ignore_deprecated():
+            mem = Memory(width=8, depth=4)
         mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
         self.assertRepr(f._write_ports[0]._en, """

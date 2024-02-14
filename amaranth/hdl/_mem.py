@@ -5,6 +5,7 @@ from .. import tracer
 from ._ast import *
 from ._ir import Elaboratable, Fragment
 from ..utils import ceil_log2
+from .._utils import deprecated
 
 
 __all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
@@ -33,18 +34,19 @@ class MemorySimWrite:
 
 class MemoryInstance(Fragment):
     class _ReadPort:
-        def __init__(self, *, domain, addr, data, en, transparency):
+        def __init__(self, *, domain, addr, data, en, transparent_for):
             assert isinstance(domain, str)
             self._domain = domain
             self._addr = Value.cast(addr)
             self._data = Value.cast(data)
             self._en = Value.cast(en)
-            self._transparency = tuple(transparency)
+            self._transparent_for = tuple(transparent_for)
             assert len(self._en) == 1
             if domain == "comb":
                 assert isinstance(self._en, Const)
                 assert self._en.width == 1
                 assert self._en.value == 1
+                assert not self._transparent_for
 
     class _WritePort:
         def __init__(self, *, domain, addr, data, en):
@@ -70,22 +72,24 @@ class MemoryInstance(Fragment):
         self._identity = identity
         self._width = operator.index(width)
         self._depth = operator.index(depth)
-        self._init = tuple(init) if init is not None else ()
+        mask = (1 << self._width) - 1
+        self._init = tuple(item & mask for item in init) if init is not None else ()
         assert len(self._init) <= self._depth
         self._init += (0,) * (self._depth - len(self._init))
         for x in self._init:
             assert isinstance(x, int)
         self._attrs = attrs or {}
-        self._read_ports = []
-        self._write_ports = []
+        self._read_ports: "list[MemoryInstance._ReadPort]" = []
+        self._write_ports: "list[MemoryInstance._WritePort]" = []
 
-    def read_port(self, *, domain, addr, data, en, transparency):
-        port = self._ReadPort(domain=domain, addr=addr, data=data, en=en, transparency=transparency)
+    def read_port(self, *, domain, addr, data, en, transparent_for):
+        port = self._ReadPort(domain=domain, addr=addr, data=data, en=en, transparent_for=transparent_for)
         assert len(port._data) == self._width
         assert len(port._addr) == ceil_log2(self._depth)
-        for x in port._transparency:
-            assert isinstance(x, int)
-            assert x in range(len(self._write_ports))
+        for idx in port._transparent_for:
+            assert isinstance(idx, int)
+            assert idx in range(len(self._write_ports))
+            assert self._write_ports[idx]._domain == port._domain
         for signal in port._data._rhs_signals():
             self.add_driver(signal, port._domain)
         self._read_ports.append(port)
@@ -124,6 +128,8 @@ class Memory(Elaboratable):
     init : list of int
     attrs : dict
     """
+    # TODO(amaranth-0.6): remove
+    @deprecated("`amaranth.hdl.Memory` is deprecated, use `amaranth.lib.memory.Memory` instead")
     def __init__(self, *, width, depth, init=None, name=None, attrs=None, simulate=True):
         if not isinstance(width, int) or width < 0:
             raise TypeError("Memory width must be a non-negative integer, not {!r}"
@@ -132,8 +138,8 @@ class Memory(Elaboratable):
             raise TypeError("Memory depth must be a non-negative integer, not {!r}"
                             .format(depth))
 
-        self.name    = name or tracer.get_var_name(depth=2, default="$memory")
-        self.src_loc = tracer.get_src_loc()
+        self.name    = name or tracer.get_var_name(depth=3, default="$memory")
+        self.src_loc = tracer.get_src_loc(src_loc_at=1)
 
         self.width = width
         self.depth = depth
@@ -208,12 +214,12 @@ class Memory(Elaboratable):
         for port in self._read_ports:
             port._MustUse__used = True
             if port.domain == "comb":
-                f.read_port(domain="comb", addr=port.addr, data=port.data, en=Const(1), transparency=())
+                f.read_port(domain="comb", addr=port.addr, data=port.data, en=Const(1), transparent_for=())
             else:
-                transparency = []
+                transparent_for = []
                 if port.transparent:
-                    transparency = write_ports.get(port.domain, [])
-                f.read_port(domain=port.domain, addr=port.addr, data=port.data, en=port.en, transparency=transparency)
+                    transparent_for = write_ports.get(port.domain, [])
+                f.read_port(domain=port.domain, addr=port.addr, data=port.data, en=port.en, transparent_for=transparent_for)
         return f
 
 
@@ -346,13 +352,15 @@ class DummyPort:
     It does not include any read/write port specific attributes, i.e. none besides ``"domain"``;
     any such attributes may be set manually.
     """
+    # TODO(amaranth-0.6): remove
+    @deprecated("`DummyPort` is deprecated, use `amaranth.lib.memory.ReadPort` or `amaranth.lib.memory.WritePort` instead")
     def __init__(self, *, data_width, addr_width, domain="sync", name=None, granularity=None):
         self.domain = domain
 
         if granularity is None:
             granularity = data_width
         if name is None:
-            name = tracer.get_var_name(depth=2, default="dummy")
+            name = tracer.get_var_name(depth=3, default="dummy")
 
         self.addr = Signal(addr_width,
                            name=f"{name}_addr", src_loc_at=1)
