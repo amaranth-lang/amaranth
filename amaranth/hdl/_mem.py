@@ -262,7 +262,7 @@ class ReadPort(Elaboratable):
         self.data = Signal(memory.width,
                            name=f"{memory.name}_r_data", src_loc_at=1 + src_loc_at)
         if self.domain != "comb":
-            self.en = Signal(name=f"{memory.name}_r_en", reset=1,
+            self.en = Signal(name=f"{memory.name}_r_en", init=1,
                              src_loc_at=1 + src_loc_at)
         else:
             self.en = Const(1)

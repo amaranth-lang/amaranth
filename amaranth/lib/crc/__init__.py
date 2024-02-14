@@ -383,7 +383,7 @@ class Processor(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        crc_reg = Signal(self._crc_width, reset=self._initial_crc.value)
+        crc_reg = Signal(self._crc_width, init=self._initial_crc.value)
         data_in = Signal(self._data_width)
 
         # Optionally bit-reflect input words.

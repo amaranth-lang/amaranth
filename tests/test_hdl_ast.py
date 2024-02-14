@@ -1140,24 +1140,26 @@ class SignalTestCase(FHDLTestCase):
         s2 = Signal(name="sig")
         self.assertEqual(s2.name, "sig")
 
-    def test_reset(self):
-        s1 = Signal(4, reset=0b111, reset_less=True)
-        self.assertEqual(s1.reset, 0b111)
+    def test_init(self):
+        s1 = Signal(4, init=0b111, reset_less=True)
+        self.assertEqual(s1.init, 0b111)
         self.assertEqual(s1.reset_less, True)
+        s2 = Signal.like(s1, init=0b011)
+        self.assertEqual(s2.init, 0b011)
 
-    def test_reset_enum(self):
-        s1 = Signal(2, reset=UnsignedEnum.BAR)
-        self.assertEqual(s1.reset, 2)
+    def test_init_enum(self):
+        s1 = Signal(2, init=UnsignedEnum.BAR)
+        self.assertEqual(s1.init, 2)
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value must be a constant-castable expression, "
+                r"^Initial value must be a constant-castable expression, "
                 r"not <StringEnum\.FOO: 'a'>$"):
-            Signal(1, reset=StringEnum.FOO)
+            Signal(1, init=StringEnum.FOO)
 
-    def test_reset_const_castable(self):
-        s1 = Signal(4, reset=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
-        self.assertEqual(s1.reset, 2)
+    def test_init_const_castable(self):
+        s1 = Signal(4, init=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
+        self.assertEqual(s1.init, 2)
 
-    def test_reset_shape_castable_const(self):
+    def test_init_shape_castable_const(self):
         class CastableFromHex(ShapeCastable):
             def as_shape(self):
                 return unsigned(8)
@@ -1168,54 +1170,80 @@ class SignalTestCase(FHDLTestCase):
             def const(self, init):
                 return int(init, 16)
 
-        s1 = Signal(CastableFromHex(), reset="aa")
-        self.assertEqual(s1.reset, 0xaa)
+        s1 = Signal(CastableFromHex(), init="aa")
+        self.assertEqual(s1.init, 0xaa)
 
         with self.assertRaisesRegex(ValueError,
                 r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
                 r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
-            Signal(CastableFromHex(), reset="01")
+            Signal(CastableFromHex(), init="01")
 
-    def test_reset_shape_castable_enum_wrong(self):
+    def test_init_shape_castable_enum_wrong(self):
         class EnumA(AmaranthEnum, shape=1):
             X = 1
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value must be a constant initializer of <enum 'EnumA'>$"):
-            Signal(EnumA) # implied reset=0
+                r"^Initial value must be a constant initializer of <enum 'EnumA'>$"):
+            Signal(EnumA) # implied init=0
 
-    def test_reset_signed_mismatch(self):
+    def test_init_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -2 is signed, but the signal shape is unsigned\(2\)$"):
-            Signal(unsigned(2), reset=-2)
+                r"^Initial value -2 is signed, but the signal shape is unsigned\(2\)$"):
+            Signal(unsigned(2), init=-2)
 
-    def test_reset_wrong_too_wide(self):
+    def test_init_wrong_too_wide(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 2 will be truncated to the signal shape unsigned\(1\)$"):
-            Signal(unsigned(1), reset=2)
+                r"^Initial value 2 will be truncated to the signal shape unsigned\(1\)$"):
+            Signal(unsigned(1), init=2)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 1 will be truncated to the signal shape signed\(1\)$"):
-            Signal(signed(1), reset=1)
+                r"^Initial value 1 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), init=1)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -2 will be truncated to the signal shape signed\(1\)$"):
-            Signal(signed(1), reset=-2)
+                r"^Initial value -2 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), init=-2)
 
-    def test_reset_wrong_fencepost(self):
+    def test_init_wrong_fencepost(self):
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 10 equals the non-inclusive end of the signal shape "
+                r"^Initial value 10 equals the non-inclusive end of the signal shape "
                 r"range\(0, 10\); this is likely an off-by-one error$"):
-            Signal(range(0, 10), reset=10)
+            Signal(range(0, 10), init=10)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 0 equals the non-inclusive end of the signal shape "
+                r"^Initial value 0 equals the non-inclusive end of the signal shape "
                 r"range\(0, 0\); this is likely an off-by-one error$"):
-            Signal(range(0), reset=0)
+            Signal(range(0), init=0)
 
-    def test_reset_wrong_range(self):
+    def test_init_wrong_range(self):
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 11 is not within the signal shape range\(0, 10\)$"):
-            Signal(range(0, 10), reset=11)
+                r"^Initial value 11 is not within the signal shape range\(0, 10\)$"):
+            Signal(range(0, 10), init=11)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 0 is not within the signal shape range\(1, 10\)$"):
-            Signal(range(1, 10), reset=0)
+                r"^Initial value 0 is not within the signal shape range\(1, 10\)$"):
+            Signal(range(1, 10), init=0)
+
+    def test_reset(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            s1 = Signal(4, reset=0b111)
+        self.assertEqual(s1.init, 0b111)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`Signal.reset` is deprecated, use `Signal.init` instead$"):
+            self.assertEqual(s1.reset, 0b111)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`Signal.reset` is deprecated, use `Signal.init` instead$"):
+            s1.reset = 0b010
+        self.assertEqual(s1.init, 0b010)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            s2 = Signal.like(s1, reset=3)
+        self.assertEqual(s2.init, 3)
+
+    def test_reset_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Signal(4, reset=1, init=1)
+        s1 = Signal(4)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Signal.like(s1, reset=1, init=1)
 
     def test_attrs(self):
         s1 = Signal()
@@ -1232,8 +1260,8 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s1.shape(), unsigned(4))
         s2 = Signal.like(Signal(range(-15, 1)))
         self.assertEqual(s2.shape(), signed(5))
-        s3 = Signal.like(Signal(4, reset=0b111, reset_less=True))
-        self.assertEqual(s3.reset, 0b111)
+        s3 = Signal.like(Signal(4, init=0b111, reset_less=True))
+        self.assertEqual(s3.init, 0b111)
         self.assertEqual(s3.reset_less, True)
         s4 = Signal.like(Signal(attrs={"no_retiming": True}))
         self.assertEqual(s4.attrs, {"no_retiming": True})

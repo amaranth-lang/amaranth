@@ -59,16 +59,23 @@ class Flow(enum.Enum):
             return Out
         assert False # :nocov:
 
-    def __call__(self, description, *, reset=None, src_loc_at=0):
+    def __call__(self, description, *, init=None, reset=None, src_loc_at=0):
         """Create a :class:`Member` with this data flow and the provided description and
-        reset value.
+        initial value.
 
         Returns
         -------
         :class:`Member`
-            :py:`Member(self, description, reset=reset)`
+            :py:`Member(self, description, init=init)`
         """
-        return Member(self, description, reset=reset, src_loc_at=src_loc_at + 1)
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
+        return Member(self, description, init=init, src_loc_at=src_loc_at + 1)
 
     def __repr__(self):
         return self.name
@@ -98,17 +105,24 @@ class Member:
     object (in which case it is created as a port member). After creation the :class:`Member`
     instance cannot be modified.
 
-    When a :class:`Signal` is created from a description of a port member, the signal's reset value
+    When a :class:`Signal` is created from a description of a port member, the signal's initial value
     is taken from the member description. If this signal is never explicitly assigned a value, it
-    will equal ``reset``.
+    will equal ``init``.
 
     Although instances can be created directly, most often they will be created through
     :data:`In` and :data:`Out`, e.g. :py:`In(unsigned(1))` or :py:`Out(stream.Signature(RGBPixel))`.
     """
-    def __init__(self, flow, description, *, reset=None, _dimensions=(), src_loc_at=0):
+    def __init__(self, flow, description, *, init=None, reset=None, _dimensions=(), src_loc_at=0):
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
         self._flow = flow
         self._description = description
-        self._reset = reset
+        self._init = init
         self._dimensions = _dimensions
         self.src_loc = tracer.get_src_loc(src_loc_at=src_loc_at)
 
@@ -121,23 +135,23 @@ class Member:
             except TypeError as e:
                 raise TypeError(f"Port member description must be a shape-castable object or "
                                 f"a signature, not {description!r}") from e
-            # This mirrors the logic that handles Signal(reset=).
+            # This mirrors the logic that handles Signal(init=).
             # TODO: We need a simpler way to check for "is this a valid constant initializer"
             if issubclass(type(self._description), ShapeCastable):
                 try:
-                    self._reset_as_const = Const.cast(self._description.const(self._reset))
+                    self._init_as_const = Const.cast(self._description.const(self._init))
                 except Exception as e:
-                    raise TypeError(f"Port member reset value {self._reset!r} is not a valid "
+                    raise TypeError(f"Port member initial value {self._init!r} is not a valid "
                                     f"constant initializer for {self._description}") from e
             else:
                 try:
-                    self._reset_as_const = Const.cast(reset or 0)
+                    self._init_as_const = Const.cast(init or 0)
                 except TypeError:
-                    raise TypeError(f"Port member reset value {self._reset!r} is not a valid "
+                    raise TypeError(f"Port member initial value {self._init!r} is not a valid "
                                     f"constant initializer for {shape}")
         if self.is_signature:
-            if self._reset is not None:
-                raise ValueError(f"A signature member cannot have a reset value")
+            if self._init is not None:
+                raise ValueError(f"A signature member cannot have an initial value")
 
     def flip(self):
         """Flip the data flow of this member.
@@ -148,7 +162,7 @@ class Member:
             A new :py:`member` with :py:`member.flow` equal to :py:`self.flow.flip()`, and identical
             to :py:`self` other than that.
         """
-        return Member(self._flow.flip(), self._description, reset=self._reset,
+        return Member(self._flow.flip(), self._description, init=self._init,
                       _dimensions=self._dimensions)
 
     def array(self, *dimensions):
@@ -175,7 +189,7 @@ class Member:
             if not (isinstance(dimension, int) and dimension >= 0):
                 raise TypeError(f"Member array dimensions must be non-negative integers, "
                                 f"not {dimension!r}")
-        return Member(self._flow, self._description, reset=self._reset,
+        return Member(self._flow, self._description, init=self._init,
                       _dimensions=(*dimensions, *self._dimensions))
 
     @property
@@ -231,13 +245,13 @@ class Member:
         return self._description
 
     @property
-    def reset(self):
-        """Reset value of a port member.
+    def init(self):
+        """Initial value of a port member.
 
         Returns
         -------
         :ref:`const-castable object <lang-constcasting>`
-            The reset value that was provided when constructing this :class:`Member`.
+            The initial value that was provided when constructing this :class:`Member`.
 
         Raises
         ------
@@ -245,8 +259,14 @@ class Member:
             If :py:`self` describes a signature member.
         """
         if self.is_signature:
-            raise AttributeError(f"A signature member does not have a reset value")
-        return self._reset
+            raise AttributeError(f"A signature member does not have an initial value")
+        return self._init
+
+    @property
+    def reset(self):
+        warnings.warn("`Member.reset` is deprecated, use `Member.init` instead",
+                      DeprecationWarning, stacklevel=2)
+        return self.init
 
     @property
     def signature(self):
@@ -288,16 +308,16 @@ class Member:
         return (type(other) is Member and
                 self._flow == other._flow and
                 self._description == other._description and
-                self._reset == other._reset and
+                self._init == other._init and
                 self._dimensions == other._dimensions)
 
     def __repr__(self):
-        reset_repr = dimensions_repr = ""
-        if self._reset:
-            reset_repr = f", reset={self._reset!r}"
+        init_repr = dimensions_repr = ""
+        if self._init:
+            init_repr = f", init={self._init!r}"
         if self._dimensions:
             dimensions_repr = f".array({', '.join(map(str, self._dimensions))})"
-        return f"{self._flow!r}({self._description!r}{reset_repr}){dimensions_repr}"
+        return f"{self._flow!r}({self._description!r}{init_repr}){dimensions_repr}"
 
 
 @final
@@ -470,7 +490,7 @@ class SignatureMembers(Mapping):
     def create(self, *, path=None, src_loc_at=0):
         """Create members from their descriptions.
 
-        For each port member, this function creates a :class:`Signal` with the shape and reset
+        For each port member, this function creates a :class:`Signal` with the shape and initial
         value taken from the member description, and the name constructed from
         the :ref:`paths <wiring-path>` to the member (by concatenating path items with a double
         underscore, ``__``).
@@ -497,7 +517,7 @@ class SignatureMembers(Mapping):
                     # Ideally we would keep both source locations here, but the .src_loc attribute
                     # data structure doesn't currently support that, so keep the more important one:
                     # the one with the name of the signal (the `In()`/`Out()` call site.)
-                    signal = Signal(member.shape, reset=member.reset, src_loc_at=1 + src_loc_at,
+                    signal = Signal(member.shape, init=member.init, src_loc_at=1 + src_loc_at,
                                     name="__".join(str(item) for item in path))
                     signal.src_loc = member.src_loc
                     return signal
@@ -775,7 +795,7 @@ class Signature(metaclass=SignatureMeta):
 
             def iter_member(value, *, path):
                 if member.is_port:
-                    yield path, Member(member.flow, member.shape, reset=member.reset), value
+                    yield path, Member(member.flow, member.shape, init=member.init), value
                 elif member.is_signature:
                     for sub_path, sub_member, sub_value in member.signature.flatten(value):
                         if member.flow == In:
@@ -816,7 +836,7 @@ class Signature(metaclass=SignatureMeta):
           * for port members, is a :ref:`value-like <lang-valuelike>` object casting to
             a :class:`Signal` or a :class:`Const` whose width and signedness is the same as that
             of the member, and (in case of a :class:`Signal`) which is not reset-less and whose
-            reset value is that of the member;
+            initial value is that of the member;
           * for signature members, matches the description in the signature as verified by
             :meth:`Signature.is_compliant`.
 
@@ -878,11 +898,11 @@ class Signature(metaclass=SignatureMeta):
                                        f"the shape {_format_shape(attr_shape)}")
                     return False
                 if isinstance(attr_value_cast, Signal):
-                    if attr_value_cast.reset != member._reset_as_const.value:
+                    if attr_value_cast.init != member._init_as_const.value:
                         if reasons is not None:
                             reasons.append(f"{_format_path(path)} is expected to have "
-                                           f"the reset value {member.reset!r}, but it has "
-                                           f"the reset value {attr_value_cast.reset!r}")
+                                           f"the initial value {member.init!r}, but it has "
+                                           f"the initial value {attr_value_cast.init!r}")
                         return False
                     if attr_value_cast.reset_less:
                         if reasons is not None:
@@ -1343,7 +1363,7 @@ def connect(m, *args, **kwargs):
 
     * Every interface object must have the same set of port members, and they must have the same
       :meth:`dimensions <Member.dimensions>`.
-    * For each path, the port members of every interface object must have the same width and reset
+    * For each path, the port members of every interface object must have the same width and initial
       value (for port members corresponding to signals) or constant value (for port members
       corresponding to constants). Signedness may differ.
     * For each path, at most one interface object must have the corresponding port member be
@@ -1486,8 +1506,8 @@ def connect(m, *args, **kwargs):
                 is_first = False
                 first_path = path
                 first_member_shape = member.shape
-                first_member_reset = member.reset
-                first_member_reset_as_const = member._reset_as_const
+                first_member_init = member.init
+                first_member_init_as_const = member._init_as_const
                 continue
             if Shape.cast(first_member_shape).width != Shape.cast(member_shape).width:
                 raise ConnectionError(
@@ -1496,13 +1516,13 @@ def connect(m, *args, **kwargs):
                     f"shape {_format_shape(member_shape)} because the shape widths "
                     f"({Shape.cast(first_member_shape).width} and "
                     f"{Shape.cast(member_shape).width}) do not match")
-            if first_member_reset_as_const.value != member._reset_as_const.value:
+            if first_member_init_as_const.value != member._init_as_const.value:
                 raise ConnectionError(
-                    f"Cannot connect together the member {_format_path(first_path)} with reset "
-                    f"value {first_member_reset!r} and the member {_format_path(path)} with reset "
-                    f"value {member.reset} because the reset values do not match")
+                    f"Cannot connect together the member {_format_path(first_path)} with initial "
+                    f"value {first_member_init!r} and the member {_format_path(path)} with initial "
+                    f"value {member.init} because the initial values do not match")
         # If there are no Out members, there is nothing to connect. The In members, while not
-        # explicitly connected, will stay at the same value since we ensured their reset values
+        # explicitly connected, will stay at the same value since we ensured their initial values
         # are all identical.
         if len(out_kind) == 0:
             continue

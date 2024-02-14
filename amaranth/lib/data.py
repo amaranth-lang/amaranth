@@ -812,7 +812,7 @@ class _AggregateMeta(ShapeCastable, type):
             cls = type.__new__(metacls, name, bases, namespace)
             if cls.__layout_cls is UnionLayout:
                 if len(default) > 1:
-                    raise ValueError("Reset value for at most one field can be provided for "
+                    raise ValueError("Initial value for at most one field can be provided for "
                                      "a union class (specified: {})"
                                      .format(", ".join(default.keys())))
             cls.__layout  = cls.__layout_cls(layout)
@@ -855,12 +855,12 @@ class Struct(View, metaclass=_AggregateMeta):
     """Structures defined with annotations.
 
     The :class:`Struct` base class is a subclass of :class:`View` that provides a concise way
-    to describe the structure layout and reset values for the fields using Python
+    to describe the structure layout and initial values for the fields using Python
     :term:`variable annotations <python:variable annotation>`.
 
     Any annotations containing :ref:`shape-like <lang-shapelike>` objects are used,
     in the order in which they appear in the source code, to construct a :class:`StructLayout`.
-    The values assigned to such annotations are used to populate the reset value of the signal
+    The values assigned to such annotations are used to populate the initial value of the signal
     created by the view. Any other annotations are kept as-is.
 
     .. testsetup::
@@ -907,15 +907,15 @@ class Struct(View, metaclass=_AggregateMeta):
         >>> flt.is_subnormal()
         (== (slice (sig flt) 23:31) (const 1'd0))
 
-    The reset values for individual fields can be overridden during instantiation:
+    The initial values for individual fields can be overridden during instantiation:
 
     .. doctest::
 
-        >>> hex(Signal(IEEE754Single).as_value().reset)
+        >>> hex(Signal(IEEE754Single).as_value().init)
         '0x3f800000'
-        >>> hex(Signal(IEEE754Single, reset={'sign': 1}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, init={'sign': 1}).as_value().init)
         '0xbf800000'
-        >>> hex(Signal(IEEE754Single, reset={'exponent': 0}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, init={'exponent': 0}).as_value().init)
         '0x0'
 
     Classes inheriting from :class:`Struct` can be used as base classes. The only restrictions
@@ -964,8 +964,8 @@ class Union(View, metaclass=_AggregateMeta):
     annotation>`. It is very similar to the :class:`Struct` class, except that its layout
     is a :class:`UnionLayout`.
 
-    A :class:`Union` can have only one field with a specified reset value. If a reset value is
-    explicitly provided during instantiation, it overrides the reset value specified with
+    A :class:`Union` can have only one field with a specified initial value. If an initial value is
+    explicitly provided during instantiation, it overrides the initial value specified with
     an annotation:
 
     .. testcode::
@@ -976,9 +976,9 @@ class Union(View, metaclass=_AggregateMeta):
 
     .. doctest::
 
-        >>> Signal(VarInt).as_value().reset
+        >>> Signal(VarInt).as_value().init
         256
-        >>> Signal(VarInt, reset={'int8': 10}).as_value().reset
+        >>> Signal(VarInt, init={'int8': 10}).as_value().init
         10
     """
     _AggregateMeta__layout_cls = UnionLayout

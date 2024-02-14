@@ -1,3 +1,5 @@
+import warnings
+
 from .. import *
 
 
@@ -26,8 +28,8 @@ class FFSynchronizer(Elaboratable):
         Signal connected to synchroniser output.
     o_domain : str
         Name of output clock domain.
-    reset : int
-        Reset value of the flip-flops. On FPGAs, even if ``reset_less`` is ``True``,
+    init : int
+        Initial and reset value of the flip-flops. On FPGAs, even if ``reset_less`` is ``True``,
         the :class:`FFSynchronizer` is still set to this value during initialization.
     reset_less : bool
         If ``True`` (the default), this :class:`FFSynchronizer` is unaffected by ``o_domain``
@@ -62,14 +64,24 @@ class FFSynchronizer(Elaboratable):
     Define the ``get_ff_sync`` platform method to override the implementation of
     :class:`FFSynchronizer`, e.g. to instantiate library cells directly.
     """
-    def __init__(self, i, o, *, o_domain="sync", reset=0, reset_less=True, stages=2,
+    def __init__(self, i, o, *, o_domain="sync", init=None, reset=None, reset_less=True, stages=2,
                  max_input_delay=None):
         _check_stages(stages)
 
         self.i = i
         self.o = o
 
-        self._reset      = reset
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
+        if init is None:
+            init = 0
+
+        self._init       = init
         self._reset_less = reset_less
         self._o_domain   = o_domain
         self._stages     = stages
@@ -87,7 +99,7 @@ class FFSynchronizer(Elaboratable):
 
         m = Module()
         flops = [Signal(self.i.shape(), name=f"stage{index}",
-                        reset=self._reset, reset_less=self._reset_less)
+                        init=self._init, reset_less=self._reset_less)
                  for index in range(self._stages)]
         for i, o in zip((self.i, *flops), flops):
             m.d[self._o_domain] += o.eq(i)
@@ -161,7 +173,7 @@ class AsyncFFSynchronizer(Elaboratable):
 
         m = Module()
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)
-        flops = [Signal(1, name=f"stage{index}", reset=1)
+        flops = [Signal(1, name=f"stage{index}", init=1)
                  for index in range(self._stages)]
         for i, o in zip((0, *flops), flops):
             m.d.async_ff += o.eq(i)

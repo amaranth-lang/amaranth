@@ -430,13 +430,13 @@ class LayoutTestCase(FHDLTestCase):
         sl = StructLayout({"f": unsigned(1)})
         self.assertRepr(sl.const({"f": Const(1)}).as_value(), "(const 1'd1)")
 
-    def test_signal_reset(self):
+    def test_signal_init(self):
         sl = StructLayout({
             "a": unsigned(1),
             "b": unsigned(2)
         })
-        self.assertEqual(Signal(sl).as_value().reset, 0)
-        self.assertEqual(Signal(sl, reset={"a": 0b1, "b": 0b10}).as_value().reset, 5)
+        self.assertEqual(Signal(sl).as_value().init, 0)
+        self.assertEqual(Signal(sl, init={"a": 0b1, "b": 0b10}).as_value().init, 5)
 
 
 class ViewTestCase(FHDLTestCase):
@@ -454,17 +454,17 @@ class ViewTestCase(FHDLTestCase):
         self.assertEqual(cv.shape(), unsigned(3))
         self.assertEqual(cv.name, "v")
 
-    def test_construct_signal_reset(self):
+    def test_construct_signal_init(self):
         v1 = Signal(StructLayout({"a": unsigned(1), "b": unsigned(2)}),
-                   reset={"a": 0b1, "b": 0b10})
-        self.assertEqual(Value.cast(v1).reset, 0b101)
+                   init={"a": 0b1, "b": 0b10})
+        self.assertEqual(Value.cast(v1).init, 0b101)
         v2 = Signal(StructLayout({"a": unsigned(1),
                                 "b": StructLayout({"x": unsigned(1), "y": unsigned(1)})}),
-                   reset={"a": 0b1, "b": {"x": 0b0, "y": 0b1}})
-        self.assertEqual(Value.cast(v2).reset, 0b101)
+                   init={"a": 0b1, "b": {"x": 0b0, "y": 0b1}})
+        self.assertEqual(Value.cast(v2).init, 0b101)
         v3 = Signal(ArrayLayout(unsigned(2), 2),
-                   reset=[0b01, 0b10])
-        self.assertEqual(Value.cast(v3).reset, 0b1001)
+                   init=[0b01, 0b10])
+        self.assertEqual(Value.cast(v3).init, 0b1001)
 
     def test_layout_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -625,13 +625,13 @@ class ViewTestCase(FHDLTestCase):
     def test_bug_837_array_layout_getitem_str(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Views with array layout may only be indexed with an integer or a value, "
-                r"not 'reset'$"):
-            Signal(ArrayLayout(unsigned(1), 1), reset=[0])["reset"]
+                r"not 'init'$"):
+            Signal(ArrayLayout(unsigned(1), 1), init=[0])["init"]
 
     def test_bug_837_array_layout_getattr(self):
         with self.assertRaisesRegex(AttributeError,
                 r"^View of \(sig \$signal\) with an array layout does not have fields$"):
-            Signal(ArrayLayout(unsigned(1), 1), reset=[0]).reset
+            Signal(ArrayLayout(unsigned(1), 1), init=[0]).init
 
     def test_eq(self):
         s1 = Signal(StructLayout({"a": unsigned(2)}))
@@ -735,7 +735,7 @@ class StructTestCase(FHDLTestCase):
         self.assertRepr(v.b.q.r, "(s (slice (slice (slice (sig v) 1:9) 4:8) 0:2))")
         self.assertRepr(v.b.q.s, "(s (slice (slice (slice (sig v) 1:9) 4:8) 2:4))")
 
-    def test_construct_reset(self):
+    def test_construct_init(self):
         class S(Struct):
             p: 4
             q: 2 = 1
@@ -744,11 +744,11 @@ class StructTestCase(FHDLTestCase):
             S.q
 
         v1 = Signal(S)
-        self.assertEqual(v1.as_value().reset, 0b010000)
-        v2 = Signal(S, reset=dict(p=0b0011))
-        self.assertEqual(v2.as_value().reset, 0b010011)
-        v3 = Signal(S, reset=dict(p=0b0011, q=0b00))
-        self.assertEqual(v3.as_value().reset, 0b000011)
+        self.assertEqual(v1.as_value().init, 0b010000)
+        v2 = Signal(S, init=dict(p=0b0011))
+        self.assertEqual(v2.as_value().init, 0b010011)
+        v3 = Signal(S, init=dict(p=0b0011, q=0b00))
+        self.assertEqual(v3.as_value().init, 0b000011)
 
     def test_shape_undefined_wrong(self):
         class S(Struct):
@@ -835,33 +835,33 @@ class UnionTestCase(FHDLTestCase):
         self.assertRepr(v.a, "(slice (sig v) 0:1)")
         self.assertRepr(v.b, "(s (slice (sig v) 0:3))")
 
-    def test_define_reset_two_wrong(self):
+    def test_define_init_two_wrong(self):
         with self.assertRaisesRegex(ValueError,
-                r"^Reset value for at most one field can be provided for a union class "
+                r"^Initial value for at most one field can be provided for a union class "
                 r"\(specified: a, b\)$"):
             class U(Union):
                 a: unsigned(1) = 1
                 b: unsigned(2) = 1
 
-    def test_construct_reset_two_wrong(self):
+    def test_construct_init_two_wrong(self):
         class U(Union):
             a: unsigned(1)
             b: unsigned(2)
 
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value must be a constant initializer of <class '.+?\.U'>$") as cm:
-            Signal(U, reset=dict(a=1, b=2))
+                r"^Initial value must be a constant initializer of <class '.+?\.U'>$") as cm:
+            Signal(U, init=dict(a=1, b=2))
             self.assertRegex(cm.exception.__cause__.message,
                              r"^Initializer for at most one field can be provided for a union "
                              r"class \(specified: a, b\)$")
 
-    def test_construct_reset_override(self):
+    def test_construct_init_override(self):
         class U(Union):
             a: unsigned(1) = 1
             b: unsigned(2)
 
-        self.assertEqual(Signal(U).as_value().reset, 0b01)
-        self.assertEqual(Signal(U, reset=dict(b=0b10)).as_value().reset, 0b10)
+        self.assertEqual(Signal(U).as_value().init, 0b01)
+        self.assertEqual(Signal(U, init=dict(b=0b10)).as_value().init, 0b10)
 
 
 # Examples from https://github.com/amaranth-lang/amaranth/issues/693

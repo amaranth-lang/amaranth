@@ -59,7 +59,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(len(rdport.data), 8)
         self.assertEqual(len(rdport.en), 1)
         self.assertIsInstance(rdport.en, Signal)
-        self.assertEqual(rdport.en.reset, 1)
+        self.assertEqual(rdport.en.init, 1)
 
     def test_read_port_non_transparent(self):
         mem    = Memory(width=8, depth=4)
@@ -69,7 +69,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(rdport.transparent, False)
         self.assertEqual(len(rdport.en), 1)
         self.assertIsInstance(rdport.en, Signal)
-        self.assertEqual(rdport.en.reset, 1)
+        self.assertEqual(rdport.en.init, 1)
 
     def test_read_port_asynchronous(self):
         mem    = Memory(width=8, depth=4)

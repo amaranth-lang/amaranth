@@ -165,8 +165,8 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     def const(cls, init):
         # Same considerations apply as above.
         if init is None:
-            # Signal with unspecified reset value passes ``None`` to :meth:`const`.
-            # Before RFC 9 was implemented, the unspecified reset value was 0, so this keeps
+            # Signal with unspecified initial value passes ``None`` to :meth:`const`.
+            # Before RFC 9 was implemented, the unspecified initial value was 0, so this keeps
             # the old behavior intact.
             member = cls(0)
         else:

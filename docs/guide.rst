@@ -407,19 +407,17 @@ The names do not need to be unique; if two signals with the same name end up in 
 Initial signal values
 ---------------------
 
-Each signal has an *initial value*, specified with the ``reset=`` parameter. If the initial value is not specified explicitly, zero is used by default. An initial value can be specified with an integer or an enumeration member.
+Each signal has an *initial value*, specified with the ``init=`` parameter. If the initial value is not specified explicitly, zero is used by default. An initial value can be specified with an integer or an enumeration member.
 
 Signals :ref:`assigned <lang-assigns>` in a :ref:`combinatorial <lang-comb>` domain assume their initial value when none of the assignments are :ref:`active <lang-active>`. Signals assigned in a :ref:`synchronous <lang-sync>` domain assume their initial value after *power-on reset* and, unless the signal is :ref:`reset-less <lang-resetless>`, *explicit reset*. Signals that are used but never assigned are equivalent to constants of their initial value.
 
-.. TODO: using "reset" for "initial value" is awful, let's rename it to "init"
-
 .. doctest::
 
-   >>> Signal(4).reset
+   >>> Signal(4).init
    0
-   >>> Signal(4, reset=5).reset
+   >>> Signal(4, init=5).init
    5
-   >>> Signal(Direction, reset=Direction.LEFT).reset
+   >>> Signal(Direction, init=Direction.LEFT).init
    1
 
 
@@ -467,7 +465,7 @@ In contrast, code written in the Amaranth language *describes* computations on a
 
 .. doctest::
 
-   >>> a = Signal(8, reset=5)
+   >>> a = Signal(8, init=5)
    >>> a + 1
    (+ (sig a) (const 1'd1))
 
@@ -1190,11 +1188,11 @@ Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machin
 
 .. TODO: FSM() should require keyword arguments, for good measure
 
-The reset state of the FSM can be provided when defining it using the :py:`with m.FSM(reset="Name"):` argument. If not provided, it is the first state in the order of definition. For example, this definition is equivalent to the one at the beginning of this section:
+The initial (and reset) state of the FSM can be provided when defining it using the :py:`with m.FSM(init="Name"):` argument. If not provided, it is the first state in the order of definition. For example, this definition is equivalent to the one at the beginning of this section:
 
 .. testcode::
 
-    with m.FSM(reset="Set Address"):
+    with m.FSM(init="Set Address"):
         ...
 
 The FSM belongs to a :ref:`clock domain <lang-domains>`, which is specified using the :py:`with m.FSM(domain="dom")` argument. If not specified, it is the ``sync`` domain. For example, this definition is equivalent to the one at the beginning of this section:
@@ -1255,7 +1253,7 @@ Consider the following code:
 
 .. testcode::
 
-    a = Signal(8, reset=1)
+    a = Signal(8, init=1)
     with m.If(en):
         m.d.comb += a.eq(b + 1)
 
@@ -1534,7 +1532,7 @@ The application of control flow modifiers in it causes the behavior of the final
     with m.If(en):
         m.d.sync += n.eq(n + 1)
     with m.If(rst):
-        m.d.sync += n.eq(n.reset)
+        m.d.sync += n.eq(n.init)
     m.d.comb += z.eq(n == 0)
 
 .. tip::

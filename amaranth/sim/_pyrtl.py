@@ -436,7 +436,7 @@ class _FragmentCompiler:
             if domain_name == "comb":
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)
-                    emitter.append(f"next_{signal_index} = {signal.reset}")
+                    emitter.append(f"next_{signal_index} = {signal.init}")
 
                 inputs = SignalSet()
                 _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)

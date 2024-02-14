@@ -36,7 +36,7 @@ class MemberTestCase(unittest.TestCase):
         self.assertEqual(member.flow, In)
         self.assertEqual(member.is_port, True)
         self.assertEqual(member.shape, unsigned(1))
-        self.assertEqual(member.reset, None)
+        self.assertEqual(member.init, None)
         self.assertEqual(member.is_signature, False)
         with self.assertRaisesRegex(AttributeError,
                 r"^A port member does not have a signature$"):
@@ -50,33 +50,58 @@ class MemberTestCase(unittest.TestCase):
                 r"not 'whatever'$"):
             Member(In, "whatever")
 
-    def test_port_member_reset(self):
-        member = Member(Out, unsigned(1), reset=1)
+    def test_port_member_init(self):
+        member = Member(Out, unsigned(1), init=1)
         self.assertEqual(member.flow, Out)
         self.assertEqual(member.shape, unsigned(1))
-        self.assertEqual(member.reset, 1)
-        self.assertEqual(repr(member._reset_as_const), repr(Const(1, 1)))
-        self.assertEqual(repr(member), "Out(unsigned(1), reset=1)")
+        self.assertEqual(member.init, 1)
+        self.assertEqual(repr(member._init_as_const), repr(Const(1, 1)))
+        self.assertEqual(repr(member), "Out(unsigned(1), init=1)")
 
-    def test_port_member_reset_wrong(self):
+    def test_port_member_init_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Port member reset value 'no' is not a valid constant initializer "
+                r"^Port member initial value 'no' is not a valid constant initializer "
                 r"for unsigned\(1\)$"):
-            Member(In, 1, reset="no")
+            Member(In, 1, init="no")
 
-    def test_port_member_reset_shape_castable(self):
+    def test_port_member_init_shape_castable(self):
         layout = data.StructLayout({"a": 32})
-        member = Member(In, layout, reset={"a": 1})
+        member = Member(In, layout, init={"a": 1})
         self.assertEqual(member.flow, In)
         self.assertEqual(member.shape, layout)
-        self.assertEqual(member.reset, {"a": 1})
-        self.assertEqual(repr(member), "In(StructLayout({'a': 32}), reset={'a': 1})")
+        self.assertEqual(member.init, {"a": 1})
+        self.assertEqual(repr(member), "In(StructLayout({'a': 32}), init={'a': 1})")
 
-    def test_port_member_reset_shape_castable_wrong(self):
+    def test_port_member_init_shape_castable_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Port member reset value 'no' is not a valid constant initializer "
+                r"^Port member initial value 'no' is not a valid constant initializer "
                 r"for StructLayout\({'a': 32}\)$"):
-            Member(In, data.StructLayout({"a": 32}), reset="no")
+            Member(In, data.StructLayout({"a": 32}), init="no")
+
+    def test_port_member_reset(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            member = Member(Out, unsigned(1), reset=1)
+        self.assertEqual(member.flow, Out)
+        self.assertEqual(member.shape, unsigned(1))
+        self.assertEqual(member.init, 1)
+        self.assertEqual(repr(member._init_as_const), repr(Const(1, 1)))
+        self.assertEqual(repr(member), "Out(unsigned(1), init=1)")
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`Member.reset` is deprecated, use `Member.init` instead$"):
+            self.assertEqual(member.reset, 1)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            member = Out(unsigned(1), reset=1)
+        self.assertEqual(member.init,1)
+
+    def test_port_member_reset_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Member(Out, unsigned(1), reset=1, init=1)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Out(unsigned(1), reset=1, init=1)
 
     def test_signature_member_out(self):
         sig = Signature({"data": Out(unsigned(32))})
@@ -87,8 +112,8 @@ class MemberTestCase(unittest.TestCase):
                 r"^A signature member does not have a shape$"):
             member.shape
         with self.assertRaisesRegex(AttributeError,
-                r"^A signature member does not have a reset value$"):
-            member.reset
+                r"^A signature member does not have an initial value$"):
+            member.init
         self.assertEqual(member.is_signature, True)
         self.assertEqual(member.signature, sig)
         self.assertEqual(member.dimensions, ())
@@ -103,8 +128,8 @@ class MemberTestCase(unittest.TestCase):
                 r"^A signature member does not have a shape$"):
             member.shape
         with self.assertRaisesRegex(AttributeError,
-                r"^A signature member does not have a reset value$"):
-            member.reset
+                r"^A signature member does not have an initial value$"):
+            member.init
         self.assertEqual(member.is_signature, True)
         self.assertEqual(member.signature, sig.flip())
         self.assertEqual(member.dimensions, ())
@@ -112,8 +137,8 @@ class MemberTestCase(unittest.TestCase):
 
     def test_signature_member_wrong(self):
         with self.assertRaisesRegex(ValueError,
-                r"^A signature member cannot have a reset value$"):
-            Member(In, Signature({}), reset=1)
+                r"^A signature member cannot have an initial value$"):
+            Member(In, Signature({}), init=1)
 
     def test_array(self):
         array_2 = Member(In, unsigned(1)).array(2)
@@ -143,8 +168,8 @@ class MemberTestCase(unittest.TestCase):
     def test_equality(self):
         self.assertEqual(In(1), In(1))
         self.assertNotEqual(In(1), Out(1))
-        self.assertNotEqual(In(1), In(1, reset=1))
-        self.assertNotEqual(In(1), In(1, reset=0))
+        self.assertNotEqual(In(1), In(1, init=1))
+        self.assertNotEqual(In(1), In(1, init=0))
         self.assertEqual(In(1), In(1).array())
         self.assertNotEqual(In(1), In(1).array(1))
         sig = Signature({})
@@ -237,12 +262,12 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(attrs["s"].b.shape(), unsigned(2))
         self.assertEqual(attrs["s"].b.name, "attrs__s__b")
 
-    def test_create_reset(self):
+    def test_create_init(self):
         members = SignatureMembers({
-            "a": In(1, reset=1),
+            "a": In(1, init=1),
         })
         attrs = members.create()
-        self.assertEqual(attrs["a"].reset, 1)
+        self.assertEqual(attrs["a"].init, 1)
 
     def test_create_tuple(self):
         sig = SignatureMembers({
@@ -421,12 +446,12 @@ class SignatureTestCase(unittest.TestCase):
             sig=Signature({"a": In(unsigned(1))}),
             obj=NS(a=Signal(signed(1))))
         self.assertNotCompliant(
-            r"^'obj\.a' is expected to have the reset value None, but it has the reset value 1$",
+            r"^'obj\.a' is expected to have the initial value None, but it has the initial value 1$",
             sig=Signature({"a": In(1)}),
-            obj=NS(a=Signal(reset=1)))
+            obj=NS(a=Signal(init=1)))
         self.assertNotCompliant(
-            r"^'obj\.a' is expected to have the reset value 1, but it has the reset value 0$",
-            sig=Signature({"a": In(1, reset=1)}),
+            r"^'obj\.a' is expected to have the initial value 1, but it has the initial value 0$",
+            sig=Signature({"a": In(1, init=1)}),
             obj=NS(a=Signal(1)))
         self.assertNotCompliant(
             r"^'obj\.a' is expected to not be reset-less$",
@@ -820,21 +845,21 @@ class ConnectTestCase(unittest.TestCase):
                     q=NS(signature=Signature({"a": In(Cycle)}),
                          a=Signal(Cycle)))
 
-    def test_reset_mismatch(self):
+    def test_init_mismatch(self):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
-                r"^Cannot connect together the member 'q\.a' with reset value 1 and the member "
-                r"'p\.a' with reset value 0 because the reset values do not match$"):
+                r"^Cannot connect together the member 'q\.a' with initial value 1 and the member "
+                r"'p\.a' with initial value 0 because the initial values do not match$"):
             connect(m,
-                    p=NS(signature=Signature({"a": Out(1, reset=0)}),
+                    p=NS(signature=Signature({"a": Out(1, init=0)}),
                          a=Signal()),
-                    q=NS(signature=Signature({"a": In(1, reset=1)}),
-                         a=Signal(reset=1)))
+                    q=NS(signature=Signature({"a": In(1, init=1)}),
+                         a=Signal(init=1)))
 
-    def test_reset_none_match(self):
+    def test_init_none_match(self):
         m = Module()
         connect(m,
-                p=NS(signature=Signature({"a": Out(1, reset=0)}),
+                p=NS(signature=Signature({"a": Out(1, init=0)}),
                      a=Signal()),
                 q=NS(signature=Signature({"a": In(1)}),
                      a=Signal()))

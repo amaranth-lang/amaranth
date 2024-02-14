@@ -99,7 +99,7 @@ class _VCDWriter:
             self.vcd_signal_vars[signal] = []
             self.gtkw_signal_names[signal] = []
             for repr in signal._value_repr:
-                var_init = self.eval_field(repr.value, signal, signal.reset)
+                var_init = self.eval_field(repr.value, signal, signal.init)
                 if isinstance(repr.format, FormatInt):
                     var_type = "wire"
                     var_size = repr.value.shape().width
@@ -250,7 +250,7 @@ class _PySignalState(BaseSignalState):
         self.signal = signal
         self.pending = pending
         self.waiters = {}
-        self.curr = self.next = signal.reset
+        self.curr = self.next = signal.init
 
     def set(self, value):
         if self.next == value:
@@ -342,7 +342,7 @@ class _PySimulation(BaseSimulation):
         for signal, index in self.signals.items():
             state = self.slots[index]
             assert isinstance(state, _PySignalState)
-            state.curr = state.next = signal.reset
+            state.curr = state.next = signal.init
         for index in self.memories.values():
             state = self.slots[index]
             assert isinstance(state, _PyMemoryState)

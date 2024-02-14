@@ -247,8 +247,8 @@ class DomainLowererTestCase(FHDLTestCase):
 class ResetInserterTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()
-        self.s2 = Signal(reset=1)
-        self.s3 = Signal(reset=1, reset_less=True)
+        self.s2 = Signal(init=1)
+        self.s3 = Signal(init=1, reset_less=True)
         self.c1 = Signal()
 
     def test_reset_default(self):

@@ -173,7 +173,7 @@ class ShapeCastable:
 
     .. code::
 
-        value_like = Signal(shape_castable, reset=initializer)
+        value_like = Signal(shape_castable, init=initializer)
 
     The code above is equivalent to:
 
@@ -181,7 +181,7 @@ class ShapeCastable:
 
         value_like = shape_castable(Signal(
             shape_castable.as_shape(),
-            reset=shape_castable.const(initializer)
+            init=shape_castable.const(initializer)
         ))
 
     Note that the :py:`shape_castable(x)` syntax performs :py:`shape_castable.__call__(x)`.
@@ -1731,15 +1731,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
     name : str
         Name hint for this signal. If ``None`` (default) the name is inferred from the variable
         name this ``Signal`` is assigned to.
-    reset : int or integral Enum
+    init : int or integral Enum
         Reset (synchronous) or default (combinatorial) value.
         When this ``Signal`` is assigned to in synchronous context and the corresponding clock
         domain is reset, the ``Signal`` assumes the given value. When this ``Signal`` is unassigned
         in combinatorial context (due to conditional assignments not being taken), the ``Signal``
-        assumes its ``reset`` value. Defaults to 0.
+        assumes its ``init`` value. Defaults to 0.
     reset_less : bool
         If ``True``, do not generate reset logic for this ``Signal`` in synchronous statements.
-        The ``reset`` value is only used as a combinatorial default or as the initial value.
+        The ``init`` value is only used as a combinatorial default or as the initial value.
         Defaults to ``False``.
     attrs : dict
         Dictionary of synthesis attributes.
@@ -1754,13 +1754,13 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
     width : int
     signed : bool
     name : str
-    reset : int
+    init : int
     reset_less : bool
     attrs : dict
     decoder : function
     """
 
-    def __init__(self, shape=None, *, name=None, reset=None, reset_less=False,
+    def __init__(self, shape=None, *, name=None, init=None, reset=None, reset_less=False,
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
@@ -1776,53 +1776,61 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         self.width  = shape.width
         self.signed = shape.signed
 
-        orig_reset = reset
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
+
+        orig_init = init
         if isinstance(orig_shape, ShapeCastable):
             try:
-                reset = Const.cast(orig_shape.const(reset))
+                init = Const.cast(orig_shape.const(init))
             except Exception:
-                raise TypeError("Reset value must be a constant initializer of {!r}"
+                raise TypeError("Initial value must be a constant initializer of {!r}"
                                 .format(orig_shape))
-            if reset.shape() != Shape.cast(orig_shape):
+            if init.shape() != Shape.cast(orig_shape):
                 raise ValueError("Constant returned by {!r}.const() must have the shape that "
                                  "it casts to, {!r}, and not {!r}"
                                  .format(orig_shape, Shape.cast(orig_shape),
-                                         reset.shape()))
+                                         init.shape()))
         else:
-            if reset is None:
-                reset = 0
+            if init is None:
+                init = 0
             try:
-                reset = Const.cast(reset)
+                init = Const.cast(init)
             except TypeError:
-                raise TypeError("Reset value must be a constant-castable expression, not {!r}"
-                                .format(orig_reset))
+                raise TypeError("Initial value must be a constant-castable expression, not {!r}"
+                                .format(orig_init))
         # Avoid false positives for all-zeroes and all-ones
-        if orig_reset is not None and not (isinstance(orig_reset, int) and orig_reset in (0, -1)):
-            if reset.shape().signed and not self.signed:
+        if orig_init is not None and not (isinstance(orig_init, int) and orig_init in (0, -1)):
+            if init.shape().signed and not self.signed:
                 warnings.warn(
-                    message="Reset value {!r} is signed, but the signal shape is {!r}"
-                            .format(orig_reset, shape),
+                    message="Initial value {!r} is signed, but the signal shape is {!r}"
+                            .format(orig_init, shape),
                     category=SyntaxWarning,
                     stacklevel=2)
-            elif (reset.shape().width > self.width or
-                  reset.shape().width == self.width and
-                    self.signed and not reset.shape().signed):
+            elif (init.shape().width > self.width or
+                  init.shape().width == self.width and
+                    self.signed and not init.shape().signed):
                 warnings.warn(
-                    message="Reset value {!r} will be truncated to the signal shape {!r}"
-                            .format(orig_reset, shape),
+                    message="Initial value {!r} will be truncated to the signal shape {!r}"
+                            .format(orig_init, shape),
                     category=SyntaxWarning,
                     stacklevel=2)
-        self.reset = reset.value
+        self.init = init.value
         self.reset_less = bool(reset_less)
 
-        if isinstance(orig_shape, range) and orig_reset is not None and orig_reset not in orig_shape:
-            if orig_reset == orig_shape.stop:
+        if isinstance(orig_shape, range) and orig_init is not None and orig_init not in orig_shape:
+            if orig_init == orig_shape.stop:
                 raise SyntaxError(
-                    f"Reset value {orig_reset!r} equals the non-inclusive end of the signal "
+                    f"Initial value {orig_init!r} equals the non-inclusive end of the signal "
                     f"shape {orig_shape!r}; this is likely an off-by-one error")
             else:
                 raise SyntaxError(
-                    f"Reset value {orig_reset!r} is not within the signal shape {orig_shape!r}")
+                    f"Initial value {orig_init!r} is not within the signal shape {orig_shape!r}")
 
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
@@ -1851,6 +1859,18 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                 self._value_repr = (Repr(FormatInt(), self),)
 
     @property
+    def reset(self):
+        warnings.warn("`Signal.reset` is deprecated, use `Signal.init` instead",
+                      DeprecationWarning, stacklevel=2)
+        return self.init
+
+    @reset.setter
+    def reset(self, value):
+        warnings.warn("`Signal.reset` is deprecated, use `Signal.init` instead",
+                      DeprecationWarning, stacklevel=2)
+        self.init = value
+
+    @property
     def decoder(self):
         return self._decoder
 
@@ -1873,7 +1893,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             self._decoder = enum_decoder
 
     @classmethod
-    def like(cls, other, *, name=None, name_suffix=None, src_loc_at=0, **kwargs):
+    def like(cls, other, *, name=None, name_suffix=None, init=None, reset=None, src_loc_at=0, **kwargs):
         """Create Signal based on another.
 
         Parameters
@@ -1887,15 +1907,24 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
             new_name = other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default="$like")
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
         if isinstance(other, ValueCastable):
             shape = other.shape()
         else:
             shape = Value.cast(other).shape()
         kw = dict(shape=shape, name=new_name)
         if isinstance(other, Signal):
-            kw.update(reset=other.reset, reset_less=other.reset_less,
+            kw.update(init=other.init, reset_less=other.reset_less,
                       attrs=other.attrs, decoder=other.decoder)
         kw.update(kwargs)
+        if init is not None:
+            kw["init"] = init
         return cls(**kw, src_loc_at=1 + src_loc_at)
 
     def shape(self):

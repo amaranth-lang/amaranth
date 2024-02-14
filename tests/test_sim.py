@@ -18,12 +18,12 @@ from amaranth._utils import _ignore_deprecated
 
 
 class SimulatorUnitTestCase(FHDLTestCase):
-    def assertStatement(self, stmt, inputs, output, reset=0):
+    def assertStatement(self, stmt, inputs, output, init=0):
         inputs = [Value.cast(i) for i in inputs]
         output = Value.cast(output)
 
         isigs = [Signal(i.shape(), name=n) for i, n in zip(inputs, "abcd")]
-        osig  = Signal(output.shape(), name="y", reset=reset)
+        osig  = Signal(output.shape(), name="y", init=init)
 
         stmt = stmt(osig, *isigs)
         frag = Fragment()
@@ -243,9 +243,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
     def test_slice_lhs(self):
         stmt1 = lambda y, a: y[2].eq(a)
-        self.assertStatement(stmt1, [C(0b0,  1)], C(0b11111011, 8), reset=0b11111111)
+        self.assertStatement(stmt1, [C(0b0,  1)], C(0b11111011, 8), init=0b11111111)
         stmt2 = lambda y, a: y[2:4].eq(a)
-        self.assertStatement(stmt2, [C(0b01, 2)], C(0b11110111, 8), reset=0b11111011)
+        self.assertStatement(stmt2, [C(0b01, 2)], C(0b11110111, 8), init=0b11111011)
 
     def test_bit_select(self):
         stmt = lambda y, a, b: y.eq(a.bit_select(b, 3))
@@ -255,9 +255,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
     def test_bit_select_lhs(self):
         stmt = lambda y, a, b: y.bit_select(a, 3).eq(b)
-        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), reset=0b11111111)
-        self.assertStatement(stmt, [C(2), C(0b101, 3)], C(0b11110111, 8), reset=0b11111111)
-        self.assertStatement(stmt, [C(3), C(0b110, 3)], C(0b11110111, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), init=0b11111111)
+        self.assertStatement(stmt, [C(2), C(0b101, 3)], C(0b11110111, 8), init=0b11111111)
+        self.assertStatement(stmt, [C(3), C(0b110, 3)], C(0b11110111, 8), init=0b11111111)
 
     def test_word_select(self):
         stmt = lambda y, a, b: y.eq(a.word_select(b, 3))
@@ -267,9 +267,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
     def test_word_select_lhs(self):
         stmt = lambda y, a, b: y.word_select(a, 3).eq(b)
-        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), reset=0b11111111)
-        self.assertStatement(stmt, [C(1), C(0b101, 3)], C(0b11101111, 8), reset=0b11111111)
-        self.assertStatement(stmt, [C(2), C(0b110, 3)], C(0b10111111, 8), reset=0b11111111)
+        self.assertStatement(stmt, [C(0), C(0b100, 3)], C(0b11111100, 8), init=0b11111111)
+        self.assertStatement(stmt, [C(1), C(0b101, 3)], C(0b11101111, 8), init=0b11111111)
+        self.assertStatement(stmt, [C(2), C(0b110, 3)], C(0b10111111, 8), init=0b11111111)
 
     def test_cat(self):
         stmt = lambda y, *xs: y.eq(Cat(*xs))
@@ -315,9 +315,9 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(4)], C(10))
 
     def test_array_lhs(self):
-        l = Signal(3, reset=1)
-        m = Signal(3, reset=4)
-        n = Signal(3, reset=7)
+        l = Signal(3, init=1)
+        m = Signal(3, init=4)
+        n = Signal(3, init=7)
         array = Array([l, m, n])
         stmt = lambda y, a, b: [array[a].eq(b), y.eq(Cat(*array))]
         self.assertStatement(stmt, [C(0), C(0b000)], C(0b111100000))
@@ -426,7 +426,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 sim.run_until(deadline)
 
     def setUp_counter(self):
-        self.count = Signal(3, reset=4)
+        self.count = Signal(3, init=4)
         self.sync  = ClockDomain()
 
         self.m = Module()
@@ -876,7 +876,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_comb_bench_process(self):
         m = Module()
-        a = Signal(reset=1)
+        a = Signal(init=1)
         b = Signal()
         m.d.comb += b.eq(a)
         with self.assertSimulation(m) as sim:
@@ -890,7 +890,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
 
     def test_sync_bench_process(self):
         m = Module()
-        a = Signal(reset=1)
+        a = Signal(init=1)
         b = Signal()
         m.d.sync += b.eq(a)
         t = Signal()
