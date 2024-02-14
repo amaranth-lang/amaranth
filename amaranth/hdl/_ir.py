@@ -1109,7 +1109,7 @@ class NetlistEmitter:
                 en=en,
                 clk=clk,
                 clk_edge=cd.clk_edge,
-                transparent_for=tuple(write_ports[idx] for idx in port._transparency),
+                transparent_for=tuple(write_ports[idx] for idx in port._transparent_for),
                 src_loc=port._data.src_loc,
             )
         data = self.netlist.add_value_cell(len(port._data), cell)

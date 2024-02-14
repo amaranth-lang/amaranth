@@ -1,12 +1,11 @@
 """First-in first-out queues."""
 
-import warnings
-
 from .. import *
 from ..asserts import *
 from ..utils import ceil_log2
 from .coding import GrayEncoder, GrayDecoder
 from .cdc import FFSynchronizer, AsyncFFSynchronizer
+from .memory import Memory
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -130,7 +129,7 @@ class SyncFIFO(Elaboratable, FIFOInterface):
         do_read  = self.r_rdy & self.r_en
         do_write = self.w_rdy & self.w_en
 
-        storage = m.submodules.storage = Memory(width=self.width, depth=self.depth)
+        storage = m.submodules.storage = Memory(shape=self.width, depth=self.depth, init=[])
         w_port  = storage.write_port()
         r_port  = storage.read_port(domain="comb")
         produce = Signal(range(self.depth))
@@ -257,9 +256,9 @@ class SyncFIFOBuffered(Elaboratable, FIFOInterface):
 
         do_inner_read  = inner_r_rdy & (~self.r_rdy | self.r_en)
 
-        storage = m.submodules.storage = Memory(width=self.width, depth=inner_depth)
+        storage = m.submodules.storage = Memory(shape=self.width, depth=inner_depth, init=[])
         w_port  = storage.write_port()
-        r_port  = storage.read_port(domain="sync", transparent=False)
+        r_port  = storage.read_port(domain="sync")
         produce = Signal(range(inner_depth))
         consume = Signal(range(inner_depth))
 
@@ -438,9 +437,9 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         m.d[self._w_domain] += self.w_level.eq(produce_w_bin - consume_w_bin)
         m.d.comb += self.r_level.eq(produce_r_bin - consume_r_bin)
 
-        storage = m.submodules.storage = Memory(width=self.width, depth=self.depth)
+        storage = m.submodules.storage = Memory(shape=self.width, depth=self.depth, init=[])
         w_port  = storage.write_port(domain=self._w_domain)
-        r_port  = storage.read_port (domain=self._r_domain, transparent=False)
+        r_port  = storage.read_port (domain=self._r_domain)
         m.d.comb += [
             w_port.addr.eq(produce_w_bin[:-1]),
             w_port.data.eq(self.w_data),

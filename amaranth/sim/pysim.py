@@ -85,7 +85,7 @@ class _VCDWriter:
                         trace_names[trace_signal] = {("bench", name)}
                         assigned_names.add(name)
                     self.traces.append(trace_signal)
-            elif isinstance(trace, (MemoryInstance, Memory)):
+            elif hasattr(trace, "_identity") and isinstance(trace._identity, MemoryIdentity):
                 if not trace._identity in memories:
                     raise ValueError(f"{trace!r} is a memory not part of the elaborated design")
                 self.traces.append(trace._identity)

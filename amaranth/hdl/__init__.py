@@ -4,7 +4,7 @@ from ._ast import Const, C, Mux, Cat, Array, Signal, ClockSignal, ResetSignal
 from ._dsl import SyntaxError, SyntaxWarning, Module
 from ._cd import DomainError, ClockDomain
 from ._ir import UnusedElaboratable, Elaboratable, DriverConflict, Fragment, Instance
-from ._mem import Memory, ReadPort, WritePort, DummyPort
+from ._mem import MemoryIdentity, MemoryInstance, Memory, ReadPort, WritePort, DummyPort
 from ._rec import Record
 from ._xfrm import DomainRenamer, ResetInserter, EnableInserter
 
@@ -21,7 +21,7 @@ __all__ = [
     # _ir
     "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance",
     # _mem
-    "Memory", "ReadPort", "WritePort", "DummyPort",
+    "MemoryIdentity", "MemoryInstance", "Memory", "ReadPort", "WritePort", "DummyPort",
     # _rec
     "Record",
     # _xfrm

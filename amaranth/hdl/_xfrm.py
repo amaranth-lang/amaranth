@@ -263,7 +263,7 @@ class FragmentTransformer:
                     addr=port._addr,
                     data=port._data,
                     en=port._en,
-                    transparency=port._transparency,
+                    transparent_for=port._transparent_for,
                 )
                 for port in fragment._read_ports
             ]
