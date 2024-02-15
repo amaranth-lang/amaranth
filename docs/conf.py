@@ -50,3 +50,14 @@ rst_prolog = """
 .. role:: py(code)
    :language: python
 """
+
+linkcheck_ignore = [
+    r"^http://127\.0\.0\.1:8000$"
+]
+
+linkcheck_anchors_ignore_for_url = [
+    r"^https://matrix\.to/",
+    r"^https://web\.libera\.chat/",
+    # React page with README content included as a JSON payload.
+    r"^https://github\.com/[^/]+/[^/]+/$",
+]

@@ -57,8 +57,8 @@ The Amaranth simulator is event-driven and can simulate designs with multiple cl
 
 Although Amaranth does not support native code simulation or co-simulation at the moment, such support will be added in near future.
 
-.. _Icarus Verilog: http://iverilog.icarus.com/
-.. _Verilator: https://www.veripool.org/wiki/verilator
+.. _Icarus Verilog: https://steveicarus.github.io/iverilog/
+.. _Verilator: https://www.veripool.org/verilator/
 .. _GTKWave: http://gtkwave.sourceforge.net/
 .. _PyPy: https://www.pypy.org/
 

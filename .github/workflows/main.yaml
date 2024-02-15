@@ -69,8 +69,6 @@ jobs:
           git fetch --tags https://github.com/amaranth-lang/amaranth.git
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
-        with:
-          python-version: '3.12'
       - name: Install dependencies
         run: |
           pdm install --dev
@@ -82,6 +80,20 @@ jobs:
         with:
           name: docs
           path: docs/_build
+
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v4
+      - name: Install dependencies
+        run: |
+          pdm install --dev
+      - name: Check links in documentation
+        run: |
+          pdm run document-linkcheck
 
   required: # group all required workflows into one to avoid reconfiguring this in Actions settings
     needs:

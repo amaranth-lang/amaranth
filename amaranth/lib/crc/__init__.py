@@ -54,7 +54,7 @@ class Algorithm:
       form of polynomial but remove the leading '1'.
 
     .. _reveng: https://reveng.sourceforge.io/crc-catalogue/all.htm
-    .. _crcmod: http://crcmod.sourceforge.net/crcmod.predefined.html
+    .. _crcmod: https://crcmod.sourceforge.net/crcmod.predefined.html
     .. _CRC Zoo: https://users.ece.cmu.edu/~koopman/crc/
 
     Many commonly used CRC algorithms are available in the
