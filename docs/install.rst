@@ -18,10 +18,10 @@ Synthesizing, placing and routing an Amaranth design for an FPGA requires the FP
 
 .. _CPython: https://www.python.org/
 .. _PyPy3.8: https://www.pypy.org/
-.. _pip: https://pip.pypa.io/
+.. _pip: https://pip.pypa.io/en/stable/
 .. _Yosys: https://yosyshq.net/yosys/
 .. _PyPI: https://pypi.org/
-.. _GTKWave: http://gtkwave.sourceforge.net/
+.. _GTKWave: https://gtkwave.sourceforge.net/
 
 
 .. _install-deps:
@@ -109,7 +109,7 @@ Installing prerequisites
 
       If Yosys |yosys-version| is not available, `build Yosys from source`_.
 
-      .. _build Yosys from source: https://github.com/YosysHQ/yosys/#setup
+      .. _build Yosys from source: https://github.com/YosysHQ/yosys/#building-from-source
 
       |upgrade-pip|
 
