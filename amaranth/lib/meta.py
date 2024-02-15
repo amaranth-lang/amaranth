@@ -1,8 +1,4 @@
 from abc import abstractmethod, ABCMeta
-from collections.abc import Mapping
-from urllib.parse import urlparse
-
-import jsonschema
 
 
 __all__ = ["Annotation"]
@@ -13,72 +9,76 @@ class Annotation(metaclass=ABCMeta):
 
     A container for metadata that can be retrieved from a :class:`~amaranth.lib.wiring.Signature`
     object. Annotation instances can be exported as JSON objects, whose structure is defined using
-    the `JSON Schema <https://json-schema.org>`_ language.
-
-    Schema URLs
-    -----------
-
-    An ``Annotation`` schema must have a ``"$id"`` property, which holds an URL that serves as its
-    unique identifier. The suggested format of this URL is:
-
-        <protocol>://<domain>/schema/<package>/<version>/<path>.json
-
-    where:
-      * ``<domain>`` is a domain name registered to the person or entity defining the annotation;
-      * ``<package>`` is the name of the Python package providing the ``Annotation`` subclass;
-      * ``<version>`` is the version of the aforementioned package;
-      * ``<path>`` is a non-empty string specific to the annotation.
-
-    Attributes
-    ----------
-    schema : :class`Mapping`
-        Annotation schema.
+    the `JSON Schema`_ language.
     """
 
-    schema = property(abstractmethod(lambda: None)) # :nocov:
+    #: :class:`dict`: Schema of this annotation, expressed in the `JSON Schema`_ language.
+    #:
+    #: Subclasses of :class:`Annotation` must implement this class attribute.
+    schema = {}
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not isinstance(cls.schema, Mapping):
+
+        if not isinstance(cls.schema, dict):
             raise TypeError(f"Annotation schema must be a dict, not {cls.schema!r}")
 
         # The '$id' keyword is optional in JSON schemas, but we require it.
         if "$id" not in cls.schema:
             raise ValueError(f"'$id' keyword is missing from Annotation schema: {cls.schema}")
-        jsonschema.Draft202012Validator.check_schema(cls.schema)
+
+        try:
+            import jsonschema
+            jsonschema.Draft202012Validator.check_schema(cls.schema)
+        except ImportError:
+            # Amaranth was installed in some weird way and doesn't have jsonschema installed,
+            # despite it being a mandatory dependency. The schema will eventually get checked
+            # by the CI, so ignore the error here.
+            pass # :nocov:
 
     @property
     @abstractmethod
     def origin(self):
-        """Annotation origin.
+        """The Python object described by this :class:`Annotation` instance.
 
-        The Python object described by this :class:`Annotation` instance.
+        Subclasses of :class:`Annotation` must implement this property.
         """
         pass # :nocov:
 
     @abstractmethod
     def as_json(self):
-        """Translate to JSON.
+        """Convert to a JSON representation.
+
+        Subclasses of :class:`Annotation` must implement this property.
+
+        The JSON representation returned by this method must adhere to :data:`schema` and pass
+        validation by :meth:`validate`.
 
         Returns
         -------
-        :class:`Mapping`
-            A JSON representation of this :class:`Annotation` instance.
+        :class:`dict`
+            JSON representation of this annotation, expressed in Python primitive types
+            (:class:`dict`, :class:`list`, :class:`str`, :class:`int`, :class:`bool`).
         """
         pass # :nocov:
 
     @classmethod
     def validate(cls, instance):
-        """Validate a JSON object.
+        """Validate a JSON representation against :attr:`schema`.
 
-        Parameters
-        ----------
-        instance : :class:`Mapping`
-            The JSON object to validate.
+        Arguments
+        ---------
+        instance : :class:`dict`
+            The JSON representation to validate, either previously returned by :meth:`as_json`
+            or retrieved from an external source.
 
         Raises
         ------
         :exc:`jsonschema.exceptions.ValidationError`
-            If `instance` doesn't comply with :attr:`Annotation.schema`.
+            If :py:`instance` doesn't comply with :attr:`Annotation.schema`.
         """
+        import jsonschema
         jsonschema.validate(instance, schema=cls.schema)
+
+    def __repr__(self):
+        return f"<{type(self).__module__}.{type(self).__qualname__} for {self.origin!r}>"

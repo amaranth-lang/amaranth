@@ -672,7 +672,7 @@ class Signature(metaclass=SignatureMeta):
     An interface object is a Python object that has a :py:`signature` attribute containing
     a :class:`Signature` object, as well as an attribute for every member of its signature.
     Signatures and interface objects are tightly linked: an interface object can be created out
-    of a signature, and the signature is used when :func:`connect` ing two interface objects
+    of a signature, and the signature is used when :func:`connect`\\ ing two interface objects
     together. See the :ref:`introduction to interfaces <wiring-intro1>` for a more detailed
     explanation of why this is useful.
 
@@ -720,7 +720,7 @@ class Signature(metaclass=SignatureMeta):
 
         Returns
         -------
-        iterator of :class:`meta.Annotation`
+        iterable of :class:`Annotation`
         """
         return ()
 

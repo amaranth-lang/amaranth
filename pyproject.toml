@@ -15,9 +15,9 @@ license = {file = "LICENSE.txt"}
 requires-python = "~=3.8"
 dependencies = [
   "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
+  "jsonschema~=4.20.0", # for amaranth.lib.meta
   "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
-  "jsonschema~=4.20.0", # for amaranth.lib.meta
 ]
 
 [project.optional-dependencies]
