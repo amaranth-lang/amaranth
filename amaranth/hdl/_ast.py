@@ -61,8 +61,16 @@ class Shape:
                             f"not {width}")
         if signed and width <= 0:
             raise TypeError(f"Width of a signed value must be a positive integer, not {width}")
-        self.width = width
-        self.signed = bool(signed)
+        self._width = width
+        self._signed = bool(signed)
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def signed(self):
+        return self._signed
 
     # The algorithm for inferring shape for standard Python enumerations is factored out so that
     # `Shape.cast()` and Amaranth's `EnumMeta.as_shape()` can both use it.
@@ -143,6 +151,9 @@ class Shape:
             return f"signed({self.width})"
         else:
             return f"unsigned({self.width})"
+
+    def __hash__(self):
+        return hash((self._width, self._signed))
 
     def __eq__(self, other):
         return (isinstance(other, Shape) and

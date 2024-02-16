@@ -152,6 +152,16 @@ class ShapeTestCase(FHDLTestCase):
                 r"^Object 'foo' cannot be converted to an Amaranth shape$"):
             Shape.cast("foo")
 
+    def test_hashable(self):
+        d = {
+            signed(2): "a",
+            unsigned(3): "b",
+            unsigned(2): "c",
+        }
+        self.assertEqual(d[signed(2)], "a")
+        self.assertEqual(d[unsigned(3)], "b")
+        self.assertEqual(d[unsigned(2)], "c")
+
 
 class MockShapeCastable(ShapeCastable):
     def __init__(self, dest):
