@@ -128,7 +128,7 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
         self._append("end\n")
         self.rtlil._buffer.write(str(self))
 
-    def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src=""):
+    def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src="", signed=False):
         # Very large wires are unlikely to work. Verilog 1364-2005 requires the limit on vectors
         # to be at least 2**16 bits, and Yosys 0.9 cannot read RTLIL with wires larger than 2**32
         # bits. In practice, wires larger than 2**16 bits, although accepted, cause performance
@@ -140,14 +140,15 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
 
         self._attributes(attrs, src=src, indent=1)
         name = self._make_name(name, local=False)
+        signed = " signed" if signed else ""
         if port_id is None:
-            self._append("  wire width {} {}\n", width, name)
+            self._append("  wire width {}{} {}\n", width, signed, name)
         else:
             assert port_kind in ("input", "output", "inout")
             # By convention, Yosys ports named $\d+ are positional, so there is no way to use
             # a port with such a name. See amaranth-lang/amaranth#733.
             assert port_id is not None
-            self._append("  wire width {} {} {} {}\n", width, port_kind, port_id, name)
+            self._append("  wire width {} {} {}{} {}\n", width, port_kind, port_id, signed, name)
         return name
 
     def connect(self, lhs, rhs):
@@ -383,14 +384,20 @@ class ModuleEmitter:
                 assert value == port_value
                 self.name_map[signal] = (*self.module.name, f"\\{name}")
             else:
-                wire = self.builder.wire(width=signal.width, name=name, attrs=attrs,
+                wire = self.builder.wire(width=signal.width, signed=signal.signed,
+                                         name=name, attrs=attrs,
                                          src=_src(signal.src_loc))
                 self.sigport_wires[name] = (wire, value)
                 self.name_map[signal] = (*self.module.name, wire)
 
     def emit_port_wires(self):
+        named_signals = {name: signal for signal, name in self.module.signal_names.items()}
         for port_id, (name, (value, flow)) in enumerate(self.module.ports.items()):
-            wire = self.builder.wire(width=len(value), port_id=port_id, port_kind=flow.value,
+            signed = False
+            if name in named_signals:
+                signed = named_signals[name].signed
+            wire = self.builder.wire(width=len(value), signed=signed,
+                                     port_id=port_id, port_kind=flow.value,
                                      name=name, attrs=self.value_attrs.get(value, {}))
             self.sigport_wires[name] = (wire, value)
             if flow == _nir.ModuleNetFlow.OUTPUT:
