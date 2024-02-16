@@ -63,6 +63,7 @@ Language changes
 * Changed: ``Signal(range(0))`` is now valid without a warning.
 * Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
 * Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
+* Changed: :class:`Shape` has been made immutable and hashable.
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
