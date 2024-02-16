@@ -60,7 +60,7 @@ class Fragment:
                     lineno=code.co_firstlineno)
             obj = new_obj
 
-    def __init__(self):
+    def __init__(self, *, src_loc=None):
         self.ports = _ast.SignalDict()
         self.drivers = OrderedDict()
         self.statements = {}
@@ -69,6 +69,7 @@ class Fragment:
         self.attrs = OrderedDict()
         self.generated = OrderedDict()
         self.flatten = False
+        self.src_loc = src_loc
 
     def add_ports(self, *ports, dir):
         assert dir in ("i", "o", "io")
@@ -132,18 +133,18 @@ class Fragment:
             stmt._MustUse__used = True
             self.statements.setdefault(domain, _ast._StatementList()).append(stmt)
 
-    def add_subfragment(self, subfragment, name=None):
+    def add_subfragment(self, subfragment, name=None, *, src_loc=None):
         assert isinstance(subfragment, Fragment)
-        self.subfragments.append((subfragment, name))
+        self.subfragments.append((subfragment, name, src_loc))
 
     def find_subfragment(self, name_or_index):
         if isinstance(name_or_index, int):
             if name_or_index < len(self.subfragments):
-                subfragment, name = self.subfragments[name_or_index]
+                subfragment, name, src_loc = self.subfragments[name_or_index]
                 return subfragment
             raise NameError(f"No subfragment at index #{name_or_index}")
         else:
-            for subfragment, name in self.subfragments:
+            for subfragment, name, src_loc in self.subfragments:
                 if name == name_or_index:
                     return subfragment
             raise NameError(f"No subfragment with name '{name_or_index}'")
@@ -172,7 +173,7 @@ class Fragment:
 
         # Remove the merged subfragment.
         found = False
-        for i, (check_subfrag, check_name) in enumerate(self.subfragments): # :nobr:
+        for i, (check_subfrag, check_name, check_src_loc) in enumerate(self.subfragments): # :nobr:
             if subfragment == check_subfrag:
                 del self.subfragments[i]
                 found = True
@@ -204,7 +205,7 @@ class Fragment:
             add_subfrag(driver_subfrags, signal, (None, hierarchy))
 
         flatten_subfrags = set()
-        for i, (subfrag, name) in enumerate(self.subfragments):
+        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
             if name is None:
                 name = f"<unnamed #{i}>"
             subfrag_hierarchy = hierarchy + (name,)
@@ -270,7 +271,7 @@ class Fragment:
         domain_subfrags = defaultdict(set)
 
         # For each domain defined by a subfragment, determine which subfragments define it.
-        for i, (subfrag, name) in enumerate(self.subfragments):
+        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
             # First, recurse into subfragments and let them propagate domains up as well.
             hier_name = name
             if hier_name is None:
@@ -281,7 +282,7 @@ class Fragment:
             for domain_name, domain in subfrag.domains.items():
                 if domain.local:
                     continue
-                domain_subfrags[domain_name].add((subfrag, name, i))
+                domain_subfrags[domain_name].add((subfrag, name, src_loc, i))
 
         # For each domain defined by more than one subfragment, rename the domain in each
         # of the subfragments such that they no longer conflict.
@@ -289,29 +290,29 @@ class Fragment:
             if len(subfrags) == 1:
                 continue
 
-            names = [n for f, n, i in subfrags]
+            names = [n for f, n, s, i in subfrags]
             if not all(names):
                 names = sorted(f"<unnamed #{i}>" if n is None else f"'{n}'"
-                               for f, n, i in subfrags)
+                               for f, n, s, i in subfrags)
                 raise _cd.DomainError(
                     "Domain '{}' is defined by subfragments {} of fragment '{}'; it is necessary "
                     "to either rename subfragment domains explicitly, or give names to subfragments"
                     .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
             if len(names) != len(set(names)):
-                names = sorted(f"#{i}" for f, n, i in subfrags)
+                names = sorted(f"#{i}" for f, n, s, i in subfrags)
                 raise _cd.DomainError(
                     "Domain '{}' is defined by subfragments {} of fragment '{}', some of which "
                     "have identical names; it is necessary to either rename subfragment domains "
                     "explicitly, or give distinct names to subfragments"
                     .format(domain_name, ", ".join(names), ".".join(hierarchy)))
 
-            for subfrag, name, i in subfrags:
+            for subfrag, name, src_loc, i in subfrags:
                 domain_name_map = {domain_name: f"{name}_{domain_name}"}
-                self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name)
+                self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name, src_loc)
 
         # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
-        for subfrag, name in self.subfragments:
+        for subfrag, name, src_loc in self.subfragments:
             for domain_name, domain in subfrag.domains.items():
                 if domain.local:
                     continue
@@ -319,7 +320,7 @@ class Fragment:
 
     def _propagate_domains_down(self):
         # For each domain defined in this fragment, ensure it also exists in all subfragments.
-        for subfrag, name in self.subfragments:
+        for subfrag, name, src_loc in self.subfragments:
             for domain in self.iter_domains():
                 if domain in subfrag.domains:
                     assert self.domains[domain] is subfrag.domains[domain]
@@ -403,7 +404,7 @@ class Fragment:
                 add_uses(cd.rst)
 
         # Repeat for subfragments.
-        for subfrag, name in self.subfragments:
+        for subfrag, name, src_loc in self.subfragments:
             if isinstance(subfrag, Instance):
                 for port_name, (value, dir) in subfrag.named_ports.items():
                     if dir == "i":
@@ -627,7 +628,7 @@ class Fragment:
         _names[self] = hierarchy
 
         signal_names = set(self._assign_names_to_signals().values())
-        for subfragment_index, (subfragment, subfragment_name) in enumerate(self.subfragments):
+        for subfragment_index, (subfragment, subfragment_name, subfragment_src_loc) in enumerate(self.subfragments):
             if subfragment_name is None:
                 subfragment_name = f"U${subfragment_index}"
             elif subfragment_name in signal_names:
@@ -641,12 +642,11 @@ class Fragment:
 
 class Instance(Fragment):
     def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
-        super().__init__()
+        super().__init__(src_loc=src_loc or tracer.get_src_loc(src_loc_at))
 
         self.type        = type
         self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
-        self.src_loc     = src_loc or tracer.get_src_loc(src_loc_at)
 
         for (kind, name, value) in args:
             if kind == "a":
@@ -1064,7 +1064,7 @@ class NetlistEmitter:
             init=fragment._init,
             name=name,
             attributes=fragment._attrs,
-            src_loc=fragment._src_loc,
+            src_loc=fragment.src_loc,
         )
         return self.netlist.add_cell(cell)
 
@@ -1205,7 +1205,7 @@ class NetlistEmitter:
                 if net.is_late and net not in self.netlist.connections:
                     self.netlist.connections[net] = _nir.Net.from_const((signal.init >> bit) & 1)
 
-    def emit_fragment(self, fragment: _ir.Fragment, parent_module_idx: 'int | None'):
+    def emit_fragment(self, fragment: _ir.Fragment, parent_module_idx: 'int | None', *, cell_src_loc=None):
         from . import _mem
 
         fragment_name = self.fragment_names[fragment]
@@ -1224,7 +1224,7 @@ class NetlistEmitter:
             for port in fragment._read_ports:
                 self.emit_read_port(parent_module_idx, fragment, port, memory, write_ports)
         elif type(fragment) is _ir.Fragment:
-            module_idx = self.netlist.add_module(parent_module_idx, fragment_name)
+            module_idx = self.netlist.add_module(parent_module_idx, fragment_name, src_loc=fragment.src_loc, cell_src_loc=cell_src_loc)
             signal_names = fragment._assign_names_to_signals()
             self.netlist.modules[module_idx].signal_names = signal_names
             if parent_module_idx is None:
@@ -1234,8 +1234,8 @@ class NetlistEmitter:
             for domain, stmts in fragment.statements.items():
                 for stmt in stmts:
                     self.emit_stmt(module_idx, fragment, domain, stmt, _nir.Net.from_const(1))
-            for subfragment, _name in fragment.subfragments:
-                self.emit_fragment(subfragment, module_idx)
+            for subfragment, _name, sub_src_loc in fragment.subfragments:
+                self.emit_fragment(subfragment, module_idx, cell_src_loc=sub_src_loc)
             if parent_module_idx is None:
                 self.emit_drivers()
         else:

@@ -830,7 +830,8 @@ class DSLTestCase(FHDLTestCase):
         m1 = Module()
         m2 = Module()
         m1.submodules += m2
-        self.assertEqual(m1._anon_submodules, [m2])
+        self.assertEqual(len(m1._anon_submodules), 1)
+        self.assertEqual(m1._anon_submodules[0][0], m2)
         self.assertEqual(m1._named_submodules, {})
 
     def test_submodule_anon_multi(self):
@@ -838,7 +839,9 @@ class DSLTestCase(FHDLTestCase):
         m2 = Module()
         m3 = Module()
         m1.submodules += m2, m3
-        self.assertEqual(m1._anon_submodules, [m2, m3])
+        self.assertEqual(len(m1._anon_submodules), 2)
+        self.assertEqual(m1._anon_submodules[0][0], m2)
+        self.assertEqual(m1._anon_submodules[1][0], m3)
         self.assertEqual(m1._named_submodules, {})
 
     def test_submodule_named(self):
@@ -846,14 +849,16 @@ class DSLTestCase(FHDLTestCase):
         m2 = Module()
         m1.submodules.foo = m2
         self.assertEqual(m1._anon_submodules, [])
-        self.assertEqual(m1._named_submodules, {"foo": m2})
+        self.assertEqual(m1._named_submodules.keys(), {"foo"})
+        self.assertEqual(m1._named_submodules["foo"][0], m2)
 
     def test_submodule_named_index(self):
         m1 = Module()
         m2 = Module()
         m1.submodules["foo"] = m2
         self.assertEqual(m1._anon_submodules, [])
-        self.assertEqual(m1._named_submodules, {"foo": m2})
+        self.assertEqual(m1._named_submodules.keys(), {"foo"})
+        self.assertEqual(m1._named_submodules["foo"][0], m2)
 
     def test_submodule_wrong(self):
         m = Module()
@@ -943,7 +948,7 @@ class DSLTestCase(FHDLTestCase):
             "comb": SignalSet((self.c1,))
         })
         self.assertEqual(len(f1.subfragments), 1)
-        (f2, f2_name), = f1.subfragments
+        (f2, f2_name, _), = f1.subfragments
         self.assertEqual(f2_name, "foo")
         self.assertRepr(f2.statements["comb"], """
         (

@@ -392,7 +392,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
 
         f._propagate_domains_up()
         self.assertEqual(f.domains, {"a_sync": cda, "b_sync": cdb})
-        (fa, _), (fb, _) = f.subfragments
+        (fa, _, _), (fb, _, _) = f.subfragments
         self.assertEqual(fa.domains, {"a_sync": cda})
         self.assertEqual(fb.domains, {"b_sync": cdb})
 
@@ -446,7 +446,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f.add_subfragment(fb, "b")
 
         f._propagate_domains_up()
-        fb_new, _ = f.subfragments[1]
+        fb_new, _, _ = f.subfragments[1]
         self.assertEqual(fb_new.drivers, OrderedDict({
             "comb": SignalSet((ResetSignal("b_sync"),))
         }))
@@ -540,7 +540,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
         self.assertEqual(new_domains, [])
         self.assertEqual(f1.subfragments, [
-            (f2, "cd_sync")
+            (f2, "cd_sync", None)
         ])
 
     def test_propagate_create_missing_fragment_many_domains(self):
@@ -559,7 +559,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         self.assertEqual(f1.domains["sync"], f2.domains["sync"])
         self.assertEqual(new_domains, [])
         self.assertEqual(f1.subfragments, [
-            (f2, "cd_sync")
+            (f2, "cd_sync", None)
         ])
 
     def test_propagate_create_missing_fragment_wrong(self):
@@ -606,7 +606,7 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         self.setUp_self_sub()
 
         self.f1._resolve_hierarchy_conflicts(mode="silent")
-        self.assertEqual(self.f1.subfragments, [
+        self.assertEqual([(f, n) for f, n, _ in self.f1.subfragments], [
             (self.f1a, "f1a"),
             (self.f1b, "f1b"),
             (self.f2a, "f2a"),

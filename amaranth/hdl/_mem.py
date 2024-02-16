@@ -65,7 +65,7 @@ class MemoryInstance(Fragment):
 
 
     def __init__(self, *, identity, width, depth, init=None, attrs=None, src_loc=None):
-        super().__init__()
+        super().__init__(src_loc=src_loc)
         assert isinstance(identity, MemoryIdentity)
         self._identity = identity
         self._width = operator.index(width)
@@ -76,7 +76,6 @@ class MemoryInstance(Fragment):
         for x in self._init:
             assert isinstance(x, int)
         self._attrs = attrs or {}
-        self._src_loc = src_loc
         self._read_ports = []
         self._write_ports = []
 

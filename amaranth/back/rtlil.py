@@ -106,21 +106,22 @@ class _Builder(_BufferedBuilder, _Namer):
         super().__init__()
         self.emit_src = emit_src
 
-    def module(self, name=None, attrs={}):
+    def module(self, name=None, attrs={}, *, src=None):
         name = self._make_name(name, local=False)
-        return _ModuleBuilder(self, name, attrs)
+        return _ModuleBuilder(self, name, attrs, src=src)
 
 
 class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
-    def __init__(self, rtlil, name, attrs):
+    def __init__(self, rtlil, name, attrs, *, src=None):
         super().__init__(emit_src=rtlil.emit_src)
         self.rtlil = rtlil
         self.name  = name
+        self.src   = src
         self.attrs = {"generator": "Amaranth"}
         self.attrs.update(attrs)
 
     def __enter__(self):
-        self._attributes(self.attrs)
+        self._attributes(self.attrs, src=self.src)
         self._append("module {}\n", self.name)
         return self
 
@@ -512,7 +513,7 @@ class ModuleEmitter:
                 self.builder.cell(f"\\{dotted_name}", submodule.name[-1], ports={
                     name: self.sigspec(value)
                     for name, (value, _flow) in submodule.ports.items()
-                })
+                }, src=_src(submodule.cell_src_loc))
 
     def emit_assignment_list(self, cell_idx, cell):
         def emit_assignments(case, cond):
@@ -997,8 +998,10 @@ def convert_fragment(fragment, name="top", *, emit_src=True):
     for module_idx, module in enumerate(netlist.modules):
         if empty_checker.is_empty(module_idx):
             continue
-        attrs = {"top": 1} if module_idx == 0 else {}
-        with builder.module(".".join(module.name), attrs=attrs) as module_builder:
+        attrs = {}
+        if module_idx == 0:
+            attrs["top"] = 1
+        with builder.module(".".join(module.name), attrs=attrs, src=_src(module.src_loc)) as module_builder:
             ModuleEmitter(module_builder, netlist, module, name_map,
                           empty_checker=empty_checker).emit()
     return str(builder), name_map

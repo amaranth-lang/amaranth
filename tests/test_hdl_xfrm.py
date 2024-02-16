@@ -378,7 +378,7 @@ class EnableInserterTestCase(FHDLTestCase):
         f1.add_subfragment(f2)
 
         f1 = EnableInserter(self.c1)(f1)
-        (f2, _), = f1.subfragments
+        (f2, _, _), = f1.subfragments
         self.assertRepr(f1.statements["sync"], """
         (
             (eq (sig s1) (const 1'd1))

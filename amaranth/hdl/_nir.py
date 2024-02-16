@@ -211,9 +211,9 @@ class Netlist:
             result.append(f"(cell {cell_idx} {cell.module_idx} {cell!r})")
         return "\n".join(result)
 
-    def add_module(self, parent, name: str):
+    def add_module(self, parent, name: str, *, src_loc=None, cell_src_loc=None):
         module_idx = len(self.modules)
-        self.modules.append(Module(parent, name))
+        self.modules.append(Module(parent, name, src_loc=src_loc, cell_src_loc=cell_src_loc))
         if module_idx == 0:
             self.modules[0].cells.append(0)
         if parent is not None:
@@ -276,15 +276,18 @@ class Module:
 
     parent: index of parent module, or ``None`` for top module
     name: a tuple of str, hierarchical name of this module (top has empty tuple)
+    src_loc: str
     submodules: a list of nested module indices
     signal_names: a SignalDict from Signal to str, signal names visible in this module
     net_flow: a dict from Net to NetFlow, describes how a net is used within this module
     ports: a dict from port name to (Value, NetFlow) pair
     cells: a list of cell indices that belong to this module
     """
-    def __init__(self, parent, name):
+    def __init__(self, parent, name, *, src_loc, cell_src_loc):
         self.parent = parent
         self.name = name
+        self.src_loc = src_loc
+        self.cell_src_loc = cell_src_loc
         self.submodules = []
         self.signal_names = SignalDict()
         self.net_flow = {}

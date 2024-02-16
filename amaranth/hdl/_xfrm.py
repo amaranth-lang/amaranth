@@ -206,8 +206,8 @@ class StatementTransformer(StatementVisitor):
 
 class FragmentTransformer:
     def map_subfragments(self, fragment, new_fragment):
-        for subfragment, name in fragment.subfragments:
-            new_fragment.add_subfragment(self(subfragment), name)
+        for subfragment, name, src_loc in fragment.subfragments:
+            new_fragment.add_subfragment(self(subfragment), name, src_loc=src_loc)
 
     def map_ports(self, fragment, new_fragment):
         for port, dir in fragment.ports.items():
@@ -255,7 +255,7 @@ class FragmentTransformer:
                 depth=fragment._depth,
                 init=fragment._init,
                 attrs=fragment._attrs,
-                src_loc=fragment._src_loc
+                src_loc=fragment.src_loc
             )
             new_fragment._read_ports = [
                 MemoryInstance._ReadPort(
@@ -282,7 +282,7 @@ class FragmentTransformer:
             new_fragment.parameters = OrderedDict(fragment.parameters)
             self.map_named_ports(fragment, new_fragment)
         else:
-            new_fragment = Fragment()
+            new_fragment = Fragment(src_loc=fragment.src_loc)
             new_fragment.flatten = fragment.flatten
         new_fragment.attrs = OrderedDict(fragment.attrs)
         self.map_ports(fragment, new_fragment)
@@ -417,7 +417,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         for domain_name, statements in fragment.statements.items():
             self._add_used_domain(domain_name)
             self.on_statements(statements)
-        for subfragment, name in fragment.subfragments:
+        for subfragment, name, src_loc in fragment.subfragments:
             self.on_fragment(subfragment)
 
         self._local_domains = old_local_domains
