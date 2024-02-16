@@ -535,7 +535,7 @@ class _FragmentCompiler:
 
             processes.add(domain_process)
 
-        for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
+        for subfragment_index, (subfragment, subfragment_name, _src_loc) in enumerate(fragment.subfragments):
             if subfragment_name is None:
                 subfragment_name = f"U${subfragment_index}"
             processes.update(self(subfragment))

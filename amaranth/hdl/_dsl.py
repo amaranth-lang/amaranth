@@ -82,15 +82,18 @@ class _ModuleBuilderSubmodules:
         object.__setattr__(self, "_builder", builder)
 
     def __iadd__(self, modules):
+        src_loc = tracer.get_src_loc()
         for module in flatten([modules]):
-            self._builder._add_submodule(module)
+            self._builder._add_submodule(module, src_loc=src_loc)
         return self
 
     def __setattr__(self, name, submodule):
-        self._builder._add_submodule(submodule, name)
+        src_loc = tracer.get_src_loc()
+        self._builder._add_submodule(submodule, name, src_loc=src_loc)
 
-    def __setitem__(self, name, value):
-        return self.__setattr__(name, value)
+    def __setitem__(self, name, submodule):
+        src_loc = tracer.get_src_loc()
+        self._builder._add_submodule(submodule, name, src_loc=src_loc)
 
     def __getattr__(self, name):
         return self._builder._get_submodule(name)
@@ -175,6 +178,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._anon_submodules  = []
         self._domains      = {}
         self._generated    = {}
+        self._src_loc      = tracer.get_src_loc()
 
     def _check_context(self, construct, context):
         if self._ctrl_context != context:
@@ -546,20 +550,21 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
             self._statements.setdefault(domain, []).append(stmt)
 
-    def _add_submodule(self, submodule, name=None):
+    def _add_submodule(self, submodule, name=None, src_loc=None):
         if not hasattr(submodule, "elaborate"):
             raise TypeError("Trying to add {!r}, which does not implement .elaborate(), as "
                             "a submodule".format(submodule))
         if name == None:
-            self._anon_submodules.append(submodule)
+            self._anon_submodules.append((submodule, src_loc))
         else:
             if name in self._named_submodules:
                 raise NameError(f"Submodule named '{name}' already exists")
-            self._named_submodules[name] = submodule
+            self._named_submodules[name] = (submodule, src_loc)
 
     def _get_submodule(self, name):
         if name in self._named_submodules:
-            return self._named_submodules[name]
+            submodule, _src_loc = self._named_submodules[name]
+            return submodule
         else:
             raise AttributeError(f"No submodule named '{name}' exists")
 
@@ -575,11 +580,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     def elaborate(self, platform):
         self._flush()
 
-        fragment = Fragment()
-        for name in self._named_submodules:
-            fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
-        for submodule in self._anon_submodules:
-            fragment.add_subfragment(Fragment.get(submodule, platform), None)
+        fragment = Fragment(src_loc=self._src_loc)
+        for name, (submodule, src_loc) in self._named_submodules.items():
+            fragment.add_subfragment(Fragment.get(submodule, platform), name, src_loc=src_loc)
+        for submodule, src_loc in self._anon_submodules:
+            fragment.add_subfragment(Fragment.get(submodule, platform), None, src_loc=src_loc)
         for domain, statements in self._statements.items():
             fragment.add_statements(domain, statements)
         for signal, domain in self._driving.items():
