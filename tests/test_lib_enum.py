@@ -1,6 +1,7 @@
 import enum as py_enum
 import operator
 import sys
+import unittest
 
 from amaranth import *
 from amaranth.lib.enum import Enum, EnumMeta, Flag, IntEnum, EnumView, FlagView
@@ -288,3 +289,23 @@ class EnumTestCase(FHDLTestCase):
             B = 1
         a = Signal(EnumA)
         assert isinstance(a, CustomView)
+
+    @unittest.skipUnless(hasattr(py_enum, "nonmember"), "Python<3.11 lacks nonmember")
+    def test_enum_member_nonmember(self):
+        with self.assertRaisesRegex(
+            TypeError, r"^Value \{\} of enumeration member 'x' must.*$"
+        ):
+            class EnumA(IntEnum, shape=4):
+                A = 1
+                x = {}
+
+        empty = {}
+        class EnumA(IntEnum, shape=4):
+            A = 1
+            x = py_enum.nonmember(empty)
+        self.assertIs(empty, EnumA.x)
+
+        class EnumB(IntEnum, shape=4):
+            A = 1
+            B = py_enum.member(2)
+        self.assertIs(2, EnumB.B.value)

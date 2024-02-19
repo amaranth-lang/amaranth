@@ -41,9 +41,9 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         # Prepare enumeration members for instantiation. This logic is unfortunately very
         # convoluted because it supports two very different code paths that need to share
         # the emitted warnings.
-        for member_name, member_value in namespace.items():
-            if py_enum._is_sunder(member_name) or py_enum._is_dunder(member_name):
-                continue
+        # TODO(py3.13): can use `namespace.member_names` property.
+        for member_name in namespace._member_names:
+            member_value = namespace[member_name]
             # If a shape is specified ("Amaranth mode" of amaranth.lib.enum.Enum), then every
             # member value must be a constant-castable expression. Otherwise ("Python mode" of
             # amaranth.lib.enum.Enum) any value goes, since all enumerations accepted by
