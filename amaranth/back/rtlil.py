@@ -744,6 +744,16 @@ class ModuleEmitter:
         emit_assignments(proc, _nir.Net.from_const(1))
         assert pos == len(cell.assignments)
 
+    def shorten_operand(self, value, *, signed):
+        value = list(value)
+        if signed:
+            while len(value) > 1 and value[-1] == value[-2]:
+                value.pop()
+        else:
+            while len(value) > 0 and value[-1] == _nir.Net.from_const(0):
+                value.pop()
+        return _nir.Value(value)
+
     def emit_operator(self, cell_idx, cell):
         UNARY_OPERATORS = {
             "-":    "$neg",
@@ -782,17 +792,75 @@ class ModuleEmitter:
         if len(cell.inputs) == 1:
             cell_type = UNARY_OPERATORS[cell.operator]
             operand, = cell.inputs
+            signed = False
+            if cell.operator == "-":
+                # For arithmetic operands, we trim the extra sign or zero extension on the operands
+                # to make the output prettier, and to fix inference problems in some not very smart
+                # synthesis tools.
+                operand_u = self.shorten_operand(operand, signed=False)
+                operand_s = self.shorten_operand(operand, signed=True)
+                # The operator will work when lowered with either signedness.  Pick whichever
+                # is prettier.
+                if len(operand_s) < len(operand_u):
+                    signed = True
+                    operand = operand_s
+                else:
+                    signed = False
+                    operand = operand_u
             self.builder.cell(cell_type, ports={
                 "A": self.sigspec(operand),
                 "Y": self.cell_wires[cell_idx].name
             }, parameters={
-                "A_SIGNED": False,
+                "A_SIGNED": signed,
                 "A_WIDTH": len(operand),
                 "Y_WIDTH": cell.width,
             }, src_loc=cell.src_loc)
         elif len(cell.inputs) == 2:
             cell_type, a_signed, b_signed = BINARY_OPERATORS[cell.operator]
             operand_a, operand_b = cell.inputs
+            if cell.operator in ("+", "-", "*", "==", "!="):
+                # Arithmetic operators that will work with any signedness, but we have to choose
+                # a common one for both operands. Prefer signed in case of mixed signedness.
+                operand_a_u = self.shorten_operand(operand_a, signed=False)
+                operand_b_u = self.shorten_operand(operand_b, signed=False)
+                operand_a_s = self.shorten_operand(operand_a, signed=True)
+                operand_b_s = self.shorten_operand(operand_b, signed=True)
+                if operand_a.is_const:
+                    # In case of constant operand, choose whichever shortens the other one better.
+                    signed = len(operand_b_s) < len(operand_b_u)
+                elif operand_b.is_const:
+                    signed = len(operand_a_s) < len(operand_a_u)
+                elif (len(operand_a_s) < len(operand_a) and len(operand_a_u) == len(operand_a)):
+                    # Operand A can only be shortened by signed. Pick it.
+                    signed = True
+                elif (len(operand_b_s) < len(operand_b) and len(operand_b_u) == len(operand_b)):
+                    # Operand B can only be shortened by signed. Pick it.
+                    signed = True
+                else:
+                    # Otherwise, use unsigned shortening.
+                    signed = False
+                if signed:
+                    operand_a = operand_a_s
+                    operand_b = operand_b_s
+                else:
+                    operand_a = operand_a_u
+                    operand_b = operand_b_u
+                a_signed = b_signed = signed
+            if cell.operator[0] in "us":
+                # Signedness forced, just shorten.
+                operand_a = self.shorten_operand(operand_a, signed=a_signed)
+                operand_b = self.shorten_operand(operand_b, signed=b_signed)
+            if cell.operator == "<<":
+                # We can pick the signedness for left operand, but right is fixed.
+                operand_a_u = self.shorten_operand(operand_a, signed=False)
+                operand_a_s = self.shorten_operand(operand_a, signed=True)
+                if len(operand_a_s) < len(operand_a_u):
+                    a_signed = True
+                    operand_a = operand_a_s
+                else:
+                    a_signed = False
+                    operand_a = operand_a_u
+                operand_b = self.shorten_operand(operand_b, signed=b_signed)
             if cell.operator in ("u//", "s//", "u%", "s%"):
                 result = self.builder.wire(cell.width)
                 self.builder.cell(cell_type, ports={

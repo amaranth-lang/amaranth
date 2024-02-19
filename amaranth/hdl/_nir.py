@@ -161,6 +161,10 @@ class Value(tuple):
         else:
             return f"(cat {' '.join(chunks)})"
 
+    @property
+    def is_const(self):
+        return all(net.is_const for net in self)
+
     __str__ = __repr__
 
 
