@@ -123,16 +123,16 @@ class RHSTestCase(RTLILTestCase):
             wire width 1 $8
             cell $neg $9
                 parameter \A_SIGNED 0
-                parameter \A_WIDTH 9
+                parameter \A_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { 1'0 \i8u [7:0] }
+                connect \A \i8u [7:0]
                 connect \Y $1
             end
             cell $neg $10
-                parameter \A_SIGNED 0
-                parameter \A_WIDTH 9
+                parameter \A_SIGNED 1
+                parameter \A_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { \i8s [7] \i8s [7:0] }
+                connect \A \i8s [7:0]
                 connect \Y $2
             end
             cell $not $11
@@ -229,61 +229,61 @@ class RHSTestCase(RTLILTestCase):
             cell $add $5
                 parameter \A_SIGNED 0
                 parameter \B_SIGNED 0
-                parameter \A_WIDTH 9
-                parameter \B_WIDTH 9
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { 1'0 \i8ua [7:0] }
-                connect \B { 1'0 \i8ub [7:0] }
+                connect \A \i8ua [7:0]
+                connect \B \i8ub [7:0]
                 connect \Y $1
             end
             cell $add $6
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 10
-                parameter \B_WIDTH 10
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 9
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 10
-                connect \A { 2'00 \i8ua [7:0] }
-                connect \B { \i8sb [7] \i8sb [7] \i8sb [7:0] }
+                connect \A { 1'0 \i8ua [7:0] }
+                connect \B \i8sb [7:0]
                 connect \Y \o2
             end
             cell $add $7
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 9
-                parameter \B_WIDTH 9
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { \i8sa [7] \i8sa [7:0] }
-                connect \B { \i8sb [7] \i8sb [7:0] }
+                connect \A \i8sa [7:0]
+                connect \B \i8sb [7:0]
                 connect \Y $2
             end
             cell $sub $8
                 parameter \A_SIGNED 0
                 parameter \B_SIGNED 0
-                parameter \A_WIDTH 9
-                parameter \B_WIDTH 9
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { 1'0 \i8ua [7:0] }
-                connect \B { 1'0 \i8ub [7:0] }
+                connect \A \i8ua [7:0]
+                connect \B \i8ub [7:0]
                 connect \Y $3
             end
             cell $sub $9
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 10
-                parameter \B_WIDTH 10
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 9
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 10
-                connect \A { 2'00 \i8ua [7:0] }
-                connect \B { \i8sb [7] \i8sb [7] \i8sb [7:0] }
+                connect \A { 1'0 \i8ua [7:0] }
+                connect \B \i8sb [7:0]
                 connect \Y \o5
             end
             cell $sub $10
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 9
-                parameter \B_WIDTH 9
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 8
                 parameter \Y_WIDTH 9
-                connect \A { \i8sa [7] \i8sa [7:0] }
-                connect \B { \i8sb [7] \i8sb [7:0] }
+                connect \A \i8sa [7:0]
+                connect \B \i8sb [7:0]
                 connect \Y $4
             end
             connect \o1 { 1'0 $1 [8:0] }
@@ -292,6 +292,82 @@ class RHSTestCase(RTLILTestCase):
             connect \o6 { $4 [8] $4 [8:0] }
         end
         """)
+
+    def test_operator_add_imm(self):
+        i8u = Signal(8)
+        i8s = Signal(signed(8))
+        o1 = Signal(10)
+        o2 = Signal(10)
+        o3 = Signal(10)
+        o4 = Signal(10)
+        m = Module()
+        m.d.comb += [
+            o1.eq(i8u + 3),
+            o2.eq(i8s + 3),
+            o3.eq(3 + i8u),
+            o4.eq(3 + i8s),
+        ]
+        self.assertRTLIL(m, [i8u, i8s, o1, o2, o3, o4], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 8 input 0 \i8u
+            wire width 8 input 1 signed \i8s
+            wire width 10 output 2 \o1
+            wire width 10 output 3 \o2
+            wire width 10 output 4 \o3
+            wire width 10 output 5 \o4
+            wire width 9 $1
+            wire width 9 $2
+            wire width 9 $3
+            wire width 9 $4
+            cell $add $5
+                parameter \A_SIGNED 0
+                parameter \B_SIGNED 0
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 2
+                parameter \Y_WIDTH 9
+                connect \A \i8u [7:0]
+                connect \B 2'11
+                connect \Y $1
+            end
+            cell $add $6
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 8
+                parameter \B_WIDTH 3
+                parameter \Y_WIDTH 9
+                connect \A \i8s [7:0]
+                connect \B 3'011
+                connect \Y $2
+            end
+            cell $add $7
+                parameter \A_SIGNED 0
+                parameter \B_SIGNED 0
+                parameter \A_WIDTH 2
+                parameter \B_WIDTH 8
+                parameter \Y_WIDTH 9
+                connect \A 2'11
+                connect \B \i8u [7:0]
+                connect \Y $3
+            end
+            cell $add $8
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 3
+                parameter \B_WIDTH 8
+                parameter \Y_WIDTH 9
+                connect \A 3'011
+                connect \B \i8s [7:0]
+                connect \Y $4
+            end
+            connect \o1 { 1'0 $1 [8:0] }
+            connect \o2 { $2 [8] $2 [8:0] }
+            connect \o3 { 1'0 $3 [8:0] }
+            connect \o4 { $4 [8] $4 [8:0] }
+        end
+        """)
+
 
     def test_operator_mul(self):
         i4ua = Signal(4)
@@ -324,31 +400,31 @@ class RHSTestCase(RTLILTestCase):
             cell $mul $4
                 parameter \A_SIGNED 0
                 parameter \B_SIGNED 0
-                parameter \A_WIDTH 8
-                parameter \B_WIDTH 8
+                parameter \A_WIDTH 4
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 8
-                connect \A { 4'0000 \i4ua [3:0] }
-                connect \B { 4'0000 \i4ub [3:0] }
+                connect \A \i4ua [3:0]
+                connect \B \i4ub [3:0]
                 connect \Y $1
             end
             cell $mul $5
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 8
-                parameter \B_WIDTH 8
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 5
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 8
-                connect \A { 4'0000 \i4ua [3:0] }
-                connect \B { \i4sb [3] \i4sb [3] \i4sb [3] \i4sb [3] \i4sb [3:0] }
+                connect \A { 1'0 \i4ua [3:0] }
+                connect \B \i4sb [3:0]
                 connect \Y $2
             end
             cell $mul $6
-                parameter \A_SIGNED 0
-                parameter \B_SIGNED 0
-                parameter \A_WIDTH 8
-                parameter \B_WIDTH 8
+                parameter \A_SIGNED 1
+                parameter \B_SIGNED 1
+                parameter \A_WIDTH 4
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 8
-                connect \A { \i4sa [3] \i4sa [3] \i4sa [3] \i4sa [3] \i4sa [3:0] }
-                connect \B { \i4sb [3] \i4sb [3] \i4sb [3] \i4sb [3] \i4sb [3:0] }
+                connect \A \i4sa [3:0]
+                connect \B \i4sb [3:0]
                 connect \Y $3
             end
             connect \o1 { 1'0 $1 [7:0] }
@@ -438,18 +514,18 @@ class RHSTestCase(RTLILTestCase):
                 parameter \A_SIGNED 1
                 parameter \B_SIGNED 1
                 parameter \A_WIDTH 5
-                parameter \B_WIDTH 5
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 5
                 connect \A { 1'0 \i4ua [3:0] }
-                connect \B { \i4sb [3] \i4sb [3:0] }
+                connect \B \i4sb [3:0]
                 connect \Y $14
             end
             wire width 1 $16
             cell $reduce_bool $17
                 parameter \A_SIGNED 0
-                parameter \A_WIDTH 5
+                parameter \A_WIDTH 4
                 parameter \Y_WIDTH 1
-                connect \A { \i4sb [3] \i4sb [3:0] }
+                connect \A \i4sb [3:0]
                 connect \Y $16
             end
             cell $mux $18
@@ -464,10 +540,10 @@ class RHSTestCase(RTLILTestCase):
             cell $divfloor $20
                 parameter \A_SIGNED 1
                 parameter \B_SIGNED 1
-                parameter \A_WIDTH 5
+                parameter \A_WIDTH 4
                 parameter \B_WIDTH 5
                 parameter \Y_WIDTH 5
-                connect \A { \i4sa [3] \i4sa [3:0] }
+                connect \A \i4sa [3:0]
                 connect \B { 1'0 \i4ub [3:0] }
                 connect \Y $19
             end
@@ -491,19 +567,19 @@ class RHSTestCase(RTLILTestCase):
             cell $divfloor $25
                 parameter \A_SIGNED 1
                 parameter \B_SIGNED 1
-                parameter \A_WIDTH 5
-                parameter \B_WIDTH 5
+                parameter \A_WIDTH 4
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 5
-                connect \A { \i4sa [3] \i4sa [3:0] }
-                connect \B { \i4sb [3] \i4sb [3:0] }
+                connect \A \i4sa [3:0]
+                connect \B \i4sb [3:0]
                 connect \Y $24
             end
             wire width 1 $26
             cell $reduce_bool $27
                 parameter \A_SIGNED 0
-                parameter \A_WIDTH 5
+                parameter \A_WIDTH 4
                 parameter \Y_WIDTH 1
-                connect \A { \i4sb [3] \i4sb [3:0] }
+                connect \A \i4sb [3:0]
                 connect \Y $26
             end
             cell $mux $28
@@ -546,18 +622,18 @@ class RHSTestCase(RTLILTestCase):
                 parameter \A_SIGNED 1
                 parameter \B_SIGNED 1
                 parameter \A_WIDTH 5
-                parameter \B_WIDTH 5
+                parameter \B_WIDTH 4
                 parameter \Y_WIDTH 5
                 connect \A { 1'0 \i4ua [3:0] }
-                connect \B { \i4sb [3] \i4sb [3:0] }
+                connect \B \i4sb [3:0]
                 connect \Y $34
             end
             wire width 1 $36
             cell $reduce_bool $37
                 parameter \A_SIGNED 0
-                parameter \A_WIDTH 5
+                parameter \A_WIDTH 4
                 parameter \Y_WIDTH 1
-                connect \A { \i4sb [3] \i4sb [3:0] }
+                connect \A \i4sb [3:0]
                 connect \Y $36
             end
             cell $mux $38
@@ -572,10 +648,10 @@ class RHSTestCase(RTLILTestCase):
             cell $modfloor $40
                 parameter \A_SIGNED 1
                 parameter \B_SIGNED 1
-                parameter \A_WIDTH 5
+                parameter \A_WIDTH 4
                 parameter \B_WIDTH 5
                 parameter \Y_WIDTH 5
-                connect \A { \i4sa [3] \i4sa [3:0] }
+                connect \A \i4sa [3:0]
                 connect \B { 1'0 \i4ub [3:0] }
                 connect \Y $39
             end
@@ -666,20 +742,20 @@ class RHSTestCase(RTLILTestCase):
             cell $shl $5
                 parameter \A_SIGNED 0
                 parameter \B_SIGNED 0
-                parameter \A_WIDTH 15
+                parameter \A_WIDTH 8
                 parameter \B_WIDTH 3
                 parameter \Y_WIDTH 15
-                connect \A { 7'0000000 \i8ua [7:0] }
+                connect \A \i8ua [7:0]
                 connect \B \i3 [2:0]
                 connect \Y $1
             end
             cell $shl $6
-                parameter \A_SIGNED 0
+                parameter \A_SIGNED 1
                 parameter \B_SIGNED 0
-                parameter \A_WIDTH 15
+                parameter \A_WIDTH 8
                 parameter \B_WIDTH 3
                 parameter \Y_WIDTH 15
-                connect \A { \i8sa [7] \i8sa [7] \i8sa [7] \i8sa [7] \i8sa [7] \i8sa [7] \i8sa [7] \i8sa [7:0] }
+                connect \A \i8sa [7:0]
                 connect \B \i3 [2:0]
                 connect \Y $2
             end
@@ -822,13 +898,13 @@ class RHSTestCase(RTLILTestCase):
                     connect \Y $1
                 end
                 cell $eqop $5
-                    parameter \A_SIGNED 0
-                    parameter \B_SIGNED 0
+                    parameter \A_SIGNED 1
+                    parameter \B_SIGNED 1
                     parameter \A_WIDTH 9
-                    parameter \B_WIDTH 9
+                    parameter \B_WIDTH 8
                     parameter \Y_WIDTH 1
                     connect \A { 1'0 \i8ua [7:0] }
-                    connect \B { \i8sb [7] \i8sb [7:0] }
+                    connect \B \i8sb [7:0]
                     connect \Y $2
                 end
                 cell $eqop $6
@@ -895,10 +971,10 @@ class RHSTestCase(RTLILTestCase):
                     parameter \A_SIGNED 1
                     parameter \B_SIGNED 1
                     parameter \A_WIDTH 9
-                    parameter \B_WIDTH 9
+                    parameter \B_WIDTH 8
                     parameter \Y_WIDTH 1
                     connect \A { 1'0 \i8ua [7:0] }
-                    connect \B { \i8sb [7] \i8sb [7:0] }
+                    connect \B \i8sb [7:0]
                     connect \Y $2
                 end
                 cell $cmpop $6
