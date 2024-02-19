@@ -2,10 +2,11 @@ import os, sys
 sys.path.insert(0, os.path.abspath("."))
 
 import time
-import amaranth
+from importlib.metadata import version as package_version
+
 
 project = "Amaranth language & toolchain"
-version = amaranth.__version__.replace(".editable", "")
+version = package_version('amaranth').replace(".editable", "")
 release = version.split("+")[0]
 copyright = time.strftime("2020—%Y, Amaranth project contributors")
 
@@ -24,7 +25,10 @@ with open(".gitignore") as f:
 
 root_doc = "cover"
 
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "jsonschema": (f"https://python-jsonschema.readthedocs.io/en/v{package_version('jsonschema')}/", None),
+}
 
 todo_include_todos = True
 

@@ -8,8 +8,9 @@ from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
 from amaranth.lib.wiring import Signature, FlippedSignature, PureInterface, FlippedInterface
-from amaranth.lib.wiring import Component
+from amaranth.lib.wiring import Component, ComponentMetadata
 from amaranth.lib.wiring import ConnectionError, connect, flipped
+from amaranth.lib.meta import Annotation
 
 
 class FlowTestCase(unittest.TestCase):
@@ -335,6 +336,11 @@ class SignatureTestCase(unittest.TestCase):
     def test_create(self):
         sig = Signature({"a": In(1)})
         self.assertEqual(sig.members, SignatureMembers({"a": In(1)}))
+
+    def test_annotations_empty(self):
+        sig   = Signature({"a": In(1)})
+        iface = PureInterface(sig)
+        self.assertEqual(sig.annotations(iface), ())
 
     def test_eq(self):
         self.assertEqual(Signature({"a": In(1)}),
@@ -1097,3 +1103,106 @@ class ComponentTestCase(unittest.TestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Object 4 is not a signature nor a dict$"):
             C(2)
+
+    def test_metadata_origin(self):
+        class A(Component):
+            clk: In(1)
+
+        a = A()
+        self.assertIsInstance(a.metadata, ComponentMetadata)
+        self.assertIs(a.metadata.origin, a)
+
+
+class ComponentMetadataTestCase(unittest.TestCase):
+    def test_as_json(self):
+        class Annotation1(Annotation):
+            schema = {
+                "$id": "https://example.com/schema/foo/0.1/bar.json",
+                "type": "object",
+                "properties": {
+                    "hello": { "type": "boolean" },
+                },
+            }
+
+            def origin(self):
+                return object()
+
+            def as_json(self):
+                instance = { "hello": True }
+                self.validate(instance)
+                return instance
+
+        class Signature1(Signature):
+            def __init__(self):
+                super().__init__({
+                    "i": In(unsigned(8), reset=42),
+                    "o": Out(signed(4))
+                })
+
+            def annotations(self, obj):
+                return (*super().annotations(obj), Annotation1())
+
+        class Signature2(Signature):
+            def __init__(self):
+                super().__init__({
+                    "clk": In(1),
+                    "foo": Out(Signature1()),
+                })
+
+            def annotations(self, obj):
+                return (*super().annotations(obj), Annotation1())
+
+        class A(Component):
+            def __init__(self):
+                super().__init__(Signature2())
+
+        metadata = ComponentMetadata(A())
+        self.assertEqual(metadata.as_json(), {
+            "interface": {
+                "members": {
+                    "clk": {
+                        "type": "port",
+                        "name": "clk",
+                        "dir": "in",
+                        "width": 1,
+                        "signed": False,
+                        "reset": "0",
+                    },
+                    "foo": {
+                        "type": "interface",
+                        "members": {
+                            "i": {
+                                "type": "port",
+                                "name": "foo__i",
+                                "dir": "in",
+                                "width": 8,
+                                "signed": False,
+                                "reset": "42",
+                            },
+                            "o": {
+                                "type": "port",
+                                "name": "foo__o",
+                                "dir": "out",
+                                "width": 4,
+                                "signed": True,
+                                "reset": "0",
+                            },
+                        },
+                        "annotations": {
+                            "https://example.com/schema/foo/0.1/bar.json": {
+                                "hello": True,
+                            },
+                        },
+                    },
+                },
+                "annotations": {
+                    "https://example.com/schema/foo/0.1/bar.json": {
+                        "hello": True,
+                    },
+                },
+            },
+        })
+
+    def test_wrong_origin(self):
+        with self.assertRaisesRegex(TypeError, r"Origin must be a Component object, not 'foo'"):
+            ComponentMetadata("foo")

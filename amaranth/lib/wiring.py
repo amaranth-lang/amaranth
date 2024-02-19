@@ -7,6 +7,7 @@ from .. import tracer
 from ..hdl._ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
 from ..hdl._ir import Elaboratable
 from .._utils import final
+from .meta import Annotation
 
 
 __all__ = ["In", "Out", "Signature", "PureInterface", "connect", "flipped", "Component"]
@@ -691,7 +692,7 @@ class Signature(metaclass=SignatureMeta):
     An interface object is a Python object that has a :py:`signature` attribute containing
     a :class:`Signature` object, as well as an attribute for every member of its signature.
     Signatures and interface objects are tightly linked: an interface object can be created out
-    of a signature, and the signature is used when :func:`connect` ing two interface objects
+    of a signature, and the signature is used when :func:`connect`\\ ing two interface objects
     together. See the :ref:`introduction to interfaces <wiring-intro1>` for a more detailed
     explanation of why this is useful.
 
@@ -730,6 +731,18 @@ class Signature(metaclass=SignatureMeta):
         :class:`SignatureMembers`
         """
         return self.__members
+
+    def annotations(self, obj, /):
+        """Get annotations of an interface object.
+
+        Subclasses of :class:`Signature` may override this method to return annotations attached
+        to an interface object compatible with this signature.
+
+        Returns
+        -------
+        iterable of :class:`Annotation`
+        """
+        return ()
 
     def __eq__(self, other):
         """Compare this signature with another.
@@ -1683,3 +1696,174 @@ class Component(Elaboratable):
             can be used to customize a component's signature.
         """
         return self.__signature
+
+    @property
+    def metadata(self):
+        return ComponentMetadata(self)
+
+
+class ComponentMetadata(Annotation):
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://amaranth-lang.org/schema/amaranth/0.5/component.json",
+        "type": "object",
+        "properties": {
+            "interface": {
+                "type": "object",
+                "properties": {
+                    "members": {
+                        "type": "object",
+                        "patternProperties": {
+                            "^[A-Za-z][A-Za-z0-9_]*$": {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "enum": ["port"],
+                                            },
+                                            "name": {
+                                                "type": "string",
+                                                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                                            },
+                                            "dir": {
+                                                "enum": ["in", "out"],
+                                            },
+                                            "width": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                            },
+                                            "signed": {
+                                                "type": "boolean",
+                                            },
+                                            "reset": {
+                                                "type": "string",
+                                                "pattern": "^[+-]?[0-9]+$",
+                                            },
+                                        },
+                                        "additionalProperties": False,
+                                        "required": [
+                                            "type",
+                                            "name",
+                                            "dir",
+                                            "width",
+                                            "signed",
+                                            "reset",
+                                        ],
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "enum": ["interface"],
+                                            },
+                                            "members": {
+                                                "$ref": "#/properties/interface/properties/members",
+                                            },
+                                            "annotations": {
+                                                "type": "object",
+                                            },
+                                        },
+                                        "additionalProperties": False,
+                                        "required": [
+                                            "type",
+                                            "members",
+                                            "annotations",
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                        "additionalProperties": False,
+                    },
+                    "annotations": {
+                        "type": "object",
+                    },
+                },
+                "additionalProperties": False,
+                "required": [
+                    "members",
+                    "annotations",
+                ],
+            },
+        },
+        "additionalProperties": False,
+        "required": [
+            "interface",
+        ]
+    }
+
+    """Component metadata.
+
+    A description of the interface and annotations of a :class:`Component`, which can be exported
+    as a JSON object.
+
+    Parameters
+    ----------
+    origin : :class:`Component`
+        The component described by this metadata instance.
+
+    Raises
+    ------
+    :exc:`TypeError`
+        If ``origin`` is not a :class:`Component`.
+    """
+    def __init__(self, origin):
+        if not isinstance(origin, Component):
+            raise TypeError(f"Origin must be a Component object, not {origin!r}")
+        self._origin = origin
+
+    @property
+    def origin(self):
+        return self._origin
+
+    def as_json(self):
+        """Translate to JSON.
+
+        Returns
+        -------
+        :class:`Mapping`
+            A JSON representation of :attr:`ComponentMetadata.origin`, with a hierarchical
+            description of its interface ports and annotations.
+        """
+        def describe_member(member, *, path):
+            assert isinstance(member, Member)
+            if member.is_port:
+                cast_shape = Shape.cast(member.shape)
+                return {
+                    "type": "port",
+                    "name": "__".join(path),
+                    "dir": "in" if member.flow == In else "out",
+                    "width": cast_shape.width,
+                    "signed": cast_shape.signed,
+                    "reset": str(member._reset_as_const.value),
+                }
+            elif member.is_signature:
+                return {
+                    "type": "interface",
+                    "members": {
+                        name: describe_member(sub_member, path=(*path, name))
+                        for name, sub_member in member.signature.members.items()
+                    },
+                    "annotations": {
+                        annotation.schema["$id"]: annotation.as_json()
+                        for annotation in member.signature.annotations(member)
+                    },
+                }
+            else:
+                assert False # :nocov:
+
+        instance = {
+            "interface": {
+                "members": {
+                    name: describe_member(member, path=(name,))
+                    for name, member in self.origin.signature.members.items()
+                },
+                "annotations": {
+                    annotation.schema["$id"]: annotation.as_json()
+                    for annotation in self.origin.signature.annotations(self.origin)
+                },
+            },
+        }
+        self.validate(instance)
+        return instance
