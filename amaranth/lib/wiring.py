@@ -1371,6 +1371,7 @@ def connect(m, *args, **kwargs):
     * For a given path, if any of the interface objects has an input port member corresponding
       to a constant value, then the rest of the interface objects must have output port members
       corresponding to the same constant value.
+    * When connecting multiple interface objects, at least one connection must be made.
 
     For example, if :py:`obj1` is being connected to :py:`obj2` and :py:`obj3`, and :py:`obj1.a.b`
     is an output, then :py:`obj2.a.b` and :py:`obj2.a.b` must exist and be inputs. If :py:`obj2.c`
@@ -1420,10 +1421,15 @@ def connect(m, *args, **kwargs):
                                   reasons_as_string)
         signatures[handle] = obj.signature
 
-    # Collate signatures and build connections.
+    # Connecting zero or one signatures is OK.
+    if len(signatures) <= 1:
+        return
+
+    # Collate signatures, build connections, track whether we see any input or output.
     flattens = {handle: iter(sorted(signature.members.flatten()))
                 for handle, signature in signatures.items()}
     connections = []
+    any_in, any_out = False, False
     # Each iteration of the outer loop is intended to connect several (usually a pair) members
     # to each other, e.g. an out member `[0].a` to an in member `[1].a`. However, because we
     # do not just check signatures for equality (in order to improve diagnostics), it is possible
@@ -1437,6 +1443,7 @@ def connect(m, *args, **kwargs):
         # implied in the flow of each port member, so the signature members are only classified
         # here to ensure they are not connected to port members.
         is_first = True
+        first_path = None
         sig_kind, out_kind, in_kind = [], [], []
         for handle, flattened_members in flattens.items():
             path_for_handle, member = next(flattened_members, (None, None))
@@ -1499,6 +1506,8 @@ def connect(m, *args, **kwargs):
             # There are no port members at this point; we're done with this path.
             continue
         # There are only port members after this point.
+        any_in = any_in or bool(in_kind)
+        any_out = any_out or bool(out_kind)
         is_first = True
         for (path, member) in in_kind + out_kind:
             member_shape = member.shape
@@ -1574,6 +1583,14 @@ def connect(m, *args, **kwargs):
                                        out_path=(*out_path, index), in_path=(*in_path, index))
             assert out_member.dimensions == in_member.dimensions
             connect_dimensions(out_member.dimensions, out_path=out_path, in_path=in_path)
+
+    # If no connections were made, and there were inputs but no outputs in the
+    # signatures, issue a diagnostic as this is most likely in error.
+    if len(connections) == 0 and any_in and not any_out:
+        raise ConnectionError(f"Only input to input connections have been made between several "
+                              f"interfaces; should one of them have been flipped?")
+
+
     # Now that we know all of the connections are legal, add them to the module. This is done
     # instead of returning them because adding them to a non-comb domain would subtly violate
     # assumptions that `connect()` is intended to provide.
