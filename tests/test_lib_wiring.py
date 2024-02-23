@@ -980,6 +980,65 @@ class ConnectTestCase(unittest.TestCase):
             '(eq (sig q__a__0__0) (sig p__a__0__0))',
         ])
 
+    def test_connect_none(self):
+        # Connecting zero or more empty signatures is permitted as (a) it's not
+        # something you can write mistakenly out by hand, and (b) it permits
+        # generic code to expand to nothing without errors around edges.
+        m = Module()
+        connect(m)
+
+    def test_connect_empty(self):
+        m = Module()
+        connect(m, p=NS(signature=Signature({})))
+
+    def test_connect_empty_multi(self):
+        m = Module()
+        connect(m, p=NS(signature=Signature({})),
+                   q=NS(signature=Signature({})))
+
+    def test_connect_one(self):
+        # Connecting just one signature should be allowed for the same reasons
+        # as above. (It's possible to forget an argument, but that stands out.)
+        m = Module()
+        connect(m, p=NS(signature=Signature({"a": Out(1), "b": In(1)}),
+                        a=Signal(),
+                        b=Signal()))
+
+    def test_connect_one_in_only(self):
+        # As above, even if there's only inputs.
+        m = Module()
+        connect(m, p=NS(signature=Signature({"a": In(1)}),
+                        a=Signal()))
+
+    def test_connect_multi_in_only_fails(self):
+        # If we're only attempting to connect multiple inputs, we're not
+        # actually doing anything and it's most likely a mistake.
+        m = Module()
+        with self.assertRaisesRegex(ConnectionError,
+                r"^Only input to input connections have been made between several interfaces; "
+                r"should one of them have been flipped\?$"):
+            connect(m,
+                    p=NS(signature=Signature({"a": In(1), "b": In(8)}),
+                         a=Signal(),
+                         b=Signal(8)),
+                    q=NS(signature=Signature({"a": In(1), "b": In(8)}),
+                         a=Signal(),
+                         b=Signal(8)))
+
+    def test_connect_multi_some_in_pairs(self):
+        # Connecting matching inputs is an allowed no-op if there are also
+        # actual input-output connections to be made. See
+        # https://github.com/amaranth-lang/amaranth/pull/1153#issuecomment-1962810678
+        # for more discussion.
+        m = Module()
+        connect(m,
+                p=NS(signature=Signature({"a": In(1), "b": In(1)}),
+                     a=Signal(),
+                     b=Signal()),
+                q=NS(signature=Signature({"a": Out(1), "b": In(1)}),
+                     a=Signal(),
+                     b=Signal()))
+
 
 class ComponentTestCase(unittest.TestCase):
     def test_basic(self):
