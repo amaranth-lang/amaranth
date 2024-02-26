@@ -8,10 +8,6 @@ Language guide
 
 .. py:currentmodule:: amaranth.hdl
 
-.. warning::
-
-   This guide is a work in progress and is seriously incomplete!
-
 This guide introduces the Amaranth language in depth. It assumes familiarity with synchronous digital logic and the Python programming language, but does not require prior experience with any hardware description language. See the :doc:`tutorial <tutorial>` for a step-by-step introduction to the language, and the :doc:`reference <reference>` for a detailed description of the Python classes that underlie the language's syntax.
 
 .. TODO: link to a good synchronous logic tutorial and a Python tutorial?
@@ -1606,7 +1602,7 @@ The renaming of the ``sync`` clock domain in it causes the behavior of the final
 Memories
 ========
 
-.. todo:: Write this section.
+Amaranth provides support for memories in the standard library module :mod:`amaranth.lib.memory`.
 
 
 .. _lang-instance:
