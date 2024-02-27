@@ -64,7 +64,7 @@ class ResourceManagerTestCase(FHDLTestCase):
         user_led = self.cm.request("user_led", 0)
 
         self.assertIsInstance(flipped(user_led), Pin)
-        self.assertEqual(user_led.name, "user_led_0")
+        self.assertEqual(user_led.o.name, "user_led_0__o")
         self.assertEqual(user_led.width, 1)
         self.assertEqual(user_led.dir, "o")
 
@@ -77,12 +77,14 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_with_dir(self):
         i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
-        self.assertIsInstance(i2c, Record)
-        self.assertIsInstance(i2c.sda, Pin)
+        self.assertIsInstance(i2c, PureInterface)
+        self.assertTrue(i2c.signature.is_compliant(i2c))
+        self.assertIsInstance(flipped(i2c.sda), Pin)
         self.assertEqual(i2c.sda.dir, "o")
 
     def test_request_tristate(self):
         i2c = self.cm.request("i2c", 0)
+        self.assertTrue(i2c.signature.is_compliant(i2c))
         self.assertEqual(i2c.sda.dir, "io")
 
         ports = list(self.cm.iter_ports())
@@ -92,11 +94,11 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(ports[1].width, 1)
 
         scl_info, sda_info = self.cm.iter_single_ended_pins()
-        self.assertIs(flipped(scl_info[0]), i2c.scl)
+        self.assertIs(scl_info[0], i2c.scl)
         self.assertIs(scl_info[1].io, scl)
         self.assertEqual(scl_info[2], {})
         self.assertEqual(scl_info[3], False)
-        self.assertIs(flipped(sda_info[0]), i2c.sda)
+        self.assertIs(sda_info[0], i2c.sda)
         self.assertIs(sda_info[1].io, sda)
 
         self.assertEqual(list(self.cm.iter_port_constraints()), [
@@ -315,12 +317,3 @@ class ResourceManagerTestCase(FHDLTestCase):
                 (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
             self.cm.add_clock_constraint(clk100.i, 1e6)
-
-    def test_eq_deprecation(self):
-        user_led = self.cm.request("user_led", 0)
-        m = Module()
-        with self.assertWarns(DeprecationWarning):
-            m.d.sync += user_led.eq(1)
-        p = Pin(4, "o")
-        with self.assertWarns(DeprecationWarning):
-            m.d.sync += p.eq(1)

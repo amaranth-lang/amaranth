@@ -1,207 +1,201 @@
 import warnings
 
 from amaranth.hdl import *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from amaranth.hdl.rec import *
 from amaranth.sim import *
 from amaranth.lib.io import *
+from amaranth.lib.wiring import *
 
 from .utils import *
 
 
-class PinLayoutTestCase(FHDLTestCase):
-    def assertLayoutEqual(self, layout, expected):
-        casted_layout = {}
-        for name, (shape, dir) in layout.items():
-            casted_layout[name] = (Shape.cast(shape), dir)
-
-        self.assertEqual(casted_layout, expected)
+class PinSignatureTestCase(FHDLTestCase):
+    def assertSignatureEqual(self, signature, expected):
+        self.assertEqual(signature.members, Signature(expected).members)
 
 
-class PinLayoutCombTestCase(PinLayoutTestCase):
-    def test_pin_layout_i(self):
-        layout_1 = pin_layout(1, dir="i")
-        self.assertLayoutEqual(layout_1.fields, {
-            "i": (unsigned(1), DIR_NONE),
+class PinSignatureCombTestCase(PinSignatureTestCase):
+    def test_signature_i(self):
+        sig_1 = Pin.Signature(1, dir="i")
+        self.assertSignatureEqual(sig_1, {
+            "i": In(1),
         })
 
-        layout_2 = pin_layout(2, dir="i")
-        self.assertLayoutEqual(layout_2.fields, {
-            "i": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="i")
+        self.assertSignatureEqual(sig_2, {
+            "i": In(2),
         })
 
-    def test_pin_layout_o(self):
-        layout_1 = pin_layout(1, dir="o")
-        self.assertLayoutEqual(layout_1.fields, {
-            "o": (unsigned(1), DIR_NONE),
+    def test_signature_o(self):
+        sig_1 = Pin.Signature(1, dir="o")
+        self.assertSignatureEqual(sig_1, {
+            "o": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="o")
-        self.assertLayoutEqual(layout_2.fields, {
-            "o": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="o")
+        self.assertSignatureEqual(sig_2, {
+            "o": Out(2),
         })
 
-    def test_pin_layout_oe(self):
-        layout_1 = pin_layout(1, dir="oe")
-        self.assertLayoutEqual(layout_1.fields, {
-            "o":  (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_oe(self):
+        sig_1 = Pin.Signature(1, dir="oe")
+        self.assertSignatureEqual(sig_1, {
+            "o":  Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="oe")
-        self.assertLayoutEqual(layout_2.fields, {
-            "o":  (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="oe")
+        self.assertSignatureEqual(sig_2, {
+            "o":  Out(2),
+            "oe": Out(1),
         })
 
-    def test_pin_layout_io(self):
-        layout_1 = pin_layout(1, dir="io")
-        self.assertLayoutEqual(layout_1.fields, {
-            "i":  (unsigned(1), DIR_NONE),
-            "o":  (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_io(self):
+        sig_1 = Pin.Signature(1, dir="io")
+        self.assertSignatureEqual(sig_1, {
+            "i":  In(1),
+            "o":  Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="io")
-        self.assertLayoutEqual(layout_2.fields, {
-            "i":  (unsigned(2), DIR_NONE),
-            "o":  (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="io")
+        self.assertSignatureEqual(sig_2, {
+            "i":  In(2),
+            "o":  Out(2),
+            "oe": Out(1),
         })
 
 
-class PinLayoutSDRTestCase(PinLayoutTestCase):
-    def test_pin_layout_i(self):
-        layout_1 = pin_layout(1, dir="i", xdr=1)
-        self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i": (unsigned(1), DIR_NONE),
+class PinSignatureSDRTestCase(PinSignatureTestCase):
+    def test_signature_i(self):
+        sig_1 = Pin.Signature(1, dir="i", xdr=1)
+        self.assertSignatureEqual(sig_1, {
+            "i_clk": Out(1),
+            "i": In(1),
         })
 
-        layout_2 = pin_layout(2, dir="i", xdr=1)
-        self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="i", xdr=1)
+        self.assertSignatureEqual(sig_2, {
+            "i_clk": Out(1),
+            "i": In(2),
         })
 
-    def test_pin_layout_o(self):
-        layout_1 = pin_layout(1, dir="o", xdr=1)
-        self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o": (unsigned(1), DIR_NONE),
+    def test_signature_o(self):
+        sig_1 = Pin.Signature(1, dir="o", xdr=1)
+        self.assertSignatureEqual(sig_1, {
+            "o_clk": Out(1),
+            "o": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="o", xdr=1)
-        self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="o", xdr=1)
+        self.assertSignatureEqual(sig_2, {
+            "o_clk": Out(1),
+            "o": Out(2),
         })
 
-    def test_pin_layout_oe(self):
-        layout_1 = pin_layout(1, dir="oe", xdr=1)
-        self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o":  (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_oe(self):
+        sig_1 = Pin.Signature(1, dir="oe", xdr=1)
+        self.assertSignatureEqual(sig_1, {
+            "o_clk": Out(1),
+            "o":  Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="oe", xdr=1)
-        self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o":  (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="oe", xdr=1)
+        self.assertSignatureEqual(sig_2, {
+            "o_clk": Out(1),
+            "o":  Out(2),
+            "oe": Out(1),
         })
 
-    def test_pin_layout_io(self):
-        layout_1 = pin_layout(1, dir="io", xdr=1)
-        self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i":  (unsigned(1), DIR_NONE),
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o":  (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_io(self):
+        sig_1 = Pin.Signature(1, dir="io", xdr=1)
+        self.assertSignatureEqual(sig_1, {
+            "i_clk": Out(1),
+            "i":  In(1),
+            "o_clk": Out(1),
+            "o":  Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="io", xdr=1)
-        self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i":  (unsigned(2), DIR_NONE),
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o":  (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="io", xdr=1)
+        self.assertSignatureEqual(sig_2, {
+            "i_clk": Out(1),
+            "i":  In(2),
+            "o_clk": Out(1),
+            "o":  Out(2),
+            "oe": Out(1),
         })
 
 
-class PinLayoutDDRTestCase(PinLayoutTestCase):
-    def test_pin_layout_i(self):
-        layout_1 = pin_layout(1, dir="i", xdr=2)
-        self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i0": (unsigned(1), DIR_NONE),
-            "i1": (unsigned(1), DIR_NONE),
+class PinSignatureDDRTestCase(PinSignatureTestCase):
+    def test_signature_i(self):
+        sig_1 = Pin.Signature(1, dir="i", xdr=2)
+        self.assertSignatureEqual(sig_1, {
+            "i_clk": Out(1),
+            "i0": In(1),
+            "i1": In(1),
         })
 
-        layout_2 = pin_layout(2, dir="i", xdr=2)
-        self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i0": (unsigned(2), DIR_NONE),
-            "i1": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="i", xdr=2)
+        self.assertSignatureEqual(sig_2, {
+            "i_clk": Out(1),
+            "i0": In(2),
+            "i1": In(2),
         })
 
-    def test_pin_layout_o(self):
-        layout_1 = pin_layout(1, dir="o", xdr=2)
-        self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(1), DIR_NONE),
-            "o1": (unsigned(1), DIR_NONE),
+    def test_signature_o(self):
+        sig_1 = Pin.Signature(1, dir="o", xdr=2)
+        self.assertSignatureEqual(sig_1, {
+            "o_clk": Out(1),
+            "o0": Out(1),
+            "o1": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="o", xdr=2)
-        self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(2), DIR_NONE),
-            "o1": (unsigned(2), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="o", xdr=2)
+        self.assertSignatureEqual(sig_2, {
+            "o_clk": Out(1),
+            "o0": Out(2),
+            "o1": Out(2),
         })
 
-    def test_pin_layout_oe(self):
-        layout_1 = pin_layout(1, dir="oe", xdr=2)
-        self.assertLayoutEqual(layout_1.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(1), DIR_NONE),
-            "o1": (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_oe(self):
+        sig_1 = Pin.Signature(1, dir="oe", xdr=2)
+        self.assertSignatureEqual(sig_1, {
+            "o_clk": Out(1),
+            "o0": Out(1),
+            "o1": Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="oe", xdr=2)
-        self.assertLayoutEqual(layout_2.fields, {
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(2), DIR_NONE),
-            "o1": (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="oe", xdr=2)
+        self.assertSignatureEqual(sig_2, {
+            "o_clk": Out(1),
+            "o0": Out(2),
+            "o1": Out(2),
+            "oe": Out(1),
         })
 
-    def test_pin_layout_io(self):
-        layout_1 = pin_layout(1, dir="io", xdr=2)
-        self.assertLayoutEqual(layout_1.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i0": (unsigned(1), DIR_NONE),
-            "i1": (unsigned(1), DIR_NONE),
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(1), DIR_NONE),
-            "o1": (unsigned(1), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+    def test_signature_io(self):
+        sig_1 = Pin.Signature(1, dir="io", xdr=2)
+        self.assertSignatureEqual(sig_1, {
+            "i_clk": Out(1),
+            "i0": In(1),
+            "i1": In(1),
+            "o_clk": Out(1),
+            "o0": Out(1),
+            "o1": Out(1),
+            "oe": Out(1),
         })
 
-        layout_2 = pin_layout(2, dir="io", xdr=2)
-        self.assertLayoutEqual(layout_2.fields, {
-            "i_clk": (unsigned(1), DIR_NONE),
-            "i0": (unsigned(2), DIR_NONE),
-            "i1": (unsigned(2), DIR_NONE),
-            "o_clk": (unsigned(1), DIR_NONE),
-            "o0": (unsigned(2), DIR_NONE),
-            "o1": (unsigned(2), DIR_NONE),
-            "oe": (unsigned(1), DIR_NONE),
+        sig_2 = Pin.Signature(2, dir="io", xdr=2)
+        self.assertSignatureEqual(sig_2, {
+            "i_clk": Out(1),
+            "i0": In(2),
+            "i1": In(2),
+            "o_clk": Out(1),
+            "o0": Out(2),
+            "o1": Out(2),
+            "oe": Out(1),
         })
 
 
@@ -211,3 +205,7 @@ class PinTestCase(FHDLTestCase):
         self.assertEqual(pin.width, 2)
         self.assertEqual(pin.dir,   "io")
         self.assertEqual(pin.xdr,   2)
+        self.assertEqual(pin.signature.width, 2)
+        self.assertEqual(pin.signature.dir,   "io")
+        self.assertEqual(pin.signature.xdr,   2)
+
