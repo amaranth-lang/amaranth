@@ -255,9 +255,7 @@ Any Python value that implements the :class:`ShapeCastable` interface can extend
 Value casting
 =============
 
-Like shapes, values may be *cast* from other objects, which are called *value-like*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly. Values are value-like objects as well.
-
-.. TODO: link to ValueCastable
+Like shapes, values may be *cast* from other objects, which are called *value-like*. Casting to values allows objects that are not provided by Amaranth, such as integers or enumeration members, to be used in Amaranth expressions directly. Custom value-like objects can be defined by implementing the :class:`~amaranth.hdl.ValueCastable` interface. Values are value-like objects as well.
 
 Casting to a value can be done explicitly with :meth:`Value.cast`, but is usually implicit, since value-like objects are accepted anywhere values are.
 
@@ -422,9 +420,7 @@ Signals :ref:`assigned <lang-assigns>` in a :ref:`combinatorial <lang-comb>` dom
 Reset-less signals
 ------------------
 
-Signals assigned in a :ref:`synchronous <lang-sync>` domain can be *resettable* or *reset-less*, specified with the ``reset_less=`` parameter. If the parameter is not specified, signals are resettable by default. Resettable signals assume their :ref:`initial value <lang-initial>` on explicit reset, which can be asserted via the clock domain or by using ``ResetInserter``. Reset-less signals are not affected by explicit reset.
-
-.. TODO: link to clock domain and ResetInserter docs
+Signals assigned in a :ref:`synchronous <lang-sync>` domain can be *resettable* or *reset-less*, specified with the ``reset_less=`` parameter. If the parameter is not specified, signals are resettable by default. Resettable signals assume their :ref:`initial value <lang-initial>` on explicit reset, which can be asserted via the :ref:`clock domain <lang-clockdomains>` or by :ref:`modifying control flow <lang-controlinserter>` with :class:`ResetInserter`. Reset-less signals are not affected by explicit reset.
 
 Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected by the ``reset_less`` parameter.
 
@@ -774,8 +770,6 @@ The ``.as_signed()`` and ``.as_unsigned()`` conversion operators reinterpret the
 
 For example, ``(pc + imm[:7].as_signed()).as_unsigned()`` sign-extends the 7 least significant bits of ``imm`` to the width of ``pc``, performs the addition, and produces an unsigned result.
 
-.. TODO: more general shape conversion? https://github.com/amaranth-lang/amaranth/issues/381
-
 
 .. _lang-muxop:
 
@@ -993,8 +987,6 @@ Control flow
 
 Although it is possible to write any decision tree as a combination of :ref:`assignments <lang-assigns>` and :ref:`choice expressions <lang-muxop>`, Amaranth provides *control flow syntax* tailored for this task: :ref:`If/Elif/Else <lang-if>`, :ref:`Switch/Case <lang-switch>`, and :ref:`FSM/State <lang-fsm>`. The control flow syntax uses :py:`with` blocks (it is implemented using :ref:`context managers <python:context-managers>`), for example:
 
-.. TODO: link to relevant subsections
-
 .. testcode::
 
    timer = Signal(8)
@@ -1132,8 +1124,6 @@ Case comparison, where a single value is examined against several different *pat
             m.d.comb += is_odd.eq(1)
         with m.Default():
             m.d.comb += too_big.eq(1)
-
-.. TODO: diagnostic for `Case` blocks after `Default`?
 
 Within a single :py:`Switch` block, the statements within at most one block will be active at any time. This will be the first :py:`Case` block in the order of definition whose pattern :ref:`matches <lang-matchop>` the value, or the first :py:`Default` block, whichever is earlier.
 
@@ -1275,9 +1265,7 @@ A combinatorial signal that is computed directly or indirectly based on its own 
 Synchronous evaluation
 ======================
 
-Signals in synchronous :ref:`control domains <lang-domains>` change whenever the *active edge* (a 0-to-1 or 1-to-0 transition, configured when :ref:`creating the domain <lang-clockdomains>`) occurs on the clock of the synchronous domain. In addition, the signals in clock domains with an asynchronous reset change when such a reset is asserted. The final value of a synchronous signal is equal to its :ref:`initial value <lang-initial>` if the reset (of any type) is asserted, or to its current value updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>` otherwise. Synchronous signals always hold state.
-
-.. TODO: link to clock domains
+Signals in synchronous :ref:`control domains <lang-domains>` change whenever the *active edge* (a 0-to-1 or 1-to-0 transition, configured when :ref:`creating the domain <lang-clockdomains>`) occurs on the clock of the synchronous domain. In addition, the signals in :ref:`clock domains <lang-clockdomains>` with an asynchronous reset change when such a reset is asserted. The final value of a synchronous signal is equal to its :ref:`initial value <lang-initial>` if the reset (of any type) is asserted, or to its current value updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>` otherwise. Synchronous signals always hold state.
 
 Consider the following code:
 
@@ -1337,7 +1325,9 @@ A clock domain also has a reset signal, which can be accessed through the :attr:
 
     m.domains.startup = ClockDomain(reset_less=True, local=True)
 
-If a clock domain is defined in a module, all of its submodules can refer to that domain under the same name.
+Signals in a reset-less clock domain can still be explicitly reset using the :class:`ResetInserter` :ref:`control flow modifier <lang-controlinserter>`.
+
+If a clock domain is defined in a module, all of its :ref:`submodules <lang-submodules>` can refer to that domain under the same name.
 
 .. warning::
 
@@ -1352,9 +1342,6 @@ If a clock domain is defined in a module, all of its submodules can refer to tha
     Unless you need to introduce a new asynchronous control set in the design, consider :ref:`using ResetInserter or EnableInserter <lang-controlinserter>` instead of defining a new clock domain. Designs with fewer clock domains are easier to reason about.
 
     A new asynchronous control set is necessary when some signals must change on a different active edge of a clock, at a different frequency, with a different phase, or when a different asynchronous reset signal is asserted.
-
-.. TODO: mention that ResetInserter will add a reset even to a reset-less domain
-.. TODO: link to hierarchy section
 
 
 .. _lang-latesignals:
