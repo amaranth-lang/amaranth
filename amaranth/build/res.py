@@ -1,10 +1,6 @@
 from collections import OrderedDict
-import warnings
 
 from ..hdl._ast import *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from ..hdl.rec import *
 from ..lib.io import *
 from ..lib import wiring
 
@@ -106,7 +102,7 @@ class ResourceManager:
                                      .format(subsignal.ios[0], xdr))
             return dir, xdr
 
-        def resolve(resource, dir, xdr, name, attrs):
+        def resolve(resource, dir, xdr, path, attrs):
             for attr_key, attr_value in attrs.items():
                 if hasattr(attr_value, "__call__"):
                     attr_value = attr_value(self)
@@ -117,18 +113,21 @@ class ResourceManager:
                     attrs[attr_key] = attr_value
 
             if isinstance(resource.ios[0], Subsignal):
-                fields = OrderedDict()
+                members = OrderedDict()
+                sig_members = OrderedDict()
                 for sub in resource.ios:
-                    fields[sub.name] = resolve(sub, dir[sub.name], xdr[sub.name],
-                                               name=f"{name}__{sub.name}",
+                    member = resolve(sub, dir[sub.name], xdr[sub.name],
+                                               path=path + (sub.name,),
                                                attrs={**attrs, **sub.attrs})
-                rec = Record([
-                    (f_name, f.layout) for (f_name, f) in fields.items()
-                ], fields=fields, name=name)
-                rec.signature = wiring.Signature({
-                    f_name: wiring.Out(f.signature) for (f_name, f) in fields.items()
-                })
-                return rec
+                    members[sub.name] = member
+                    sig_members[sub.name] = wiring.Out(member.signature)
+                signature = wiring.Signature(sig_members)
+                # Provide members ourselves instead of having the constructor
+                # create ones for us.
+                intf = object.__new__(wiring.PureInterface)
+                intf.signature = signature
+                intf.__dict__.update(members)
+                return intf
 
             elif isinstance(resource.ios[0], (Pins, DiffPairs)):
                 phys = resource.ios[0]
@@ -137,34 +136,30 @@ class ResourceManager:
                 # ignore it as well.
                 if isinstance(phys, Pins):
                     phys_names = phys.names
-                    port = Record([("io", len(phys))], name=name)
-                    port.signature = wiring.Signature({"io": wiring.In(len(phys))})
+                    port = wiring.Signature({"io": wiring.In(len(phys))}).create(path=path)
                 if isinstance(phys, DiffPairs):
                     phys_names = []
-                    rec_members = []
                     sig_members = {}
                     if not self.should_skip_port_component(None, attrs, "p"):
                         phys_names += phys.p.names
-                        rec_members.append(("p", len(phys)))
                         sig_members["p"] = wiring.In(len(phys))
                     if not self.should_skip_port_component(None, attrs, "n"):
                         phys_names += phys.n.names
-                        rec_members.append(("n", len(phys)))
                         sig_members["n"] = wiring.In(len(phys))
-                    port = Record(rec_members, name=name)
-                    port.signature = wiring.Signature(sig_members)
+                    port = wiring.Signature(sig_members).create(path=path)
                 if dir == "-":
                     pin = None
                 else:
-                    pin = wiring.flipped(Pin(len(phys), dir, xdr=xdr, name=name))
+                    pin = wiring.flipped(Pin(len(phys), dir, xdr=xdr, path=path))
 
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
                         raise ResourceError("Resource component {} uses physical pin {}, but it "
                                             "is already used by resource component {} that was "
                                             "requested earlier"
-                                            .format(name, phys_name, self._phys_reqd[phys_name]))
-                    self._phys_reqd[phys_name] = name
+                                            .format(".".join(path), phys_name,
+                                                    ".".join(self._phys_reqd[phys_name])))
+                    self._phys_reqd[phys_name] = path
 
                 self._ports.append((resource, pin, port, attrs))
 
@@ -178,7 +173,7 @@ class ResourceManager:
 
         value = resolve(resource,
             *merge_options(resource, dir, xdr),
-            name=f"{resource.name}_{resource.number}",
+            path=(f"{resource.name}_{resource.number}",),
             attrs=resource.attrs)
         self._requested[resource.name, resource.number] = value
         return value

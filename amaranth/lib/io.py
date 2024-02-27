@@ -1,74 +1,18 @@
-import warnings
-
 from .. import *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from ..hdl.rec import *
-from ..lib.wiring import In, Out, Signature, flipped, FlippedInterface
+from ..lib import wiring
+from ..lib.wiring import In, Out
 
 
-__all__ = ["pin_layout", "Pin"]
+__all__ = ["Pin"]
 
 
-def _pin_signature(width, dir, xdr=0):
-    if not isinstance(width, int) or width < 0:
-        raise TypeError("Width must be a non-negative integer, not {!r}"
-                        .format(width))
-    if dir not in ("i", "o", "oe", "io"):
-        raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"oe\", not {!r}"""
-                        .format(dir))
-    if not isinstance(xdr, int) or xdr < 0:
-        raise TypeError("Gearing ratio must be a non-negative integer, not {!r}"
-                        .format(xdr))
-
-    members = {}
-    if dir in ("i", "io"):
-        if xdr > 0:
-            members["i_clk"] = In(1)
-        if xdr > 2:
-            members["i_fclk"] = In(1)
-        if xdr in (0, 1):
-            members["i"] = In(width)
-        else:
-            for n in range(xdr):
-                members[f"i{n}"] = In(width)
-    if dir in ("o", "oe", "io"):
-        if xdr > 0:
-            members["o_clk"] = Out(1)
-        if xdr > 2:
-            members["o_fclk"] = Out(1)
-        if xdr in (0, 1):
-            members["o"] = Out(width)
-        else:
-            for n in range(xdr):
-                members[f"o{n}"] = Out(width)
-    if dir in ("oe", "io"):
-        members["oe"] = Out(1)
-    return Signature(members)
-
-
-def pin_layout(width, dir, xdr=0):
-    """
-    Layout of the platform interface of a pin or several pins, which may be used inside
-    user-defined records.
-
-    See :class:`Pin` for details.
-    """
-    fields = []
-    for name, member in _pin_signature(width, dir, xdr).members.items():
-        fields.append((name, member.shape))
-    return Layout(fields)
-
-
-class Pin(Record):
+class Pin(wiring.PureInterface):
     """
     An interface to an I/O buffer or a group of them that provides uniform access to input, output,
     or tristate buffers that may include a 1:n gearbox. (A 1:2 gearbox is typically called "DDR".)
 
-    A :class:`Pin` is identical to a :class:`Record` that uses the corresponding :meth:`pin_layout`
-    except that it allows accessing the parameters like ``width`` as attributes. It is legal to use
-    a plain :class:`Record` anywhere a :class:`Pin` is used, provided that these attributes are
-    not necessary.
+    This is an interface object using :class:`Pin.Signature` as its signature.  The signature flows
+    are defined from the point of view of a component that drives the I/O buffer.
 
     Parameters
     ----------
@@ -87,8 +31,8 @@ class Pin(Record):
         are present instead, where ``N in range(0, N)``. For example, if ``xdr=2``, the I/O buffer
         is DDR; the signal ``i0`` reflects the value at the rising edge, and the signal ``i1``
         reflects the value at the falling edge.
-    name : str
-        Name of the underlying record.
+    path : tuple of str
+        As in :class:`PureInterface`, used to name the created signals.
 
     Attributes
     ----------
@@ -119,23 +63,76 @@ class Pin(Record):
         cannot change direction more than once per cycle, so at most one output enable signal
         is present.
     """
-    def __init__(self, width, dir, *, xdr=0, name=None, src_loc_at=0):
-        self.width = width
-        self.dir   = dir
-        self.xdr   = xdr
 
-        super().__init__(pin_layout(self.width, self.dir, self.xdr),
-                         name=name, src_loc_at=src_loc_at + 1)
+    class Signature(wiring.Signature):
+        """A signature for :class:`Pin`.  The parameters are as defined on the ``Pin`` class,
+        and are accessible as attributes.
+        """
+        def __init__(self, width, dir, *, xdr=0):
+            if not isinstance(width, int) or width < 0:
+                raise TypeError("Width must be a non-negative integer, not {!r}"
+                                .format(width))
+            if dir not in ("i", "o", "oe", "io"):
+                raise TypeError("Direction must be one of \"i\", \"o\", \"io\", or \"oe\", not {!r}"""
+                                .format(dir))
+            if not isinstance(xdr, int) or xdr < 0:
+                raise TypeError("Gearing ratio must be a non-negative integer, not {!r}"
+                                .format(xdr))
+
+            self.width = width
+            self.dir = dir
+            self.xdr = xdr
+
+            members = {}
+            if dir in ("i", "io"):
+                if xdr > 0:
+                    members["i_clk"] = Out(1)
+                if xdr > 2:
+                    members["i_fclk"] = Out(1)
+                if xdr in (0, 1):
+                    members["i"] = In(width)
+                else:
+                    for n in range(xdr):
+                        members[f"i{n}"] = In(width)
+            if dir in ("o", "oe", "io"):
+                if xdr > 0:
+                    members["o_clk"] = Out(1)
+                if xdr > 2:
+                    members["o_fclk"] = Out(1)
+                if xdr in (0, 1):
+                    members["o"] = Out(width)
+                else:
+                    for n in range(xdr):
+                        members[f"o{n}"] = Out(width)
+            if dir in ("oe", "io"):
+                members["oe"] = Out(1)
+            super().__init__(members)
+
+        def __eq__(self, other):
+            return (type(self) is type(other) and
+                    self.width == other.width and
+                    self.dir == other.dir and
+                    self.xdr == other.xdr)
+
+        def create(self, *, path=None, src_loc_at=0):
+            return Pin(self.width, self.dir, xdr=self.xdr, path=path, src_loc_at=1 + src_loc_at)
+
+    def __init__(self, width, dir, *, xdr=0, name=None, path=None, src_loc_at=0):
+        if name is not None:
+            if path is None:
+                raise ValueError("Cannot pass both name and path")
+            path = (name,)
+        signature = Pin.Signature(width, dir, xdr=xdr)
+        super().__init__(signature, path=path, src_loc_at=src_loc_at + 1)
 
     @property
-    def signature(self):
-        return _pin_signature(self.width, self.dir, self.xdr)
-
-    def eq(self, other):
-        first_field, _, _ = next(iter(Pin(1, dir="o").layout))
-        warnings.warn(f"`pin.eq(...)` is deprecated; use `pin.{first_field}.eq(...)` here",
-                      DeprecationWarning, stacklevel=2)
-        if isinstance(self, FlippedInterface):
-            return Record.eq(flipped(self), other)
-        else:
-            return Record.eq(self, other)
+    def width(self):
+        return self.signature.width
+    
+    @property
+    def dir(self):
+        return self.signature.dir
+    
+    @property
+    def xdr(self):
+        return self.signature.xdr
