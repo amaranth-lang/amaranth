@@ -923,12 +923,8 @@ class ModuleEmitter:
             ports[name] = self.instance_wires[cell_idx, name]
         for name, nets in cell.ports_io.items():
             ports[name] = self.sigspec(nets)
-        if cell.type.startswith("$"):
-            type = cell.type
-        else:
-            type = "\\" + cell.type
-        self.builder.cell(type, cell.name, ports=ports, params=cell.parameters,
-                         attrs=cell.attributes, src=_src(cell.src_loc))
+        self.builder.cell(f"\\{cell.type}", cell.name, ports=ports, params=cell.parameters,
+                          attrs=cell.attributes, src=_src(cell.src_loc))
 
     def emit_cells(self):
         for cell_idx in self.module.cells:
