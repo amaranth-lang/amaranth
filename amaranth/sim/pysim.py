@@ -40,10 +40,14 @@ class _VCDWriter:
         # the simulator is still usable if it's not installed for some reason.
         import vcd, vcd.gtkw
 
+        self.close_vcd = False
+        self.close_gtkw = False
         if isinstance(vcd_file, str):
             vcd_file = open(vcd_file, "w")
+            self.close_vcd = True
         if isinstance(gtkw_file, str):
             gtkw_file = open(gtkw_file, "w")
+            self.close_gtkw = True
 
         self.vcd_vars = SignalDict()
         self.vcd_file = vcd_file
@@ -150,9 +154,9 @@ class _VCDWriter:
                 for name in self.gtkw_names[signal]:
                     self.gtkw_save.trace(name)
 
-        if self.vcd_file is not None:
+        if self.close_vcd:
             self.vcd_file.close()
-        if self.gtkw_file is not None:
+        if self.close_gtkw:
             self.gtkw_file.close()
 
 
