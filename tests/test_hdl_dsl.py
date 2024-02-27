@@ -593,8 +593,9 @@ class DSLTestCase(FHDLTestCase):
                 m.d.sync += b.eq(~b)
                 with m.If(c):
                     m.next = "FIRST"
-        m._flush()
-        self.assertRepr(m._statements["comb"], """
+
+        frag = m.elaborate(platform=None)
+        self.assertRepr(frag.statements["comb"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -602,9 +603,11 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
+            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
         )
         """)
-        self.assertRepr(m._statements["sync"], """
+        self.assertRepr(frag.statements["sync"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -620,13 +623,13 @@ class DSLTestCase(FHDLTestCase):
             )
         )
         """)
-        self.assertEqual({repr(k): v for k, v in m._driving.items()}, {
+        self.assertEqual({repr(sig): k for k, v in frag.drivers.items() for sig in v}, {
             "(sig a)": "comb",
             "(sig fsm_state)": "sync",
             "(sig b)": "sync",
+            "(sig fsm_ongoing_FIRST)": "comb",
+            "(sig fsm_ongoing_SECOND)": "comb",
         })
-
-        frag = m.elaborate(platform=None)
         fsm  = frag.find_generated("fsm")
         self.assertIsInstance(fsm.state, Signal)
         self.assertEqual(fsm.encoding, OrderedDict({
@@ -647,8 +650,8 @@ class DSLTestCase(FHDLTestCase):
                 m.next = "SECOND"
             with m.State("SECOND"):
                 m.next = "FIRST"
-        m._flush()
-        self.assertRepr(m._statements["comb"], """
+        frag = m.elaborate(platform=None)
+        self.assertRepr(frag.statements["comb"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -656,9 +659,11 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
+            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
         )
         """)
-        self.assertRepr(m._statements["sync"], """
+        self.assertRepr(frag.statements["sync"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -683,8 +688,8 @@ class DSLTestCase(FHDLTestCase):
                     m.next = "SECOND"
                 with m.State("SECOND"):
                     m.next = "FIRST"
-        m._flush()
-        self.assertRepr(m._statements["comb"], """
+        frag = m.elaborate(platform=None)
+        self.assertRepr(frag.statements["comb"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -692,9 +697,11 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
+            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
         )
         """)
-        self.assertRepr(m._statements["sync"], """
+        self.assertRepr(frag.statements["sync"], """
         (
             (switch (sig fsm_state)
                 (case 0
@@ -731,13 +738,15 @@ class DSLTestCase(FHDLTestCase):
             m.d.comb += a.eq(fsm.ongoing("FIRST"))
             with m.State("SECOND"):
                 pass
-        m._flush()
+        frag = m.elaborate(platform=None)
         self.assertEqual(m._generated["fsm"].state.init, 1)
         self.maxDiff = 10000
-        self.assertRepr(m._statements["comb"], """
+        self.assertRepr(frag.statements["comb"], """
         (
-            (eq (sig b) (== (sig fsm_state) (const 1'd0)))
-            (eq (sig a) (== (sig fsm_state) (const 1'd1)))
+            (eq (sig b) (sig fsm_ongoing_SECOND))
+            (eq (sig a) (sig fsm_ongoing_FIRST))
+            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd1)))
         )
         """)
 

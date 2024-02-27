@@ -2304,6 +2304,11 @@ def Cover(test, *, name=None, src_loc_at=0):
     return Property("cover", test, name=name, src_loc_at=src_loc_at+1)
 
 
+class _LateBoundStatement(Statement):
+    def resolve(self):
+        raise NotImplementedError # :nocov:
+
+
 @final
 class Switch(Statement):
     def __init__(self, test, cases, *, src_loc=None, src_loc_at=0, case_src_locs={}):
