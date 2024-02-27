@@ -289,6 +289,7 @@ class ModuleEmitter:
         self.memories = {} # cell idx -> MemoryInfo
         self.value_names = {} # value -> signal or port name
         self.value_attrs = {} # value -> dict
+        self.value_src_loc = {} # value -> source location
         self.sigport_wires = {} # signal or port name -> (wire, value)
         self.driven_sigports = set() # set of signal or port name
         self.nets = {} # net -> (wire name, bit idx)
@@ -372,6 +373,7 @@ class ModuleEmitter:
             # the design is flattened) will do that anyway, so it doesn't matter.
             attrs = self.value_attrs.setdefault(value, {})
             attrs.update(signal.attrs)
+            self.value_src_loc[value] = signal.src_loc
 
             for repr in signal._value_repr:
                 if repr.path == () and isinstance(repr.format, _repr.FormatEnum):
@@ -399,7 +401,8 @@ class ModuleEmitter:
                 signed = named_signals[name].signed
             wire = self.builder.wire(width=len(value), signed=signed,
                                      port_id=port_id, port_kind=flow.value,
-                                     name=name, attrs=self.value_attrs.get(value, {}))
+                                     name=name, attrs=self.value_attrs.get(value, {}),
+                                     src=_src(self.value_src_loc.get(value)))
             self.sigport_wires[name] = (wire, value)
             if flow == _nir.ModuleNetFlow.Output:
                 continue
