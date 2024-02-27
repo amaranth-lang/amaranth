@@ -383,13 +383,13 @@ class ModuleEmitter:
             if name in self.module.ports:
                 port_value, _flow = self.module.ports[name]
                 assert value == port_value
-                self.name_map[signal] = (*self.module.name, f"\\{name}")
+                self.name_map[signal] = (*self.module.name, name)
             else:
                 wire = self.builder.wire(width=signal.width, signed=signal.signed,
                                          name=name, attrs=attrs,
                                          src=_src(signal.src_loc))
                 self.sigport_wires[name] = (wire, value)
-                self.name_map[signal] = (*self.module.name, wire)
+                self.name_map[signal] = (*self.module.name, wire[1:])
 
     def emit_port_wires(self):
         named_signals = {name: signal for signal, name in self.module.signal_names.items()}
