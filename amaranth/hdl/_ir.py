@@ -990,9 +990,11 @@ class NetlistEmitter:
             if signal in self.drivers:
                 driver = self.drivers[signal]
                 if driver.domain is not cd:
+                    domain_name = cd.name if cd is not None else "comb"
+                    other_domain_name = driver.domain.name if driver.domain is not None else "comb"
                     raise _ir.DriverConflict(
-                        f"Signal {signal} driven from domain {cd} at {stmt.src_loc} and domain "
-                        f"{driver.domain} at {driver.src_loc}")
+                        f"Signal {signal} driven from domain {domain_name} at {stmt.src_loc} and domain "
+                        f"{other_domain_name} at {driver.src_loc}")
                 if driver.module_idx != module_idx:
                     mod_name = ".".join(self.netlist.modules[module_idx].name or ("<toplevel>",))
                     other_mod_name = \
