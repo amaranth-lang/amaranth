@@ -57,6 +57,38 @@ jobs:
       run: |
         codecov
 
+  smoketest: # If we plug this into downstream projects, does magic smoke escape?
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - amaranth-lang/amaranth-boards
+          - amaranth-lang/amaranth-stdio
+          - amaranth-lang/amaranth-soc
+    name: 'smoke (${{ matrix.project }})'
+    steps:
+    - name: Check out source code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ matrix.project }}
+        fetch-depth: 0
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v4
+    - name: Install dependencies
+      run: |
+        pdm install --dev
+    - name: Cache YoWASP build products
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/YoWASP
+        key: YoWASP-${{ runner.os }}-${{ hashFiles('./.venv/**/*.wasm') }}
+        restore-keys: |
+          YoWASP-${{ runner.os }}-
+    - name: Run tests
+      run: |
+        pdm run test
+
   document:
     runs-on: ubuntu-latest
     steps:
