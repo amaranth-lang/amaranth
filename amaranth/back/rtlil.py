@@ -988,8 +988,8 @@ class EmptyModuleChecker:
         return module_idx in self.empty
 
 
-def convert_fragment(fragment, ports, name="top", *, emit_src=True, **kwargs):
-    assert isinstance(fragment, _ir.Fragment)
+def convert_fragment(fragment, ports=(), name="top", *, emit_src=True, **kwargs):
+    assert isinstance(fragment, (_ir.Fragment, _ir.Design))
     name_map = _ast.SignalDict()
     netlist = _ir.build_netlist(fragment, ports=ports, name=name, **kwargs)
     empty_checker = EmptyModuleChecker(netlist)
