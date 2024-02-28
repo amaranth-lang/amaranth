@@ -1059,3 +1059,699 @@ class IOBufferTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^`oe` must not be used if `o` is not used"):
             IOBufferInstance(pad, oe=oe)
+
+
+class AssignTestCase(FHDLTestCase):
+    def test_simple(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:10)
+                (output 's1' 0.2:10)
+            )
+            (cell 0 0 (top
+                (output 's1' 0.2:10)
+                (input 's2' 2:10)
+            ))
+        )
+        """)
+
+    def test_simple_trunc(self):
+        s1 = Signal(8)
+        s2 = Signal(10)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:12)
+                (output 's1' 0.2:10)
+            )
+            (cell 0 0 (top
+                (output 's1' 0.2:10)
+                (input 's2' 2:12)
+            ))
+        )
+        """)
+
+    def test_simple_zext(self):
+        s1 = Signal(8)
+        s2 = Signal(6)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:8)
+                (output 's1' (cat 0.2:8 2'd0))
+            )
+            (cell 0 0 (top
+                (output 's1' (cat 0.2:8 2'd0))
+                (input 's2' 2:8)
+            ))
+        )
+        """)
+
+    def test_simple_sext(self):
+        s1 = Signal(8)
+        s2 = Signal(signed(6))
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:8)
+                (output 's1' (cat 0.2:8 0.7 0.7))
+            )
+            (cell 0 0 (top
+                (output 's1' (cat 0.2:8 0.7 0.7))
+                (input 's2' 2:8)
+            ))
+        )
+        """)
+
+    def test_simple_slice(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1[2:6].eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (output 's1' 1.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 1.0:8)
+                (input 's2' 2:6)
+            ))
+            (cell 1 0 (assignment_list 8'd0 (1 2:6 0.2:6)))
+        )
+        """)
+
+    def test_simple_part(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.bit_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 10.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 10.0:8)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (matches 0.6:10 0101))
+            (cell 7 0 (matches 0.6:10 0110))
+            (cell 8 0 (matches 0.6:10 0111))
+            (cell 9 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)))
+            (cell 10 0 (assignment_list 8'd0
+                (9.0 0:4 0.2:6)
+                (9.1 1:5 0.2:6)
+                (9.2 2:6 0.2:6)
+                (9.3 3:7 0.2:6)
+                (9.4 4:8 0.2:6)
+                (9.5 5:8 0.2:5)
+                (9.6 6:8 0.2:4)
+                (9.7 7:8 0.2)
+            ))
+        )
+        """)
+
+    def test_simple_part_short(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(2)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.bit_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:8)
+                (output 's1' 6.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 6.0:8)
+                (input 's2' 2:6)
+                (input 's3' 6:8)
+            ))
+            (cell 1 0 (matches 0.6:8 00))
+            (cell 2 0 (matches 0.6:8 01))
+            (cell 3 0 (matches 0.6:8 10))
+            (cell 4 0 (matches 0.6:8 11))
+            (cell 5 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0)))
+            (cell 6 0 (assignment_list 8'd0
+                (5.0 0:4 0.2:6)
+                (5.1 1:5 0.2:6)
+                (5.2 2:6 0.2:6)
+                (5.3 3:7 0.2:6)
+            ))
+        )
+        """)
+
+    def test_simple_part_word(self):
+        s1 = Signal(16)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.word_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 6.0:16)
+            )
+            (cell 0 0 (top
+                (output 's1' 6.0:16)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0)))
+            (cell 6 0 (assignment_list 16'd0
+                (5.0 0:4 0.2:6)
+                (5.1 4:8 0.2:6)
+                (5.2 8:12 0.2:6)
+                (5.3 12:16 0.2:6)
+            ))
+        )
+        """)
+
+    def test_simple_part_word_misalign(self):
+        s1 = Signal(17)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.word_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 7.0:17)
+            )
+            (cell 0 0 (top
+                (output 's1' 7.0:17)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0 5.0)))
+            (cell 7 0 (assignment_list 17'd0
+                (6.0 0:4 0.2:6)
+                (6.1 4:8 0.2:6)
+                (6.2 8:12 0.2:6)
+                (6.3 12:16 0.2:6)
+                (6.4 16:17 0.2)
+            ))
+        )
+        """)
+
+    def test_simple_concat(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(12)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            Cat(s1, s2, s3).eq(s4)
+        )
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's4' 0.2:14)
+                (output 's1' 0.2:6)
+                (output 's2' 0.6:10)
+                (output 's3' 0.10:14)
+            )
+            (cell 0 0 (top
+                (output 's1' 0.2:6)
+                (output 's2' 0.6:10)
+                (output 's3' 0.10:14)
+                (input 's4' 2:14)
+            ))
+        )
+        """)
+
+    def test_simple_concat_narrow(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(signed(6))
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            Cat(s1, s2, s3).eq(s4)
+        )
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's4' 0.2:8)
+                (output 's1' 0.2:6)
+                (output 's2' (cat 0.6:8 0.7 0.7))
+                (output 's3' (cat 0.7 0.7 0.7 0.7))
+            )
+            (cell 0 0 (top
+                (output 's1' 0.2:6)
+                (output 's2' (cat 0.6:8 0.7 0.7))
+                (output 's3' (cat 0.7 0.7 0.7 0.7))
+                (input 's4' 2:8)
+            ))
+        )
+        """)
+
+    def test_simple_operator(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        f = Fragment()
+        f.add_statements("comb", [
+            s1.as_signed().eq(s3),
+            s2.as_unsigned().eq(s3),
+        ])
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's3' 0.2:10)
+                (output 's1' 0.2:10)
+                (output 's2' 0.2:10)
+            )
+            (cell 0 0 (top
+                (output 's1' 0.2:10)
+                (output 's2' 0.2:10)
+                (input 's3' 2:10)
+            ))
+        )
+        """)
+
+    def test_simple_array(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        s5 = Signal(8)
+        f = Fragment()
+        f.add_statements("comb", [
+            Array([s1, s2, s3])[s4].eq(s5),
+        ])
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4, s5])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's4' 0.2:10)
+                (input 's5' 0.10:18)
+                (output 's1' 5.0:8)
+                (output 's2' 6.0:8)
+                (output 's3' 7.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 5.0:8)
+                (output 's2' 6.0:8)
+                (output 's3' 7.0:8)
+                (input 's4' 2:10)
+                (input 's5' 10:18)
+            ))
+            (cell 1 0 (matches 0.2:10 00000000))
+            (cell 2 0 (matches 0.2:10 00000001))
+            (cell 3 0 (matches 0.2:10 00000010))
+            (cell 4 0 (priority_match 1 (cat 1.0 2.0 3.0)))
+            (cell 5 0 (assignment_list 8'd0 (4.0 0:8 0.10:18)))
+            (cell 6 0 (assignment_list 8'd0 (4.1 0:8 0.10:18)))
+            (cell 7 0 (assignment_list 8'd0 (4.2 0:8 0.10:18)))
+        )
+        """)
+
+    def test_sliced_slice(self):
+        s1 = Signal(12)
+        s2 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1[1:11][2:6].eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (output 's1' 1.0:12)
+            )
+            (cell 0 0 (top
+                (output 's1' 1.0:12)
+                (input 's2' 2:6)
+            ))
+            (cell 1 0 (assignment_list 12'd0 (1 3:7 0.2:6)))
+        )
+        """)
+
+    def test_sliced_concat(self):
+        s1 = Signal(4)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        s4 = Signal(4)
+        s5 = Signal(4)
+        s6 = Signal(8)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            Cat(s1, s2, s3, s4, s5)[5:14].eq(s6)
+        )
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        f.add_driver(s4, "comb")
+        f.add_driver(s5, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4, s5, s6])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's1' 0.2:6)
+                (input 's5' 0.6:10)
+                (input 's6' 0.10:18)
+                (output 's2' 1.0:4)
+                (output 's3' 0.13:17)
+                (output 's4' 2.0:4)
+            )
+            (cell 0 0 (top
+                (output 's2' 1.0:4)
+                (output 's3' 0.13:17)
+                (output 's4' 2.0:4)
+                (input 's1' 2:6)
+                (input 's5' 6:10)
+                (input 's6' 10:18)
+            ))
+            (cell 1 0 (assignment_list 4'd0 (1 1:4 0.10:13)))
+            (cell 2 0 (assignment_list 4'd0 (1 0:2 (cat 0.17 1'd0))))
+        )
+        """)
+
+    def test_sliced_part(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.bit_select(s3, 6)[2:4].eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 10.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 10.0:8)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (matches 0.6:10 0101))
+            (cell 7 0 (matches 0.6:10 0110))
+            (cell 8 0 (matches 0.6:10 0111))
+            (cell 9 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)))
+            (cell 10 0 (assignment_list 8'd0
+                (9.0 2:4 0.2:4)
+                (9.1 3:5 0.2:4)
+                (9.2 4:6 0.2:4)
+                (9.3 5:7 0.2:4)
+                (9.4 6:8 0.2:4)
+                (9.5 7:8 0.2)
+            ))
+        )
+        """)
+
+    def test_sliced_part_word(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1.word_select(s3, 4)[1:3].eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 4.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 4.0:8)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (priority_match 1 (cat 1.0 2.0)))
+            (cell 4 0 (assignment_list 8'd0
+                (3.0 1:3 0.2:4)
+                (3.1 5:7 0.2:4)
+            ))
+        )
+        """)
+
+    def test_sliced_array(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        s5 = Signal(8)
+        f = Fragment()
+        f.add_statements("comb", [
+            Array([s1, s2, s3])[s4][2:7].eq(s5),
+        ])
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4, s5])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's4' 0.2:10)
+                (input 's5' 0.10:18)
+                (output 's1' 5.0:8)
+                (output 's2' 6.0:8)
+                (output 's3' 7.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 5.0:8)
+                (output 's2' 6.0:8)
+                (output 's3' 7.0:8)
+                (input 's4' 2:10)
+                (input 's5' 10:18)
+            ))
+            (cell 1 0 (matches 0.2:10 00000000))
+            (cell 2 0 (matches 0.2:10 00000001))
+            (cell 3 0 (matches 0.2:10 00000010))
+            (cell 4 0 (priority_match 1 (cat 1.0 2.0 3.0)))
+            (cell 5 0 (assignment_list 8'd0 (4.0 2:7 0.10:15)))
+            (cell 6 0 (assignment_list 8'd0 (4.1 2:7 0.10:15)))
+            (cell 7 0 (assignment_list 8'd0 (4.2 2:7 0.10:15)))
+        )
+        """)
+
+    def test_part_slice(self):
+        s1 = Signal(8)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1[1:7].bit_select(s3, 4).eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 8.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 8.0:8)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (matches 0.6:10 0101))
+            (cell 7 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0 5.0 6.0)))
+            (cell 8 0 (assignment_list 8'd0
+                (7.0 1:5 0.2:6)
+                (7.1 2:6 0.2:6)
+                (7.2 3:7 0.2:6)
+                (7.3 4:7 0.2:5)
+                (7.4 5:7 0.2:4)
+                (7.5 6:7 0.2)
+            ))
+        )
+        """)
+
+    def test_sliced_part_slice(self):
+        s1 = Signal(12)
+        s2 = Signal(4)
+        s3 = Signal(4)
+        f = Fragment()
+        f.add_statements(
+            "comb",
+            s1[3:9].bit_select(s3, 4)[1:3].eq(s2)
+        )
+        f.add_driver(s1, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's2' 0.2:6)
+                (input 's3' 0.6:10)
+                (output 's1' 8.0:12)
+            )
+            (cell 0 0 (top
+                (output 's1' 8.0:12)
+                (input 's2' 2:6)
+                (input 's3' 6:10)
+            ))
+            (cell 1 0 (matches 0.6:10 0000))
+            (cell 2 0 (matches 0.6:10 0001))
+            (cell 3 0 (matches 0.6:10 0010))
+            (cell 4 0 (matches 0.6:10 0011))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (matches 0.6:10 0101))
+            (cell 7 0 (priority_match 1 (cat 1.0 2.0 3.0 4.0 5.0 6.0)))
+            (cell 8 0 (assignment_list 12'd0
+                (7.0 4:6 0.2:4)
+                (7.1 5:7 0.2:4)
+                (7.2 6:8 0.2:4)
+                (7.3 7:9 0.2:4)
+                (7.4 8:9 0.2)
+            ))
+        )
+        """)
+
+    def test_sliced_operator(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        f = Fragment()
+        f.add_statements("comb", [
+            s1.as_signed()[2:7].eq(s3),
+            s2.as_unsigned()[2:7].eq(s3),
+        ])
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's3' 0.2:10)
+                (output 's1' 1.0:8)
+                (output 's2' 2.0:8)
+            )
+            (cell 0 0 (top
+                (output 's1' 1.0:8)
+                (output 's2' 2.0:8)
+                (input 's3' 2:10)
+            ))
+            (cell 1 0 (assignment_list 8'd0 (1 2:7 0.2:7)))
+            (cell 2 0 (assignment_list 8'd0 (1 2:7 0.2:7)))
+        )
+        """)

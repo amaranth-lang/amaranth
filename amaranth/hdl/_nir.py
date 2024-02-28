@@ -89,12 +89,22 @@ class Value(tuple):
         return super().__new__(cls, (Net.ensure(net) for net in nets))
 
     @classmethod
+    def from_const(cls, value, width):
+        return cls(Net.from_const((value >> bit) & 1) for bit in range(width))
+
+    @classmethod
     def zeros(cls, digits=1):
-        return cls(Net.from_const(0) for _ in range(digits))
+        return cls.from_const(0, digits)
 
     @classmethod
     def ones(cls, digits=1):
-        return cls(Net.from_const(1) for _ in range(digits))
+        return cls.from_const(-1, digits)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return type(self)(super().__getitem__(index))
+        else:
+            return super().__getitem__(index)
 
     def __repr__(self):
         pos = 0
