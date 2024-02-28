@@ -110,6 +110,12 @@ class WritePort:
         def granularity(self):
             return self._granularity
 
+        def __eq__(self, other):
+            return (type(self) is type(other) and
+                    self.addr_width == other.addr_width and
+                    self.shape == other.shape and
+                    self.granularity == other.granularity)
+
         def __repr__(self):
             granularity = f", granularity={self.granularity}" if self.granularity is not None else ""
             return f"WritePort.Signature(addr_width={self.addr_width}, shape={self.shape}{granularity})"
@@ -212,6 +218,11 @@ class ReadPort:
         @property
         def shape(self):
             return self._shape
+
+        def __eq__(self, other):
+            return (type(self) is type(other) and
+                    self.addr_width == other.addr_width and
+                    self.shape == other.shape)
 
         def __repr__(self):
             return f"ReadPort.Signature(addr_width={self.addr_width}, shape={self.shape})"
