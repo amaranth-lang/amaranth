@@ -68,16 +68,27 @@ jobs:
           - amaranth-lang/amaranth-soc
     name: 'smoke (${{ matrix.project }})'
     steps:
+    - name: Check out Amaranth source code
+      uses: actions/checkout@v4
+      with:
+        path: amaranth
+        fetch-depth: 0
     - name: Check out source code
       uses: actions/checkout@v4
       with:
         repository: ${{ matrix.project }}
+        path: project
         fetch-depth: 0
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4
     - name: Install dependencies
+      working-directory: project
       run: |
         pdm install --dev
+    - name: Use Amaranth HEAD revision
+      working-directory: project
+      run: |
+        pdm add ../amaranth
     - name: Cache YoWASP build products
       uses: actions/cache@v4
       with:
@@ -86,6 +97,7 @@ jobs:
         restore-keys: |
           YoWASP-${{ runner.os }}-
     - name: Run tests
+      working-directory: project
       run: |
         pdm run test
 
