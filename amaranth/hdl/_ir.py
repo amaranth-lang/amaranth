@@ -386,16 +386,17 @@ class Fragment:
 
         return new_ports
 
-    def prepare(self, ports=(), *, hierarchy=("top",), legalize_assignments=False, missing_domain=lambda name: _cd.ClockDomain(name)):
+    def prepare(self, ports=(), *, hierarchy=("top",), legalize_assignments=False, missing_domain=lambda name: _cd.ClockDomain(name), propagate_domains=True):
         from ._xfrm import DomainLowerer
 
         ports = self._prepare_ports(ports)
 
-        new_domains = self._propagate_domains(missing_domain)
-        for domain in new_domains:
-            ports.append((None, domain.clk, PortDirection.Input))
-            if domain.rst is not None:
-                ports.append((None, domain.rst, PortDirection.Input))
+        if propagate_domains:
+            new_domains = self._propagate_domains(missing_domain)
+            for domain in new_domains:
+                ports.append((None, domain.clk, PortDirection.Input))
+                if domain.rst is not None:
+                    ports.append((None, domain.rst, PortDirection.Input))
 
         def resolve_signal(signal):
             if isinstance(signal, _ast.ClockSignal):
@@ -1369,8 +1370,11 @@ def _compute_ports(netlist: _nir.Netlist):
         top_module.ports[name] = (value, _nir.ModuleNetFlow.Output)
 
 
-def build_netlist(fragment, ports, *, name="top", **kwargs):
-    design = fragment.prepare(ports=ports, hierarchy=(name,), legalize_assignments=True, **kwargs)
+def build_netlist(fragment, ports=(), *, name="top", **kwargs):
+    if isinstance(fragment, Design):
+        design = fragment
+    else:
+        design = fragment.prepare(ports=ports, hierarchy=(name,), legalize_assignments=True, **kwargs)
     netlist = _nir.Netlist()
     _emit_netlist(netlist, design)
     netlist.resolve_all_nets()
