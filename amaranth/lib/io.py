@@ -114,6 +114,10 @@ class Pin(wiring.PureInterface):
                     self.dir == other.dir and
                     self.xdr == other.xdr)
 
+        def __repr__(self):
+            xdr = f", xdr={self.xdr}" if self.xdr != 0 else ""
+            return f"Pin.Signature({self.width}, dir={self.dir!r}{xdr})"
+
         def create(self, *, path=None, src_loc_at=0):
             return Pin(self.width, self.dir, xdr=self.xdr, path=path, src_loc_at=1 + src_loc_at)
 
@@ -128,11 +132,11 @@ class Pin(wiring.PureInterface):
     @property
     def width(self):
         return self.signature.width
-    
+
     @property
     def dir(self):
         return self.signature.dir
-    
+
     @property
     def xdr(self):
         return self.signature.xdr
