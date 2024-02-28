@@ -83,6 +83,16 @@ class WritePortTestCase(FHDLTestCase):
                 "^Granularity must divide data array length$"):
             WritePort.Signature(addr_width=2, shape=ArrayLayout(8, 8), granularity=3)
 
+    def test_signature_eq(self):
+        sig = WritePort.Signature(addr_width=2, shape=8)
+        self.assertEqual(sig, WritePort.Signature(addr_width=2, shape=8))
+        self.assertNotEqual(sig, WritePort.Signature(addr_width=2, shape=7))
+        self.assertNotEqual(sig, WritePort.Signature(addr_width=1, shape=8))
+        self.assertNotEqual(sig, WritePort.Signature(addr_width=2, shape=8, granularity=8))
+        sig = WritePort.Signature(addr_width=2, shape=8, granularity=4)
+        self.assertEqual(sig, WritePort.Signature(addr_width=2, shape=8, granularity=4))
+        self.assertNotEqual(sig, WritePort.Signature(addr_width=2, shape=8, granularity=8))
+
     def test_constructor(self):
         signature = WritePort.Signature(shape=MyStruct, addr_width=4)
         port = WritePort(signature, memory=None, domain="sync")
@@ -170,6 +180,13 @@ class ReadPortTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 "^`addr_width` must be a non-negative int, not -2$"):
             ReadPort.Signature(addr_width=-2, shape=8)
+
+    def test_signature_eq(self):
+        sig = ReadPort.Signature(addr_width=2, shape=8)
+        self.assertEqual(sig, ReadPort.Signature(addr_width=2, shape=8))
+        self.assertNotEqual(sig, ReadPort.Signature(addr_width=2, shape=7))
+        self.assertNotEqual(sig, ReadPort.Signature(addr_width=1, shape=8))
+        self.assertNotEqual(sig, WritePort.Signature(addr_width=2, shape=8))
 
     def test_constructor(self):
         signature = ReadPort.Signature(shape=MyStruct, addr_width=4)
