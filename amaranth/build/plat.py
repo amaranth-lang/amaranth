@@ -165,10 +165,10 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 add_pin_fragment(pin, self.get_diff_input_output(pin, port, attrs, invert))
 
         ports = list(self.iter_ports())
-        return self.toolchain_prepare(fragment, ports, name, **kwargs)
+        return self.toolchain_prepare(fragment, name, ports=ports, **kwargs)
 
     @abstractmethod
-    def toolchain_prepare(self, fragment, ports, name, **kwargs):
+    def toolchain_prepare(self, fragment, name, *, ports, **kwargs):
         """
         Convert the ``fragment`` and constraints recorded in this :class:`Platform` into
         a :class:`BuildPlan`.
@@ -291,7 +291,7 @@ class TemplatedPlatform(Platform):
                 continue
             yield net_signal, port_signal, frequency
 
-    def toolchain_prepare(self, fragment, ports, name, *, emit_src=True, **kwargs):
+    def toolchain_prepare(self, fragment, name, *, ports, emit_src=True, **kwargs):
         # Restrict the name of the design to a strict alphanumeric character set. Platforms will
         # interpolate the name of the design in many different contexts: filesystem paths, Python
         # scripts, Tcl scripts, ad-hoc constraint files, and so on. It is not practical to add
