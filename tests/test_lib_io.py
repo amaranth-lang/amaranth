@@ -199,6 +199,16 @@ class PinSignatureDDRTestCase(PinSignatureTestCase):
         })
 
 
+class PinSignatureReprCase(FHDLTestCase):
+    def test_repr(self):
+        sig_0 = Pin.Signature(1, dir="i")
+        self.assertRepr(sig_0, "Pin.Signature(1, dir='i')")
+        sig_0 = Pin.Signature(2, dir="o", xdr=1)
+        self.assertRepr(sig_0, "Pin.Signature(2, dir='o', xdr=1)")
+        sig_0 = Pin.Signature(3, dir="io", xdr=2)
+        self.assertRepr(sig_0, "Pin.Signature(3, dir='io', xdr=2)")
+
+
 class PinTestCase(FHDLTestCase):
     def test_attributes(self):
         pin = Pin(2, dir="io", xdr=2)
@@ -208,4 +218,3 @@ class PinTestCase(FHDLTestCase):
         self.assertEqual(pin.signature.width, 2)
         self.assertEqual(pin.signature.dir,   "io")
         self.assertEqual(pin.signature.xdr,   2)
-
