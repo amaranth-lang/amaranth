@@ -1,6 +1,7 @@
 from .. import *
 from ..lib import wiring
 from ..lib.wiring import In, Out
+from .. import tracer
 
 
 __all__ = ["Pin"]
@@ -123,9 +124,14 @@ class Pin(wiring.PureInterface):
 
     def __init__(self, width, dir, *, xdr=0, name=None, path=None, src_loc_at=0):
         if name is not None:
-            if path is None:
+            if path is not None:
                 raise ValueError("Cannot pass both name and path")
             path = (name,)
+        if path is None:
+            name = tracer.get_var_name(depth=2 + src_loc_at, default="$pin")
+            path = (name,)
+        self.path = tuple(path)
+        self.name = path[-1]
         signature = Pin.Signature(width, dir, xdr=xdr)
         super().__init__(signature, path=path, src_loc_at=src_loc_at + 1)
 
