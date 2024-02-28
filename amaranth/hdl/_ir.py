@@ -386,7 +386,7 @@ class Fragment:
 
         return new_ports
 
-    def prepare(self, ports=(), *, hierarchy=("top",), legalize_assignments=False, missing_domain=lambda name: _cd.ClockDomain(name), propagate_domains=True):
+    def prepare(self, ports=(), *, hierarchy=("top",), missing_domain=lambda name: _cd.ClockDomain(name), propagate_domains=True):
         from ._xfrm import DomainLowerer
 
         ports = self._prepare_ports(ports)
@@ -416,9 +416,6 @@ class Fragment:
         ]
 
         fragment = DomainLowerer()(self)
-        if legalize_assignments:
-            from ._xfrm import AssignmentLegalizer
-            fragment = AssignmentLegalizer()(fragment)
 
         # Create design and let it do the rest.
         return Design(fragment, ports, hierarchy=hierarchy)
@@ -698,10 +695,7 @@ class NetlistEmitter:
         except KeyError:
             pass
         if isinstance(value, _ast.Const):
-            result = _nir.Value(
-                _nir.Net.from_const((value.value >> bit) & 1)
-                for bit in range(value.width)
-            )
+            result = _nir.Value.from_const(value.value, value.width)
             signed = value.signed
         elif isinstance(value, _ast.Signal):
             result = self.emit_signal(value)
@@ -887,6 +881,95 @@ class NetlistEmitter:
             self.netlist.connections[left] = right
             self.connect_src_loc[left] = src_loc
 
+    def emit_assign(self, module_idx: int, cd: "_cd.ClockDomain | None", lhs: _ast.Value, lhs_start: int, rhs: _nir.Value, cond: _nir.Net, *, src_loc):
+        # Assign rhs to lhs[lhs_start:lhs_start+len(rhs)]
+        if isinstance(lhs, _ast.Signal):
+            if lhs in self.drivers:
+                driver = self.drivers[lhs]
+                if driver.domain is not cd:
+                    domain_name = cd.name if cd is not None else "comb"
+                    other_domain_name = driver.domain.name if driver.domain is not None else "comb"
+                    raise _ir.DriverConflict(
+                        f"Signal {lhs} driven from domain {domain_name} at {src_loc} and domain "
+                        f"{other_domain_name} at {driver.src_loc}")
+                if driver.module_idx != module_idx:
+                    mod_name = ".".join(self.netlist.modules[module_idx].name or ("<toplevel>",))
+                    other_mod_name = \
+                        ".".join(self.netlist.modules[driver.module_idx].name or ("<toplevel>",))
+                    raise _ir.DriverConflict(
+                        f"Signal {lhs} driven from module {mod_name} at {src_loc} and "
+                        f"module {other_mod_name} at {driver.src_loc}")
+            else:
+                driver = NetlistDriver(module_idx, lhs, domain=cd, src_loc=src_loc)
+                self.drivers[lhs] = driver
+            driver.assignments.append(_nir.Assignment(cond=cond, start=lhs_start, value=rhs,
+                                                      src_loc=src_loc))
+        elif isinstance(lhs, _ast.Slice):
+            self.emit_assign(module_idx, cd, lhs.value, lhs_start + lhs.start, rhs, cond, src_loc=src_loc)
+        elif isinstance(lhs, _ast.Cat):
+            part_stop = 0
+            for part in lhs.parts:
+                part_start = part_stop
+                part_len = len(part)
+                part_stop = part_start + part_len
+                if lhs_start >= part_stop:
+                    continue
+                if lhs_start + len(rhs) <= part_start:
+                    continue
+                if lhs_start < part_start:
+                    part_lhs_start = 0
+                    part_rhs_start = part_start - lhs_start
+                else:
+                    part_lhs_start = lhs_start - part_start
+                    part_rhs_start = 0
+                if lhs_start + len(rhs) >= part_stop:
+                    part_rhs_stop = part_stop - lhs_start
+                else:
+                    part_rhs_stop = len(rhs)
+                self.emit_assign(module_idx, cd, part, part_lhs_start, rhs[part_rhs_start:part_rhs_stop], cond, src_loc=src_loc)
+        elif isinstance(lhs, _ast.Part):
+            offset, _signed = self.emit_rhs(module_idx, lhs.offset)
+            width = len(lhs.value)
+            num_cases = min((width + lhs.stride - 1) // lhs.stride, 1 << len(offset))
+            conds = []
+            for case_index in range(num_cases):
+                cell = _nir.Matches(module_idx, value=offset,
+                                    patterns=(f"{case_index:0{len(offset)}b}",),
+                                    src_loc=lhs.src_loc)
+                subcond, = self.netlist.add_value_cell(1, cell)
+                conds.append(subcond)
+            conds = _nir.Value(conds)
+            cell = _nir.PriorityMatch(module_idx, en=cond, inputs=conds, src_loc=lhs.src_loc)
+            conds = self.netlist.add_value_cell(len(conds), cell)
+            for idx, subcond in enumerate(conds):
+                start = lhs_start + idx * lhs.stride
+                if start >= width:
+                    continue
+                if start + len(rhs) >= width:
+                    subrhs = rhs[:width - start]
+                else:
+                    subrhs = rhs
+                self.emit_assign(module_idx, cd, lhs.value, start, subrhs, subcond, src_loc=src_loc)
+        elif isinstance(lhs, _ast.ArrayProxy):
+            index, _signed = self.emit_rhs(module_idx, lhs.index)
+            conds = []
+            for case_index in range(len(lhs.elems)):
+                cell = _nir.Matches(module_idx, value=index,
+                                       patterns=(f"{case_index:0{len(index)}b}",),
+                                       src_loc=lhs.src_loc)
+                subcond, = self.netlist.add_value_cell(1, cell)
+                conds.append(subcond)
+            conds = _nir.Value(conds)
+            cell = _nir.PriorityMatch(module_idx, en=cond, inputs=conds, src_loc=lhs.src_loc)
+            conds = self.netlist.add_value_cell(len(conds), cell)
+            for subcond, val in zip(conds, lhs.elems):
+                self.emit_assign(module_idx, cd, val, lhs_start, rhs[:len(val)], subcond, src_loc=src_loc)
+        elif isinstance(lhs, _ast.Operator):
+            assert lhs.operator in ('u', 's')
+            self.emit_assign(module_idx, cd, lhs.operands[0], lhs_start, rhs, cond, src_loc=src_loc)
+        else:
+            assert False # :nocov:
+
     def emit_stmt(self, module_idx: int, fragment: _ir.Fragment, domain: str,
                   stmt: _ast.Statement, cond: _nir.Net):
         if domain == "comb":
@@ -894,42 +977,13 @@ class NetlistEmitter:
         else:
             cd = fragment.domains[domain]
         if isinstance(stmt, _ast.Assign):
-            if isinstance(stmt.lhs, _ast.Signal):
-                signal = stmt.lhs
-                start = 0
-                width = signal.width
-            elif isinstance(stmt.lhs, _ast.Slice):
-                signal = stmt.lhs.value
-                start = stmt.lhs.start
-                width = stmt.lhs.stop - stmt.lhs.start
-            else:
-                assert False # :nocov:
-            assert isinstance(signal, _ast.Signal)
-            if signal in self.drivers:
-                driver = self.drivers[signal]
-                if driver.domain is not cd:
-                    domain_name = cd.name if cd is not None else "comb"
-                    other_domain_name = driver.domain.name if driver.domain is not None else "comb"
-                    raise _ir.DriverConflict(
-                        f"Signal {signal} driven from domain {domain_name} at {stmt.src_loc} and domain "
-                        f"{other_domain_name} at {driver.src_loc}")
-                if driver.module_idx != module_idx:
-                    mod_name = ".".join(self.netlist.modules[module_idx].name or ("<toplevel>",))
-                    other_mod_name = \
-                        ".".join(self.netlist.modules[driver.module_idx].name or ("<toplevel>",))
-                    raise _ir.DriverConflict(
-                        f"Signal {signal} driven from module {mod_name} at {stmt.src_loc} and "
-                        f"module {other_mod_name} at {driver.src_loc}")
-            else:
-                driver = NetlistDriver(module_idx, signal, domain=cd, src_loc=stmt.src_loc)
-                self.drivers[signal] = driver
             rhs, signed = self.emit_rhs(module_idx, stmt.rhs)
+            width = len(stmt.lhs)
             if len(rhs) > width:
                 rhs = _nir.Value(rhs[:width])
             if len(rhs) < width:
                 rhs = self.extend(rhs, signed, width)
-            driver.assignments.append(_nir.Assignment(cond=cond, start=start, value=rhs,
-                                                      src_loc=stmt.src_loc))
+            self.emit_assign(module_idx, cd, stmt.lhs, 0, rhs, cond, src_loc=stmt.src_loc)
         elif isinstance(stmt, _ast.Property):
             test, _signed = self.emit_rhs(module_idx, stmt.test)
             if len(test) != 1:
@@ -1374,7 +1428,7 @@ def build_netlist(fragment, ports=(), *, name="top", **kwargs):
     if isinstance(fragment, Design):
         design = fragment
     else:
-        design = fragment.prepare(ports=ports, hierarchy=(name,), legalize_assignments=True, **kwargs)
+        design = fragment.prepare(ports=ports, hierarchy=(name,), **kwargs)
     netlist = _nir.Netlist()
     _emit_netlist(netlist, design)
     netlist.resolve_all_nets()

@@ -10,7 +10,7 @@ from .. import __version__
 from .._toolchain import *
 from ..hdl import *
 from ..hdl._ir import IOBufferInstance, Design
-from ..hdl._xfrm import DomainLowerer, AssignmentLegalizer
+from ..hdl._xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..back import rtlil, verilog
 from .res import *
@@ -165,7 +165,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
                 add_pin_fragment(pin, self.get_diff_input_output(pin, port, attrs, invert))
 
         ports = [(None, signal, None) for signal in self.iter_ports()]
-        fragment = AssignmentLegalizer()(fragment)
         fragment = Design(fragment, ports, hierarchy=(name,))
         return self.toolchain_prepare(fragment, name, **kwargs)
 
