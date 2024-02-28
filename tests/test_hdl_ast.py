@@ -1238,10 +1238,6 @@ class SignalTestCase(FHDLTestCase):
                 r"^`Signal.reset` is deprecated, use `Signal.init` instead$"):
             self.assertEqual(s1.reset, 0b111)
         with self.assertWarnsRegex(DeprecationWarning,
-                r"^`Signal.reset` is deprecated, use `Signal.init` instead$"):
-            s1.reset = 0b010
-        self.assertEqual(s1.init, 0b010)
-        with self.assertWarnsRegex(DeprecationWarning,
                 r"^`reset=` is deprecated, use `init=` instead$"):
             s2 = Signal.like(s1, reset=3)
         self.assertEqual(s2.init, 3)
