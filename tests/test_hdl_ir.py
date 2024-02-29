@@ -839,6 +839,122 @@ class InstanceTestCase(FHDLTestCase):
             ("ATTR", 1),
         ]))
 
+    def test_nir_simple(self):
+        f = Fragment()
+        i = Signal(3)
+        o = Signal(4)
+        io = Signal(5)
+        f.add_subfragment(Instance("gadget",
+            i_i=i,
+            o_o=o,
+            io_io=io,
+            p_param="TEST",
+            a_attr=1234,
+        ), "my_gadget")
+        nl = build_netlist(f, [i, o, io])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'i' 0.2:5)
+                (inout 'io' 0.5:10)
+                (output 'o' 1.0:4)
+            )
+            (cell 0 0 (top
+                (output 'o' 1.0:4)
+                (input 'i' 2:5)
+                (inout 'io' 5:10)
+            ))
+            (cell 1 0 (instance 'gadget' 'my_gadget'
+                (param 'param' 'TEST')
+                (attr 'attr' 1234)
+                (input 'i' 0.2:5)
+                (output 'o' 0:4)
+                (inout 'io' 0.5:10)
+            ))
+        )
+        """)
+
+    def test_nir_out_slice(self):
+        f = Fragment()
+        o = Signal(6)
+        f.add_subfragment(Instance("test",
+            o_o=o[:2],
+        ), "t1")
+        f.add_subfragment(Instance("test",
+            o_o=o[2:4],
+        ), "t2")
+        nl = build_netlist(f, [o])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (output 'o' (cat 1.0:2 2.0:2 2'd0))
+            )
+            (cell 0 0 (top
+                (output 'o' (cat 1.0:2 2.0:2 2'd0))
+            ))
+            (cell 1 0 (instance 'test' 't1'
+                (output 'o' 0:2)
+            ))
+            (cell 2 0 (instance 'test' 't2'
+                (output 'o' 0:2)
+            ))
+        )
+        """)
+
+    def test_nir_out_concat(self):
+        f = Fragment()
+        o1 = Signal(4)
+        o2 = Signal(4)
+        f.add_subfragment(Instance("test",
+            o_o=Cat(o1, o2),
+        ))
+        nl = build_netlist(f, [o1, o2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (output 'o1' 1.0:4)
+                (output 'o2' 1.4:8)
+            )
+            (cell 0 0 (top
+                (output 'o1' 1.0:4)
+                (output 'o2' 1.4:8)
+            ))
+            (cell 1 0 (instance 'test' 'U$0'
+                (output 'o' 0:8)
+            ))
+        )
+        """)
+
+    def test_nir_operator(self):
+        f = Fragment()
+        i = Signal(3)
+        o = Signal(4)
+        io = Signal(5)
+        f.add_subfragment(Instance("gadget",
+            i_i=i.as_signed(),
+            o_o=o.as_signed(),
+            io_io=io.as_signed(),
+        ), "my_gadget")
+        nl = build_netlist(f, [i, o, io])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'i' 0.2:5)
+                (inout 'io' 0.5:10)
+                (output 'o' 1.0:4)
+            )
+            (cell 0 0 (top
+                (output 'o' 1.0:4)
+                (input 'i' 2:5)
+                (inout 'io' 5:10)
+            ))
+            (cell 1 0 (instance 'gadget' 'my_gadget'
+                (input 'i' 0.2:5)
+                (output 'o' 0:4)
+                (inout 'io' 0.5:10)
+            ))
+        )
+        """)
 
 class NamesTestCase(FHDLTestCase):
     def test_assign_names_to_signals(self):
