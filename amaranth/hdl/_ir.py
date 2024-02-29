@@ -581,13 +581,14 @@ class Design:
         """
         self.fragment_names[fragment] = hierarchy
 
-        signal_names = set(self.signal_names[fragment].values())
+        taken_names = set(self.signal_names[fragment].values())
         for subfragment_index, (subfragment, subfragment_name, subfragment_src_loc) in enumerate(fragment.subfragments):
             if subfragment_name is None:
                 subfragment_name = f"U${subfragment_index}"
-            elif subfragment_name in signal_names:
+            elif subfragment_name in taken_names:
                 subfragment_name = f"{subfragment_name}$U${subfragment_index}"
-            assert subfragment_name not in signal_names
+            assert subfragment_name not in taken_names
+            taken_names.add(subfragment_name)
             self._assign_names_to_fragments(subfragment, hierarchy=(*hierarchy, subfragment_name))
 
 
