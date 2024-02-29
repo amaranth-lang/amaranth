@@ -423,9 +423,6 @@ class TemplatedPlatform(Platform):
                     return f"_{ord(match.group(1)[0]):02x}_"
             return "".join(escape_one(m) for m in re.finditer(r"([^A-Za-z0-9_])|(.)", string))
 
-        def tcl_escape(string):
-            return "{" + re.sub(r"([{}\\])", r"\\\1", string) + "}"
-
         def tcl_quote(string):
             return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
 
@@ -449,7 +446,6 @@ class TemplatedPlatform(Platform):
                 compiled.environment.filters["options"] = options
                 compiled.environment.filters["hierarchy"] = hierarchy
                 compiled.environment.filters["ascii_escape"] = ascii_escape
-                compiled.environment.filters["tcl_escape"] = tcl_escape
                 compiled.environment.filters["tcl_quote"] = tcl_quote
             except jinja2.TemplateSyntaxError as e:
                 e.args = (f"{e.message} (at {origin}:{e.lineno})",)
