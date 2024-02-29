@@ -914,6 +914,18 @@ class NamesTestCase(FHDLTestCase):
             a_f: ("top", "a$U$0")
         })
 
+    def test_assign_names_to_fragments_duplicate(self):
+        f = Fragment()
+        f.add_subfragment(a1_f := Fragment(), name="a")
+        f.add_subfragment(a2_f := Fragment(), name="a")
+
+        design = Design(f, ports=[], hierarchy=("top",))
+        self.assertEqual(design.fragment_names, {
+            f: ("top",),
+            a1_f: ("top", "a"),
+            a2_f: ("top", "a$U$1"),
+        })
+
 
 class ElaboratesTo(Elaboratable):
     def __init__(self, lower):
