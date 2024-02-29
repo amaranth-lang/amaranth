@@ -21,6 +21,8 @@ __all__ = [
 
 
 class Net(int):
+    __slots__ = ()
+
     @classmethod
     def from_cell(cls, cell: int, bit: int):
         assert bit in range(1 << 16)
@@ -83,6 +85,8 @@ class Net(int):
 
 
 class Value(tuple):
+    __slots__ = ()
+
     def __new__(cls, nets: 'Net | Iterable[Net]' = ()):
         if isinstance(nets, Net):
             return super().__new__(cls, (nets,))
