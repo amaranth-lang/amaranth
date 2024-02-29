@@ -131,7 +131,7 @@ class Pin(wiring.PureInterface):
             name = tracer.get_var_name(depth=2 + src_loc_at, default="$pin")
             path = (name,)
         self.path = tuple(path)
-        self.name = path[-1]
+        self.name = "__".join(path)
         signature = Pin.Signature(width, dir, xdr=xdr)
         super().__init__(signature, path=path, src_loc_at=src_loc_at + 1)
 

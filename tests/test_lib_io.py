@@ -226,6 +226,6 @@ class PinTestCase(FHDLTestCase):
         self.assertEqual(pin.path, ("testpin",))
         self.assertEqual(pin.i0.name, "testpin__i0")
         pin = Pin(2, dir="io", xdr=2, path=["a", "b"])
-        self.assertEqual(pin.name, "b")
+        self.assertEqual(pin.name, "a__b")
         self.assertEqual(pin.path, ("a", "b"))
         self.assertEqual(pin.i0.name, "a__b__i0")
