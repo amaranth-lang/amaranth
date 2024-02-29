@@ -503,9 +503,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             if_tests, if_bodies = data["tests"], data["bodies"]
             if_src_locs = data["src_locs"]
 
-            domains = set()
+            # Use dict to ensure deterministic iteration.
+            domains = {}
             for if_case in if_bodies:
-                domains |= set(if_case)
+                for domain in if_case:
+                    domains[domain] = None
 
             for domain in domains:
                 tests, cases = [], OrderedDict()
@@ -528,9 +530,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             switch_test, switch_cases = data["test"], data["cases"]
             switch_case_src_locs = data["case_src_locs"]
 
-            domains = set()
+            domains = {}
             for stmts in switch_cases.values():
-                domains |= set(stmts)
+                for domain in stmts:
+                    domains[domain] = None
 
             for domain in domains:
                 domain_cases = OrderedDict()
@@ -561,9 +564,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 self._top_comb_statements.append(
                     sig.eq(Operator("==", [fsm_signal, fsm_encoding[name]], src_loc_at=0)))
 
-            domains = set()
+            domains = {}
             for stmts in fsm_states.values():
-                domains |= set(stmts)
+                for domain in stmts:
+                    domains[domain] = None
 
             for domain in domains:
                 domain_states = OrderedDict()

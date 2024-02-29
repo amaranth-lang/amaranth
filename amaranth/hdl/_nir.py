@@ -383,10 +383,10 @@ class Top(Cell):
 
     def __repr__(self):
         ports = []
-        for (name, val) in self.ports_o.items():
-            ports.append(f"(output {name!r} {val})")
         for (name, (start, width)) in self.ports_i.items():
             ports.append(f"(input {name!r} {start}:{start+width})")
+        for (name, val) in self.ports_o.items():
+            ports.append(f"(output {name!r} {val})")
         for (name, (start, width)) in self.ports_io.items():
             ports.append(f"(inout {name!r} {start}:{start+width})")
         ports = " ".join(ports)
@@ -533,7 +533,7 @@ class ArrayMux(Cell):
         self.index = netlist.resolve_value(self.index)
 
     def __repr__(self):
-        elems = " ".join(repr(elem) for elem in elems)
+        elems = " ".join(repr(elem) for elem in self.elems)
         return f"(array_mux {self.width} {self.index} ({elems}))"
 
 
