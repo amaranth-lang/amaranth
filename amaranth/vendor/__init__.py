@@ -4,6 +4,7 @@
 
 # Keep this list sorted alphabetically.
 __all__ = [
+    "AlteraPlatform",
     "GowinPlatform",
     "IntelPlatform",
     "LatticeECP5Platform",
@@ -20,12 +21,12 @@ def __dir__():
 
 
 def __getattr__(name):
+    if name in ("AlteraPlatform", "IntelPlatform"):
+        from ._altera import AlteraPlatform
+        return AlteraPlatform
     if name == "GowinPlatform":
         from ._gowin import GowinPlatform
         return GowinPlatform
-    if name == "IntelPlatform":
-        from ._intel import IntelPlatform
-        return IntelPlatform
     if name == "LatticeECP5Platform":
         from ._lattice_ecp5 import LatticeECP5Platform
         return LatticeECP5Platform
