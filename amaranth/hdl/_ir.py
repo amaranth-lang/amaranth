@@ -1184,7 +1184,7 @@ class NetlistEmitter:
             value = driver.emit_value(self)
             if driver.domain is not None:
                 clk, = self.emit_signal(driver.domain.clk)
-                if driver.domain.rst is not None and driver.domain.async_reset:
+                if driver.domain.rst is not None and driver.domain.async_reset and not driver.signal.reset_less:
                     arst, = self.emit_signal(driver.domain.rst)
                 else:
                     arst = _nir.Net.from_const(0)
