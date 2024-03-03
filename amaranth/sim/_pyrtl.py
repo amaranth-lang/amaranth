@@ -473,6 +473,18 @@ class _FragmentCompiler:
 
                 _StatementCompiler(self.state, emitter)(domain_stmts)
 
+                if domain.rst is not None:
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
+                    rst = rhs(domain.rst)
+                    rst = f"(1 & {rst})"
+                    emitter.append(f"if {rst}:")
+                    with emitter.indent():
+                        emitter.append("pass")
+                        for signal in domain_signals:
+                            if not signal.reset_less:
+                                signal_index = self.state.get_signal(signal)
+                                emitter.append(f"next_{signal_index} = {signal.init}")
+
                 if isinstance(fragment, MemoryInstance):
                     memory_index = self.state.memories[fragment._identity]
                     rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
