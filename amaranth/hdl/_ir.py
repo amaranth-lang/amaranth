@@ -710,9 +710,6 @@ class NetlistEmitter:
                 elif value.operator == 'u':
                     result = operand_a
                     signed = False
-                elif value.operator == '+':
-                    result = operand_a
-                    signed = signed_a
                 elif value.operator == '-':
                     operand_a = self.extend(operand_a, signed_a, len(operand_a) + 1)
                     result = self.emit_operator(module_idx, '-', operand_a,
