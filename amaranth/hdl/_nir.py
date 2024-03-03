@@ -8,7 +8,7 @@ __all__ = [
     # Netlist core
     "Net", "Value", "Netlist", "ModuleNetFlow", "Module", "Cell", "Top",
     # Computation cells
-    "Operator", "Part", "ArrayMux",
+    "Operator", "Part",
     # Decision tree cells
     "Matches", "PriorityMatch", "Assignment", "AssignmentList",
     # Storage cells
@@ -499,42 +499,6 @@ class Part(Cell):
     def __repr__(self):
         value_signed = "signed" if self.value_signed else "unsigned"
         return f"(part {self.value} {value_signed} {self.offset} {self.width} {self.stride})"
-
-
-class ArrayMux(Cell):
-    """Corresponds to ``hdl.ast.ArrayProxy``. All values in the ``elems`` array need to have
-    the same width as the output.
-
-    Attributes
-    ----------
-
-    width: int (width of output and all inputs)
-    elems: tuple of Value
-    index: Value
-    """
-    def __init__(self, module_idx, *, width, elems, index, src_loc):
-        super().__init__(module_idx, src_loc=src_loc)
-
-        self.width = width
-        self.elems = tuple(Value(val) for val in elems)
-        self.index = Value(index)
-
-    def input_nets(self):
-        nets = set(self.index)
-        for value in self.elems:
-            nets |= set(value)
-        return nets
-
-    def output_nets(self, self_idx: int):
-        return {Net.from_cell(self_idx, bit) for bit in range(self.width)}
-
-    def resolve_nets(self, netlist: Netlist):
-        self.elems = tuple(netlist.resolve_value(val) for val in self.elems)
-        self.index = netlist.resolve_value(self.index)
-
-    def __repr__(self):
-        elems = " ".join(repr(elem) for elem in self.elems)
-        return f"(array_mux {self.width} {self.index} ({elems}))"
 
 
 class Matches(Cell):

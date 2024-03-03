@@ -446,7 +446,7 @@ class ModuleEmitter:
                 continue # No outputs.
             elif isinstance(cell, _nir.AssignmentList):
                 width = len(cell.default)
-            elif isinstance(cell, (_nir.Operator, _nir.Part, _nir.ArrayMux, _nir.AnyValue,
+            elif isinstance(cell, (_nir.Operator, _nir.Part, _nir.AnyValue,
                                    _nir.SyncReadPort, _nir.AsyncReadPort)):
                 width = cell.width
             elif isinstance(cell, _nir.FlipFlop):
@@ -738,21 +738,6 @@ class ModuleEmitter:
             "Y_WIDTH": cell.width,
         }, src=_src(cell.src_loc))
 
-    def emit_array_mux(self, cell_idx, cell):
-        wire = self.cell_wires[cell_idx]
-        with self.builder.process(src=_src(cell.src_loc)) as proc:
-            with proc.case() as root_case:
-                with root_case.switch(self.sigspec(cell.index)) as switch:
-                    for index, elem in enumerate(cell.elems):
-                        if len(cell.index) > 0:
-                            pattern = "{:0{}b}".format(index, len(cell.index))
-                        else:
-                            pattern = ""
-                        with switch.case(pattern) as case:
-                            case.assign(wire, self.sigspec(elem))
-                    with switch.case() as case:
-                        case.assign(wire, self.sigspec(cell.elems[0]))
-
     def emit_flip_flop(self, cell_idx, cell):
         ports = {
             "D": self.sigspec(cell.data),
@@ -944,8 +929,6 @@ class ModuleEmitter:
                 self.emit_operator(cell_idx, cell)
             elif isinstance(cell, _nir.Part):
                 self.emit_part(cell_idx, cell)
-            elif isinstance(cell, _nir.ArrayMux):
-                self.emit_array_mux(cell_idx, cell)
             elif isinstance(cell, _nir.FlipFlop):
                 self.emit_flip_flop(cell_idx, cell)
             elif isinstance(cell, _nir.IOBuffer):

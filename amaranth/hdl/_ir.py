@@ -842,7 +842,21 @@ class NetlistEmitter:
                     width = max(width, len(elem))
             elems = tuple(self.extend(elem, elem_signed, width) for elem, elem_signed in elems)
             index, _signed = self.emit_rhs(module_idx, value.index)
-            cell = _nir.ArrayMux(module_idx, width=width, elems=elems, index=index,
+            conds = []
+            for case_index in range(len(elems)):
+                cell = _nir.Matches(module_idx, value=index,
+                                       patterns=(f"{case_index:0{len(index)}b}",),
+                                       src_loc=value.src_loc)
+                subcond, = self.netlist.add_value_cell(1, cell)
+                conds.append(subcond)
+            conds = _nir.Value(conds)
+            cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1), inputs=conds, src_loc=value.src_loc)
+            conds = self.netlist.add_value_cell(len(conds), cell)
+            assignments = [
+                _nir.Assignment(cond=cond, start=0, value=elem, src_loc=value.src_loc)
+                for cond, elem in zip(conds, elems)
+            ]
+            cell = _nir.AssignmentList(module_idx, default=elems[0], assignments=assignments,
                                  src_loc=value.src_loc)
             result = self.netlist.add_value_cell(width, cell)
         elif isinstance(value, _ast.Cat):
