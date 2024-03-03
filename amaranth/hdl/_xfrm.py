@@ -575,23 +575,14 @@ class ResetInserter(_ControlInserter):
         fragment.add_statements(domain, Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 
-class _PropertyEnableInserter(StatementTransformer):
-    def __init__(self, en):
-        self.en = en
-
-    def on_Property(self, stmt):
-        return Switch(
-            self.en,
-            {1: [stmt]},
-            src_loc=stmt.src_loc,
-        )
-
-
 class EnableInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(s) for s in signals]
-        fragment.add_statements(domain, Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
-        fragment.statements[domain] = _PropertyEnableInserter(self.controls[domain])(fragment.statements[domain])
+        if domain in fragment.statements:
+            fragment.statements[domain] = _StatementList([Switch(
+                self.controls[domain],
+                {1: fragment.statements[domain]},
+                src_loc=self.src_loc,
+            )])
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)

@@ -337,9 +337,8 @@ class EnableInserterTestCase(FHDLTestCase):
         f = EnableInserter(self.c1)(f)
         self.assertRepr(f.statements["sync"], """
         (
-            (eq (sig s1) (const 1'd1))
             (switch (sig c1)
-                (case 0 (eq (sig s1) (sig s1)))
+                (case 1 (eq (sig s1) (const 1'd1)))
             )
         )
         """)
@@ -359,9 +358,8 @@ class EnableInserterTestCase(FHDLTestCase):
         """)
         self.assertRepr(f.statements["pix"], """
         (
-            (eq (sig s2) (const 1'd0))
             (switch (sig c1)
-                (case 0 (eq (sig s2) (sig s2)))
+                (case 1 (eq (sig s2) (const 1'd0)))
             )
         )
         """)
@@ -380,17 +378,15 @@ class EnableInserterTestCase(FHDLTestCase):
         (f2, _, _), = f1.subfragments
         self.assertRepr(f1.statements["sync"], """
         (
-            (eq (sig s1) (const 1'd1))
             (switch (sig c1)
-                (case 0 (eq (sig s1) (sig s1)))
+                (case 1 (eq (sig s1) (const 1'd1)))
             )
         )
         """)
         self.assertRepr(f2.statements["sync"], """
         (
-            (eq (sig s2) (const 1'd1))
             (switch (sig c1)
-                (case 0 (eq (sig s2) (sig s2)))
+                (case 1 (eq (sig s2) (const 1'd1)))
             )
         )
         """)
@@ -451,9 +447,8 @@ class TransformedElaboratableTestCase(FHDLTestCase):
         f = Fragment.get(te2, None)
         self.assertRepr(f.statements["sync"], """
         (
-            (eq (sig s1) (const 1'd1))
             (switch (sig c1)
-                (case 0 (eq (sig s1) (sig s1)))
+                (case 1 (eq (sig s1) (const 1'd1)))
             )
             (switch (sig c2)
                 (case 1 (eq (sig s1) (const 1'd0)))
