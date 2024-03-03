@@ -4,7 +4,7 @@ from ..hdl import *
 from ..build import *
 
 
-class IntelPlatform(TemplatedPlatform):
+class AlteraPlatform(TemplatedPlatform):
     """
     .. rubric:: Quartus toolchain
 

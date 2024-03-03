@@ -102,6 +102,7 @@ Platform integration changes
 * Added: :meth:`BuildPlan.execute_local_docker`.
 * Added: :meth:`BuildPlan.extract`.
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
+* Changed: ``IntelPlatform`` renamed to ``AlteraPlatform``.
 * Deprecated: argument ``run_script=`` in :meth:`BuildPlan.execute_local`.
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
