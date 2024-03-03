@@ -1181,6 +1181,22 @@ class NetlistEmitter:
 
     def emit_drivers(self):
         for driver in self.drivers.values():
+            if (driver.domain is not None and
+                    driver.domain.rst is not None and
+                    not driver.domain.async_reset and
+                    not driver.signal.reset_less):
+                cell = _nir.Matches(driver.module_idx,
+                                    value=self.emit_signal(driver.domain.rst),
+                                    patterns=("1",),
+                                    src_loc=driver.domain.rst.src_loc)
+                cond, = self.netlist.add_value_cell(1, cell)
+                cell = _nir.PriorityMatch(driver.module_idx, en=_nir.Net.from_const(1),
+                                          inputs=_nir.Value(cond),
+                                          src_loc=driver.domain.rst.src_loc)
+                cond, = self.netlist.add_value_cell(1, cell)
+                init = _nir.Value.from_const(driver.signal.init, driver.signal.width)
+                driver.assignments.append(_nir.Assignment(cond=cond, start=0,
+                                                         value=init, src_loc=driver.signal.src_loc))
             value = driver.emit_value(self)
             if driver.domain is not None:
                 clk, = self.emit_signal(driver.domain.clk)

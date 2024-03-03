@@ -526,22 +526,9 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                                   .format(value, value.domain))
         return domain.rst
 
-    def _insert_resets(self, fragment):
-        for domain_name, signals in fragment.drivers.items():
-            if domain_name == "comb":
-                continue
-            domain = fragment.domains[domain_name]
-            if domain.rst is None:
-                continue
-            stmts = [signal.eq(Const(signal.init, signal.width))
-                     for signal in signals if not signal.reset_less]
-            fragment.add_statements(domain_name, Switch(domain.rst, {1: stmts}))
-
     def on_fragment(self, fragment):
         self.domains = fragment.domains
-        new_fragment = super().on_fragment(fragment)
-        self._insert_resets(new_fragment)
-        return new_fragment
+        return super().on_fragment(fragment)
 
 
 class _ControlInserter(FragmentTransformer):
