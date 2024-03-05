@@ -677,16 +677,13 @@ class NetlistEmitter:
 
     def unify_shapes_bitwise(self,
             operand_a: _nir.Value, signed_a: bool, operand_b: _nir.Value, signed_b: bool):
-        if signed_a == signed_b:
-            width = max(len(operand_a), len(operand_b))
-        elif signed_a:
-            width = max(len(operand_a), len(operand_b) + 1)
-        else: # signed_b
-            width = max(len(operand_a) + 1, len(operand_b))
-        operand_a = self.extend(operand_a, signed_a, width)
-        operand_b = self.extend(operand_b, signed_b, width)
-        signed = signed_a or signed_b
-        return (operand_a, operand_b, signed)
+        shape = _ast.Shape._unify((
+            _ast.Shape(len(operand_a), signed_a),
+            _ast.Shape(len(operand_b), signed_b),
+        ))
+        operand_a = self.extend(operand_a, signed_a, shape.width)
+        operand_b = self.extend(operand_b, signed_b, shape.width)
+        return (operand_a, operand_b, shape.signed)
 
     def emit_rhs(self, module_idx: int, value: _ast.Value) -> Tuple[_nir.Value, bool]:
         """Emits a RHS value, returns a tuple of (value, is_signed)"""
@@ -825,19 +822,11 @@ class NetlistEmitter:
             signed = False
         elif isinstance(value, _ast.ArrayProxy):
             elems = [self.emit_rhs(module_idx, elem) for elem in value.elems]
-            width = 0
-            signed = False
-            for elem, elem_signed in elems:
-                if elem_signed:
-                    if not signed:
-                        width += 1
-                        signed = True
-                    width = max(width, len(elem))
-                elif signed:
-                    width = max(width, len(elem) + 1)
-                else:
-                    width = max(width, len(elem))
-            elems = tuple(self.extend(elem, elem_signed, width) for elem, elem_signed in elems)
+            shape = _ast.Shape._unify(
+                _ast.Shape(len(value), signed)
+                for value, signed in elems
+            )
+            elems = tuple(self.extend(elem, elem_signed, shape.width) for elem, elem_signed in elems)
             index, _signed = self.emit_rhs(module_idx, value.index)
             conds = []
             for case_index in range(len(elems)):
@@ -855,7 +844,8 @@ class NetlistEmitter:
             ]
             cell = _nir.AssignmentList(module_idx, default=elems[0], assignments=assignments,
                                  src_loc=value.src_loc)
-            result = self.netlist.add_value_cell(width, cell)
+            result = self.netlist.add_value_cell(shape.width, cell)
+            signed = shape.signed
         elif isinstance(value, _ast.Cat):
             nets = []
             for val in value.parts:
