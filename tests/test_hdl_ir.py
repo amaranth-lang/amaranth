@@ -460,6 +460,7 @@ class FragmentPortsTestCase(FHDLTestCase):
                     r" \(did you mean `ports=\(<signal>,\)`, rather than `ports=<signal>`\?\)$")):
             build_netlist(f, ports=Const(1))
 
+
 class FragmentDomainsTestCase(FHDLTestCase):
     def test_propagate_up(self):
         cd = ClockDomain()
@@ -980,6 +981,7 @@ class InstanceTestCase(FHDLTestCase):
             ))
         )
         """)
+
 
 class NamesTestCase(FHDLTestCase):
     def test_assign_names_to_signals(self):
@@ -1988,6 +1990,7 @@ class AssignTestCase(FHDLTestCase):
             (cell 2 0 (assignment_list 8'd0 (1 2:7 0.2:7)))
         )
         """)
+
 
 class RhsTestCase(FHDLTestCase):
     def test_const(self):
@@ -3173,6 +3176,7 @@ class RhsTestCase(FHDLTestCase):
         )
         """)
 
+
 class SwitchTestCase(FHDLTestCase):
     def test_comb(self):
         o1 = Signal(8)
@@ -3436,6 +3440,7 @@ class SwitchTestCase(FHDLTestCase):
         )
         """)
 
+
 class ConflictTestCase(FHDLTestCase):
     def test_domain_conflict(self):
         s = Signal()
@@ -3472,3 +3477,61 @@ class ConflictTestCase(FHDLTestCase):
                 r"^Bit 0 of signal \(sig s\) has multiple drivers: "
                 r".*test_hdl_ir.py:\d+ and .*test_hdl_ir.py:\d+$"):
             build_netlist(Fragment.get(m, None), [])
+
+
+class UndrivenTestCase(FHDLTestCase):
+    def test_undriven(self):
+        o = Signal(8)
+        m = Module()
+        nl = build_netlist(Fragment.get(m, None), [
+            ("o", o, PortDirection.Output),
+        ])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (output 'o' 8'd0)
+            )
+            (cell 0 0 (top
+                (output 'o' 8'd0)
+            ))
+        )
+        """)
+
+    def test_undef_to_ff(self):
+        o = Signal(8, init=0x55)
+        m = Module()
+        nl = build_netlist(Fragment.get(m, None), [
+            ("o", o, PortDirection.Output),
+        ], all_undef_to_ff=True)
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (output 'o' 1.0:8)
+            )
+            (cell 0 0 (top
+                (output 'o' 1.0:8)
+            ))
+            (cell 1 0 (flipflop 1.0:8 85 pos 0 0))
+        )
+        """)
+
+    def test_undef_to_ff_partial(self):
+        o = Signal(8, init=0x55)
+        m = Module()
+        m.submodules.inst = Instance("t", o_o=o[2])
+        nl = build_netlist(Fragment.get(m, None), [
+            ("o", o, PortDirection.Output),
+        ], all_undef_to_ff=True)
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (output 'o' (cat 2.0:2 1.0 3.0:5))
+            )
+            (cell 0 0 (top
+                (output 'o' (cat 2.0:2 1.0 3.0:5))
+            ))
+            (cell 1 0 (instance 't' 'inst' (output 'o' 0:1)))
+            (cell 2 0 (flipflop 2.0:2 1 pos 0 0))
+            (cell 3 0 (flipflop 3.0:5 10 pos 0 0))
+        )
+        """)

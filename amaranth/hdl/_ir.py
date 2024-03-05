@@ -669,12 +669,14 @@ class NetlistDriver:
 
 
 class NetlistEmitter:
-    def __init__(self, netlist: _nir.Netlist, design):
+    def __init__(self, netlist: _nir.Netlist, design, *, all_undef_to_ff=False):
         self.netlist = netlist
         self.design = design
+        self.all_undef_to_ff = all_undef_to_ff
         self.drivers = _ast.SignalDict()
         self.io_ports: dict[_ast.IOPort, int] = {}
         self.rhs_cache: dict[int, Tuple[_nir.Value, bool, _ast.Value]] = {}
+        self.fragment_module_idx: dict[Fragment, int] = {}
 
         # Collected for driver conflict diagnostics only.
         self.late_net_to_signal = {}
@@ -1358,6 +1360,39 @@ class NetlistEmitter:
                 src_loc = driver.signal.src_loc
             self.connect(self.emit_signal(driver.signal), value, src_loc=src_loc)
 
+    def emit_undef_ff(self):
+        # Connect all completely undriven signals to flip-flops with const-0 clock. This is used
+        # for simulation targets, so that undriven signals have allocated storage that can be
+        # used by the testbench to drive them, instead of being hardwired to the init value
+        # constant.
+        for signal, value in self.netlist.signals.items():
+            fragment = self.design.signal_lca[signal]
+            module_idx = self.fragment_module_idx[fragment]
+            pos = 0
+            while pos < len(signal):
+                net = value[pos]
+                if not net.is_late or net in self.netlist.connections:
+                    pos += 1
+                else:
+                    end_pos = pos
+                    while (end_pos < len(signal) and
+                            value[end_pos].is_late and
+                            value[end_pos] not in self.netlist.connections):
+                        end_pos += 1
+                    init = (signal.init >> pos) & ((1 << (end_pos - pos)) - 1)
+                    cell = _nir.FlipFlop(module_idx,
+                        data=value[pos:end_pos],
+                        init=init,
+                        clk=_nir.Net.from_const(0),
+                        clk_edge="pos",
+                        arst=_nir.Net.from_const(0),
+                        attributes={},
+                        src_loc=signal.src_loc,
+                    )
+                    ff_value = self.netlist.add_value_cell(end_pos - pos, cell)
+                    self.connect(value[pos:end_pos], ff_value, src_loc=signal.src_loc)
+                    pos = end_pos
+
     def emit_undriven(self):
         # Connect all undriven signal bits to their initial values. This can only happen for entirely
         # undriven signals, or signals that are partially driven by instances.
@@ -1373,6 +1408,7 @@ class NetlistEmitter:
         if isinstance(fragment, _ir.Instance):
             assert parent_module_idx is not None
             self.emit_instance(parent_module_idx, fragment, name=fragment_name[-1])
+            self.fragment_module_idx[fragment] = parent_module_idx
         elif isinstance(fragment, _mem.MemoryInstance):
             assert parent_module_idx is not None
             memory = self.emit_memory(parent_module_idx, fragment, name=fragment_name[-1])
@@ -1381,11 +1417,14 @@ class NetlistEmitter:
                 write_ports.append(self.emit_write_port(parent_module_idx, fragment, port, memory))
             for port in fragment._read_ports:
                 self.emit_read_port(parent_module_idx, fragment, port, memory, write_ports)
+            self.fragment_module_idx[fragment] = parent_module_idx
         elif isinstance(fragment, _ir.IOBufferInstance):
             assert parent_module_idx is not None
             self.emit_iobuffer(parent_module_idx, fragment)
+            self.fragment_module_idx[fragment] = parent_module_idx
         elif type(fragment) is _ir.Fragment:
             module_idx = self.netlist.add_module(parent_module_idx, fragment_name, src_loc=fragment.src_loc, cell_src_loc=cell_src_loc)
+            self.fragment_module_idx[fragment] = module_idx
             signal_names = self.design.fragments[fragment].signal_names
             self.netlist.modules[module_idx].signal_names = signal_names
             io_port_names = self.design.fragments[fragment].io_port_names
@@ -1402,13 +1441,15 @@ class NetlistEmitter:
             if parent_module_idx is None:
                 self.emit_drivers()
                 self.emit_top_ports(fragment)
+                if self.all_undef_to_ff:
+                    self.emit_undef_ff()
                 self.emit_undriven()
         else:
             assert False # :nocov:
 
 
-def _emit_netlist(netlist: _nir.Netlist, design):
-    NetlistEmitter(netlist, design).emit_fragment(design.fragment, None)
+def _emit_netlist(netlist: _nir.Netlist, design, *, all_undef_to_ff=False):
+    NetlistEmitter(netlist, design, all_undef_to_ff=all_undef_to_ff).emit_fragment(design.fragment, None)
 
 
 def _compute_net_flows(netlist: _nir.Netlist):
@@ -1640,13 +1681,13 @@ def _compute_io_ports(netlist: _nir.Netlist, ports):
                 visited.update(value)
 
 
-def build_netlist(fragment, ports=(), *, name="top", **kwargs):
+def build_netlist(fragment, ports=(), *, name="top", all_undef_to_ff=False, **kwargs):
     if isinstance(fragment, Design):
         design = fragment
     else:
         design = fragment.prepare(ports=ports, hierarchy=(name,), **kwargs)
     netlist = _nir.Netlist()
-    _emit_netlist(netlist, design)
+    _emit_netlist(netlist, design, all_undef_to_ff=all_undef_to_ff)
     netlist.resolve_all_nets()
     _compute_net_flows(netlist)
     _compute_ports(netlist)
