@@ -1,3 +1,5 @@
+# amaranth: UnusedPrint=no, UnusedProperty
+
 import warnings
 from enum import Enum, EnumMeta
 
@@ -329,8 +331,6 @@ class ValueTestCase(FHDLTestCase):
                 r"^Cannot slice value with a value; use Value.bit_select\(\) or Value.word_select\(\) instead$"):
             Const(31)[s:s+3]
 
-
-
     def test_shift_left(self):
         self.assertRepr(Const(256, unsigned(9)).shift_left(0),
                         "(cat (const 0'd0) (const 9'd256))")
@@ -451,6 +451,12 @@ class ValueTestCase(FHDLTestCase):
     def test_replicate_repr(self):
         s = Const(10).replicate(3)
         self.assertEqual(repr(s), "(cat (const 4'd10) (const 4'd10) (const 4'd10))")
+
+    def test_format_wrong(self):
+        sig = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Value \(sig sig\) cannot be converted to string."):
+            f"{sig}"
 
 
 class ConstTestCase(FHDLTestCase):
@@ -1492,6 +1498,151 @@ class InitialTestCase(FHDLTestCase):
     def test_initial(self):
         i = Initial()
         self.assertEqual(i.shape(), unsigned(1))
+
+
+class FormatTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        self.assertRepr(Format("abc"), "(format 'abc')")
+        fmt = Format("{{abc}}")
+        self.assertRepr(fmt, "(format '{{abc}}')")
+        self.assertEqual(fmt._chunks, ("{abc}",))
+        fmt = Format("{abc}", abc="{def}")
+        self.assertRepr(fmt, "(format '{{def}}')")
+        self.assertEqual(fmt._chunks, ("{def}",))
+        fmt = Format("a: {a:0{b}}, b: {b}", a=13, b=4)
+        self.assertRepr(fmt, "(format 'a: 0013, b: 4')")
+        fmt = Format("a: {a:0{b}x}, b: {b}", a=a, b=4)
+        self.assertRepr(fmt, "(format 'a: {:04x}, b: 4' (sig a))")
+        fmt = Format("a: {a}, b: {b}, a: {a}", a=a, b=b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}, a: {}' (sig a) (sig b) (sig a))")
+        fmt = Format("a: {0}, b: {1}, a: {0}", a, b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}, a: {}' (sig a) (sig b) (sig a))")
+        fmt = Format("a: {}, b: {}", a, b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}' (sig a) (sig b))")
+        subfmt = Format("a: {:2x}, b: {:3x}", a, b)
+        fmt = Format("sub: {}, c: {:4x}", subfmt, c)
+        self.assertRepr(fmt, "(format 'sub: a: {:2x}, b: {:3x}, c: {:4x}' (sig a) (sig b) (sig c))")
+
+    def test_construct_wrong(self):
+        a = Signal()
+        b = Signal(signed(16))
+        with self.assertRaisesRegex(ValueError,
+                r"^cannot switch from manual field specification to automatic field numbering$"):
+            Format("{0}, {}", a, b)
+        with self.assertRaisesRegex(ValueError,
+                r"^cannot switch from automatic field numbering to manual field specification$"):
+            Format("{}, {1}", a, b)
+        with self.assertRaisesRegex(TypeError,
+                r"^'ValueCastable' formatting is not supported$"):
+            Format("{}", MockValueCastable(Const(0)))
+        with self.assertRaisesRegex(ValueError,
+                r"^Format specifiers \('s'\) cannot be used for 'Format' objects$"):
+            Format("{:s}", Format(""))
+        with self.assertRaisesRegex(ValueError,
+                r"^format positional argument 1 was not used$"):
+            Format("{}", a, b)
+        with self.assertRaisesRegex(ValueError,
+                r"^format keyword argument 'b' was not used$"):
+            Format("{a}", a=a, b=b)
+        with self.assertRaisesRegex(ValueError,
+                r"^Invalid format specifier 'meow'$"):
+            Format("{a:meow}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alignment '\^' is not supported$"):
+            Format("{a:^13}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Grouping option ',' is not supported$"):
+            Format("{a:,}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Presentation type 'n' is not supported$"):
+            Format("{a:n}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot print signed value with format specifier 'c'$"):
+            Format("{b:c}", b=b)
+        with self.assertRaisesRegex(ValueError,
+                r"^Value width must be divisible by 8 with format specifier 's'$"):
+            Format("{a:s}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alignment '=' is not allowed with format specifier 'c'$"):
+            Format("{a:=13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Sign is not allowed with format specifier 'c'$"):
+            Format("{a:+13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Zero fill is not allowed with format specifier 'c'$"):
+            Format("{a:013c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alternate form is not allowed with format specifier 'c'$"):
+            Format("{a:#13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify '_' with format specifier 'c'$"):
+            Format("{a:_c}", a=a)
+
+    def test_plus(self):
+        a = Signal()
+        b = Signal()
+        fmt_a = Format("a = {};", a)
+        fmt_b = Format("b = {};", b)
+        fmt = fmt_a + fmt_b
+        self.assertRepr(fmt, "(format 'a = {};b = {};' (sig a) (sig b))")
+        self.assertEqual(fmt._chunks[2], ";b = ")
+
+    def test_plus_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^unsupported operand type\(s\) for \+: 'Format' and 'str'$"):
+            Format("") + ""
+
+    def test_format_wrong(self):
+        fmt = Format("")
+        with self.assertRaisesRegex(TypeError,
+                r"^Format object .* cannot be converted to string."):
+            f"{fmt}"
+
+
+class PrintTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        p = Print("abc")
+        self.assertRepr(p, "(print (format 'abc\\n'))")
+        p = Print("abc", "def")
+        self.assertRepr(p, "(print (format 'abc def\\n'))")
+        p = Print("abc", b)
+        self.assertRepr(p, "(print (format 'abc {}\\n' (sig b)))")
+        p = Print(a, b, end="", sep=", ")
+        self.assertRepr(p, "(print (format '{}, {}' (sig a) (sig b)))")
+        p = Print(Format("a: {a:04x}", a=a))
+        self.assertRepr(p, "(print (format 'a: {:04x}\\n' (sig a)))")
+
+    def test_construct_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^'sep' must be a string, not 13$"):
+            Print("", sep=13)
+        with self.assertRaisesRegex(TypeError,
+                r"^'end' must be a string, not 13$"):
+            Print("", end=13)
+
+
+class AssertTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        p = Assert(a)
+        self.assertRepr(p, "(assert (sig a))")
+        p = Assert(a, "abc")
+        self.assertRepr(p, "(assert (sig a) (format 'abc'))")
+        p = Assert(a, Format("a = {}, b = {}", a, b))
+        self.assertRepr(p, "(assert (sig a) (format 'a = {}, b = {}' (sig a) (sig b)))")
+
+    def test_construct_wrong(self):
+        a = Signal()
+        b = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Property message must be None, str, or Format, not \(sig b\)$"):
+            Assert(a, b)
 
 
 class SwitchTestCase(FHDLTestCase):

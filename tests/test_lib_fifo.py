@@ -3,7 +3,7 @@
 import warnings
 
 from amaranth.hdl import *
-from amaranth.asserts import *
+from amaranth.asserts import Initial, AnyConst
 from amaranth.sim import *
 from amaranth.lib.fifo import *
 from amaranth.lib.memory import *

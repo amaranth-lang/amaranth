@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from .._utils import flatten
 from .. import tracer
 from ._ast import *
-from ._ast import _StatementList, AnyValue, Property
+from ._ast import _StatementList, AnyValue
 from ._cd import *
 from ._ir import *
 from ._mem import MemoryInstance
@@ -146,6 +146,10 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
+    def on_Print(self, stmt):
+        pass # :nocov:
+
+    @abstractmethod
     def on_Property(self, stmt):
         pass # :nocov:
 
@@ -166,6 +170,8 @@ class StatementVisitor(metaclass=ABCMeta):
     def on_statement(self, stmt):
         if type(stmt) is Assign:
             new_stmt = self.on_Assign(stmt)
+        elif type(stmt) is Print:
+            new_stmt = self.on_Print(stmt)
         elif type(stmt) is Property:
             new_stmt = self.on_Property(stmt)
         elif type(stmt) is Switch:
@@ -178,7 +184,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt.src_loc = stmt.src_loc
             if isinstance(new_stmt, Switch) and isinstance(stmt, Switch):
                 new_stmt.case_src_locs = stmt.case_src_locs
-        if isinstance(new_stmt, Property):
+        if isinstance(new_stmt, (Print, Property)):
             new_stmt._MustUse__used = True
         return new_stmt
 
@@ -190,11 +196,28 @@ class StatementTransformer(StatementVisitor):
     def on_value(self, value):
         return value
 
+    def on_Format(self, format):
+        chunks = []
+        for chunk in format._chunks:
+            if isinstance(chunk, str):
+                chunks.append(chunk)
+            else:
+                value, format_spec = chunk
+                chunks.append((self.on_value(value), format_spec))
+        return Format._from_chunks(chunks)
+
     def on_Assign(self, stmt):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
+    def on_Print(self, stmt):
+        return Print(self.on_Format(stmt.message), end="")
+
     def on_Property(self, stmt):
-        return Property(stmt.kind, self.on_value(stmt.test), name=stmt.name)
+        if stmt.message is None:
+            message = None
+        else:
+            message = self.on_Format(stmt.message)
+        return Property(stmt.kind, self.on_value(stmt.test), message)
 
     def on_Switch(self, stmt):
         cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
@@ -386,12 +409,23 @@ class DomainCollector(ValueVisitor, StatementVisitor):
     def on_Initial(self, value):
         pass
 
+    def on_Format(self, format):
+        for chunk in format._chunks:
+            if not isinstance(chunk, str):
+                value, _format_spec = chunk
+                self.on_value(value)
+
     def on_Assign(self, stmt):
         self.on_value(stmt.lhs)
         self.on_value(stmt.rhs)
 
+    def on_Print(self, stmt):
+        self.on_Format(stmt.message)
+
     def on_Property(self, stmt):
         self.on_value(stmt.test)
+        if stmt.message is not None:
+            self.on_Format(stmt.message)
 
     def on_Switch(self, stmt):
         self.on_value(stmt.test)

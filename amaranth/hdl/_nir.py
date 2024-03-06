@@ -6,13 +6,16 @@ from ._ast import SignalDict
 
 __all__ = [
     # Netlist core
-    "Net", "Value", "Netlist", "ModuleNetFlow", "Module", "Cell", "Top",
+    "Net", "Value", "FormatValue", "Format",
+    "Netlist", "ModuleNetFlow", "Module", "Cell", "Top",
     # Computation cells
     "Operator", "Part",
     # Decision tree cells
     "Matches", "PriorityMatch", "Assignment", "AssignmentList",
     # Storage cells
     "FlipFlop", "Memory", "SyncWritePort", "AsyncReadPort", "SyncReadPort",
+    # Print cells
+    "AsyncPrint", "SyncPrint",
     # Formal verification cells
     "Initial", "AnyValue", "AsyncProperty", "SyncProperty",
     # Foreign interface cells
@@ -157,6 +160,57 @@ class Value(tuple):
             return f"(cat {' '.join(chunks)})"
 
     __str__ = __repr__
+
+
+class FormatValue:
+    """A single formatted value within ``Format``.
+
+    Attributes
+    ----------
+
+    value: Value
+    format_desc: str
+    signed: bool
+    """
+    def __init__(self, value, format_desc, *, signed):
+        assert isinstance(format_desc, str)
+        assert isinstance(signed, bool)
+        self.value = Value(value)
+        self.format_desc = format_desc
+        self.signed = signed
+
+    def __repr__(self):
+        sign = "s" if self.signed else "u"
+        return f"({sign} {self.value!r} {self.format_desc!r})"
+
+
+class Format:
+    """Like _ast.Format, but for NIR.
+
+    Attributes
+    ----------
+
+    chunks: tuple of str and FormatValue
+    """
+    def __init__(self, chunks):
+        self.chunks = tuple(chunks)
+        for chunk in self.chunks:
+            assert isinstance(chunk, (str, FormatValue))
+
+    def __repr__(self):
+        return f"({' '.join(repr(chunk) for chunk in self.chunks)})"
+
+    def input_nets(self):
+        nets = set()
+        for chunk in self.chunks:
+            if isinstance(chunk, FormatValue):
+                nets |= set(chunk.value)
+        return nets
+
+    def resolve_nets(self, netlist: "Netlist"):
+        for chunk in self.chunks:
+            if isinstance(chunk, FormatValue):
+                chunk.value = netlist.resolve_value(chunk.value)
 
 
 class Netlist:
@@ -837,6 +891,73 @@ class SyncReadPort(Cell):
         return f"(read_port {self.memory} {self.width} {self.addr} {self.en} {self.clk_edge} {self.clk} ({transparent_for}))"
 
 
+class AsyncPrint(Cell):
+    """Corresponds to ``Print`` in the "comb" domain.
+
+    Attributes
+    ----------
+
+    en: Net
+    format: Format
+    """
+    def __init__(self, module_idx, *, en, format, src_loc):
+        super().__init__(module_idx, src_loc=src_loc)
+
+        assert isinstance(format, Format)
+        self.en = Net.ensure(en)
+        self.format = format
+
+    def input_nets(self):
+        return {self.en} | self.format.input_nets()
+
+    def output_nets(self, self_idx: int):
+        return set()
+
+    def resolve_nets(self, netlist: Netlist):
+        self.en = netlist.resolve_net(self.en)
+        self.format.resolve_nets(netlist)
+
+    def __repr__(self):
+        return f"(print {self.en} {self.format!r})"
+
+
+class SyncPrint(Cell):
+    """Corresponds to ``Print`` in domains other than "comb".
+
+    Attributes
+    ----------
+
+    en: Net
+    clk: Net
+    clk_edge: str, either 'pos' or 'neg'
+    format: Format
+    """
+
+    def __init__(self, module_idx, *, en, clk, clk_edge, format, src_loc):
+        super().__init__(module_idx, src_loc=src_loc)
+
+        assert clk_edge in ('pos', 'neg')
+        assert isinstance(format, Format)
+        self.en = Net.ensure(en)
+        self.clk = Net.ensure(clk)
+        self.clk_edge = clk_edge
+        self.format = format
+
+    def input_nets(self):
+        return {self.en, self.clk} | self.format.input_nets()
+
+    def output_nets(self, self_idx: int):
+        return set()
+
+    def resolve_nets(self, netlist: Netlist):
+        self.en = netlist.resolve_net(self.en)
+        self.clk = netlist.resolve_net(self.clk)
+        self.format.resolve_nets(netlist)
+
+    def __repr__(self):
+        return f"(print {self.en} {self.clk_edge} {self.clk} {self.format!r})"
+
+
 class Initial(Cell):
     """Corresponds to ``Initial`` value."""
 
@@ -892,19 +1013,23 @@ class AsyncProperty(Cell):
     kind: str, either 'assert', 'assume', or 'cover'
     test: Net
     en: Net
-    name: str
+    format: Format or None
     """
-    def __init__(self, module_idx, *, kind, test, en, name, src_loc):
+    def __init__(self, module_idx, *, kind, test, en, format, src_loc):
         super().__init__(module_idx, src_loc=src_loc)
 
+        assert format is None or isinstance(format, Format)
         assert kind in ('assert', 'assume', 'cover')
         self.kind = kind
         self.test = Net.ensure(test)
         self.en = Net.ensure(en)
-        self.name = name
+        self.format = format
 
     def input_nets(self):
-        return {self.test, self.en}
+        if self.format is None:
+            return {self.test, self.en}
+        else:
+            return {self.test, self.en} | self.format.input_nets()
 
     def output_nets(self, self_idx: int):
         return set()
@@ -912,9 +1037,11 @@ class AsyncProperty(Cell):
     def resolve_nets(self, netlist: Netlist):
         self.test = netlist.resolve_net(self.test)
         self.en = netlist.resolve_net(self.en)
+        if self.format is not None:
+            self.format.resolve_nets(netlist)
 
     def __repr__(self):
-        return f"({self.kind} {self.name!r} {self.test} {self.en})"
+        return f"({self.kind} {self.test} {self.en} {self.format!r})"
 
 
 class SyncProperty(Cell):
@@ -928,12 +1055,13 @@ class SyncProperty(Cell):
     en: Net
     clk: Net
     clk_edge: str, either 'pos' or 'neg'
-    name: str
+    format: Format or None
     """
 
-    def __init__(self, module_idx, *, kind, test, en, clk, clk_edge, name, src_loc):
+    def __init__(self, module_idx, *, kind, test, en, clk, clk_edge, format, src_loc):
         super().__init__(module_idx, src_loc=src_loc)
 
+        assert format is None or isinstance(format, Format)
         assert kind in ('assert', 'assume', 'cover')
         assert clk_edge in ('pos', 'neg')
         self.kind = kind
@@ -941,10 +1069,13 @@ class SyncProperty(Cell):
         self.en = Net.ensure(en)
         self.clk = Net.ensure(clk)
         self.clk_edge = clk_edge
-        self.name = name
+        self.format = format
 
     def input_nets(self):
-        return {self.test, self.en, self.clk}
+        if self.format is None:
+            return {self.test, self.en, self.clk}
+        else:
+            return {self.test, self.en, self.clk} | self.format.input_nets()
 
     def output_nets(self, self_idx: int):
         return set()
@@ -953,9 +1084,11 @@ class SyncProperty(Cell):
         self.test = netlist.resolve_net(self.test)
         self.en = netlist.resolve_net(self.en)
         self.clk = netlist.resolve_net(self.clk)
+        if self.format is not None:
+            self.format.resolve_nets(netlist)
 
     def __repr__(self):
-        return f"({self.kind} {self.name!r} {self.test} {self.en} {self.clk_edge} {self.clk})"
+        return f"({self.kind} {self.test} {self.en} {self.clk_edge} {self.clk} {self.format!r})"
 
 
 class Instance(Cell):

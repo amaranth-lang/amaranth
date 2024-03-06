@@ -1,7 +1,8 @@
 """First-in first-out queues."""
 
 from .. import *
-from ..asserts import *
+from ..hdl import Assume
+from ..asserts import Initial
 from ..utils import ceil_log2
 from .coding import GrayEncoder, GrayDecoder
 from .cdc import FFSynchronizer, AsyncFFSynchronizer

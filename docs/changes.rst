@@ -35,6 +35,8 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
 * Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
 * Replace uses of ``amaranth.hdl.Memory`` with ``amaranth.lib.memory.Memory``
+* Replace imports of ``amaranth.asserts.{Assert, Assume, Cover}`` with imports from ``amaranth.hdl``
+* Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
 
 
 Implemented RFCs
@@ -46,6 +48,7 @@ Implemented RFCs
 .. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
+.. _RFC 50: https://amaranth-lang.org/rfcs/0050-print.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -53,6 +56,7 @@ Implemented RFCs
 * `RFC 43`_: Rename ``reset=`` to ``init=``
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
+* `RFC 50`_: ``Print`` statement and string formatting
 
 
 Language changes
@@ -62,6 +66,7 @@ Language changes
 
 * Added: :class:`ast.Slice` objects have been made const-castable.
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
+* Added: :class:`Format` objects, :class:`Print` statements, messages in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
 * Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
@@ -69,11 +74,13 @@ Language changes
 * Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
 * Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
 * Changed: :class:`Shape` has been made immutable and hashable.
+* Changed: :class:`Assert`, :class:`Assume`, :class:`Cover` have been moved to :mod:`amaranth.hdl` from :mod:`amaranth.asserts`. (`RFC 50`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
+* Removed: assertion names in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
 
 
 Standard library changes
@@ -91,6 +98,7 @@ Toolchain changes
 -----------------
 
 * Added: ``Simulator.add_testbench``. (`RFC 27`_)
+* Added: support for :class:`amaranth.hdl.Assert` in simulation. (`RFC 50`_)
 * Deprecated: ``Settle`` simulation command. (`RFC 27`_)
 * Deprecated: ``Simulator.add_sync_process``. (`RFC 27`_)
 * Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.

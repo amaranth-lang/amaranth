@@ -9,7 +9,7 @@ from .._utils import flatten
 from ..utils import bits_for
 from .. import tracer
 from ._ast import *
-from ._ast import _StatementList, _LateBoundStatement, Property
+from ._ast import _StatementList, _LateBoundStatement, Property, Print
 from ._ir import *
 from ._cd import *
 from ._xfrm import *
@@ -184,7 +184,7 @@ def resolve_statement(stmt):
             src_loc=stmt.src_loc,
             case_src_locs=stmt.case_src_locs,
         )
-    elif isinstance(stmt, (Assign, Property)):
+    elif isinstance(stmt, (Assign, Property, Print)):
         return stmt
     else:
         assert False # :nocov:
@@ -584,9 +584,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not isinstance(stmt, (Assign, Property, _LateBoundStatement)):
+            if not isinstance(stmt, (Assign, Property, Print, _LateBoundStatement)):
                 raise SyntaxError(
-                    f"Only assignments and property checks may be appended to d.{domain}")
+                    f"Only assignments, prints, and property checks may be appended to d.{domain}")
 
             stmt._MustUse__used = True
 

@@ -938,6 +938,8 @@ Every signal included in the target of an assignment becomes a part of the domai
 
    The answer is no. While this kind of code is occasionally useful, rejecting it greatly simplifies backends, simulators, and analyzers.
 
+In addition to assignments, :ref:`assertions, assumptions <lang-asserts>`, and :ref:`debug prints <lang-print>` can be added using the same syntax.
+
 
 .. _lang-assignorder:
 
@@ -1285,6 +1287,89 @@ Consider the following code:
         m.d.sync += timer.eq(timer - 1)
 
 Whenever there is a transition on the clock of the ``sync`` domain, the :py:`timer` signal is incremented by one if :py:`up` is true, decremented by one if :py:`down` is true, and retains its value otherwise.
+
+
+.. _lang-assert:
+
+Assertions
+==========
+
+Some properties are so important that if they are violated, the computations described by the design become meaningless. These properties should be guarded with an :class:`Assert` statement that immediately terminates the simulation if its condition is false. Assertions should generally be added to a :ref:`synchronous domain <lang-sync>`, and may have an optional message printed when it is violated:
+
+.. testcode::
+
+    ip = Signal(16)
+    m.d.sync += Assert(ip < 128, "instruction pointer past the end of program code!")
+
+Assertions may be nested within a :ref:`control block <lang-control>`:
+
+.. testcode::
+    :hide:
+
+    booting = Signal()
+
+.. testcode::
+
+    with m.If(~booting):
+        m.d.sync += Assert(ip < 128)
+
+.. warning::
+
+    While is is also possible to add assertions to the :ref:`combinatorial domain <lang-comb>`, simulations of combinatorial circuits may have *glitches*: instantaneous, transient changes in the values of expressions that are being computed which do not affect the result of the computation (and are not visible in most waveform viewers for that reason). Depending on the tools used for simulation, a glitch in the condition of an assertion or of a :ref:`control block <lang-control>` that contains it may cause the simulation to be terminated, even if the glitch would have been instantaneously resolved afterwards.
+
+    If the condition of an assertion is assigned in a synchronous domain, then it is safe to add that assertion in the combinatorial domain. For example, neither of the assertions in the example below will be violated due to glitches, regardless of which domain the :py:`ip` and :py:`booting` signals are driven by:
+
+    .. testcode::
+
+        ip_sync = Signal.like(ip)
+        m.d.sync += ip_sync.eq(ip)
+
+        m.d.comb += Assert(ip_sync < 128)
+        with m.If(booting):
+            m.d.comb += Assert(ip_sync < 128)
+
+    Assertions should be added in a :ref:`synchronous domain <lang-sync>` when possible. In cases where it is not, such as if the condition is a signal that is assigned in a synchronous domain elsewhere, care should be taken while adding the assertion to the combinatorial domain.
+
+
+.. _lang-print:
+
+Debug printing
+==============
+
+The value of any expression, or of several of them, can be printed to the terminal during simulation using the :class:`Print` statement. When added to the :ref:`combinatorial domain <lang-comb>`, the value of an expression is printed whenever it changes:
+
+.. testcode::
+
+    state = Signal()
+    m.d.comb += Print(state)
+
+When added to a :ref:`synchronous domain <lang-sync>`, the value of an expression is printed whenever the active edge occurs on the clock of that domain:
+
+.. testcode::
+
+    m.d.sync += Print("on tick: ", state)
+
+The :class:`Print` statement, regardless of the domain, may be nested within a :ref:`control block <lang-control>`:
+
+.. testcode::
+
+    old_state = Signal.like(state)
+    m.d.sync += old_state.eq(state)
+    with m.If(state != old_state):
+        m.d.sync += Print("was: ", old_state, "now: ", state)
+
+The arguments to the :class:`Print` statement have the same meaning as the arguments to the Python :func:`print` function, with the exception that only :py:`sep` and :py:`end` keyword arguments are supported. In addition, the :class:`Format` helper can be used to apply formatting to the values, similar to the Python :meth:`str.format` method:
+
+.. testcode::
+
+    addr = Signal(32)
+    m.d.sync += Print(Format("address: {:08x}", addr))
+
+In both :class:`Print` and :class:`Format`, arguments that are not Amaranth :ref:`values <lang-values>` are formatted using the usual Python rules. The optional second :py:`message` argument to :class:`Assert` (described :ref:`above <lang-assert>`) also accepts a string or the :class:`Format` helper:
+
+.. testcode::
+
+    m.d.sync += Assert((addr & 0b111) == 0, message=Format("unaligned address {:08x}!", addr))
 
 
 .. _lang-clockdomains:
