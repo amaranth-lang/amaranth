@@ -1,6 +1,8 @@
 import os
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
+from io import StringIO
+from textwrap import dedent
 
 from amaranth._utils import flatten
 from amaranth.hdl._ast import *
@@ -416,7 +418,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
 class SimulatorIntegrationTestCase(FHDLTestCase):
     @contextmanager
-    def assertSimulation(self, module, deadline=None):
+    def assertSimulation(self, module, *, deadline=None):
         sim = Simulator(module)
         yield sim
         with sim.write_vcd("test.vcd", "test.gtkw"):
@@ -1073,6 +1075,104 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             def process():
                 self.assertEqual((yield o), 1)
             sim.add_testbench(process)
+
+    def test_print(self):
+        m = Module()
+        ctr = Signal(16)
+        m.d.sync += ctr.eq(ctr + 1)
+        with m.If(ctr % 3 == 0):
+            m.d.sync += Print(Format("Counter: {ctr:03d}", ctr=ctr))
+        output = StringIO()
+        with redirect_stdout(output):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Delay(1e-5)
+                sim.add_testbench(process)
+        self.assertEqual(output.getvalue(), dedent("""\
+            Counter: 000
+            Counter: 003
+            Counter: 006
+            Counter: 009
+        """))
+
+    def test_print(self):
+        def enc(s):
+            return Cat(
+                Const(b, 8)
+                for b in s.encode()
+            )
+
+        m = Module()
+        ctr = Signal(16)
+        m.d.sync += ctr.eq(ctr + 1)
+        msg = Signal(8 * 8)
+        with m.If(ctr == 0):
+            m.d.comb += msg.eq(enc("zero"))
+        with m.Else():
+            m.d.comb += msg.eq(enc("non-zero"))
+        with m.If(ctr % 3 == 0):
+            m.d.sync += Print(Format("Counter: {:>8s}", msg))
+        output = StringIO()
+        with redirect_stdout(output):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Delay(1e-5)
+                sim.add_testbench(process)
+        self.assertEqual(output.getvalue(), dedent("""\
+            Counter:     zero
+            Counter: non-zero
+            Counter: non-zero
+            Counter: non-zero
+        """))
+
+    def test_assert(self):
+        m = Module()
+        ctr = Signal(16)
+        m.d.sync += ctr.eq(ctr + 1)
+        m.d.sync += Assert(ctr < 4, Format("Counter too large: {}", ctr))
+        with self.assertRaisesRegex(AssertionError,
+                r"^Assertion violated: Counter too large: 4$"):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Delay(1e-5)
+                sim.add_testbench(process)
+
+    def test_assume(self):
+        m = Module()
+        ctr = Signal(16)
+        m.d.sync += ctr.eq(ctr + 1)
+        m.d.comb += Assume(ctr < 4)
+        with self.assertRaisesRegex(AssertionError,
+                r"^Assumption violated$"):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Delay(1e-5)
+                sim.add_testbench(process)
+
+    def test_cover(self):
+        m = Module()
+        ctr = Signal(16)
+        m.d.sync += ctr.eq(ctr + 1)
+        cover = Cover(ctr % 3 == 0, Format("Counter: {ctr:03d}", ctr=ctr))
+        m.d.sync += cover
+        m.d.sync += Cover(ctr % 3 == 1)
+        output = StringIO()
+        with redirect_stdout(output):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Delay(1e-5)
+                sim.add_testbench(process)
+        self.assertRegex(output.getvalue(), dedent(r"""
+            Coverage hit at .*test_sim\.py:\d+: Counter: 000
+            Coverage hit at .*test_sim\.py:\d+: Counter: 003
+            Coverage hit at .*test_sim\.py:\d+: Counter: 006
+            Coverage hit at .*test_sim\.py:\d+: Counter: 009
+        """).lstrip())
 
 
 class SimulatorRegressionTestCase(FHDLTestCase):

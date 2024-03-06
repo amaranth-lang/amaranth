@@ -222,7 +222,7 @@ class Fragment:
                 continue
 
             # While we're at it, show a message.
-            message = ("Signal '{}' is driven from multiple fragments: {}"
+            message = ("Signal '{!r}' is driven from multiple fragments: {}"
                        .format(signal, ", ".join(subfrag_names)))
             if mode == "error":
                 raise DriverConflict(message)
@@ -972,6 +972,17 @@ class NetlistEmitter:
         else:
             assert False # :nocov:
 
+    def emit_format(self, module_idx, format):
+        chunks = []
+        for chunk in format._chunks:
+            if isinstance(chunk, str):
+                chunks.append(chunk)
+            else:
+                value, format_desc = chunk
+                value, signed = self.emit_rhs(module_idx, value)
+                chunks.append(_nir.FormatValue(value, format_desc, signed=signed))
+        return _nir.Format(chunks)
+
     def emit_stmt(self, module_idx: int, fragment: _ir.Fragment, domain: str,
                   stmt: _ast.Statement, cond: _nir.Net):
         if domain == "comb":
@@ -986,6 +997,25 @@ class NetlistEmitter:
             if len(rhs) < width:
                 rhs = self.extend(rhs, signed, width)
             self.emit_assign(module_idx, cd, stmt.lhs, 0, rhs, cond, src_loc=stmt.src_loc)
+        elif isinstance(stmt, _ast.Print):
+            en_cell = _nir.AssignmentList(module_idx,
+                default=_nir.Value.zeros(),
+                assignments=[
+                    _nir.Assignment(cond=cond, start=0, value=_nir.Value.ones(),
+                                    src_loc=stmt.src_loc)
+                ],
+                src_loc=stmt.src_loc)
+            cond, = self.netlist.add_value_cell(1, en_cell)
+            format = self.emit_format(module_idx, stmt.message)
+            if cd is None:
+                cell = _nir.AsyncPrint(module_idx, en=cond,
+                                       format=format, src_loc=stmt.src_loc)
+            else:
+                clk, = self.emit_signal(cd.clk)
+                cell = _nir.SyncPrint(module_idx, en=cond,
+                                      clk=clk, clk_edge=cd.clk_edge,
+                                      format=format, src_loc=stmt.src_loc)
+            self.netlist.add_cell(cell)
         elif isinstance(stmt, _ast.Property):
             test, _signed = self.emit_rhs(module_idx, stmt.test)
             if len(test) != 1:
@@ -999,14 +1029,18 @@ class NetlistEmitter:
                 ],
                 src_loc=stmt.src_loc)
             cond, = self.netlist.add_value_cell(1, en_cell)
+            if stmt.message is None:
+                format = None
+            else:
+                format = self.emit_format(module_idx, stmt.message)
             if cd is None:
                 cell = _nir.AsyncProperty(module_idx, kind=stmt.kind.value, test=test, en=cond,
-                                          name=stmt.name, src_loc=stmt.src_loc)
+                                          format=format, src_loc=stmt.src_loc)
             else:
                 clk, = self.emit_signal(cd.clk)
                 cell = _nir.SyncProperty(module_idx, kind=stmt.kind.value, test=test, en=cond,
-                                         clk=clk, clk_edge=cd.clk_edge, name=stmt.name,
-                                         src_loc=stmt.src_loc)
+                                         clk=clk, clk_edge=cd.clk_edge,
+                                         format=format, src_loc=stmt.src_loc)
             self.netlist.add_cell(cell)
         elif isinstance(stmt, _ast.Switch):
             test, _signed = self.emit_rhs(module_idx, stmt.test)

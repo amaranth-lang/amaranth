@@ -63,6 +63,9 @@ The prelude exports exactly the following names:
 * :class:`Signal`
 * :class:`ClockSignal`
 * :class:`ResetSignal`
+* :class:`Format`
+* :class:`Print`
+* :func:`Assert`
 * :class:`Module`
 * :class:`ClockDomain`
 * :class:`Elaboratable`

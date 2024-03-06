@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import sys
 
 from ..hdl import *
-from ..hdl._ast import SignalSet, _StatementList
+from ..hdl._ast import SignalSet, _StatementList, Property
 from ..hdl._xfrm import ValueVisitor, StatementVisitor
 from ..hdl._mem import MemoryInstance
 from ._base import BaseProcess
@@ -112,6 +112,15 @@ class _RHSValueCompiler(_ValueCompiler):
         self.mode = mode
         # If not None, `inputs` gets populated with RHS signals.
         self.inputs = inputs
+
+    def sign(self, value):
+        value_mask = (1 << len(value)) - 1
+        masked = f"({value_mask:#x} & {self(value)})"
+
+        if value.shape().signed:
+            return f"sign({masked}, {-1 << (len(value) - 1):#x})"
+        else: # unsigned
+            return masked
 
     def on_Const(self, value):
         return f"{value.value}"
@@ -345,7 +354,31 @@ class _LHSValueCompiler(_ValueCompiler):
         return gen
 
 
+def value_to_string(value):
+    """Unpack a Verilog-like (but LSB-first) string of unknown width from an integer."""
+    msg = bytearray()
+    while value:
+        byte = value & 0xff
+        value >>= 8
+        if byte:
+            msg.append(byte)
+    return msg.decode()
+
+
+def pin_blame(src_loc, exc):
+    if src_loc is None:
+        raise exc
+    filename, line = src_loc
+    code = compile("\n" * (line - 1) + "raise exc", filename, "exec")
+    exec(code, {"exc": exc})
+
+
 class _StatementCompiler(StatementVisitor, _Compiler):
+    helpers = {
+        "value_to_string": value_to_string,
+        "pin_blame": pin_blame,
+    }
+
     def __init__(self, state, emitter, *, inputs=None, outputs=None):
         super().__init__(state, emitter)
         self.rhs = _RHSValueCompiler(state, emitter, mode="curr", inputs=inputs)
@@ -358,11 +391,7 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             self.emitter.append("pass")
 
     def on_Assign(self, stmt):
-        gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
-        gen_rhs = f"({(1 << len(stmt.rhs)) - 1:#x} & {gen_rhs_value})"
-        if stmt.rhs.shape().signed:
-            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1):#x})"
-        return self.lhs(stmt.lhs)(gen_rhs)
+        return self.lhs(stmt.lhs)(self.rhs.sign(stmt.rhs))
 
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
@@ -387,8 +416,47 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             with self.emitter.indent():
                 self(stmts)
 
+    def emit_format(self, format):
+        format_string = []
+        args = []
+        for chunk in format._chunks:
+            if isinstance(chunk, str):
+                format_string.append(chunk.replace("{", "{{").replace("}", "}}"))
+            else:
+                value, format_desc = chunk
+                value = self.rhs.sign(value)
+                if format_desc.endswith("s"):
+                    format_desc = format_desc[:-1]
+                    value = f"value_to_string({value})"
+                format_string.append(f"{{:{format_desc}}}")
+                args.append(value)
+        format_string = "".join(format_string)
+        args = ", ".join(args)
+        return f"{format_string!r}.format({args})"
+
+    def on_Print(self, stmt):
+        self.emitter.append(f"print({self.emit_format(stmt.message)}, end='')")
+
     def on_Property(self, stmt):
-        raise NotImplementedError # :nocov:
+        if stmt.kind == Property.Kind.Cover:
+            if stmt.message is not None:
+                self.emitter.append(f"if {self.rhs.sign(stmt.test)}:")
+                with self.emitter.indent():
+                    filename, line = stmt.src_loc
+                    self.emitter.append(f"print(\"Coverage hit at \" {filename!r} \":{line}:\", {self.emit_format(stmt.message)})")
+        else:
+            self.emitter.append(f"if not {self.rhs.sign(stmt.test)}:")
+            with self.emitter.indent():
+                if stmt.kind == Property.Kind.Assert:
+                    kind = "Assertion"
+                elif stmt.kind == Property.Kind.Assume:
+                    kind = "Assumption"
+                else:
+                    assert False # :nocov:
+                if stmt.message is not None:
+                    self.emitter.append(f"pin_blame({stmt.src_loc!r}, AssertionError(\"{kind} violated: \" + {self.emit_format(stmt.message)}))")
+                else:
+                    self.emitter.append(f"pin_blame({stmt.src_loc!r}, AssertionError(\"{kind} violated\"))")
 
     @classmethod
     def compile(cls, state, stmt):
@@ -541,7 +609,11 @@ class _FragmentCompiler:
             else:
                 filename = "<string>"
 
-            exec_locals = {"slots": self.state.slots, **_ValueCompiler.helpers}
+            exec_locals = {
+                "slots": self.state.slots,
+                **_ValueCompiler.helpers,
+                **_StatementCompiler.helpers,
+            }
             exec(compile(code, filename, "exec"), exec_locals)
             domain_process.run = exec_locals["run"]
 

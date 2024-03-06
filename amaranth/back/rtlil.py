@@ -441,8 +441,8 @@ class ModuleEmitter:
                 continue # Instances use one wire per output, not per cell.
             elif isinstance(cell, (_nir.PriorityMatch, _nir.Matches)):
                 continue # Inlined into assignment lists.
-            elif isinstance(cell, (_nir.SyncProperty, _nir.AsyncProperty, _nir.Memory,
-                                   _nir.SyncWritePort)):
+            elif isinstance(cell, (_nir.SyncPrint, _nir.AsyncPrint, _nir.SyncProperty,
+                                   _nir.AsyncProperty, _nir.Memory, _nir.SyncWritePort)):
                 continue # No outputs.
             elif isinstance(cell, _nir.AssignmentList):
                 width = len(cell.default)
@@ -859,37 +859,78 @@ class ModuleEmitter:
             })
         self.builder.cell(f"$memrd_v2", ports=ports, params=params, src=_src(cell.src_loc))
 
-    def emit_property(self, cell_idx, cell):
-        if isinstance(cell, _nir.AsyncProperty):
-            ports = {
-                "A": self.sigspec(cell.test),
-                "EN": self.sigspec(cell.en),
-            }
-        if isinstance(cell, _nir.SyncProperty):
-            test = self.builder.wire(1, attrs={"init": _ast.Const(0, 1)})
-            en = self.builder.wire(1, attrs={"init": _ast.Const(0, 1)})
-            for (d, q) in [
-                (cell.test, test),
-                (cell.en, en),
-            ]:
-                ports = {
-                    "D": self.sigspec(d),
-                    "Q": q,
-                    "CLK": self.sigspec(cell.clk),
-                }
-                params = {
-                    "WIDTH": 1,
-                    "CLK_POLARITY": {
-                        "pos": True,
-                        "neg": False,
-                    }[cell.clk_edge],
-                }
-                self.builder.cell(f"$dff", ports=ports, params=params, src=_src(cell.src_loc))
-            ports = {
-                "A": test,
-                "EN": en,
-            }
-        self.builder.cell(f"${cell.kind}", name=cell.name, ports=ports, src=_src(cell.src_loc))
+    def emit_print(self, cell_idx, cell):
+        args = []
+        format = []
+        if cell.format is not None:
+            for chunk in cell.format.chunks:
+                if isinstance(chunk, str):
+                    format.append(chunk)
+                else:
+                    spec = _ast.Format._parse_format_spec(chunk.format_desc, _ast.Shape(len(chunk.value), chunk.signed))
+                    type = spec["type"]
+                    if type == "s":
+                        assert len(chunk.value) % 8 == 0
+                        for bit in reversed(range(0, len(chunk.value), 8)):
+                            args += chunk.value[bit:bit+8]
+                    else:
+                        args += chunk.value
+                    if type is None:
+                        type = "d"
+                    if type == "x" or type == "X":
+                        # TODO(yosys): "H" type
+                        type = "h"
+                    if type == "s":
+                        # TODO(yosys): support for single unicode character?
+                        type = "c"
+                    width = spec["width"]
+                    align = spec["align"]
+                    if align is None:
+                        align = ">" if type != "c" else "<"
+                    if align == "=":
+                        # TODO(yosys): "=" alignment
+                        align = ">"
+                    fill = spec["fill"]
+                    if fill not in (" ", "0"):
+                        # TODO(yosys): arbitrary fill
+                        fill = " "
+                    # TODO(yosys): support for options, grouping
+                    sign = spec["sign"]
+                    if sign != "+":
+                        # TODO(yosys): support " " sign
+                        sign = ""
+                    if type == "c":
+                        signed = ""
+                    elif chunk.signed:
+                        signed = "s"
+                    else:
+                        signed = "u"
+                    format.append(f"{{{len(chunk.value)}:{align}{fill}{width or ''}{type}{sign}{signed}}}")
+        ports = {
+            "EN": self.sigspec(cell.en),
+            "ARGS": self.sigspec(_nir.Value(args)),
+        }
+        params = {
+            "FORMAT": "".join(format),
+            "ARGS_WIDTH": len(args),
+            "PRIORITY": -cell_idx,
+        }
+        if isinstance(cell, (_nir.AsyncPrint, _nir.AsyncProperty)):
+            ports["TRG"] = self.sigspec(_nir.Value())
+            params["TRG_ENABLE"] = False
+            params["TRG_WIDTH"] = 0
+            params["TRG_POLARITY"] = 0
+        if isinstance(cell, (_nir.SyncPrint, _nir.SyncProperty)):
+            ports["TRG"] = self.sigspec(cell.clk)
+            params["TRG_ENABLE"] = True
+            params["TRG_WIDTH"] = 1
+            params["TRG_POLARITY"] = cell.clk_edge == "pos"
+        if isinstance(cell, (_nir.AsyncPrint, _nir.SyncPrint)):
+            self.builder.cell(f"$print", params=params, ports=ports, src=_src(cell.src_loc))
+        if isinstance(cell, (_nir.AsyncProperty, _nir.SyncProperty)):
+            params["FLAVOR"] = cell.kind
+            ports["A"] = self.sigspec(cell.test)
+            self.builder.cell(f"$check", params=params, ports=ports, src=_src(cell.src_loc))
 
     def emit_any_value(self, cell_idx, cell):
         self.builder.cell(f"${cell.kind}", ports={
@@ -939,8 +980,8 @@ class ModuleEmitter:
                 self.emit_write_port(cell_idx, cell)
             elif isinstance(cell, (_nir.AsyncReadPort, _nir.SyncReadPort)):
                 self.emit_read_port(cell_idx, cell)
-            elif isinstance(cell, (_nir.AsyncProperty, _nir.SyncProperty)):
-                self.emit_property(cell_idx, cell)
+            elif isinstance(cell, (_nir.AsyncPrint, _nir.SyncPrint, _nir.AsyncProperty, _nir.SyncProperty)):
+                self.emit_print(cell_idx, cell)
             elif isinstance(cell, _nir.AnyValue):
                 self.emit_any_value(cell_idx, cell)
             elif isinstance(cell, _nir.Initial):

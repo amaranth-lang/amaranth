@@ -87,7 +87,7 @@ class DSLTestCase(FHDLTestCase):
     def test_d_asgn_wrong(self):
         m = Module()
         with self.assertRaisesRegex(SyntaxError,
-                r"^Only assignments and property checks may be appended to d\.sync$"):
+                r"^Only assignments, prints, and property checks may be appended to d\.sync$"):
             m.d.sync += Switch(self.s1, {})
 
     def test_comb_wrong(self):

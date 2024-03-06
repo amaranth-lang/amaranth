@@ -2,12 +2,13 @@ from abc import ABCMeta, abstractmethod
 import warnings
 import functools
 import operator
+import string
+import re
 from collections import OrderedDict
 from collections.abc import Iterable, MutableMapping, MutableSet, MutableSequence
 from enum import Enum, EnumMeta
 from itertools import chain
 
-from ._repr import *
 from .. import tracer
 from ..utils import *
 from .._utils import *
@@ -21,8 +22,9 @@ __all__ = [
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
     "Initial",
+    "Format",
     "Statement", "Switch",
-    "Property", "Assign", "Assert", "Assume", "Cover",
+    "Property", "Assign", "Print", "Assert", "Assume", "Cover",
     "SignalKey", "SignalDict", "SignalSet",
 ]
 
@@ -337,7 +339,7 @@ class ShapeCastable:
 
     # TODO: write an RFC for turning this into a proper interface method
     def _value_repr(self, value):
-        return (Repr(FormatInt(), value),)
+        return (_repr.Repr(_repr.FormatInt(), value),)
 
 
 class _ShapeLikeMeta(type):
@@ -1260,6 +1262,17 @@ class Value(metaclass=ABCMeta):
     #:      assert info == "a signal"
     __hash__ = None # type: ignore
 
+    def __format__(self, format_desc):
+        """Forbidden formatting.
+
+        Since normal Python formatting (f-strings and ``str.format``) must immediately return
+        a string, it is unsuitable for formatting Amaranth values. To format a value at simulation
+        time, use :class:`Format` instead. If you really want to dump the AST at elaboration time,
+        use ``repr`` instead (for instance, via ``f"{value!r}"``).
+        """
+        raise TypeError(f"Value {self!r} cannot be converted to string. Use `Format` for "
+                        f"simulation-time formatting, or use `repr` to print the AST.")
+
     def _lhs_signals(self):
         raise TypeError(f"Value {self!r} cannot be used in assignments")
 
@@ -1925,20 +1938,20 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                 self._value_repr = tuple(orig_shape._value_repr(self))
             elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
                 # A non-Amaranth enum needs a value repr constructed for it.
-                self._value_repr = (Repr(FormatEnum(orig_shape), self),)
+                self._value_repr = (_repr.Repr(_repr.FormatEnum(orig_shape), self),)
             else:
                 # Any other case is formatted as a plain integer.
-                self._value_repr = (Repr(FormatInt(), self),)
+                self._value_repr = (_repr.Repr(_repr.FormatInt(), self),)
 
         # Compute the value representation that will be used by Amaranth.
         if decoder is None:
-            self._value_repr = (Repr(FormatInt(), self),)
+            self._value_repr = (_repr.Repr(_repr.FormatInt(), self),)
             self._decoder = None
         elif not (isinstance(decoder, type) and issubclass(decoder, Enum)):
-            self._value_repr = (Repr(FormatCustom(decoder), self),)
+            self._value_repr = (_repr.Repr(_repr.FormatCustom(decoder), self),)
             self._decoder = decoder
         else: # Violence. In the name of backwards compatibility!
-            self._value_repr = (Repr(FormatEnum(decoder), self),)
+            self._value_repr = (_repr.Repr(_repr.FormatEnum(decoder), self),)
             def enum_decoder(value):
                 try:
                     return "{0.name:}/{0.value:}".format(decoder(value))
@@ -2299,6 +2312,189 @@ class Initial(Value):
         return "(initial)"
 
 
+@final
+class Format:
+    def __init__(self, format, *args, **kwargs):
+        fmt = string.Formatter()
+        chunks = []
+        used_args = set()
+        auto_arg_index = 0
+
+        def get_field(field_name):
+            nonlocal auto_arg_index
+            if field_name == "":
+                if auto_arg_index is None:
+                    raise ValueError("cannot switch from manual field "
+                                        "specification to automatic field "
+                                        "numbering")
+                field_name = str(auto_arg_index)
+                auto_arg_index += 1
+            elif field_name.isdigit():
+                if auto_arg_index is not None and auto_arg_index > 0:
+                    raise ValueError("cannot switch from automatic field "
+                                        "numbering to manual field "
+                                        "specification")
+                auto_arg_index = None
+
+            obj, arg_used = fmt.get_field(field_name, args, kwargs)
+            used_args.add(arg_used)
+            return obj
+
+        def subformat(sub_string):
+            result = []
+            for literal, field_name, format_spec, conversion in fmt.parse(sub_string):
+                result.append(literal)
+                if field_name is not None:
+                    obj = get_field(field_name)
+                    obj = fmt.convert_field(obj, conversion)
+                    format_spec = subformat(format_spec)
+                    result.append(fmt.format_field(obj, format_spec))
+            return "".join(result)
+
+        for literal, field_name, format_spec, conversion in fmt.parse(format):
+            chunks.append(literal)
+            if field_name is not None:
+                obj = get_field(field_name)
+                obj = fmt.convert_field(obj, conversion)
+                format_spec = subformat(format_spec)
+                if isinstance(obj, Value):
+                    # Perform validation.
+                    self._parse_format_spec(format_spec, obj.shape())
+                    chunks.append((obj, format_spec))
+                elif isinstance(obj, ValueCastable):
+                    raise TypeError("'ValueCastable' formatting is not supported")
+                elif isinstance(obj, Format):
+                    if format_spec != "":
+                        raise ValueError(f"Format specifiers ({format_spec!r}) cannot be used for 'Format' objects")
+                    chunks += obj._chunks
+                else:
+                    chunks.append(fmt.format_field(obj, format_spec))
+
+        for i in range(len(args)):
+            if i not in used_args:
+                raise ValueError(f"format positional argument {i} was not used")
+        for name in kwargs:
+            if name not in used_args:
+                raise ValueError(f"format keyword argument {name!r} was not used")
+
+        self._chunks = self._clean_chunks(chunks)
+
+    @classmethod
+    def _from_chunks(cls, chunks):
+        res = object.__new__(cls)
+        res._chunks = cls._clean_chunks(chunks)
+        return res
+
+    @classmethod
+    def _clean_chunks(cls, chunks):
+        res = []
+        for chunk in chunks:
+            if isinstance(chunk, str) and chunk == "":
+                continue
+            if isinstance(chunk, str) and res and isinstance(res[-1], str):
+                res[-1] += chunk
+            else:
+                res.append(chunk)
+        return tuple(res)
+
+    def _to_format_string(self):
+        format_string = []
+        args = []
+        for chunk in self._chunks:
+            if isinstance(chunk, str):
+                format_string.append(chunk.replace("{", "{{").replace("}", "}}"))
+            else:
+                arg, format_spec = chunk
+                args.append(arg)
+                if format_spec:
+                    format_string.append(f"{{:{format_spec}}}")
+                else:
+                    format_string.append("{}")
+        return ("".join(format_string), tuple(args))
+
+    def __add__(self, other):
+        if not isinstance(other, Format):
+            return NotImplemented
+        return Format._from_chunks(self._chunks + other._chunks)
+
+    def __repr__(self):
+        format_string, args = self._to_format_string()
+        args = "".join(f" {arg!r}" for arg in args)
+        return f"(format {format_string!r}{args})"
+
+    def __format__(self, format_desc):
+        """Forbidden formatting.
+
+        ``Format`` objects cannot be directly formatted for the same reason as the ``Value``s
+        they contain.
+        """
+        raise TypeError(f"Format object {self!r} cannot be converted to string. Use `repr` "
+                        f"to print the AST, or pass it to the `Print` statement.")
+
+    _FORMAT_SPEC_PATTERN = re.compile(r"""
+        (?:
+            (?P<fill>.)?
+            (?P<align>[<>=^])
+        )?
+        (?P<sign>[-+ ])?
+        (?P<options>[#]?[0]?)
+        (?P<width>[1-9][0-9]*)?
+        (?P<grouping>[_,])?
+        (?P<type>[bodxXcsn])?
+    """, re.VERBOSE)
+
+    @staticmethod
+    def _parse_format_spec(spec: str, shape: Shape):
+        match = Format._FORMAT_SPEC_PATTERN.fullmatch(spec)
+        if not match:
+            raise ValueError(f"Invalid format specifier {spec!r}")
+        if match["align"] == "^":
+            raise ValueError(f"Alignment {match['align']!r} is not supported")
+        if match["grouping"] == ",":
+            raise ValueError(f"Grouping option {match['grouping']!r} is not supported")
+        if match["type"] == "n":
+            raise ValueError(f"Presentation type {match['type']!r} is not supported")
+        if match["type"] in ("c", "s"):
+            if shape.signed:
+                raise ValueError(f"Cannot print signed value with format specifier {match['type']!r}")
+            if match["align"] == "=":
+                raise ValueError(f"Alignment {match['align']!r} is not allowed with format specifier {match['type']!r}")
+            if "#" in match["options"]:
+                raise ValueError(f"Alternate form is not allowed with format specifier {match['type']!r}")
+            if "0" in match["options"]:
+                raise ValueError(f"Zero fill is not allowed with format specifier {match['type']!r}")
+            if match["sign"] is not None:
+                raise ValueError(f"Sign is not allowed with format specifier {match['type']!r}")
+            if match["grouping"] is not None:
+                raise ValueError(f"Cannot specify {match['grouping']!r} with format specifier {match['type']!r}")
+        if match["type"] == "s" and shape.width % 8 != 0:
+            raise ValueError(f"Value width must be divisible by 8 with format specifier {match['type']!r}")
+        return {
+            # Single character or None.
+            "fill": match["fill"],
+            # '<', '>', '=', or None. Cannot be '=' for types 'c' and 's'.
+            "align": match["align"],
+            # '-', '+', ' ', or None. Always None for types 'c' and 's'.
+            "sign": match["sign"],
+            # "", "#", "0", or "#0". Always "" for types 'c' and 's'.
+            "options": match["options"],
+            # An int.
+            "width": int(match["width"]) if match["width"] is not None else 0,
+            # '_' or None. Always None for types 'c' and 's'.
+            "grouping": match["grouping"],
+            # 'b', 'o', 'd', 'x', 'X', 'c', 's', or None.
+            "type": match["type"],
+        }
+
+    def _rhs_signals(self):
+        res = SignalSet()
+        for chunk in self._chunks:
+            if not isinstance(chunk, str):
+                obj, format_spec = chunk
+                res |= obj._rhs_signals()
+        return res
+
+
 class _StatementList(list):
     def __repr__(self):
         return "({})".format(" ".join(map(repr, self)))
@@ -2350,6 +2546,47 @@ class Assign(Statement):
         return f"(eq {self.lhs!r} {self.rhs!r})"
 
 
+class UnusedPrint(UnusedMustUse):
+    pass
+
+
+@final
+class Print(Statement, MustUse):
+    _MustUse__warning = UnusedPrint
+
+    def __init__(self, *args, sep=" ", end="\n", src_loc_at=0):
+        self._MustUse__silence = True
+        super().__init__(src_loc_at=src_loc_at)
+        if not isinstance(sep, str):
+            raise TypeError(f"'sep' must be a string, not {sep!r}")
+        if not isinstance(end, str):
+            raise TypeError(f"'end' must be a string, not {end!r}")
+        chunks = []
+        first = True
+        for arg in args:
+            if not first and sep != "":
+                chunks.append(sep)
+            first = False
+            chunks += Format("{}", arg)._chunks
+        if end != "":
+            chunks.append(end)
+        self._message = Format._from_chunks(chunks)
+        del self._MustUse__silence
+
+    @property
+    def message(self):
+        return self._message
+
+    def _lhs_signals(self):
+        return set()
+
+    def _rhs_signals(self):
+        return self.message._rhs_signals()
+
+    def __repr__(self):
+        return f"(print {self.message!r})"
+
+
 class UnusedProperty(UnusedMustUse):
     pass
 
@@ -2363,14 +2600,17 @@ class Property(Statement, MustUse):
         Assume = "assume"
         Cover  = "cover"
 
-    def __init__(self, kind, test, *, name=None, src_loc_at=0):
+    def __init__(self, kind, test, message=None, *, src_loc_at=0):
+        self._MustUse__silence = True
         super().__init__(src_loc_at=src_loc_at)
         self._kind   = self.Kind(kind)
         self._test   = Value.cast(test)
-        self._name   = name
-        if not isinstance(self.name, str) and self.name is not None:
-            raise TypeError("Property name must be a string or None, not {!r}"
-                            .format(self.name))
+        if isinstance(message, str):
+            message = Format._from_chunks([message])
+        if message is not None and not isinstance(message, Format):
+            raise TypeError(f"Property message must be None, str, or Format, not {message!r}")
+        self._message = message
+        del self._MustUse__silence
 
     @property
     def kind(self):
@@ -2381,31 +2621,33 @@ class Property(Statement, MustUse):
         return self._test
 
     @property
-    def name(self):
-        return self._name
+    def message(self):
+        return self._message
 
     def _lhs_signals(self):
         return set()
 
     def _rhs_signals(self):
+        if self.message is not None:
+            return self.message._rhs_signals() | self.test._rhs_signals()
         return self.test._rhs_signals()
 
     def __repr__(self):
-        if self.name is not None:
-            return f"({self.name}: {self.kind.value} {self.test!r})"
+        if self.message is not None:
+            return f"({self.kind.value} {self.test!r} {self.message!r})"
         return f"({self.kind.value} {self.test!r})"
 
 
-def Assert(test, *, name=None, src_loc_at=0):
-    return Property("assert", test, name=name, src_loc_at=src_loc_at+1)
+def Assert(test, message=None, *, src_loc_at=0):
+    return Property("assert", test, message, src_loc_at=src_loc_at+1)
 
 
-def Assume(test, *, name=None, src_loc_at=0):
-    return Property("assume", test, name=name, src_loc_at=src_loc_at+1)
+def Assume(test, message=None, *, src_loc_at=0):
+    return Property("assume", test, message, src_loc_at=src_loc_at+1)
 
 
-def Cover(test, *, name=None, src_loc_at=0):
-    return Property("cover", test, name=name, src_loc_at=src_loc_at+1)
+def Cover(test, message=None, *, src_loc_at=0):
+    return Property("cover", test, message, src_loc_at=src_loc_at+1)
 
 
 class _LateBoundStatement(Statement):
@@ -2617,4 +2859,4 @@ class SignalSet(_MappedKeySet):
     _unmap_key = lambda self, key: key.signal
 
 
-from ._repr import *
+from . import _repr
