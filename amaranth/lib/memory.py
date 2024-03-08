@@ -145,11 +145,11 @@ class WritePort:
     @property
     def signature(self):
         return self._signature
-    
+
     @property
     def memory(self):
         return self._memory
-    
+
     @property
     def domain(self):
         return self._domain
@@ -261,15 +261,15 @@ class ReadPort:
     @property
     def signature(self):
         return self._signature
-    
+
     @property
     def memory(self):
         return self._memory
-    
+
     @property
     def domain(self):
         return self._domain
-    
+
     @property
     def transparent_for(self):
         return self._transparent_for
@@ -329,7 +329,7 @@ class Memory(wiring.Component):
             except (TypeError, ValueError) as e:
                 raise type(e)("Memory initialization value at address {:x}: {}"
                                 .format(idx, e)) from None
-        
+
         def __getitem__(self, index):
             return self._items[index]
 
@@ -350,10 +350,10 @@ class Memory(wiring.Component):
 
         def __delitem__(self, index):
             raise TypeError("Deleting items from Memory.init is not allowed")
-        
+
         def insert(self, index, value):
             raise TypeError("Inserting items into Memory.init is not allowed")
-        
+
         def __len__(self):
             return self._depth
 
@@ -364,7 +364,7 @@ class Memory(wiring.Component):
         @property
         def shape(self):
             return self._shape
-        
+
         def __repr__(self):
             return f"Memory.Init({self._items!r})"
 
