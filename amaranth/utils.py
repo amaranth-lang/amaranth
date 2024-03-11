@@ -9,7 +9,7 @@ def ceil_log2(n):
     Raises a `ValueError` for negative inputs."""
     n = operator.index(n)
     if n < 0:
-        raise ValueError("{n} is negative")
+        raise ValueError(f"{n} is negative")
     if n == 0:
         return 0
     return (n - 1).bit_length()
@@ -21,7 +21,7 @@ def exact_log2(n):
     Raises a `ValueError` if `n` is not a power of two."""
     n = operator.index(n)
     if n <= 0 or (n & (n - 1)):
-        raise ValueError("{n} is not a power of 2")
+        raise ValueError(f"{n} is not a power of 2")
     return (n - 1).bit_length()
 
 def log2_int(n, need_pow2=True):
