@@ -319,7 +319,6 @@ class FragmentTransformer:
                 )
         else:
             new_fragment = Fragment(src_loc=fragment.src_loc)
-            new_fragment.flatten = fragment.flatten
         new_fragment.attrs = OrderedDict(fragment.attrs)
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)

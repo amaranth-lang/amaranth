@@ -7,7 +7,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 
 
-__all__ = ["flatten", "union", "memoize", "final", "deprecated", "get_linter_options",
+__all__ = ["flatten", "union", "final", "deprecated", "get_linter_options",
            "get_linter_option"]
 
 
@@ -27,16 +27,6 @@ def union(i, start=None):
         else:
             r |= e
     return r
-
-
-def memoize(f):
-    memo = OrderedDict()
-    @functools.wraps(f)
-    def g(*args):
-        if args not in memo:
-            memo[args] = f(*args)
-        return memo[args]
-    return g
 
 
 def final(cls):

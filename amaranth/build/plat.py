@@ -140,8 +140,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
         def add_pin_fragment(pin, pin_fragment):
             pin_fragment = Fragment.get(pin_fragment, self)
-            if not isinstance(pin_fragment, Instance):
-                pin_fragment.flatten = True
             fragment.add_subfragment(pin_fragment, name=f"pin_{pin.name}")
 
         for pin, port, attrs, invert in self.iter_single_ended_pins():
