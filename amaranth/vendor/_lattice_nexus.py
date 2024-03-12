@@ -192,7 +192,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}} \
                 -synthesis synplify
             {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%}
-                prj_add_source {{file|tcl_escape}}
+                prj_add_source {{file|tcl_quote}}
             {% endfor %}
             prj_add_source {{name}}.v
             prj_add_source {{name}}.sdc
@@ -210,9 +210,9 @@ class LatticeNexusPlatform(TemplatedPlatform):
         "{{name}}.sdc": r"""
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
                 {% else -%}
-                    create_clock -name {{net_signal.name|tcl_escape}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
+                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
@@ -220,9 +220,9 @@ class LatticeNexusPlatform(TemplatedPlatform):
         # Physical PDC contraints
         "{{name}}.pdc": r"""
             {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
-                ldc_set_location -site "{{pin_name}}" [get_ports {{port_name|tcl_escape}}]
+                ldc_set_location -site "{{pin_name}}" [get_ports {{port_name|tcl_quote}}]
                 {% if attrs -%}
-                ldc_set_port -iobuf { {%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %} } [get_ports {{port_name|tcl_escape}}]
+                ldc_set_port -iobuf { {%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %} } [get_ports {{port_name|tcl_quote}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
