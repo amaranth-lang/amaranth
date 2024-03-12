@@ -938,7 +938,7 @@ Every signal included in the target of an assignment becomes a part of the domai
 
    The answer is no. While this kind of code is occasionally useful, rejecting it greatly simplifies backends, simulators, and analyzers.
 
-In addition to assignments, :ref:`assertions, assumptions <lang-asserts>`, and :ref:`debug prints <lang-print>` can be added using the same syntax.
+In addition to assignments, :ref:`assertions <lang-assert>` and :ref:`debug prints <lang-print>` can be added using the same syntax.
 
 
 .. _lang-assignorder:
