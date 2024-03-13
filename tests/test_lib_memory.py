@@ -311,6 +311,8 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.init._raw, [0, 2, 0, 0])
         m.init[2:] = [4, 5]
         self.assertEqual(list(m.init), [0, 2, 4, 5])
+        m.init = [6, 7]
+        self.assertEqual(list(m.init), [6, 7, 0, 0])
 
     def test_init_set_shapecastable(self):
         m = Memory(shape=MyStruct, depth=4, init=[])
