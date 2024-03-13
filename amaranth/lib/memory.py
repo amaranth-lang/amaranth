@@ -408,6 +408,10 @@ class Memory(wiring.Component):
     def init(self):
         return self._init
 
+    @init.setter
+    def init(self, init):
+        self._init = Memory.Init(init, shape=self._shape, depth=self._depth)
+
     @property
     def attrs(self):
         return self._attrs
