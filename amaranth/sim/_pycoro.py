@@ -143,8 +143,7 @@ class PyCoroProcess(BaseProcess):
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "
-                                    "with add_process(); did you mean to add this process with "
-                                    "add_sync_process() instead?"
+                                    "with add_process(); did you mean to use Tick() instead?"
                                     .format(self.src_loc()))
 
                 else:
