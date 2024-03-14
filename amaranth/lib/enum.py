@@ -173,6 +173,9 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
             member = cls(init)
         return cls(Const(member.value, cls.as_shape()))
 
+    def from_bits(cls, bits):
+        return cls(bits)
+
     def _value_repr(cls, value):
         yield Repr(FormatEnum(cls), value)
 

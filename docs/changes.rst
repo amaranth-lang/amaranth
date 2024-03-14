@@ -49,6 +49,7 @@ Implemented RFCs
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 .. _RFC 50: https://amaranth-lang.org/rfcs/0050-print.html
+.. _RFC 51: https://amaranth-lang.org/rfcs/0051-const-from-bits.html
 .. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
 .. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
 
@@ -59,6 +60,7 @@ Implemented RFCs
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 * `RFC 50`_: ``Print`` statement and string formatting
+* `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
 * `RFC 53`_: Low-level I/O primitives
 
 
@@ -70,6 +72,7 @@ Language changes
 * Added: :class:`Slice` objects have been made const-castable.
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
 * Added: :class:`Format` objects, :class:`Print` statements, messages in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
+* Added: :meth:`ShapeCastable.from_bits` method. (`RFC 51`_)
 * Added: IO values, :class:`IOPort` objects, :class:`IOBufferInstance` objects. (`RFC 53`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
@@ -94,6 +97,8 @@ Standard library changes
 .. currentmodule:: amaranth.lib
 
 * Added: :mod:`amaranth.lib.memory`. (`RFC 45`_)
+* Added: :class:`amaranth.lib.data.Const` class. (`RFC 51`_)
+* Changed: :meth:`amaranth.lib.data.Layout.const` returns a :class:`amaranth.lib.data.Const`, not a view (`RFC 51`_)
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
