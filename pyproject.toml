@@ -82,7 +82,7 @@ test-code.env = {PYTHONWARNINGS = "error"}
 test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"
 test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
 
-document.cmd = "sphinx-build docs/ docs/_build/"
+document.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
 document-live.cmd = "sphinx-autobuild docs/ docs/_build/ --watch amaranth"
 document-linkcheck.cmd = "sphinx-build docs/ docs/_linkcheck/ -b linkcheck"
 
