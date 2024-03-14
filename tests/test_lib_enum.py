@@ -110,6 +110,15 @@ class EnumTestCase(FHDLTestCase):
         self.assertRepr(EnumA.const(10), "EnumView(EnumA, (const 8'd10))")
         self.assertRepr(EnumA.const(EnumA.A), "EnumView(EnumA, (const 8'd10))")
 
+    def test_from_bits(self):
+        class EnumA(Enum, shape=2):
+            A = 0
+            B = 1
+            C = 2
+        self.assertIs(EnumA.from_bits(2), EnumA.C)
+        with self.assertRaises(ValueError):
+            EnumA.from_bits(3)
+
     def test_shape_implicit_wrong_in_concat(self):
         class EnumA(Enum):
             A = 0

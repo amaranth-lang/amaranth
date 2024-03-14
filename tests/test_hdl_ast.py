@@ -178,6 +178,9 @@ class MockShapeCastable(ShapeCastable):
     def const(self, init):
         return Const(init, self.dest)
 
+    def from_bits(self, bits):
+        return bits
+
 
 class ShapeCastableTestCase(FHDLTestCase):
     def test_no_override(self):
@@ -207,6 +210,25 @@ class ShapeCastableTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Can't instantiate abstract class ShapeCastable$"):
             ShapeCastable()
+
+    def test_no_from_bits(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Class 'MockShapeCastableNoFromBits' deriving from 'ShapeCastable' does "
+                r"not override the 'from_bits' method, which will be required in Amaranth 0.6$"):
+            class MockShapeCastableNoFromBits(ShapeCastable):
+                def __init__(self, dest):
+                    self.dest = dest
+
+                def as_shape(self):
+                    return self.dest
+
+                def __call__(self, value):
+                    return value
+
+                def const(self, init):
+                    return Const(init, self.dest)
+
+        self.assertEqual(MockShapeCastableNoFromBits(unsigned(2)).from_bits(123), 123)
 
 
 class ShapeLikeTestCase(FHDLTestCase):
@@ -513,6 +535,9 @@ class ConstTestCase(FHDLTestCase):
 
             def const(self, init):
                 return MockConstValue(init)
+
+            def from_bits(self, bits):
+                return bits
 
         s = Const(10, MockConstShape())
         self.assertIsInstance(s, MockConstValue)
@@ -1185,6 +1210,9 @@ class SignalTestCase(FHDLTestCase):
 
             def const(self, init):
                 return int(init, 16)
+
+            def from_bits(self, bits):
+                return bits
 
         s1 = Signal(CastableFromHex(), init="aa")
         self.assertEqual(s1.init, 0xaa)

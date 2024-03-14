@@ -243,6 +243,10 @@ class ShapeCastable:
         if cls.__call__ is ShapeCastable.__call__:
             raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
                             f"the '__call__' method")
+        if cls.from_bits is ShapeCastable.from_bits:
+            warnings.warn(f"Class '{cls.__name__}' deriving from 'ShapeCastable' does not override "
+                          f"the 'from_bits' method, which will be required in Amaranth 0.6",
+                          DeprecationWarning, stacklevel=2)
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
@@ -307,6 +311,40 @@ class ShapeCastable:
             usually the exception class will be :exc:`TypeError` or :exc:`ValueError`.
         """
         return super().const(*args, **kwargs) # :nocov:
+
+    def from_bits(self, raw):
+        """Lift a bit pattern to a higher-level representation.
+
+        This method is called by the Amaranth language to lift :py:`raw`, which is an :class:`int`,
+        to a higher-level representation, which may be any object accepted by :meth:`const`.
+        Most importantly, the simulator calls this method when the value of a shape-castable
+        object is retrieved.
+
+        For any valid bit pattern :py:`raw`, the following condition must hold:
+
+        .. code::
+
+            Const.cast(self.const(self.from_bits(raw))).value == raw
+
+        While :meth:`const` will usually return an Amaranth value or a custom value-castable
+        object that is convenient to use while constructing the design, this method will usually
+        return a Python object that is convenient to use while simulating the design. While not
+        constrained here, these objects should have the same type whenever feasible.
+
+        This method may also be called by code that is not a part of the Amaranth language.
+
+        Returns
+        -------
+        unspecified type
+
+        Raises
+        ------
+        Exception
+            When the bit pattern isn't valid. This exception must be propagated by callers,
+            either directly or as a cause of another exception. While not constrained here,
+            usually the exception class will be :exc:`ValueError`.
+        """
+        return raw
 
     def __call__(self, *args, **kwargs):
         """__call__(obj)
