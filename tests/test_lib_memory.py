@@ -122,6 +122,15 @@ class WritePortTestCase(FHDLTestCase):
         self.assertIs(port.memory, m)
         self.assertEqual(m.w_ports, (port,))
 
+        signature = memory.WritePort.Signature(shape=MyStruct, addr_width=4)
+        port = signature.create()
+        self.assertEqual(port.signature, signature)
+        self.assertIsNone(port.memory)
+        self.assertEqual(port.domain, "sync")
+        self.assertRepr(port.addr, "(sig port__addr)")
+        port = signature.create(path=("abc",))
+        self.assertRepr(port.addr, "(sig abc__addr)")
+
     def test_constructor_wrong(self):
         signature = memory.ReadPort.Signature(shape=8, addr_width=4)
         with self.assertRaisesRegex(TypeError,
@@ -223,6 +232,15 @@ class ReadPortTestCase(FHDLTestCase):
         port = memory.ReadPort(signature, memory=m, domain="sync", transparent_for=[write_port])
         self.assertIs(port.memory, m)
         self.assertEqual(port.transparent_for, (write_port,))
+
+        signature = memory.ReadPort.Signature(shape=MyStruct, addr_width=4)
+        port = signature.create()
+        self.assertEqual(port.signature, signature)
+        self.assertIsNone(port.memory)
+        self.assertEqual(port.domain, "sync")
+        self.assertRepr(port.addr, "(sig port__addr)")
+        port = signature.create(path=("abc",))
+        self.assertRepr(port.addr, "(sig abc__addr)")
 
     def test_constructor_wrong(self):
         signature = memory.WritePort.Signature(shape=8, addr_width=4)
