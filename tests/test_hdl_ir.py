@@ -3142,3 +3142,40 @@ class SwitchTestCase(FHDLTestCase):
             (cell 21 0 (cover 0.6 20.0 neg 0.12 ('c')))
         )
         """)
+
+class ConflictTestCase(FHDLTestCase):
+    def test_domain_conflict(self):
+        s = Signal()
+        m = Module()
+        m.d.sync += s.eq(1)
+        m1 = Module()
+        m1.d.comb += s.eq(2)
+        m.submodules.m1 = m1
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Signal \(sig s\) driven from domain comb at "
+                r".*test_hdl_ir.py:\d+ and domain sync at "
+                r".*test_hdl_ir.py:\d+$"):
+            build_netlist(Fragment.get(m, None), [])
+
+    def test_module_conflict(self):
+        s = Signal()
+        m = Module()
+        m.d.sync += s.eq(1)
+        m1 = Module()
+        m1.d.sync += s.eq(2)
+        m.submodules.m1 = m1
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Signal \(sig s\) driven from module top\.m1 at "
+                r".*test_hdl_ir.py:\d+ and module top at "
+                r".*test_hdl_ir.py:\d+$"):
+            build_netlist(Fragment.get(m, None), [])
+
+    def test_instance_conflict(self):
+        s = Signal()
+        m = Module()
+        m.d.sync += s.eq(1)
+        m.submodules.t = Instance("tt", o_s=s)
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Bit 0 of signal \(sig s\) has multiple drivers: "
+                r".*test_hdl_ir.py:\d+ and .*test_hdl_ir.py:\d+$"):
+            build_netlist(Fragment.get(m, None), [])
