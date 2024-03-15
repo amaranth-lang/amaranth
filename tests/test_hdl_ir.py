@@ -92,7 +92,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         self.assertRepr(nl, """
         (
             (module 0 None ('top'))
-            (cell 0 0 (top ))
+            (cell 0 0 (top))
         )
         """)
 
@@ -177,21 +177,21 @@ class FragmentPortsTestCase(FHDLTestCase):
                 (output 'c2' 2.0)
                 (output 'c3' 1.0))
             (module 1 0 ('top' 'f1')
-                (input 'port$0$2' 0.2)
-                (output 'port$1$0' 1.0)
-                (output 'port$2$0' 2.0)
-                (output 'port$5$0' 5.0)
-                (input 'port$10$0' 10.0))
-            (module 2 1 ('top' 'f1' 'f11')
-                (input 'port$0$2' 0.2)
-                (output 'port$1$0' 1.0)
-                (output 'port$2$0' 2.0)
-                (input 'port$6$0' 6.0))
-            (module 3 2 ('top' 'f1' 'f11' 'f111')
-                (input 'port$0$2' 0.2)
+                (input 's1' 0.2)
                 (output 'c3' 1.0)
                 (output 'c2' 2.0)
-                (input 'port$6$0' 6.0))
+                (output 'c1' 5.0)
+                (input 's2' 10.0))
+            (module 2 1 ('top' 'f1' 'f11')
+                (input 's1' 0.2)
+                (output 'c3' 1.0)
+                (output 'c2' 2.0)
+                (input 's3' 6.0))
+            (module 3 2 ('top' 'f1' 'f11' 'f111')
+                (input 's1' 0.2)
+                (output 'c3' 1.0)
+                (output 'c2' 2.0)
+                (input 's3' 6.0))
             (module 4 3 ('top' 'f1' 'f11' 'f111' 'f1111')
                 (input 's1' 0.2)
                 (output 'c2' 2.0)
@@ -200,9 +200,9 @@ class FragmentPortsTestCase(FHDLTestCase):
                 (output 'c1' 5.0)
                 (input 's3' 6.0))
             (module 6 1 ('top' 'f1' 'f13')
-                (input 'port$0$2' 0.2)
-                (output 'port$6$0' 6.0)
-                (input 'port$10$0' 10.0))
+                (input 's1' 0.2)
+                (output 's3' 6.0)
+                (input 's2' 10.0))
             (module 7 6 ('top' 'f1' 'f13' 'f131')
                 (input 's1' 0.2)
                 (output 's3' 6.0)
@@ -229,12 +229,12 @@ class FragmentPortsTestCase(FHDLTestCase):
         nl = build_netlist(f, ports={
             "a": (self.s1, PortDirection.Output),
             "b": (self.s2, PortDirection.Input),
-            "c": (self.s3, PortDirection.Inout),
+            "c": (IOPort(1, name="io3"), PortDirection.Inout),
         })
         self.assertRepr(nl, """
         (
-            (module 0 None ('top') (input 'b' 0.2) (inout 'c' 0.3) (output 'a' 1'd0))
-            (cell 0 0 (top (input 'b' 2:3) (output 'a' 1'd0) (inout 'c' 3:4)))
+            (module 0 None ('top') (input 'b' 0.2) (output 'a' 1'd0) (io inout 'c' 0.0))
+            (cell 0 0 (top (input 'b' 2:3) (output 'a' 1'd0)))
         )
         """)
 
@@ -308,6 +308,65 @@ class FragmentPortsTestCase(FHDLTestCase):
         )
         """)
 
+    def test_port_io(self):
+        io = IOPort(8)
+        f = Fragment()
+        f1 = Fragment()
+        f1.add_subfragment(Instance("t", i_io=io[:2]), "i")
+        f.add_subfragment(f1, "f1")
+        f2 = Fragment()
+        f2.add_subfragment(Instance("t", o_io=io[2:4]), "i")
+        f.add_subfragment(f2, "f2")
+        f3 = Fragment()
+        f3.add_subfragment(Instance("t", io_io=io[4:6]), "i")
+        f.add_subfragment(f3, "f3")
+        nl = build_netlist(f, ports=[])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (io inout 'io' 0.0:8)
+            )
+            (module 1 0 ('top' 'f1')
+                (io input 'ioport$0$0' 0.0:2)
+            )
+            (module 2 0 ('top' 'f2')
+                (io output 'ioport$0$2' 0.2:4)
+            )
+            (module 3 0 ('top' 'f3')
+                (io inout 'ioport$0$4' 0.4:6)
+            )
+            (cell 0 0 (top))
+            (cell 1 1 (instance 't' 'i' (io input 'io' 0.0:2)))
+            (cell 2 2 (instance 't' 'i' (io output 'io' 0.2:4)))
+            (cell 3 3 (instance 't' 'i' (io inout 'io' 0.4:6)))
+        )
+        """)
+
+    def test_port_io_part(self):
+        io = IOPort(4)
+        f = Fragment()
+        f1 = Fragment()
+        f1.add_subfragment(Instance("t", i_i=io[0], o_o=io[1], io_io=io[2]), "i")
+        f.add_subfragment(f1, "f1")
+        nl = build_netlist(f, ports=[])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (io inout 'io' 0.0:4)
+            )
+            (module 1 0 ('top' 'f1')
+                (io input 'ioport$0$0' 0.0)
+                (io output 'ioport$0$1' 0.1)
+                (io inout 'ioport$0$2' 0.2)
+            )
+            (cell 0 0 (top))
+            (cell 1 1 (instance 't' 'i'
+                 (io input 'i' 0.0)
+                 (io output 'o' 0.1)
+                 (io inout 'io' 0.2)
+            ))
+        )
+        """)
 
     def test_port_instance(self):
         f = Fragment()
@@ -316,40 +375,53 @@ class FragmentPortsTestCase(FHDLTestCase):
         a = Signal(4)
         b = Signal(4)
         c = Signal(4)
-        d = Signal(4)
+        ioa = IOPort(4)
+        iob = IOPort(4)
+        ioc = IOPort(4)
         f1.add_subfragment(Instance("t",
             p_p = "meow",
             a_a = True,
             i_aa=a,
-            io_bb=b,
+            o_bb=b,
             o_cc=c,
-            o_dd=d,
+            i_aaa=ioa,
+            o_bbb=iob,
+            io_ccc=ioc,
         ), "i")
-        nl = build_netlist(f, ports=[a, b, c, d])
+        nl = build_netlist(f, ports=[a, b, c])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
                 (input 'a' 0.2:6)
-                (inout 'b' 0.6:10)
-                (output 'c' 1.0:4)
-                (output 'd' 1.4:8))
+                (output 'b' 1.0:4)
+                (output 'c' 1.4:8)
+                (io input 'ioa' 0.0:4)
+                (io output 'iob' 1.0:4)
+                (io inout 'ioc' 2.0:4)
+            )
             (module 1 0 ('top' 'f1')
-                (input 'port$0$2' 0.2:6)
-                (inout 'port$0$6' 0.6:10)
-                (output 'port$1$0' 1.0:4)
-                (output 'port$1$4' 1.4:8))
+                (input 'a' 0.2:6)
+                (output 'b' 1.0:4)
+                (output 'c' 1.4:8)
+                (io input 'ioa' 0.0:4)
+                (io output 'iob' 1.0:4)
+                (io inout 'ioc' 2.0:4)
+            )
             (cell 0 0 (top
                 (input 'a' 2:6)
-                (output 'c' 1.0:4)
-                (output 'd' 1.4:8)
-                (inout 'b' 6:10)))
+                (output 'b' 1.0:4)
+                (output 'c' 1.4:8)
+            ))
             (cell 1 1 (instance 't' 'i'
                 (param 'p' 'meow')
                 (attr 'a' True)
                 (input 'aa' 0.2:6)
-                (output 'cc' 0:4)
-                (output 'dd' 4:8)
-                (inout 'bb' 0.6:10)))
+                (output 'bb' 0:4)
+                (output 'cc' 4:8)
+                (io input 'aaa' 0.0:4)
+                (io output 'bbb' 1.0:4)
+                (io inout 'ccc' 2.0:4)
+            ))
         )
         """)
 
@@ -357,7 +429,7 @@ class FragmentPortsTestCase(FHDLTestCase):
         f = Fragment()
         a = Signal()
         with self.assertRaisesRegex(TypeError,
-                r"^Only signals may be added as ports, not \(const 1'd1\)$"):
+                r"^Only signals and IO ports may be added as ports, not \(const 1'd1\)$"):
             build_netlist(f, ports=(Const(1),))
         with self.assertRaisesRegex(TypeError,
                 r"^Port name must be a string, not 1$"):
@@ -619,19 +691,27 @@ class InstanceTestCase(FHDLTestCase):
         s2 = Signal()
         s3 = Signal()
         s4 = Signal()
-        s5 = Signal()
-        s6 = Signal()
+        io1 = IOPort(1)
+        io2 = IOPort(1)
+        io3 = IOPort(1)
+        io4 = IOPort(1)
+        io5 = IOPort(1)
+        io6 = IOPort(1)
         inst = Instance("foo",
             ("a", "ATTR1", 1),
             ("p", "PARAM1", 0x1234),
             ("i", "s1", s1),
             ("o", "s2", s2),
-            ("io", "s3", s3),
+            ("i", "io1", io1),
+            ("o", "io2", io2),
+            ("io", "io3", io3),
             a_ATTR2=2,
             p_PARAM2=0x5678,
-            i_s4=s4,
-            o_s5=s5,
-            io_s6=s6,
+            i_s3=s3,
+            o_s4=s4,
+            i_io4=io4,
+            o_io5=io5,
+            io_io6=io6,
         )
         self.assertEqual(inst.attrs, OrderedDict([
             ("ATTR1", 1),
@@ -644,27 +724,27 @@ class InstanceTestCase(FHDLTestCase):
         self.assertEqual(inst.named_ports, OrderedDict([
             ("s1", (s1, "i")),
             ("s2", (s2, "o")),
-            ("s3", (s3, "io")),
-            ("s4", (s4, "i")),
-            ("s5", (s5, "o")),
-            ("s6", (s6, "io")),
+            ("io1", (io1, "i")),
+            ("io2", (io2, "o")),
+            ("io3", (io3, "io")),
+            ("s3", (s3, "i")),
+            ("s4", (s4, "o")),
+            ("io4", (io4, "i")),
+            ("io5", (io5, "o")),
+            ("io6", (io6, "io")),
         ]))
 
     def test_cast_ports(self):
         inst = Instance("foo",
             ("i", "s1", 1),
-            ("o", "s2", 2),
-            ("io", "s3", 3),
-            i_s4=4,
-            o_s5=5,
-            io_s6=6,
+            ("io", "s2", Cat()),
+            i_s3=3,
+            io_s4=Cat(),
         )
         self.assertRepr(inst.named_ports["s1"][0], "(const 1'd1)")
-        self.assertRepr(inst.named_ports["s2"][0], "(const 2'd2)")
+        self.assertRepr(inst.named_ports["s2"][0], "(io-cat )")
         self.assertRepr(inst.named_ports["s3"][0], "(const 2'd3)")
-        self.assertRepr(inst.named_ports["s4"][0], "(const 3'd4)")
-        self.assertRepr(inst.named_ports["s5"][0], "(const 3'd5)")
-        self.assertRepr(inst.named_ports["s6"][0], "(const 3'd6)")
+        self.assertRepr(inst.named_ports["s4"][0], "(io-cat )")
 
     def test_wrong_construct_arg(self):
         s = Signal()
@@ -683,7 +763,7 @@ class InstanceTestCase(FHDLTestCase):
     def setUp_cpu(self):
         self.rst = Signal()
         self.stb = Signal()
-        self.pins = Signal(8)
+        self.pins = IOPort(8)
         self.datal = Signal(4)
         self.datah = Signal(4)
         self.inst = Instance("cpu",
@@ -716,33 +796,40 @@ class InstanceTestCase(FHDLTestCase):
         f = Fragment()
         i = Signal(3)
         o = Signal(4)
-        io = Signal(5)
+        ioa = IOPort(5)
+        iob = IOPort(6)
+        ioc = IOPort(7)
         f.add_subfragment(Instance("gadget",
             i_i=i,
             o_o=o,
-            io_io=io,
+            i_ioa=ioa,
+            o_iob=iob,
+            io_ioc=ioc,
             p_param="TEST",
             a_attr=1234,
         ), "my_gadget")
-        nl = build_netlist(f, [i, o, io])
+        nl = build_netlist(f, [i, o])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
                 (input 'i' 0.2:5)
-                (inout 'io' 0.5:10)
                 (output 'o' 1.0:4)
+                (io input 'ioa' 0.0:5)
+                (io output 'iob' 1.0:6)
+                (io inout 'ioc' 2.0:7)
             )
             (cell 0 0 (top
                 (input 'i' 2:5)
                 (output 'o' 1.0:4)
-                (inout 'io' 5:10)
             ))
             (cell 1 0 (instance 'gadget' 'my_gadget'
                 (param 'param' 'TEST')
                 (attr 'attr' 1234)
                 (input 'i' 0.2:5)
                 (output 'o' 0:4)
-                (inout 'io' 0.5:10)
+                (io input 'ioa' 0.0:5)
+                (io output 'iob' 1.0:6)
+                (io inout 'ioc' 2.0:7)
             ))
         )
         """)
@@ -798,33 +885,72 @@ class InstanceTestCase(FHDLTestCase):
         )
         """)
 
+    def test_nir_io_slice(self):
+        f = Fragment()
+        io = IOPort(8)
+        f.add_subfragment(Instance("test",
+            i_i=io[:2],
+            o_o=io[2:4],
+            io_io=io[4:6],
+        ), "t1")
+        nl = build_netlist(f, [])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (io inout 'io' 0.0:8)
+            )
+            (cell 0 0 (top))
+            (cell 1 0 (instance 'test' 't1'
+                (io input 'i' 0.0:2)
+                (io output 'o' 0.2:4)
+                (io inout 'io' 0.4:6)
+            ))
+        )
+        """)
+
+    def test_nir_io_concat(self):
+        f = Fragment()
+        io1 = IOPort(4)
+        io2 = IOPort(4)
+        f.add_subfragment(Instance("test",
+            io_io=Cat(io1, io2),
+        ))
+        nl = build_netlist(f, [io1, io2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (io inout 'io1' 0.0:4)
+                (io inout 'io2' 1.0:4)
+            )
+            (cell 0 0 (top))
+            (cell 1 0 (instance 'test' 'U$0'
+                (io inout 'io' (io-cat 0.0:4 1.0:4))
+            ))
+        )
+        """)
+
     def test_nir_operator(self):
         f = Fragment()
         i = Signal(3)
         o = Signal(4)
-        io = Signal(5)
         f.add_subfragment(Instance("gadget",
             i_i=i.as_signed(),
             o_o=o.as_signed(),
-            io_io=io.as_signed(),
         ), "my_gadget")
-        nl = build_netlist(f, [i, o, io])
+        nl = build_netlist(f, [i, o])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
                 (input 'i' 0.2:5)
-                (inout 'io' 0.5:10)
                 (output 'o' 1.0:4)
             )
             (cell 0 0 (top
                 (input 'i' 2:5)
                 (output 'o' 1.0:4)
-                (inout 'io' 5:10)
             ))
             (cell 1 0 (instance 'gadget' 'my_gadget'
                 (input 'i' 0.2:5)
                 (output 'o' 0:4)
-                (inout 'io' 0.5:10)
             ))
         )
         """)
@@ -856,7 +982,7 @@ class NamesTestCase(FHDLTestCase):
             "o3": (o3, PortDirection.Output),
         }
         design = f.prepare(ports)
-        self.assertEqual(design.signal_names[design.fragment], SignalDict([
+        self.assertEqual(design.fragments[design.fragment].signal_names, SignalDict([
             (i, "i"),
             (rst, "rst"),
             (o1, "o1"),
@@ -865,7 +991,7 @@ class NamesTestCase(FHDLTestCase):
             (cd_sync.clk, "clk"),
             (cd_sync.rst, "rst$6"),
             (cd_sync_norst.clk, "sync_norst_clk"),
-            (i1, "i$8"),
+            (i1, "i$7"),
         ]))
 
     def test_assign_names_to_fragments(self):
@@ -874,11 +1000,9 @@ class NamesTestCase(FHDLTestCase):
         f.add_subfragment(b := Fragment(), name="b")
 
         design = Design(f, ports=(), hierarchy=("top",))
-        self.assertEqual(design.fragment_names, {
-            f: ("top",),
-            a: ("top", "U$0"),
-            b: ("top", "b")
-        })
+        self.assertEqual(design.fragments[f].name, ("top",))
+        self.assertEqual(design.fragments[a].name, ("top", "U$0"))
+        self.assertEqual(design.fragments[b].name, ("top", "b"))
 
     def test_assign_names_to_fragments_rename_top(self):
         f = Fragment()
@@ -886,11 +1010,9 @@ class NamesTestCase(FHDLTestCase):
         f.add_subfragment(b := Fragment(), name="b")
 
         design = Design(f, ports=[], hierarchy=("bench", "cpu"))
-        self.assertEqual(design.fragment_names, {
-            f: ("bench", "cpu",),
-            a: ("bench", "cpu", "U$0"),
-            b: ("bench", "cpu", "b")
-        })
+        self.assertEqual(design.fragments[f].name, ("bench", "cpu",))
+        self.assertEqual(design.fragments[a].name, ("bench", "cpu", "U$0"))
+        self.assertEqual(design.fragments[b].name, ("bench", "cpu", "b"))
 
     def test_assign_names_to_fragments_collide_with_signal(self):
         f = Fragment()
@@ -898,10 +1020,8 @@ class NamesTestCase(FHDLTestCase):
         a_s = Signal(name="a")
 
         design = Design(f, ports=[("a", a_s, None)], hierarchy=("top",))
-        self.assertEqual(design.fragment_names, {
-            f: ("top",),
-            a_f: ("top", "a$U$0")
-        })
+        self.assertEqual(design.fragments[f].name, ("top",))
+        self.assertEqual(design.fragments[a_f].name, ("top", "a$1"))
 
     def test_assign_names_to_fragments_duplicate(self):
         f = Fragment()
@@ -909,11 +1029,9 @@ class NamesTestCase(FHDLTestCase):
         f.add_subfragment(a2_f := Fragment(), name="a")
 
         design = Design(f, ports=[], hierarchy=("top",))
-        self.assertEqual(design.fragment_names, {
-            f: ("top",),
-            a1_f: ("top", "a"),
-            a2_f: ("top", "a$U$1"),
-        })
+        self.assertEqual(design.fragments[f].name, ("top",))
+        self.assertEqual(design.fragments[a1_f].name, ("top", "a"))
+        self.assertEqual(design.fragments[a2_f].name, ("top", "a$1"))
 
 
 class ElaboratesTo(Elaboratable):
@@ -944,122 +1062,137 @@ class OriginsTestCase(FHDLTestCase):
 
 class IOBufferTestCase(FHDLTestCase):
     def test_nir_i(self):
-        pad = Signal(4)
+        port = IOPort(4)
         i = Signal(4)
         f = Fragment()
-        f.add_subfragment(IOBufferInstance(pad, i=i))
-        nl = build_netlist(f, ports=[pad, i])
+        f.add_subfragment(IOBufferInstance(port, i=i))
+        nl = build_netlist(f, ports=[i])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
-                (inout 'pad' 0.2:6)
                 (output 'i' 1.0:4)
+                (io input 'port' 0.0:4)
             )
             (cell 0 0 (top
                 (output 'i' 1.0:4)
-                (inout 'pad' 2:6)
             ))
-            (cell 1 0 (iob 0.2:6 4'd0 0))
+            (cell 1 0 (iob input 0.0:4))
         )
         """)
 
     def test_nir_o(self):
-        pad = Signal(4)
+        port = IOPort(4)
         o = Signal(4)
         f = Fragment()
-        f.add_subfragment(IOBufferInstance(pad, o=o))
-        nl = build_netlist(f, ports=[pad, o])
+        f.add_subfragment(IOBufferInstance(port, o=o))
+        nl = build_netlist(f, ports=[o])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
-                (input 'o' 0.6:10)
-                (inout 'pad' 0.2:6)
+                (input 'o' 0.2:6)
+                (io output 'port' 0.0:4)
             )
             (cell 0 0 (top
-                (input 'o' 6:10)
-                (inout 'pad' 2:6)
+                (input 'o' 2:6)
             ))
-            (cell 1 0 (iob 0.2:6 0.6:10 1))
+            (cell 1 0 (iob output 0.0:4 0.2:6 1))
         )
         """)
 
     def test_nir_oe(self):
-        pad = Signal(4)
+        port = IOPort(4)
         o = Signal(4)
         oe = Signal()
         f = Fragment()
-        f.add_subfragment(IOBufferInstance(pad, o=o, oe=oe))
-        nl = build_netlist(f, ports=[pad, o, oe])
+        f.add_subfragment(IOBufferInstance(port, o=o, oe=oe))
+        nl = build_netlist(f, ports=[ o, oe])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
-                (input 'o' 0.6:10)
-                (input 'oe' 0.10)
-                (inout 'pad' 0.2:6)
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (io output 'port' 0.0:4)
             )
             (cell 0 0 (top
-                (input 'o' 6:10)
-                (input 'oe' 10:11)
-                (inout 'pad' 2:6)
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
             ))
-            (cell 1 0 (iob 0.2:6 0.6:10 0.10))
+            (cell 1 0 (iob output 0.0:4 0.2:6 0.6))
         )
         """)
 
     def test_nir_io(self):
-        pad = Signal(4)
+        port = IOPort(4)
         i = Signal(4)
         o = Signal(4)
         oe = Signal()
         f = Fragment()
-        f.add_subfragment(IOBufferInstance(pad, i=i, o=o, oe=oe))
-        nl = build_netlist(f, ports=[pad, i, o, oe])
+        f.add_subfragment(IOBufferInstance(port, i=i, o=o, oe=oe))
+        nl = build_netlist(f, ports=[i, o, oe])
         self.assertRepr(nl, """
         (
             (module 0 None ('top')
-                (input 'o' 0.6:10)
-                (input 'oe' 0.10)
-                (inout 'pad' 0.2:6)
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
                 (output 'i' 1.0:4)
+                (io inout 'port' 0.0:4)
             )
             (cell 0 0 (top
-                (input 'o' 6:10)
-                (input 'oe' 10:11)
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
                 (output 'i' 1.0:4)
-                (inout 'pad' 2:6)
             ))
-            (cell 1 0 (iob 0.2:6 0.6:10 0.10))
+            (cell 1 0 (iob inout 0.0:4 0.2:6 0.6))
         )
         """)
 
+    def test_wrong_port(self):
+        port = Signal(4)
+        i = Signal(4)
+        with self.assertRaisesRegex(TypeError,
+                r"^Object \(sig port\) cannot be converted to an IO value"):
+            IOBufferInstance(port, i=i)
+
     def test_wrong_i(self):
-        pad = Signal(4)
+        port = IOPort(4)
         i = Signal()
         with self.assertRaisesRegex(ValueError,
-                r"^`pad` length \(4\) doesn't match `i` length \(1\)"):
-            IOBufferInstance(pad, i=i)
+                r"^'port' length \(4\) doesn't match 'i' length \(1\)"):
+            IOBufferInstance(port, i=i)
 
     def test_wrong_o(self):
-        pad = Signal(4)
+        port = IOPort(4)
         o = Signal()
         with self.assertRaisesRegex(ValueError,
-                r"^`pad` length \(4\) doesn't match `o` length \(1\)"):
-            IOBufferInstance(pad, o=o)
+                r"^'port' length \(4\) doesn't match 'o' length \(1\)"):
+            IOBufferInstance(port, o=o)
 
     def test_wrong_oe(self):
-        pad = Signal(4)
+        port = IOPort(4)
         o = Signal(4)
         oe = Signal(4)
         with self.assertRaisesRegex(ValueError,
-                r"^`oe` length \(4\) must be 1"):
-            IOBufferInstance(pad, o=o, oe=oe)
+                r"^'oe' length \(4\) must be 1"):
+            IOBufferInstance(port, o=o, oe=oe)
 
     def test_wrong_oe_without_o(self):
-        pad = Signal(4)
+        port = IOPort(4)
         oe = Signal()
         with self.assertRaisesRegex(ValueError,
-                r"^`oe` must not be used if `o` is not used"):
-            IOBufferInstance(pad, oe=oe)
+                r"^'oe' must not be used if 'o' is not used"):
+            IOBufferInstance(port, oe=oe)
+
+    def test_conflict(self):
+        port = IOPort(4)
+        i1 = Signal(4)
+        i2 = Signal(4)
+        f = Fragment()
+        f.add_subfragment(IOBufferInstance(port, i=i1))
+        f.add_subfragment(IOBufferInstance(port, i=i2))
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Bit 0 of I/O port \(io-port port\) used twice, at .*test_hdl_ir.py:\d+ and "
+                r".*test_hdl_ir.py:\d+$"):
+            build_netlist(f, ports=[i1, i2])
 
 
 class AssignTestCase(FHDLTestCase):

@@ -272,7 +272,7 @@ class MemoryInfo:
 
 
 class ModuleEmitter:
-    def __init__(self, builder, netlist, module, name_map, empty_checker):
+    def __init__(self, builder, netlist: _nir.Netlist, module: _nir.Module, name_map, empty_checker):
         self.builder = builder
         self.netlist = netlist
         self.module = module
@@ -293,6 +293,7 @@ class ModuleEmitter:
         self.sigport_wires = {} # signal or port name -> (wire, value)
         self.driven_sigports = set() # set of signal or port name
         self.nets = {} # net -> (wire name, bit idx)
+        self.ionets = {} # ionet -> (wire name, bit idx)
         self.cell_wires = {} # cell idx -> wire name
         self.instance_wires = {} # (cell idx, output name) -> wire name
 
@@ -302,6 +303,7 @@ class ModuleEmitter:
         self.collect_init_attrs()
         self.emit_signal_wires()
         self.emit_port_wires()
+        self.emit_io_port_wires()
         self.emit_cell_wires()
         self.emit_submodule_wires()
         self.emit_connects()
@@ -406,10 +408,27 @@ class ModuleEmitter:
             self.sigport_wires[name] = (wire, value)
             if flow == _nir.ModuleNetFlow.Output:
                 continue
-            # If we just emitted an input or inout port, it is driving the value.
+            # If we just emitted an input port, it is driving the value.
             self.driven_sigports.add(name)
             for bit, net in enumerate(value):
                 self.nets[net] = (wire, bit)
+
+    def emit_io_port_wires(self):
+        for idx, (name, (value, dir)) in enumerate(self.module.io_ports.items()):
+            port_id = idx + len(self.module.ports)
+            if self.module.parent is None:
+                port = self.netlist.io_ports[value[0].port]
+                attrs = port.attrs
+                src_loc = port.src_loc
+            else:
+                attrs = {}
+                src_loc = None
+            wire = self.builder.wire(width=len(value),
+                                     port_id=port_id, port_kind=dir.value,
+                                     name=name, attrs=attrs,
+                                     src=_src(src_loc))
+            for bit, net in enumerate(value):
+                self.ionets[net] = (wire, bit)
 
     def emit_driven_wire(self, value):
         # Emits a wire for a value, in preparation for driving it.
@@ -454,7 +473,9 @@ class ModuleEmitter:
             elif isinstance(cell, _nir.Initial):
                 width = 1
             elif isinstance(cell, _nir.IOBuffer):
-                width = len(cell.pad)
+                if cell.dir is _nir.IODirection.Output:
+                    continue # No outputs.
+                width = len(cell.port)
             else:
                 assert False # :nocov:
             # Single output cell connected to a wire.
@@ -503,6 +524,28 @@ class ModuleEmitter:
             return chunks[0]
         return "{ " + " ".join(reversed(chunks)) + " }"
 
+    def io_sigspec(self, value: _nir.IOValue):
+        chunks = []
+        begin_pos = 0
+        while begin_pos < len(value):
+            end_pos = begin_pos
+            wire, start_bit = self.ionets[value[begin_pos]]
+            bit = start_bit
+            while (end_pos < len(value) and
+                    self.ionets[value[end_pos]] == (wire, bit)):
+                end_pos += 1
+                bit += 1
+            width = end_pos - begin_pos
+            if width == 1:
+                chunks.append(f"{wire} [{start_bit}]")
+            else:
+                chunks.append(f"{wire} [{start_bit + width - 1}:{start_bit}]")
+            begin_pos = end_pos
+
+        if len(chunks) == 1:
+            return chunks[0]
+        return "{ " + " ".join(reversed(chunks)) + " }"
+
     def emit_connects(self):
         for name, (wire, value) in self.sigport_wires.items():
             if name not in self.driven_sigports:
@@ -513,10 +556,13 @@ class ModuleEmitter:
             submodule = self.netlist.modules[submodule_idx]
             if not self.empty_checker.is_empty(submodule_idx):
                 dotted_name = ".".join(submodule.name)
-                self.builder.cell(f"\\{dotted_name}", submodule.name[-1], ports={
-                    name: self.sigspec(value)
-                    for name, (value, _flow) in submodule.ports.items()
-                }, src=_src(submodule.cell_src_loc))
+                ports = {}
+                for name, (value, _flow) in submodule.ports.items():
+                    ports[name] = self.sigspec(value)
+                for name, (value, _dir) in submodule.io_ports.items():
+                    ports[name] = self.io_sigspec(value)
+                self.builder.cell(f"\\{dotted_name}", submodule.name[-1], ports=ports,
+                                  src=_src(submodule.cell_src_loc))
 
     def emit_assignment_list(self, cell_idx, cell):
         def emit_assignments(case, cond):
@@ -761,14 +807,19 @@ class ModuleEmitter:
         self.builder.cell(cell_type, ports=ports, params=params, src=_src(cell.src_loc))
 
     def emit_io_buffer(self, cell_idx, cell):
-        self.builder.cell("$tribuf", ports={
-            "Y": self.sigspec(cell.pad),
-            "A": self.sigspec(cell.o),
-            "EN": self.sigspec(cell.oe),
-        }, params={
-            "WIDTH": len(cell.pad),
-        }, src=_src(cell.src_loc))
-        self.builder.connect(self.cell_wires[cell_idx], self.sigspec(cell.pad))
+        if cell.dir is not _nir.IODirection.Input:
+            if cell.dir is _nir.IODirection.Output and cell.oe == _nir.Net.from_const(1):
+                self.builder.connect(self.io_sigspec(cell.port), self.sigspec(cell.o))
+            else:
+                self.builder.cell("$tribuf", ports={
+                    "Y": self.io_sigspec(cell.port),
+                    "A": self.sigspec(cell.o),
+                    "EN": self.sigspec(cell.oe),
+                }, params={
+                    "WIDTH": len(cell.port),
+                }, src=_src(cell.src_loc))
+        if cell.dir is not _nir.IODirection.Output:
+            self.builder.connect(self.cell_wires[cell_idx], self.io_sigspec(cell.port))
 
     def emit_memory(self, cell_idx, cell):
         memory_info = self.memories[cell_idx]
@@ -950,8 +1001,8 @@ class ModuleEmitter:
             ports[name] = self.sigspec(nets)
         for name in cell.ports_o:
             ports[name] = self.instance_wires[cell_idx, name]
-        for name, nets in cell.ports_io.items():
-            ports[name] = self.sigspec(nets)
+        for name, (ionets, _dir) in cell.ports_io.items():
+            ports[name] = self.io_sigspec(ionets)
         self.builder.cell(f"\\{cell.type}", cell.name, ports=ports, params=cell.parameters,
                           attrs=cell.attributes, src=_src(cell.src_loc))
 

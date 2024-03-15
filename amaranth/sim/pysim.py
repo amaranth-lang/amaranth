@@ -65,9 +65,9 @@ class _VCDWriter:
 
         signal_names = SignalDict()
         memories = {}
-        for fragment, fragment_name in design.fragment_names.items():
-            fragment_name = ("bench", *fragment_name)
-            for signal, signal_name in design.signal_names[fragment].items():
+        for fragment, fragment_info in design.fragments.items():
+            fragment_name = ("bench", *fragment_info.name)
+            for signal, signal_name in fragment_info.signal_names.items():
                 if signal not in signal_names:
                     signal_names[signal] = set()
                 signal_names[signal].add((*fragment_name, signal_name))

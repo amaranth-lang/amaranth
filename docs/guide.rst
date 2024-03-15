@@ -328,7 +328,7 @@ They may also be provided as a pattern to the :ref:`match operator <lang-matchop
    At the moment, only the following expressions are constant-castable:
 
    * :class:`Const`
-   * :class:`Cat`
+   * :func:`Cat`
    * :class:`Slice`
 
    This list will be expanded in the future.
@@ -707,21 +707,21 @@ The result of any bit sequence operation is an unsigned value.
 
 The following table lists the bit sequence operations provided by Amaranth:
 
-======================= ================================================ ======
-Operation               Description                                      Notes
-======================= ================================================ ======
-``len(a)``              bit length; value width                          [#opS1]_
-``a[i:j:k]``            bit slicing by constant subscripts               [#opS2]_
-``iter(a)``             bit iteration
-``a.bit_select(b, w)``  overlapping part select with variable offset
-``a.word_select(b, w)`` non-overlapping part select with variable offset
-``Cat(a, b)``           concatenation                                    [#opS3]_
-``a.replicate(n)``      replication
-======================= ================================================ ======
+========================= ================================================ ========
+Operation                 Description                                      Notes
+========================= ================================================ ========
+:py:`len(a)`              bit length; value width                          [#opS1]_
+:py:`a[i:j:k]`            bit slicing by constant subscripts               [#opS2]_
+:py:`iter(a)`             bit iteration
+:py:`a.bit_select(b, w)`  overlapping part select with variable offset
+:py:`a.word_select(b, w)` non-overlapping part select with variable offset
+:py:`Cat(a, b)`           concatenation                                    [#opS3]_
+:py:`a.replicate(n)`      replication
+========================= ================================================ ========
 
 .. [#opS1] Words "length" and "width" have the same meaning when talking about Amaranth values. Conventionally, "width" is used.
-.. [#opS2] All variations of the Python slice notation are supported, including "extended slicing". E.g. all of ``a[0]``, ``a[1:9]``, ``a[2:]``, ``a[:-2]``, ``a[::-1]``, ``a[0:8:2]`` select bits in the same way as other Python sequence types select their elements.
-.. [#opS3] In the concatenated value, ``a`` occupies the least significant bits, and ``b`` the most significant bits. Any number of arguments (zero, one, two, or more) are supported.
+.. [#opS2] All variations of the Python slice notation are supported, including "extended slicing". E.g. all of :py:`a[0]`, :py:`a[1:9]`, :py:`a[2:]`, :py:`a[:-2]`, :py:`a[::-1]`, :py:`a[0:8:2]` select bits in the same way as other Python sequence types select their elements.
+.. [#opS3] In the concatenated value, :py:`a` occupies the least significant bits, and :py:`b` the most significant bits. Any number of arguments (zero, one, two, or more) are supported.
 
 For the operators introduced by Amaranth, the following table explains them in terms of Python code operating on tuples of bits rather than Amaranth values:
 
@@ -1677,6 +1677,66 @@ Memories
 Amaranth provides support for memories in the standard library module :mod:`amaranth.lib.memory`.
 
 
+.. _lang-iovalues:
+
+I/O values
+==========
+
+To interoperate with external circuitry, Amaranth provides *I/O values*, which represent bundles of wires carrying uninterpreted signals. Unlike regular :ref:`values <lang-values>`, which represent binary numbers and can be :ref:`assigned <lang-assigns>` to create a unidirectional connection or used in computations, I/O values represent electrical signals that may be digital or analog and have no :ref:`shape <lang-shapes>`, cannot be assigned, used in computations, or simulated.
+
+I/O values are only used to define connections between non-Amaranth building blocks that traverse an Amaranth design, including :ref:`instances <lang-instance>` and :ref:`I/O buffer instances <lang-iobufferinstance>`.
+
+
+.. _lang-ioports:
+
+I/O ports
+---------
+
+An *I/O port* is an I/O value representing a connection to a port of the topmost module in the :ref:`design hierarchy <lang-submodules>`. It can be created with an explicitly specified width.
+
+.. testcode::
+
+    from amaranth.hdl import IOPort
+
+.. doctest::
+
+    >>> port = IOPort(4)
+    >>> port.width
+    4
+
+I/O ports can be named in the same way as :ref:`signals <lang-signalname>`:
+
+.. doctest::
+
+    >>> clk_port = IOPort(1, name="clk")
+    >>> clk_port.name
+    'clk'
+
+If two I/O ports with the same name exist in a design, one of them will be renamed to remove the ambiguity. Because the name of an I/O port is significant, they should be named unambiguously.
+
+
+.. _lang-ioops:
+
+I/O operators
+-------------
+
+I/O values support only a limited set of :ref:`sequence <python:typesseq>` operators, all of which return another I/O value. The following table lists the I/O operators provided by Amaranth:
+
+=============== ============================== ===================
+Operation       Description                    Notes
+=============== ============================== ===================
+:py:`len(a)`    length; width                  [#iopS1]_
+:py:`a[i:j:k]`  slicing by constant subscripts [#iopS2]_
+:py:`iter(a)`   iteration
+:py:`Cat(a, b)` concatenation                  [#iopS3]_ [#iopS4]_
+=============== ============================== ===================
+
+.. [#iopS1] Words "length" and "width" have the same meaning when talking about Amaranth I/O values. Conventionally, "width" is used.
+.. [#iopS2] All variations of the Python slice notation are supported, including "extended slicing". E.g. all of :py:`a[0]`, :py:`a[1:9]`, :py:`a[2:]`, :py:`a[:-2]`, :py:`a[::-1]`, :py:`a[0:8:2]` select wires in the same way as other Python sequence types select their elements.
+.. [#iopS3] In the concatenated value, :py:`a` occupies the lower indices and :py:`b` the higher indices. Any number of arguments (zero, one, two, or more) are supported.
+.. [#iopS4] Concatenation of zero arguments, :py:`Cat()`, returns a 0-bit regular value, however any such value is accepted (and ignored) anywhere an I/O value is expected.
+
+
 .. _lang-instance:
 
 Instances
@@ -1690,14 +1750,15 @@ A submodule written in a non-Amaranth language is called an *instance*. An insta
 * The *name* of an instance is the name of the submodule within the containing elaboratable.
 * The *attributes* of an instance correspond to attributes of a (System)Verilog module instance, or a custom attribute of a VHDL entity or component instance. Attributes applied to instances are interpreted by the synthesis toolchain rather than the HDL.
 * The *parameters* of an instance correspond to parameters of a (System)Verilog module instance, or a generic constant of a VHDL entity or component instance. Not all HDLs allow their design units to be parameterized during instantiation.
-* The *inputs* and *outputs* of an instance correspond to inputs and outputs of the external design unit.
+* The *inputs*, *outputs*, and *inouts* of an instance correspond to input ports, output ports, and bidirectional ports of the external design unit.
 
 An instance can be added as a submodule using the :py:`m.submodules.name = Instance("type", ...)` syntax, where :py:`"type"` is the type of the instance as a string (which is passed to the synthesis toolchain uninterpreted), and :py:`...` is a list of parameters, inputs, and outputs. Depending on whether the name of an attribute, parameter, input, or output can be written as a part of a Python identifier or not, one of two possible syntaxes is used to specify them:
 
 * An attribute is specified using the :py:`a_ANAME=attr` or :py:`("a", "ANAME", attr)` syntaxes. The :py:`attr` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
 * A parameter is specified using the :py:`p_PNAME=param` or :py:`("p", "PNAME", param)` syntaxes. The :py:`param` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
-* An input is specified using the :py:`i_INAME=in_val` or :py:`("i", "INAME", in_val)` syntaxes. The :py:`in_val` must be a :ref:`value-like <lang-valuelike>` object.
-* An output is specified using the :py:`o_ONAME=out_val` or :py:`("o", "ONAME", out_val)` syntaxes. The :py:`out_val` must be a :ref:`value-like <lang-valuelike>` object that casts to a :class:`Signal`.
+* An input is specified using the :py:`i_INAME=in_val` or :py:`("i", "INAME", in_val)` syntaxes. The :py:`in_val` must be an :ref:`I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object.
+* An output is specified using the :py:`o_ONAME=out_val` or :py:`("o", "ONAME", out_val)` syntaxes. The :py:`out_val` must be an :ref:`I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object that casts to a :ref:`signal <lang-signals>`, a concatenation of signals, or a slice of a signal.
+* An inout is specified using the :py:`io_IONAME=inout_val` or :py:`("io", "IONAME", inout_val)` syntaxes. The :py:`inout_val` must be an :ref:`I/O value <lang-iovalues>`.
 
 The two following examples use both syntaxes to add the same instance of type ``external`` as a submodule named ``processor``:
 
@@ -1706,6 +1767,7 @@ The two following examples use both syntaxes to add the same instance of type ``
 
     i_data = Signal(8)
     o_data = Signal(8)
+    io_pin = IOPort(1)
     m = Module()
 
 .. testcode::
@@ -1718,6 +1780,7 @@ The two following examples use both syntaxes to add the same instance of type ``
         i_mode=Const(3, unsigned(4)),
         i_data_in=i_data,
         o_data_out=o_data,
+        io_pin=io_pin,
     )
 
 .. testcode::
@@ -1735,6 +1798,7 @@ The two following examples use both syntaxes to add the same instance of type ``
         ("i", "mode", Const(3, unsigned(4))),
         ("i", "data_in", i_data),
         ("o", "data_out", o_data),
+        ("io", "pin", io_pin),
     )
 
 Like a regular submodule, an instance can also be added without specifying a name:
@@ -1771,3 +1835,54 @@ Although an :class:`Instance` is not an elaboratable, as a special case, it can 
                 )
             else:
                 raise NotImplementedError
+
+
+.. _lang-iobufferinstance:
+
+I/O buffer instances
+====================
+
+An *I/O buffer instance* is a submodule that allows assigning :ref:`I/O values <lang-iovalues>` to or from regular :ref:`values <lang-values>` without the use of an external, toolchain- and technology-dependent :ref:`instance <lang-instance>`. It can be created in four configurations: input, output, tristatable output, and bidirectional (input/output).
+
+.. testcode::
+
+    from amaranth.hdl import IOBufferInstance
+
+    m = Module()
+
+In the input configuration, the buffer combinatorially drives a signal :py:`i` by the port:
+
+.. testcode::
+
+    port = IOPort(4)
+    port_i = Signal(4)
+    m.submodules.ibuf = IOBufferInstance(port, i=port_i)
+
+In the output configuration, the buffer combinatorially drives the port by a value :py:`o`:
+
+.. testcode::
+
+    port = IOPort(4)
+    port_o = Signal(4)
+    m.submodules.obuf = IOBufferInstance(port, o=port_o)
+
+In the tristatable output configuration, the buffer combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+
+.. testcode::
+
+    port = IOPort(4)
+    port_o = Signal(4)
+    port_oe = Signal()
+    m.submodules.obuft = IOBufferInstance(port, o=port_o, oe=port_oe)
+
+In the bidirectional (input/output) configuration, the buffer combiatorially drives a signal :py:`i` by the port, combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+
+.. testcode::
+
+    port = IOPort(4)
+    port_i = Signal(4)
+    port_o = Signal(4)
+    port_oe = Signal()
+    m.submodules.iobuf = IOBufferInstance(port, i=port_i, o=port_o, oe=port_oe)
+
+The width of the :py:`i` and :py:`o` values (when present) must be the same as the width of the port, and the width of the :py:`oe` value must be 1.

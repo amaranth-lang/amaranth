@@ -222,7 +222,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
         m = Module()
         m.submodules += IOBufferInstance(
-            pad=port,
+            port=port,
             o=self._invert_if(invert, pin.o),
             oe=pin.oe,
         )
@@ -235,7 +235,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         m = Module()
         i = Signal.like(pin.i)
         m.submodules += IOBufferInstance(
-            pad=port,
+            port=port,
             i=i,
             o=self._invert_if(invert, pin.o),
             oe=pin.oe,
