@@ -772,7 +772,7 @@ class NetlistEmitter:
                 signal, bit = self.late_net_to_signal[left]
                 other_src_loc = self.connect_src_loc[left]
                 raise _ir.DriverConflict(f"Bit {bit} of signal {signal!r} has multiple drivers: "
-                                         f"{other_src_loc} and {src_loc}")
+                                         f"{other_src_loc[0]}:{other_src_loc[1]} and {src_loc[0]}:{src_loc[1]}")
             self.netlist.connections[left] = right
             self.connect_src_loc[left] = src_loc
 
@@ -785,15 +785,15 @@ class NetlistEmitter:
                     domain_name = cd.name if cd is not None else "comb"
                     other_domain_name = driver.domain.name if driver.domain is not None else "comb"
                     raise _ir.DriverConflict(
-                        f"Signal {lhs} driven from domain {domain_name} at {src_loc} and domain "
-                        f"{other_domain_name} at {driver.src_loc}")
+                        f"Signal {lhs!r} driven from domain {domain_name} at {src_loc[0]}:{src_loc[1]} and domain "
+                        f"{other_domain_name} at {driver.src_loc[0]}:{driver.src_loc[1]}")
                 if driver.module_idx != module_idx:
                     mod_name = ".".join(self.netlist.modules[module_idx].name or ("<toplevel>",))
                     other_mod_name = \
                         ".".join(self.netlist.modules[driver.module_idx].name or ("<toplevel>",))
                     raise _ir.DriverConflict(
-                        f"Signal {lhs} driven from module {mod_name} at {src_loc} and "
-                        f"module {other_mod_name} at {driver.src_loc}")
+                        f"Signal {lhs!r} driven from module {mod_name} at {src_loc[0]}:{src_loc[1]} and "
+                        f"module {other_mod_name} at {driver.src_loc[0]}:{driver.src_loc[1]}")
             else:
                 driver = NetlistDriver(module_idx, lhs, domain=cd, src_loc=src_loc)
                 self.drivers[lhs] = driver

@@ -1,4 +1,4 @@
-# amaranth: UnusedPrint=no, UnusedProperty
+# amaranth: UnusedPrint=no, UnusedProperty=no
 
 import warnings
 from enum import Enum, EnumMeta
