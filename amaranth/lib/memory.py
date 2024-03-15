@@ -98,6 +98,9 @@ class WritePort:
                 "en": wiring.In(en_width),
             })
 
+        def create(self, *, path=None, src_loc_at=0):
+            return WritePort(self, memory=None, domain="sync", path=path, src_loc_at=1 + src_loc_at)
+
         @property
         def addr_width(self):
             return self._addr_width
@@ -121,7 +124,7 @@ class WritePort:
             return f"WritePort.Signature(addr_width={self.addr_width}, shape={self.shape}{granularity})"
 
 
-    def __init__(self, signature, *, memory, domain):
+    def __init__(self, signature, *, memory, domain, path=None, src_loc_at=0):
         if not isinstance(signature, WritePort.Signature):
             raise TypeError(f"Expected `WritePort.Signature`, not {signature!r}")
         if memory is not None:
@@ -138,7 +141,7 @@ class WritePort:
         self._signature = signature
         self._memory = memory
         self._domain = domain
-        self.__dict__.update(signature.members.create())
+        self.__dict__.update(signature.members.create(path=path, src_loc_at=1 + src_loc_at))
         if memory is not None:
             memory._w_ports.append(self)
 
@@ -211,6 +214,9 @@ class ReadPort:
                 "en": wiring.In(1, init=1),
             })
 
+        def create(self, *, path=None, src_loc_at=0):
+            return ReadPort(self, memory=None, domain="sync", path=path, src_loc_at=1 + src_loc_at)
+
         @property
         def addr_width(self):
             return self._addr_width
@@ -228,7 +234,7 @@ class ReadPort:
             return f"ReadPort.Signature(addr_width={self.addr_width}, shape={self.shape})"
 
 
-    def __init__(self, signature, *, memory, domain, transparent_for=()):
+    def __init__(self, signature, *, memory, domain, transparent_for=(), path=None, src_loc_at=0):
         if not isinstance(signature, ReadPort.Signature):
             raise TypeError(f"Expected `ReadPort.Signature`, not {signature!r}")
         if memory is not None:
@@ -252,7 +258,7 @@ class ReadPort:
         self._memory = memory
         self._domain = domain
         self._transparent_for = transparent_for
-        self.__dict__.update(signature.members.create())
+        self.__dict__.update(signature.members.create(path=path, src_loc_at=1 + src_loc_at))
         if domain == "comb":
             self.en = Const(1)
         if memory is not None:
