@@ -798,8 +798,6 @@ class Signature(metaclass=SignatureMeta):
                     yield path, Member(member.flow, member.shape, init=member.init), value
                 elif member.is_signature:
                     for sub_path, sub_member, sub_value in member.signature.flatten(value):
-                        if member.flow == In:
-                            sub_member = sub_member.flip()
                         yield ((*path, *sub_path), sub_member, sub_value)
                 else:
                     assert False # :nocov:
