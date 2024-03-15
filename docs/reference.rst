@@ -58,7 +58,7 @@ The prelude exports exactly the following names:
 * :class:`Const`
 * :func:`C`
 * :func:`Mux`
-* :class:`Cat`
+* :func:`Cat`
 * :class:`Array`
 * :class:`Signal`
 * :class:`ClockSignal`

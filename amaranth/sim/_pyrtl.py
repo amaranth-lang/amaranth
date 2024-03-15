@@ -212,7 +212,7 @@ class _RHSValueCompiler(_ValueCompiler):
         return f"({(1 << value.width) - 1} & " \
                f"{self(value.value)} >> {offset})"
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         gen_parts = []
         offset = 0
         for part in value.parts:
@@ -313,7 +313,7 @@ class _LHSValueCompiler(_ValueCompiler):
                 f"(({width_mask:#x} & {arg}) << {offset}))")
         return gen
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         def gen(arg):
             gen_arg = self.emitter.def_var("cat", arg)
             offset = 0

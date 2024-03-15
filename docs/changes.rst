@@ -49,6 +49,7 @@ Implemented RFCs
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 .. _RFC 50: https://amaranth-lang.org/rfcs/0050-print.html
+.. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -57,6 +58,7 @@ Implemented RFCs
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
 * `RFC 50`_: ``Print`` statement and string formatting
+* `RFC 53`_: Low-level I/O primitives
 
 
 Language changes
@@ -64,9 +66,10 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
-* Added: :class:`ast.Slice` objects have been made const-castable.
+* Added: :class:`Slice` objects have been made const-castable.
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
 * Added: :class:`Format` objects, :class:`Print` statements, messages in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
+* Added: IO values, :class:`IOPort` objects, :class:`IOBufferInstance` objects. (`RFC 53`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
 * Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
@@ -75,6 +78,7 @@ Language changes
 * Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
 * Changed: :class:`Shape` has been made immutable and hashable.
 * Changed: :class:`Assert`, :class:`Assume`, :class:`Cover` have been moved to :mod:`amaranth.hdl` from :mod:`amaranth.asserts`. (`RFC 50`_)
+* Changed: :class:`Instance` IO ports now accept only IO values, not plain values. (`RFC 53`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
@@ -218,7 +222,7 @@ Language changes
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
-* Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
+* Changed: :func:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
 * Changed: ``signed(0)`` is no longer constructible. (The semantics of this shape were never defined.)
 * Changed: :meth:`Value.__abs__` returns an unsigned value.
 * Deprecated: :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`. (Predating the RFC process.)

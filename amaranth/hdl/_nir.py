@@ -2,12 +2,14 @@ from typing import Iterable
 import enum
 
 from ._ast import SignalDict
+from . import _ast
 
 
 __all__ = [
     # Netlist core
-    "Net", "Value", "FormatValue", "Format",
-    "Netlist", "ModuleNetFlow", "Module", "Cell", "Top",
+    "Net", "Value", "IONet", "IOValue",
+    "FormatValue", "Format",
+    "Netlist", "ModuleNetFlow", "IODirection", "Module", "Cell", "Top",
     # Computation cells
     "Operator", "Part",
     # Decision tree cells
@@ -153,11 +155,81 @@ class Value(tuple):
                     chunks.append(f"{cell}.{start_bit}:{end_bit}")
             pos = next_pos
         if len(chunks) == 0:
-            return "(0'd0)"
+            return "()"
         elif len(chunks) == 1:
             return chunks[0]
         else:
             return f"(cat {' '.join(chunks)})"
+
+    __str__ = __repr__
+
+
+class IONet(int):
+    __slots__ = ()
+
+    @classmethod
+    def from_port(cls, port: int, bit: int):
+        assert bit in range(1 << 16)
+        assert port >= 0
+        return cls((port << 16) | bit)
+
+    @property
+    def port(self):
+        return self >> 16
+
+    @property
+    def bit(self):
+        return self & 0xffff
+
+    @classmethod
+    def ensure(cls, value: 'IONet'):
+        assert isinstance(value, cls)
+        return value
+
+    def __repr__(self):
+        return f"{self.port}.{self.bit}"
+
+    __str__ = __repr__
+
+
+class IOValue(tuple):
+    __slots__ = ()
+
+    def __new__(cls, nets: 'IONet | Iterable[IONet]' = ()):
+        if isinstance(nets, IONet):
+            return super().__new__(cls, (nets,))
+        return super().__new__(cls, (IONet.ensure(net) for net in nets))
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return type(self)(super().__getitem__(index))
+        else:
+            return super().__getitem__(index)
+
+    def __repr__(self):
+        pos = 0
+        chunks = []
+        while pos < len(self):
+            next_pos = pos
+            port = self[pos].port
+            start_bit = self[pos].bit
+            while (next_pos < len(self) and
+                    self[next_pos].port == port and
+                    self[next_pos].bit == start_bit + (next_pos - pos)):
+                next_pos += 1
+            width = next_pos - pos
+            end_bit = start_bit + width
+            if width == 1:
+                chunks.append(f"{port}.{start_bit}")
+            else:
+                chunks.append(f"{port}.{start_bit}:{end_bit}")
+            pos = next_pos
+        if len(chunks) == 0:
+            return "()"
+        elif len(chunks) == 1:
+            return chunks[0]
+        else:
+            return f"(io-cat {' '.join(chunks)})"
 
     __str__ = __repr__
 
@@ -240,14 +312,18 @@ class Netlist:
     Attributes
     ----------
 
+    modules : list of ``Module``
     cells : list of ``Cell``
     connections : dict of (negative) int to int
+    io_ports : list of ``IOPort``
     signals : dict of Signal to ``Value``
+    last_late_net: int
     """
     def __init__(self):
         self.modules: list[Module] = []
         self.cells: list[Cell] = [Top()]
         self.connections: dict[Net, Net] = {}
+        self.io_ports: list[_ast.IOPort] = []
         self.signals = SignalDict()
         self.last_late_net = 0
 
@@ -270,11 +346,16 @@ class Netlist:
         result = ["("]
         for module_idx, module in enumerate(self.modules):
             name = " ".join(repr(name) for name in module.name)
-            ports = " ".join(
+            ports = [
                 f"({flow.value} {name!r} {val})"
                 for name, (val, flow) in module.ports.items()
-            )
-            result.append(f"(module {module_idx} {module.parent} ({name}) {ports})")
+            ]
+            io_ports = [
+                f"(io {dir.value} {name!r} {val})"
+                for name, (val, dir) in module.io_ports.items()
+            ]
+            ports = "".join(" " + port for port in ports + io_ports)
+            result.append(f"(module {module_idx} {module.parent} ({name}){ports})")
         for cell_idx, cell in enumerate(self.cells):
             result.append(f"(cell {cell_idx} {cell.module_idx} {cell!r})")
         result.append(")")
@@ -332,9 +413,18 @@ class ModuleNetFlow(enum.Enum):
     #: It is thus an output port of this module.
     Output   = "output"
 
-    #: The net is a special top-level inout net that is used within
-    #: this module or its submodules.  It is an inout port of this module.
-    Inout    = "inout"
+
+class IODirection(enum.Enum):
+    Input  = "input"
+    Output = "output"
+    Bidir  = "inout"
+
+    def __or__(self, other):
+        assert isinstance(other, IODirection)
+        if self == other:
+            return self
+        else:
+            return IODirection.Bidir
 
 
 class Module:
@@ -349,7 +439,8 @@ class Module:
     submodules: a list of nested module indices
     signal_names: a SignalDict from Signal to str, signal names visible in this module
     net_flow: a dict from Net to NetFlow, describes how a net is used within this module
-    ports: a dict from port name to (Value, NetFlow) pair
+    ports: a dict from port name to (Value, ModuleNetFlow) pair
+    io_ports: a dict from port name to (IOValue, IODirection) pair
     cells: a list of cell indices that belong to this module
     """
     def __init__(self, parent, name, *, src_loc, cell_src_loc):
@@ -359,8 +450,11 @@ class Module:
         self.cell_src_loc = cell_src_loc
         self.submodules = []
         self.signal_names = SignalDict()
-        self.net_flow = {}
+        self.io_port_names = {}
+        self.net_flow: dict[Net, ModuleNetFlow] = {}
+        self.ionet_dir: dict[IONet, IODirection] = {}
         self.ports = {}
+        self.io_ports = {}
         self.cells = []
 
 
@@ -384,36 +478,34 @@ class Cell:
     def output_nets(self, self_idx: int):
         raise NotImplementedError
 
+    def io_nets(self):
+        return set()
+
     def resolve_nets(self, netlist: Netlist):
         raise NotImplementedError
 
 
 class Top(Cell):
-    """A special cell type representing top-level ports. Must be present in the netlist exactly
+    """A special cell type representing top-level non-IO ports. Must be present in the netlist exactly
     once, at index 0.
 
     Top-level outputs are stored as a dict of names to their assigned values.
 
-    Top-level inputs and inouts are effectively the output of this cell. They are both stored
+    Top-level inputs are effectively the output of this cell. They are stored
     as a dict of names to a (start bit index, width) tuple. Output bit indices 0 and 1 are reserved
     for constant nets, so the lowest bit index that can be assigned to a port is 2.
-
-    Top-level inouts are special and can only be used by inout ports of instances, or in the pad
-    value of an ``IoBuf`` cell.
 
     Attributes
     ----------
 
     ports_o: dict of str to Value
     ports_i: dict of str to (int, int)
-    ports_io: dict of str to (int, int)
     """
     def __init__(self):
         super().__init__(module_idx=0, src_loc=None)
 
         self.ports_o = {}
         self.ports_i = {}
-        self.ports_io = {}
 
     def input_nets(self):
         nets = set()
@@ -426,9 +518,6 @@ class Top(Cell):
         for start, width in self.ports_i.values():
             for bit in range(start, start + width):
                 nets.add(Net.from_cell(self_idx, bit))
-        for start, width in self.ports_io.values():
-            for bit in range(start, start + width):
-                nets.add(Net.from_cell(self_idx, bit))
         return nets
 
     def resolve_nets(self, netlist: Netlist):
@@ -438,13 +527,11 @@ class Top(Cell):
     def __repr__(self):
         ports = []
         for (name, (start, width)) in self.ports_i.items():
-            ports.append(f"(input {name!r} {start}:{start+width})")
+            ports.append(f" (input {name!r} {start}:{start+width})")
         for (name, val) in self.ports_o.items():
-            ports.append(f"(output {name!r} {val})")
-        for (name, (start, width)) in self.ports_io.items():
-            ports.append(f"(inout {name!r} {start}:{start+width})")
-        ports = " ".join(ports)
-        return f"(top {ports})"
+            ports.append(f" (output {name!r} {val})")
+        ports = "".join(ports)
+        return f"(top{ports})"
 
 
 class Operator(Cell):
@@ -1108,7 +1195,7 @@ class Instance(Cell):
     attributes: dict of str to Const, int, or str
     ports_i: dict of str to Value
     ports_o: dict of str to pair of int (index start, width)
-    ports_io: dict of str to Value
+    ports_io: dict of str to (IOValue, IODirection)
     """
 
     def __init__(self, module_idx, *, type, name, parameters, attributes, ports_i, ports_o, ports_io, src_loc):
@@ -1120,13 +1207,11 @@ class Instance(Cell):
         self.attributes = attributes
         self.ports_i = {name: Value(val) for name, val in ports_i.items()}
         self.ports_o = ports_o
-        self.ports_io = {name: Value(val) for name, val in ports_io.items()}
+        self.ports_io = {name: (IOValue(val), IODirection(dir)) for name, (val, dir) in ports_io.items()}
 
     def input_nets(self):
         nets = set()
         for val in self.ports_i.values():
-            nets |= set(val)
-        for val in self.ports_io.values():
             nets |= set(val)
         return nets
 
@@ -1137,11 +1222,15 @@ class Instance(Cell):
                 nets.add(Net.from_cell(self_idx, bit))
         return nets
 
+    def io_nets(self):
+        nets = set()
+        for val, dir in self.ports_io.values():
+            nets |= {(net, dir) for net in val}
+        return nets
+
     def resolve_nets(self, netlist: Netlist):
         for port in self.ports_i:
             self.ports_i[port] = netlist.resolve_value(self.ports_i[port])
-        for port in self.ports_io:
-            self.ports_io[port] = netlist.resolve_value(self.ports_io[port])
 
     def __repr__(self):
         items = []
@@ -1153,43 +1242,62 @@ class Instance(Cell):
             items.append(f"(input {name!r} {val})")
         for name, (start, width) in self.ports_o.items():
             items.append(f"(output {name!r} {start}:{start+width})")
-        for name, val in self.ports_io.items():
-            items.append(f"(inout {name!r} {val})")
+        for name, (val, dir) in self.ports_io.items():
+            items.append(f"(io {dir.value} {name!r} {val})")
         items = " ".join(items)
         return f"(instance {self.type!r} {self.name!r} {items})"
 
 
 class IOBuffer(Cell):
-    """An IO buffer cell. ``pad`` must be connected to nets corresponding to an IO port
-    of the ``Top`` cell. This cell does two things:
+    """An IO buffer cell. This cell does two things:
 
-    - a tristate buffer is inserted driving ``pad`` based on ``o`` and ``oe`` nets (output buffer)
-    - the value of ``pad`` is sampled and made available as output of this cell (input buffer)
+    - a tristate buffer is inserted driving ``port`` based on ``o`` and ``oe`` nets (output buffer)
+    - the value of ``port`` is sampled and made available as output of this cell (input buffer)
 
     Attributes
     ----------
 
-    pad: Value
-    o: Value
-    oe: Net
+    port: IOValue
+    dir: IODirection
+    o: Value or None
+    oe: Net or None
     """
-    def __init__(self, module_idx, *, pad, o, oe, src_loc):
+    def __init__(self, module_idx, *, port, dir, o=None, oe=None, src_loc):
         super().__init__(module_idx, src_loc=src_loc)
 
-        self.pad = Value(pad)
-        self.o = Value(o)
-        self.oe = Net.ensure(oe)
+        self.port = IOValue(port)
+        self.dir = IODirection(dir)
+        if self.dir is IODirection.Input:
+            assert o is None
+            assert oe is None
+            self.o = None
+            self.oe = None
+        else:
+            self.o = Value(o)
+            self.oe = Net.ensure(oe)
 
     def input_nets(self):
-        return set(self.pad) | set(self.o) | {self.oe}
+        if self.dir is IODirection.Input:
+            return set()
+        else:
+            return set(self.o) | {self.oe}
 
     def output_nets(self, self_idx: int):
-        return {Net.from_cell(self_idx, bit) for bit in range(len(self.pad))}
+        if self.dir is IODirection.Output:
+            return set()
+        else:
+            return {Net.from_cell(self_idx, bit) for bit in range(len(self.port))}
+
+    def io_nets(self):
+        return {(net, self.dir) for net in self.port}
 
     def resolve_nets(self, netlist: Netlist):
-        self.pad = netlist.resolve_value(self.pad)
-        self.o = netlist.resolve_value(self.o)
-        self.oe = netlist.resolve_net(self.oe)
+        if self.dir is not IODirection.Input:
+            self.o = netlist.resolve_value(self.o)
+            self.oe = netlist.resolve_net(self.oe)
 
     def __repr__(self):
-        return f"(iob {self.pad} {self.o} {self.oe})"
+        if self.dir is IODirection.Input:
+            return f"(iob {self.dir.value} {self.port})"
+        else:
+            return f"(iob {self.dir.value} {self.port} {self.o} {self.oe})"

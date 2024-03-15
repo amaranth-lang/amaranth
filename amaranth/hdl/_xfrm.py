@@ -53,7 +53,7 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         pass # :nocov:
 
     @abstractmethod
@@ -87,8 +87,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Slice(value)
         elif type(value) is Part:
             new_value = self.on_Part(value)
-        elif type(value) is Cat:
-            new_value = self.on_Cat(value)
+        elif type(value) is Concat:
+            new_value = self.on_Concat(value)
         elif type(value) is ArrayProxy:
             new_value = self.on_ArrayProxy(value)
         elif type(value) is Initial:
@@ -129,8 +129,8 @@ class ValueTransformer(ValueVisitor):
         return Part(self.on_value(value.value), self.on_value(value.offset),
                     value.width, value.stride)
 
-    def on_Cat(self, value):
-        return Cat(self.on_value(o) for o in value.parts)
+    def on_Concat(self, value):
+        return Concat(self.on_value(o) for o in value.parts)
 
     def on_ArrayProxy(self, value):
         return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
@@ -235,7 +235,10 @@ class FragmentTransformer:
     def map_named_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
             for name, (value, dir) in fragment.named_ports.items():
-                new_fragment.named_ports[name] = self.on_value(value), dir
+                if isinstance(value, Value):
+                    new_fragment.named_ports[name] = self.on_value(value), dir
+                else:
+                    new_fragment.named_ports[name] = value, dir
         else:
             new_fragment.named_ports = OrderedDict(fragment.named_ports.items())
 
@@ -303,15 +306,15 @@ class FragmentTransformer:
         elif isinstance(fragment, IOBufferInstance):
             if hasattr(self, "on_value"):
                 new_fragment = IOBufferInstance(
-                    pad=self.on_value(fragment.pad),
+                    port=fragment.port,
                     i=self.on_value(fragment.i) if fragment.i is not None else None,
-                    o=self.on_value(fragment.o),
-                    oe=self.on_value(fragment.oe),
+                    o=self.on_value(fragment.o) if fragment.o is not None else None,
+                    oe=self.on_value(fragment.oe) if fragment.o is not None else None,
                     src_loc=fragment.src_loc,
                 )
             else:
                 new_fragment = IOBufferInstance(
-                    pad=fragment.pad,
+                    port=fragment.port,
                     i=fragment.i,
                     o=fragment.o,
                     oe=fragment.oe,
@@ -396,7 +399,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         self.on_value(value.value)
         self.on_value(value.offset)
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         for o in value.parts:
             self.on_value(o)
 
@@ -450,7 +453,15 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
         if isinstance(fragment, Instance):
             for name, (value, dir) in fragment.named_ports.items():
-                self.on_value(value)
+                if not isinstance(value, IOValue):
+                    self.on_value(value)
+
+        if isinstance(fragment, IOBufferInstance):
+            if fragment.o is not None:
+                self.on_value(fragment.o)
+                self.on_value(fragment.oe)
+            if fragment.i is not None:
+                self.on_value(fragment.i)
 
         old_local_domains, self._local_domains = self._local_domains, set(self._local_domains)
         for domain_name, domain in fragment.domains.items():

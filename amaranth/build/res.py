@@ -14,6 +14,21 @@ class ResourceError(Exception):
     pass
 
 
+class SingleEndedPort:
+    def __init__(self, io):
+        self.io = io
+
+
+class DifferentialPort:
+    def __init__(self, p, n):
+        self.p = p
+        self.n = n
+
+
+class PortGroup:
+    pass
+
+
 class ResourceManager:
     def __init__(self, resources, connectors):
         self.resources  = OrderedDict()
@@ -113,21 +128,13 @@ class ResourceManager:
                     attrs[attr_key] = attr_value
 
             if isinstance(resource.ios[0], Subsignal):
-                members = OrderedDict()
-                sig_members = OrderedDict()
+                res = PortGroup()
                 for sub in resource.ios:
                     member = resolve(sub, dir[sub.name], xdr[sub.name],
                                                path=path + (sub.name,),
                                                attrs={**attrs, **sub.attrs})
-                    members[sub.name] = member
-                    sig_members[sub.name] = wiring.Out(member.signature)
-                signature = wiring.Signature(sig_members)
-                # Provide members ourselves instead of having the constructor
-                # create ones for us.
-                intf = object.__new__(wiring.PureInterface)
-                intf.signature = signature
-                intf.__dict__.update(members)
-                return intf
+                    setattr(res, sub.name, member)
+                return res
 
             elif isinstance(resource.ios[0], (Pins, DiffPairs)):
                 phys = resource.ios[0]
@@ -136,17 +143,21 @@ class ResourceManager:
                 # ignore it as well.
                 if isinstance(phys, Pins):
                     phys_names = phys.names
-                    port = wiring.Signature({"io": wiring.In(len(phys))}).create(path=path)
+                    io = IOPort(len(phys), name="__".join(path) + "__io")
+                    port = SingleEndedPort(io)
                 if isinstance(phys, DiffPairs):
                     phys_names = []
-                    sig_members = {}
                     if not self.should_skip_port_component(None, attrs, "p"):
+                        p = IOPort(len(phys), name="__".join(path) + "__p")
                         phys_names += phys.p.names
-                        sig_members["p"] = wiring.In(len(phys))
+                    else:
+                        p = None
                     if not self.should_skip_port_component(None, attrs, "n"):
+                        n = IOPort(len(phys), name="__".join(path) + "__n")
                         phys_names += phys.n.names
-                        sig_members["n"] = wiring.In(len(phys))
-                    port = wiring.Signature(sig_members).create(path=path)
+                    else:
+                        n = None
+                    port = DifferentialPort(p, n)
                 if dir == "-":
                     pin = None
                 else:

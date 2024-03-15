@@ -308,7 +308,7 @@ class ValueTestCase(FHDLTestCase):
         self.assertEqual(s2.start, 1)
         self.assertEqual(s2.stop, 2)
         s3 = Const(31)[::2]
-        self.assertIsInstance(s3, Cat)
+        self.assertIsInstance(s3, Concat)
         self.assertIsInstance(s3.parts[0], Slice)
         self.assertEqual(s3.parts[0].start, 0)
         self.assertEqual(s3.parts[0].stop, 1)
@@ -1679,3 +1679,109 @@ class SwitchTestCase(FHDLTestCase):
     def test_two_cases(self):
         s = Switch(Const(0, 8), {("00001111", 123): []})
         self.assertEqual(s.cases, {("00001111", "01111011"): []})
+
+
+class IOValueTestCase(FHDLTestCase):
+    def test_ioport(self):
+        a = IOPort(4)
+        self.assertEqual(len(a), 4)
+        self.assertEqual(a.attrs, {})
+        self.assertEqual(a.metadata, (None, None, None, None))
+        self.assertEqual(a._ioports(), {a})
+        self.assertRepr(a, "(io-port a)")
+        b = IOPort(3, name="b", attrs={"a": "b"}, metadata=["x", "y", "z"])
+        self.assertEqual(len(b), 3)
+        self.assertEqual(b.attrs, {"a": "b"})
+        self.assertEqual(b.metadata, ("x", "y", "z"))
+        self.assertEqual(b._ioports(), {b})
+        self.assertRepr(b, "(io-port b)")
+
+    def test_ioport_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Name must be a string, not 3$"):
+            a = IOPort(2, name=3)
+        with self.assertRaises(TypeError):
+            a = IOPort("a")
+        with self.assertRaises(TypeError):
+            a = IOPort(8, attrs=3)
+        with self.assertRaises(TypeError):
+            a = IOPort(8, metadata=3)
+        with self.assertRaisesRegex(ValueError,
+                r"^Metadata length \(3\) doesn't match port width \(2\)$"):
+            a = IOPort(2, metadata=["a", "b", "c"])
+
+    def test_ioslice(self):
+        a = IOPort(8, metadata=["a", "b", "c", "d", "e", "f", "g", "h"])
+        s = a[2:5]
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("c", "d", "e"))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-slice (io-port a) 2:5)")
+        s = a[-5:-2]
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("d", "e", "f"))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-slice (io-port a) 3:6)")
+        s = IOSlice(a, -5, -2)
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("d", "e", "f"))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-slice (io-port a) 3:6)")
+        s = a[5]
+        self.assertEqual(len(s), 1)
+        self.assertEqual(s.metadata, ("f",))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-slice (io-port a) 5:6)")
+        s = a[-1]
+        self.assertEqual(len(s), 1)
+        self.assertEqual(s.metadata, ("h",))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-slice (io-port a) 7:8)")
+        s = a[::2]
+        self.assertEqual(len(s), 4)
+        self.assertEqual(s.metadata, ("a", "c", "e", "g"))
+        self.assertEqual(s._ioports(), {a})
+        self.assertRepr(s, "(io-cat (io-slice (io-port a) 0:1) (io-slice (io-port a) 2:3) (io-slice (io-port a) 4:5) (io-slice (io-port a) 6:7))")
+
+    def test_ioslice_wrong(self):
+        a = IOPort(8)
+        with self.assertRaises(IndexError):
+            a[8]
+        with self.assertRaises(IndexError):
+            a[-9]
+        with self.assertRaises(TypeError):
+            a["a"]
+        with self.assertRaises(IndexError):
+            IOSlice(a, 0, 9)
+        with self.assertRaises(IndexError):
+            IOSlice(a, -10, 8)
+        with self.assertRaises(TypeError):
+            IOSlice(a, 0, "a")
+        with self.assertRaises(TypeError):
+            IOSlice(a, "a", 8)
+        with self.assertRaises(IndexError):
+            a[5:3]
+
+    def test_iocat(self):
+        a = IOPort(3, name="a", metadata=["a", "b", "c"])
+        b = IOPort(2, name="b", metadata=["x", "y"])
+        c = Cat(a, b)
+        self.assertEqual(len(c), 5)
+        self.assertEqual(c.metadata, ("a", "b", "c", "x", "y"))
+        self.assertEqual(c._ioports(), {a, b})
+        self.assertRepr(c, "(io-cat (io-port a) (io-port b))")
+        c = Cat(a, Cat())
+        self.assertEqual(len(c), 3)
+        self.assertEqual(c.metadata, ("a", "b", "c"))
+        self.assertEqual(c._ioports(), {a})
+        self.assertRepr(c, "(io-cat (io-port a) (io-cat ))")
+        c = Cat(a, Cat()[:])
+        self.assertEqual(len(c), 3)
+        self.assertRepr(c, "(io-cat (io-port a) (io-cat ))")
+
+    def test_iocat_wrong(self):
+        a = IOPort(3, name="a")
+        b = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Object \(sig b\) cannot be converted to an IO value$"):
+            Cat(a, b)

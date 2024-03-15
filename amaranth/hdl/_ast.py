@@ -17,7 +17,7 @@ from .._unused import *
 
 __all__ = [
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
-    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat",
+    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
@@ -25,6 +25,7 @@ __all__ = [
     "Format",
     "Statement", "Switch",
     "Property", "Assign", "Print", "Assert", "Assume", "Cover",
+    "IOValue", "IOPort", "IOConcat", "IOSlice",
     "SignalKey", "SignalDict", "SignalSet",
 ]
 
@@ -1480,7 +1481,7 @@ class Const(Value, metaclass=_ConstMeta):
         obj = Value.cast(obj)
         if type(obj) is Const:
             return obj
-        elif type(obj) is Cat:
+        elif type(obj) is Concat:
             value = 0
             width = 0
             for part in obj.parts:
@@ -1636,9 +1637,13 @@ def Mux(sel, val1, val0):
 @final
 class Slice(Value):
     def __init__(self, value, start, stop, *, src_loc_at=0):
-        if not isinstance(start, int):
+        try:
+            start = int(operator.index(start))
+        except TypeError:
             raise TypeError(f"Slice start must be an integer, not {start!r}")
-        if not isinstance(stop, int):
+        try:
+            stop = int(operator.index(stop))
+        except TypeError:
             raise TypeError(f"Slice stop must be an integer, not {stop!r}")
 
         value = Value.cast(value)
@@ -1656,8 +1661,8 @@ class Slice(Value):
 
         super().__init__(src_loc_at=src_loc_at)
         self._value = value
-        self._start = int(operator.index(start))
-        self._stop  = int(operator.index(stop))
+        self._start = start
+        self._stop  = stop
 
     @property
     def value(self):
@@ -1733,8 +1738,7 @@ class Part(Value):
                                            self.width, self.stride)
 
 
-@final
-class Cat(Value):
+def Cat(*parts, src_loc_at=0):
     """Concatenate values.
 
     Form a compound ``Value`` from several smaller ones by concatenation.
@@ -1758,10 +1762,19 @@ class Cat(Value):
     Value, inout
         Resulting ``Value`` obtained by concatenation.
     """
-    def __init__(self, *args, src_loc_at=0):
+    parts = list(flatten(parts))
+    if any(isinstance(part, IOValue) for part in parts):
+        return IOConcat(parts, src_loc_at=src_loc_at + 1)
+    else:
+        return Concat(parts, src_loc_at=src_loc_at + 1)
+
+
+@final
+class Concat(Value):
+    def __init__(self, args, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
         parts = []
-        for index, arg in enumerate(flatten(args)):
+        for index, arg in enumerate(args):
             if isinstance(arg, Enum) and (not isinstance(type(arg), ShapeCastable) or
                                           not hasattr(arg, "_amaranth_shape_")):
                 warnings.warn("Argument #{} of Cat() is an enumerated value {!r} without "
@@ -2730,6 +2743,162 @@ class Switch(Statement):
                 return "(case ({}) {})".format(" ".join(keys), stmts_repr)
         case_reprs = [case_repr(keys, stmts) for keys, stmts in self.cases.items()]
         return "(switch {!r} {})".format(self.test, " ".join(case_reprs))
+
+
+class IOValue(metaclass=ABCMeta):
+    @staticmethod
+    def cast(obj):
+        if isinstance(obj, IOValue):
+            return obj
+        elif isinstance(obj, Value) and len(obj) == 0:
+            return IOConcat(())
+        else:
+            raise TypeError(f"Object {obj!r} cannot be converted to an IO value")
+
+    def __init__(self, *, src_loc_at=0):
+        self.src_loc = tracer.get_src_loc(1 + src_loc_at)
+
+    @property
+    @abstractmethod
+    def metadata(self):
+        raise NotImplementedError # :nocov:
+
+    def __getitem__(self, key):
+        n = len(self)
+        if isinstance(key, int):
+            if key not in range(-n, n):
+                raise IndexError(f"Index {key} is out of bounds for a {n}-bit IO value")
+            if key < 0:
+                key += n
+            return IOSlice(self, key, key + 1, src_loc_at=1)
+        elif isinstance(key, slice):
+            start, stop, step = key.indices(n)
+            if step != 1:
+                return IOConcat((self[i] for i in range(start, stop, step)), src_loc_at=1)
+            return IOSlice(self, start, stop, src_loc_at=1)
+        else:
+            raise TypeError(f"Cannot index IO value with {key!r}")
+
+    @abstractmethod
+    def _ioports(self):
+        raise NotImplementedError # :nocov:
+
+
+@final
+class IOPort(IOValue):
+    def __init__(self, width, *, name=None, attrs=None, metadata=None, src_loc_at=0):
+        super().__init__(src_loc_at=src_loc_at)
+
+        if name is not None and not isinstance(name, str):
+            raise TypeError(f"Name must be a string, not {name!r}")
+        self.name = name or tracer.get_var_name(depth=2 + src_loc_at)
+
+        self._width = operator.index(width)
+        self._attrs = dict(() if attrs is None else attrs)
+        self._metadata = (None,) * self._width if metadata is None else tuple(metadata)
+        if len(self._metadata) != self._width:
+            raise ValueError(f"Metadata length ({len(self._metadata)}) doesn't match port width ({self._width})")
+
+    def __len__(self):
+        return self._width
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def attrs(self):
+        return self._attrs
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    def _ioports(self):
+        return {self}
+
+    def __repr__(self):
+        return f"(io-port {self.name})"
+
+
+@final
+class IOConcat(IOValue):
+    def __init__(self, parts, src_loc_at=0):
+        super().__init__(src_loc_at=src_loc_at)
+        self._parts = tuple(IOValue.cast(part) for part in parts)
+
+    @property
+    def parts(self):
+        return self._parts
+
+    def __len__(self):
+        return sum(len(part) for part in self.parts)
+
+    @property
+    def metadata(self):
+        return tuple(obj for part in self._parts for obj in part.metadata)
+
+    def _ioports(self):
+        return {port for part in self._parts for port in part._ioports()}
+
+    def __repr__(self):
+        return "(io-cat {})".format(" ".join(map(repr, self.parts)))
+
+
+@final
+class IOSlice(IOValue):
+    def __init__(self, value, start, stop, *, src_loc_at=0):
+        try:
+            start = int(operator.index(start))
+        except TypeError:
+            raise TypeError(f"Slice start must be an integer, not {start!r}")
+        try:
+            stop = int(operator.index(stop))
+        except TypeError:
+            raise TypeError(f"Slice stop must be an integer, not {stop!r}")
+
+        value = IOValue.cast(value)
+        n = len(value)
+        if start not in range(-n, n+1):
+            raise IndexError(f"Cannot start slice {start} bits into {n}-bit value")
+        if start < 0:
+            start += n
+        if stop not in range(-n, n+1):
+            raise IndexError(f"Cannot stop slice {stop} bits into {n}-bit value")
+        if stop < 0:
+            stop += n
+        if start > stop:
+            raise IndexError(f"Slice start {start} must be less than slice stop {stop}")
+
+        super().__init__(src_loc_at=src_loc_at)
+        self._value = value
+        self._start = start
+        self._stop  = stop
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def stop(self):
+        return self._stop
+
+    def __len__(self):
+        return self.stop - self.start
+
+    @property
+    def metadata(self):
+        return self._value.metadata[self.start:self.stop]
+
+    def _ioports(self):
+        return self.value._ioports()
+
+    def __repr__(self):
+        return f"(io-slice {self.value!r} {self.start}:{self.stop})"
 
 
 class _MappedKeyCollection(metaclass=ABCMeta):

@@ -1,11 +1,6 @@
 # amaranth: UnusedElaboratable=no
 
-import warnings
-
-from amaranth import *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from amaranth.hdl.rec import *
+from amaranth.hdl import *
 from amaranth.lib.wiring import *
 from amaranth.lib.io import *
 from amaranth.build.dsl import *
@@ -77,14 +72,11 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_with_dir(self):
         i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
-        self.assertIsInstance(i2c, PureInterface)
-        self.assertTrue(i2c.signature.is_compliant(i2c))
         self.assertIsInstance(flipped(i2c.sda), Pin)
         self.assertEqual(i2c.sda.dir, "o")
 
     def test_request_tristate(self):
         i2c = self.cm.request("i2c", 0)
-        self.assertTrue(i2c.signature.is_compliant(i2c))
         self.assertEqual(i2c.sda.dir, "io")
 
         ports = list(self.cm.iter_ports())
@@ -158,7 +150,7 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")
-        self.assertIsInstance(clk50.io, Signal)
+        self.assertIsInstance(clk50.io, IOPort)
 
         ports = list(self.cm.iter_ports())
         self.assertEqual(len(ports), 1)
@@ -166,8 +158,8 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_raw_diffpairs(self):
         clk100 = self.cm.request("clk100", 0, dir="-")
-        self.assertIsInstance(clk100.p, Signal)
-        self.assertIsInstance(clk100.n, Signal)
+        self.assertIsInstance(clk100.p, IOPort)
+        self.assertIsInstance(clk100.n, IOPort)
 
         ports = list(self.cm.iter_ports())
         self.assertEqual(len(ports), 2)
