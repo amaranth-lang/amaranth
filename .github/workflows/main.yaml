@@ -148,7 +148,7 @@ jobs:
           folder: pages/
           clean: false
 
-  publish-code:
+  publish-package:
     needs: required
     runs-on: ubuntu-latest
     environment: publish
@@ -166,7 +166,7 @@ jobs:
     - name: Upload package artifact
       uses: actions/upload-artifact@v4
       with:
-        name: code
+        name: package
         path: dist/
     - name: Verify package metadata
       run: |
@@ -180,3 +180,24 @@ jobs:
     - name: Publish package to PyPI
       if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/') }}
       uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-release:
+    needs: publish-package
+    if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Determine release metadata
+      id: metadata
+      env:
+        REF_NAME: ${{ github.ref_name }}
+      run: |
+        echo name=${REF_NAME/v/} >>$GITHUB_OUTPUT
+    - name: Create release
+      uses: comnoco/create-release-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ steps.metadata.outputs.name }}
