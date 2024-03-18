@@ -64,6 +64,14 @@ class _Changed(Command):
         self.value = value
 
 
+class _AwaitableCmd:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __await__(self):
+        return (yield self.obj)
+
+
 class _AsyncTrigger:
     def __init__(self, cmd):
         self.cmd = cmd
@@ -77,6 +85,12 @@ class _AsyncTrigger:
 
 
 class SimulatorContext:
+    def get(self, expr):
+        return _AwaitableCmd(expr)
+
+    def set(self, expr, value):
+        return _AwaitableCmd(expr.eq(value))
+
     def delay(self, interval=None):
         return _AsyncTrigger(Delay(interval))
 
