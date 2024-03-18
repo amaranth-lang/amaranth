@@ -59,12 +59,6 @@ class Active(Command):
         return "(active)"
 
 
-class _Changed(Command):
-    def __init__(self, signal, value=None):
-        self.signal = signal
-        self.value = value
-
-
 class _AwaitableCmd:
     def __init__(self, obj):
         self.obj = obj
@@ -73,16 +67,49 @@ class _AwaitableCmd:
         return (yield self.obj)
 
 
-class _AsyncTrigger:
-    def __init__(self, cmd):
-        self.cmd = cmd
+class _DomainTrigger:
+    def __init__(self, sim, domain, context):
+        self._sim = sim
+        self._domain = domain
+        self._context = context
 
     def __await__(self):
-        yield self.cmd
+        yield Tick(self.domain)
 
     async def until(self, condition):
-        while not (await condition.get()):
+        while not await self._sim.get(condition):
             await self
+
+    async def repeat(self, times):
+        for _ in range(times):
+            await self
+
+
+class _CombinableTrigger:
+    def __init__(self, triggers=None):
+        self._triggers = [] if triggers is None else triggers
+
+    def __await__(self):
+        yield self
+
+    async def __aiter__(self):
+        while True:
+            yield await self
+
+    def delay(self, interval):
+        return _CombinableTrigger(self._triggers + [('delay', interval)])
+
+    def changed(self, *signals):
+        return _CombinableTrigger(self._triggers + [('changed', signals)])
+
+    def edge(self, signal, value):
+        return _CombinableTrigger(self._triggers + [('edge', signal, value)])
+
+    def posedge(self, signal):
+        return self.edge(signal, 1)
+
+    def negedge(self, signal):
+        return self.edge(signal, 0)
 
 
 class SimulatorContext:
@@ -98,14 +125,23 @@ class SimulatorContext:
     def memory_write(self, instance, address, value, mask=None):
         return _AwaitableCmd(MemorySimWrite(instance, address, value, mask))
 
+    def tick(self, domain="sync", context=None):
+        return _DomainTrigger(self, domain, context)
+
     def delay(self, interval=None):
-        return _AsyncTrigger(Delay(interval))
+        return _CombinableTrigger().delay(interval)
 
-    def tick(self, domain="sync"):
-        return _AsyncTrigger(Tick(domain))
+    def changed(self, *signals):
+        return _CombinableTrigger().changed(*signals)
 
-    def changed(self, signal, value=None):
-        return _AsyncTrigger(_Changed(signal, value))
+    def edge(self, signal, value):
+        return _CombinableTrigger().edge(signal, value)
+
+    def posedge(self, signal):
+        return _CombinableTrigger().posedge(signal)
+
+    def negedge(self, signal):
+        return _CombinableTrigger().negedge(signal)
 
 
 class Simulator:
