@@ -50,6 +50,7 @@ Implemented RFCs
 .. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
 .. _RFC 50: https://amaranth-lang.org/rfcs/0050-print.html
 .. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
+.. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -93,6 +94,7 @@ Standard library changes
 .. currentmodule:: amaranth.lib
 
 * Added: :mod:`amaranth.lib.memory`. (`RFC 45`_)
+* Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)

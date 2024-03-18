@@ -1,10 +1,256 @@
-from .. import *
+import enum
+from collections.abc import Iterable
+
+from ..hdl import *
 from ..lib import wiring
 from ..lib.wiring import In, Out
 from .. import tracer
 
 
-__all__ = ["Pin"]
+__all__ = ["Direction", "SingleEndedPort", "DifferentialPort", "Pin"]
+
+
+class Direction(enum.Enum):
+    """Represents a direction of an I/O port, or of an I/O buffer."""
+
+    #: Input direction (from world to Amaranth design)
+    Input  = "i"
+    #: Output direction (from Amaranth design to world)
+    Output = "o"
+    #: Bidirectional (can be switched between input and output)
+    Bidir  = "io"
+
+    def __or__(self, other):
+        if not isinstance(other, Direction):
+            return NotImplemented
+        if self == other:
+            return self
+        else:
+            return Direction.Bidir
+
+    def __and__(self, other):
+        if not isinstance(other, Direction):
+            return NotImplemented
+        if self == other:
+            return self
+        elif self is Direction.Bidir:
+            return other
+        elif other is Direction.Bidir:
+            return self
+        else:
+            raise ValueError("Cannot combine input port with output port")
+
+
+class SingleEndedPort:
+    """Represents a single-ended I/O port with optional inversion.
+
+    Parameters
+    ----------
+    io : IOValue
+        The raw I/O value being wrapped.
+    invert : bool or iterable of bool
+        If true, the electrical state of the physical pin will be opposite from the Amaranth value
+        (the ``*Buffer`` classes will insert inverters on ``o`` and ``i`` pins, as appropriate).
+
+        This can be used for various purposes:
+
+        - Normalizing active-low pins (such as ``CS_B``) to be active-high in Amaranth code
+        - Compensating for boards where an inverting level-shifter (or similar circuitry) was used
+          on the pin
+
+        If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
+        is an iterable of :class:`bool`, the iterable must have the same length as ``io``, and
+        the inversion is specified per-bit.
+    direction : Direction or str
+        Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
+        :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
+        If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
+        If a string is passed, it is cast to :class:`Direction`.
+    """
+    def __init__(self, io, *, invert=False, direction=Direction.Bidir):
+        self._io = IOValue.cast(io)
+        if isinstance(invert, bool):
+            self._invert = (invert,) * len(self._io)
+        elif isinstance(invert, Iterable):
+            self._invert = tuple(invert)
+            if len(self._invert) != len(self._io):
+                raise ValueError(f"Length of 'invert' ({len(self._invert)}) doesn't match "
+                                 f"length of 'io' ({len(self._io)})")
+            if not all(isinstance(item, bool) for item in self._invert):
+                raise TypeError(f"'invert' must be a bool or iterable of bool, not {invert!r}")
+        else:
+            raise TypeError(f"'invert' must be a bool or iterable of bool, not {invert!r}")
+        self._direction = Direction(direction)
+
+    @property
+    def io(self):
+        """The ``io`` argument passed to the constructor."""
+        return self._io
+
+    @property
+    def invert(self):
+        """The ``invert`` argument passed to the constructor, normalized to a :class:`tuple`
+        of :class:`bool`."""
+        return self._invert
+
+    @property
+    def direction(self):
+        """The ``direction`` argument passed to the constructor, normalized to :class:`Direction`."""
+        return self._direction
+
+    def __len__(self):
+        """Returns the width of this port in bits. Equal to :py:`len(self.io)`."""
+        return len(self._io)
+
+    def __invert__(self):
+        """Returns a new :class:`SingleEndedPort` with the opposite value of ``invert``."""
+        return SingleEndedPort(self._io, invert=tuple(not inv for inv in self._invert),
+                               direction=self._direction)
+
+    def __getitem__(self, index):
+        """Slices the port, returning another :class:`SingleEndedPort` with a subset
+        of its bits.
+
+        The index can be a :class:`slice` or :class:`int`. If the index is
+        an :class:`int`, the result is a single-bit :class:`SingleEndedPort`."""
+        return SingleEndedPort(self._io[index], invert=self._invert[index],
+                               direction=self._direction)
+
+    def __add__(self, other):
+        """Concatenates two :class:`SingleEndedPort` objects together, returning a new
+        :class:`SingleEndedPort` object.
+
+        When the concatenated ports have different directions, the conflict is resolved as follows:
+
+        - If a bidirectional port is concatenated with an input port, the result is an input port.
+        - If a bidirectional port is concatenated with an output port, the result is an output port.
+        - If an input port is concatenated with an output port, :exc:`ValueError` is raised.
+        """
+        if not isinstance(other, SingleEndedPort):
+            return NotImplemented
+        return SingleEndedPort(Cat(self._io, other._io), invert=self._invert + other._invert,
+                               direction=self._direction | other._direction)
+
+    def __repr__(self):
+        if all(self._invert):
+            invert = True
+        elif not any(self._invert):
+            invert = False
+        else:
+            invert = self._invert
+        return f"SingleEndedPort({self._io!r}, invert={invert!r}, direction={self._direction})"
+
+
+class DifferentialPort:
+    """Represents a differential I/O port with optional inversion.
+
+    Parameters
+    ----------
+    p : IOValue
+        The raw I/O value used as positive (true) half of the port.
+    n : IOValue
+        The raw I/O value used as negative (complemented) half of the port. Must have the same
+        length as ``p``.
+    invert : bool or iterable of bool
+        If true, the electrical state of the physical pin will be opposite from the Amaranth value
+        (the ``*Buffer`` classes will insert inverters on ``o`` and ``i`` pins, as appropriate).
+
+        This can be used for various purposes:
+
+        - Normalizing active-low pins (such as ``CS_B``) to be active-high in Amaranth code
+        - Compensating for boards where the P and N pins are swapped (e.g. for easier routing)
+
+        If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
+        is an iterable of :class:`bool`, the iterable must have the same length as ``io``, and
+        the inversion is specified per-bit.
+    direction : Direction or str
+        Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
+        :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
+        If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
+        If a string is passed, it is cast to :class:`Direction`.
+    """
+    def __init__(self, p, n, *, invert=False, direction=Direction.Bidir):
+        self._p = IOValue.cast(p)
+        self._n = IOValue.cast(n)
+        if len(self._p) != len(self._n):
+            raise ValueError(f"Length of 'p' ({len(self._p)}) doesn't match length of 'n' "
+                             f"({len(self._n)})")
+        if isinstance(invert, bool):
+            self._invert = (invert,) * len(self._p)
+        elif isinstance(invert, Iterable):
+            self._invert = tuple(invert)
+            if len(self._invert) != len(self._p):
+                raise ValueError(f"Length of 'invert' ({len(self._invert)}) doesn't match "
+                                 f"length of 'p' ({len(self._p)})")
+            if not all(isinstance(item, bool) for item in self._invert):
+                raise TypeError(f"'invert' must be a bool or iterable of bool, not {invert!r}")
+        else:
+            raise TypeError(f"'invert' must be a bool or iterable of bool, not {invert!r}")
+        self._direction = Direction(direction)
+
+    @property
+    def p(self):
+        """The ``p`` argument passed to the constructor."""
+        return self._p
+
+    @property
+    def n(self):
+        """The ``n`` argument passed to the constructor."""
+        return self._n
+
+    @property
+    def invert(self):
+        """The ``invert`` argument passed to the constructor, normalized to a :class:`tuple`
+        of :class:`bool`."""
+        return self._invert
+
+    @property
+    def direction(self):
+        """The ``direction`` argument passed to the constructor, normalized to :class:`Direction`."""
+        return self._direction
+
+    def __len__(self):
+        """Returns the width of this port in bits. Equal to :py:`len(self.p)` (and :py:`len(self.n)`)."""
+        return len(self._p)
+
+    def __invert__(self):
+        """Returns a new :class:`DifferentialPort` with the opposite value of ``invert``."""
+        return DifferentialPort(self._p, self._n, invert=tuple(not inv for inv in self._invert),
+                               direction=self._direction)
+
+    def __getitem__(self, index):
+        """Slices the port, returning another :class:`DifferentialPort` with a subset
+        of its bits.
+
+        The index can be a :class:`slice` or :class:`int`. If the index is
+        an :class:`int`, the result is a single-bit :class:`DifferentialPort`."""
+        return DifferentialPort(self._p[index], self._n[index], invert=self._invert[index],
+                               direction=self._direction)
+
+    def __add__(self, other):
+        """Concatenates two :class:`DifferentialPort` objects together, returning a new
+        :class:`DifferentialPort` object.
+
+        When the concatenated ports have different directions, the conflict is resolved as follows:
+
+        - If a bidirectional port is concatenated with an input port, the result is an input port.
+        - If a bidirectional port is concatenated with an output port, the result is an output port.
+        - If an input port is concatenated with an output port, :exc:`ValueError` is raised.
+        """
+        if not isinstance(other, DifferentialPort):
+            return NotImplemented
+        return DifferentialPort(Cat(self._p, other._p), Cat(self._n, other._n),
+                               invert=self._invert + other._invert,
+                               direction=self._direction | other._direction)
+
+    def __repr__(self):
+        if not any(self._invert):
+            invert = False
+        elif all(self._invert):
+            invert = True
+        else:
+            invert = self._invert
+        return f"DifferentialPort({self._p!r}, {self._n!r}, invert={invert!r}, direction={self._direction})"
 
 
 class Pin(wiring.PureInterface):

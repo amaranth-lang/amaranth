@@ -14,17 +14,6 @@ class ResourceError(Exception):
     pass
 
 
-class SingleEndedPort:
-    def __init__(self, io):
-        self.io = io
-
-
-class DifferentialPort:
-    def __init__(self, p, n):
-        self.p = p
-        self.n = n
-
-
 class PortGroup:
     pass
 
@@ -138,26 +127,23 @@ class ResourceManager:
 
             elif isinstance(resource.ios[0], (Pins, DiffPairs)):
                 phys = resource.ios[0]
-                # The flow is `In` below regardless of requested pin direction. The flow should
-                # never be used as it's not used internally and anyone using `dir="-"` should
-                # ignore it as well.
+                if phys.dir == "oe":
+                    direction = "o"
+                else:
+                    direction = phys.dir
                 if isinstance(phys, Pins):
                     phys_names = phys.names
                     io = IOPort(len(phys), name="__".join(path) + "__io")
-                    port = SingleEndedPort(io)
+                    port = SingleEndedPort(io, invert=phys.invert, direction=direction)
                 if isinstance(phys, DiffPairs):
                     phys_names = []
+                    p = IOPort(len(phys), name="__".join(path) + "__p")
+                    n = IOPort(len(phys), name="__".join(path) + "__n")
                     if not self.should_skip_port_component(None, attrs, "p"):
-                        p = IOPort(len(phys), name="__".join(path) + "__p")
                         phys_names += phys.p.names
-                    else:
-                        p = None
                     if not self.should_skip_port_component(None, attrs, "n"):
-                        n = IOPort(len(phys), name="__".join(path) + "__n")
                         phys_names += phys.n.names
-                    else:
-                        n = None
-                    port = DifferentialPort(p, n)
+                    port = DifferentialPort(p, n, invert=phys.invert, direction=direction)
                 if dir == "-":
                     pin = None
                 else:
