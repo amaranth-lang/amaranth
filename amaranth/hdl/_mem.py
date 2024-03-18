@@ -25,11 +25,12 @@ class MemorySimRead:
 
 
 class MemorySimWrite:
-    def __init__(self, identity, addr, data):
+    def __init__(self, identity, addr, data, mask = None):
         assert isinstance(identity, MemoryIdentity)
         self._identity = identity
         self._addr = Value.cast(addr)
         self._data = Value.cast(data)
+        self._mask = mask
 
 
 class MemoryInstance(Fragment):

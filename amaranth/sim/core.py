@@ -4,6 +4,7 @@ import warnings
 from .._utils import deprecated
 from ..hdl._cd import *
 from ..hdl._ir import *
+from ..hdl._mem import MemorySimRead, MemorySimWrite
 from ._base import BaseEngine
 
 
@@ -90,6 +91,12 @@ class SimulatorContext:
 
     def set(self, expr, value):
         return _AwaitableCmd(expr.eq(value))
+
+    def memory_read(self, instance, address):
+        return _AwaitableCmd(MemorySimRead(instance, address))
+
+    def memory_write(self, instance, address, value, mask=None):
+        return _AwaitableCmd(MemorySimWrite(instance, address, value, mask))
 
     def delay(self, interval=None):
         return _AsyncTrigger(Delay(interval))

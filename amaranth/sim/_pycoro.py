@@ -140,10 +140,11 @@ class PyCoroProcess(BaseProcess):
                     exec(_RHSValueCompiler.compile(self.state, command._data, mode="curr"),
                         self.exec_locals)
                     data = Const(self.exec_locals["result"], command._data.shape()).value
+                    mask = command._mask
                     index = self.state.memories[command._identity]
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
-                    state.write(addr, data)
+                    state.write(addr, data, mask)
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "
