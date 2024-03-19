@@ -37,6 +37,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace uses of ``amaranth.hdl.Memory`` with ``amaranth.lib.memory.Memory``
 * Replace imports of ``amaranth.asserts.{Assert, Assume, Cover}`` with imports from ``amaranth.hdl``
 * Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
+* Ensure all elaboratables are subclasses of :class:`Elaboratable`
 
 
 Implemented RFCs
@@ -89,6 +90,7 @@ Language changes
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
 * Removed: assertion names in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
+* Removed: accepting non-subclasses of :class:`Elaboratable` as elaboratables.
 
 
 Standard library changes

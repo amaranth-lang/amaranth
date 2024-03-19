@@ -45,17 +45,8 @@ class Fragment:
                 UnusedElaboratable._MustUse__silence = False
                 obj._MustUse__used = True
                 new_obj = obj.elaborate(platform)
-            elif hasattr(obj, "elaborate"):
-                warnings.warn(
-                    message="Class {!r} is an elaboratable that does not explicitly inherit from "
-                            "Elaboratable; doing so would improve diagnostics"
-                            .format(type(obj)),
-                    category=RuntimeWarning,
-                    stacklevel=2)
-                code = obj.elaborate.__code__
-                new_obj = obj.elaborate(platform)
             else:
-                raise AttributeError(f"Object {obj!r} cannot be elaborated")
+                raise TypeError(f"Object {obj!r} is not an 'Elaboratable' nor 'Fragment'")
             if new_obj is obj:
                 raise RecursionError(f"Object {obj!r} elaborates to itself")
             if new_obj is None and code is not None:

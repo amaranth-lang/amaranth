@@ -23,14 +23,14 @@ class ElaboratesToSelf(Elaboratable):
 
 class FragmentGetTestCase(FHDLTestCase):
     def test_get_wrong_none(self):
-        with self.assertRaisesRegex(AttributeError,
-                r"^Object None cannot be elaborated$"):
+        with self.assertRaisesRegex(TypeError,
+                r"^Object None is not an 'Elaboratable' nor 'Fragment'$"):
             Fragment.get(None, platform=None)
 
         with self.assertWarnsRegex(UserWarning,
                 r"^\.elaborate\(\) returned None; missing return statement\?$"):
-            with self.assertRaisesRegex(AttributeError,
-                    r"^Object None cannot be elaborated$"):
+            with self.assertRaisesRegex(TypeError,
+                    r"^Object None is not an 'Elaboratable' nor 'Fragment'$"):
                 Fragment.get(ElaboratesToNone(), platform=None)
 
     def test_get_wrong_self(self):
