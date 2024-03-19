@@ -1,13 +1,19 @@
 import enum
+import operator
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 
 from ..hdl import *
-from ..lib import wiring
+from ..lib import wiring, data
 from ..lib.wiring import In, Out
 from .. import tracer
 
 
-__all__ = ["Direction", "SingleEndedPort", "DifferentialPort", "Pin"]
+__all__ = [
+    "Direction", "PortLike", "SingleEndedPort", "DifferentialPort",
+    "Buffer", "FFBuffer", "DDRBuffer",
+    "Pin",
+]
 
 
 class Direction(enum.Enum):
@@ -41,16 +47,52 @@ class Direction(enum.Enum):
             raise ValueError("Cannot combine input port with output port")
 
 
-class SingleEndedPort:
+class PortLike(metaclass=ABCMeta):
+    """Represents an abstract port that can be passed to a buffer.
+
+    The port types supported by most platforms are :class:`SingleEndedPort` and
+    :class:`DifferentialPort`. Platforms may define additional custom port types as appropriate.
+    """
+
+    @property
+    @abstractmethod
+    def direction(self):
+        """The direction of this port, as :class:`Direction`."""
+        raise NotImplementedError # :nocov:
+
+    @abstractmethod
+    def __len__(self):
+        """Returns the width of this port in bits."""
+        raise NotImplementedError # :nocov:
+
+    @abstractmethod
+    def __getitem__(self, index):
+        """Slices the port, returning another :class:`PortLike` with a subset
+        of its bits.
+
+        The index can be a :class:`slice` or :class:`int`. If the index is
+        an :class:`int`, the result is a single-bit :class:`PortLike`."""
+        raise NotImplementedError # :nocov:
+
+    @abstractmethod
+    def __invert__(self):
+        """Returns a new :class:`PortLike` object like this one, but with inverted polarity.
+
+        The result should be such that using :class:`Buffer` on it is equivalent to using
+        :class:`Buffer` on the original, with added inverters on the :py:`i` and :py:`o` ports."""
+        raise NotImplementedError # :nocov:
+
+
+class SingleEndedPort(PortLike):
     """Represents a single-ended I/O port with optional inversion.
 
     Parameters
     ----------
-    io : IOValue
+    io : :class:`IOValue`
         The raw I/O value being wrapped.
-    invert : bool or iterable of bool
+    invert : :class:`bool` or iterable of :class:`bool`
         If true, the electrical state of the physical pin will be opposite from the Amaranth value
-        (the ``*Buffer`` classes will insert inverters on ``o`` and ``i`` pins, as appropriate).
+        (the ``*Buffer`` classes will insert inverters on :py:`o` and :py:`i` pins, as appropriate).
 
         This can be used for various purposes:
 
@@ -59,9 +101,9 @@ class SingleEndedPort:
           on the pin
 
         If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
-        is an iterable of :class:`bool`, the iterable must have the same length as ``io``, and
+        is an iterable of :class:`bool`, the iterable must have the same length as :py:`io`, and
         the inversion is specified per-bit.
-    direction : Direction or str
+    direction : :class:`Direction` or :class:`str`
         Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
         :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
         If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
@@ -84,18 +126,18 @@ class SingleEndedPort:
 
     @property
     def io(self):
-        """The ``io`` argument passed to the constructor."""
+        """The :py:`io` argument passed to the constructor."""
         return self._io
 
     @property
     def invert(self):
-        """The ``invert`` argument passed to the constructor, normalized to a :class:`tuple`
+        """The :py:`invert` argument passed to the constructor, normalized to a :class:`tuple`
         of :class:`bool`."""
         return self._invert
 
     @property
     def direction(self):
-        """The ``direction`` argument passed to the constructor, normalized to :class:`Direction`."""
+        """The :py:`direction` argument passed to the constructor, normalized to :class:`Direction`."""
         return self._direction
 
     def __len__(self):
@@ -103,7 +145,7 @@ class SingleEndedPort:
         return len(self._io)
 
     def __invert__(self):
-        """Returns a new :class:`SingleEndedPort` with the opposite value of ``invert``."""
+        """Returns a new :class:`SingleEndedPort` with the opposite value of :py:`invert`."""
         return SingleEndedPort(self._io, invert=tuple(not inv for inv in self._invert),
                                direction=self._direction)
 
@@ -141,19 +183,19 @@ class SingleEndedPort:
         return f"SingleEndedPort({self._io!r}, invert={invert!r}, direction={self._direction})"
 
 
-class DifferentialPort:
+class DifferentialPort(PortLike):
     """Represents a differential I/O port with optional inversion.
 
     Parameters
     ----------
-    p : IOValue
+    p : :class:`IOValue`
         The raw I/O value used as positive (true) half of the port.
-    n : IOValue
+    n : :class:`IOValue`
         The raw I/O value used as negative (complemented) half of the port. Must have the same
-        length as ``p``.
-    invert : bool or iterable of bool
+        length as :py:`p`.
+    invert : :class:`bool` or iterable of :class`bool`
         If true, the electrical state of the physical pin will be opposite from the Amaranth value
-        (the ``*Buffer`` classes will insert inverters on ``o`` and ``i`` pins, as appropriate).
+        (the ``*Buffer`` classes will insert inverters on :py:`o` and :py:`i` pins, as appropriate).
 
         This can be used for various purposes:
 
@@ -161,9 +203,9 @@ class DifferentialPort:
         - Compensating for boards where the P and N pins are swapped (e.g. for easier routing)
 
         If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
-        is an iterable of :class:`bool`, the iterable must have the same length as ``io``, and
+        is an iterable of :class:`bool`, the iterable must have the same length as :py:`io`, and
         the inversion is specified per-bit.
-    direction : Direction or str
+    direction : :class:`Direction` or :class:`str`
         Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
         :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
         If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
@@ -190,23 +232,23 @@ class DifferentialPort:
 
     @property
     def p(self):
-        """The ``p`` argument passed to the constructor."""
+        """The :py:`p` argument passed to the constructor."""
         return self._p
 
     @property
     def n(self):
-        """The ``n`` argument passed to the constructor."""
+        """The :py:`n` argument passed to the constructor."""
         return self._n
 
     @property
     def invert(self):
-        """The ``invert`` argument passed to the constructor, normalized to a :class:`tuple`
+        """The :py:`invert` argument passed to the constructor, normalized to a :class:`tuple`
         of :class:`bool`."""
         return self._invert
 
     @property
     def direction(self):
-        """The ``direction`` argument passed to the constructor, normalized to :class:`Direction`."""
+        """The :py:`direction` argument passed to the constructor, normalized to :class:`Direction`."""
         return self._direction
 
     def __len__(self):
@@ -214,7 +256,7 @@ class DifferentialPort:
         return len(self._p)
 
     def __invert__(self):
-        """Returns a new :class:`DifferentialPort` with the opposite value of ``invert``."""
+        """Returns a new :class:`DifferentialPort` with the opposite value of :py:`invert`."""
         return DifferentialPort(self._p, self._n, invert=tuple(not inv for inv in self._invert),
                                direction=self._direction)
 
@@ -251,6 +293,357 @@ class DifferentialPort:
         else:
             invert = self._invert
         return f"DifferentialPort({self._p!r}, {self._n!r}, invert={invert!r}, direction={self._direction})"
+
+
+class Buffer(wiring.Component):
+    """A combinatorial I/O buffer.
+
+    Parameters
+    ----------
+    direction : :class:`Direction`
+    port : :class:`PortLike`
+
+    Attributes
+    ----------
+    signature : :class:`Buffer.Signature`
+        Created based on constructor arguments.
+    """
+    class Signature(wiring.Signature):
+        """A signature of a combinatorial I/O buffer.
+
+        Parameters
+        ----------
+        direction : :class:`Direction`
+        width : :class:`int`
+
+        Attributes
+        ----------
+        i: :py:`unsigned(width)` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
+        o: :py:`unsigned(width)` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
+        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
+        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        """
+        def __init__(self, direction, width):
+            self._direction = Direction(direction)
+            self._width = operator.index(width)
+            members = {}
+            if self._direction is not Direction.Output:
+                members["i"] = wiring.In(self._width)
+            if self._direction is not Direction.Input:
+                members["o"] = wiring.Out(self._width)
+                members["oe"] = wiring.Out(1, init=int(self._direction is Direction.Output))
+            super().__init__(members)
+
+        @property
+        def direction(self):
+            return self._direction
+
+        @property
+        def width(self):
+            return self._width
+
+        def __eq__(self, other):
+            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+
+        def __repr__(self):
+            return f"Buffer.Signature({self.direction}, {self.width})"
+
+    def __init__(self, direction, port):
+        if not isinstance(port, PortLike):
+            raise TypeError(f"'port' must be a 'PortLike', not {port!r}")
+        self._port = port
+        super().__init__(Buffer.Signature(direction, len(port)).flip())
+        if port.direction is Direction.Input and self.direction is not Direction.Input:
+            raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
+        if port.direction is Direction.Output and self.direction is not Direction.Output:
+            raise ValueError(f"Output port cannot be used with {self.direction.name} buffer")
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def direction(self):
+        return self.signature.direction
+
+    def elaborate(self, platform):
+        if hasattr(platform, "get_io_buffer"):
+            return platform.get_io_buffer(self)
+
+        m = Module()
+
+        invert = sum(bit << idx for idx, bit in enumerate(self._port.invert))
+        if self.direction is not Direction.Input:
+            if invert != 0:
+                o_inv = Signal.like(self.o)
+                m.d.comb += o_inv.eq(self.o ^ invert)
+            else:
+                o_inv = self.o
+        if self.direction is not Direction.Output:
+            if invert:
+                i_inv = Signal.like(self.i)
+                m.d.comb += self.i.eq(i_inv ^ invert)
+            else:
+                i_inv = self.i
+
+        if isinstance(self._port, SingleEndedPort):
+            if self.direction is Direction.Input:
+                m.submodules += IOBufferInstance(self._port.io, i=i_inv)
+            elif self.direction is Direction.Output:
+                m.submodules += IOBufferInstance(self._port.io, o=o_inv, oe=self.oe)
+            else:
+                m.submodules += IOBufferInstance(self._port.io, o=o_inv, oe=self.oe, i=i_inv)
+        elif isinstance(self._port, DifferentialPort):
+            if self.direction is Direction.Input:
+                m.submodules += IOBufferInstance(self._port.p, i=i_inv)
+            elif self.direction is Direction.Output:
+                m.submodules += IOBufferInstance(self._port.p, o=o_inv, oe=self.oe)
+                m.submodules += IOBufferInstance(self._port.n, o=~o_inv, oe=self.oe)
+            else:
+                m.submodules += IOBufferInstance(self._port.p, o=o_inv, oe=self.oe, i=i_inv)
+                m.submodules += IOBufferInstance(self._port.n, o=~o_inv, oe=self.oe)
+        else:
+            raise TypeError("Cannot elaborate generic 'Buffer' with port {self._port!r}")
+
+        return m
+
+
+class FFBuffer(wiring.Component):
+    """A registered I/O buffer.
+
+    Equivalent to a plain :class:`Buffer` combined with reset-less registers on :py:`i`, :py:`o`,
+    :py:`oe`.
+
+    Parameters
+    ----------
+    direction : :class:`Direction`
+    port : :class:`PortLike`
+    i_domain : :class:`str`
+        Domain for input register. Only used when :py:`direction in (Direction.Input, Direction.Bidir)`.
+        Defaults to :py:`"sync"`
+    o_domain : :class:`str`
+        Domain for output and output enable registers. Only used when
+        :py:`direction in (Direction.Output, Direction.Bidir)`. Defaults to :py:`"sync"`
+
+    Attributes
+    ----------
+    signature : FFBuffer.Signature
+        Created based on constructor arguments.
+    """
+    class Signature(wiring.Signature):
+        """A signature of a registered I/O buffer.
+
+        Parameters
+        ----------
+        direction : :class:`Direction`
+        width : :class:`int`
+
+        Attributes
+        ----------
+        i: :py:`unsigned(width)` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
+        o: :py:`unsigned(width)` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
+        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
+        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        """
+        def __init__(self, direction, width):
+            self._direction = Direction(direction)
+            self._width = operator.index(width)
+            members = {}
+            if self._direction is not Direction.Output:
+                members["i"] = wiring.In(self._width)
+            if self._direction is not Direction.Input:
+                members["o"] = wiring.Out(self._width)
+                members["oe"] = wiring.Out(1, init=int(self._direction is Direction.Output))
+            super().__init__(members)
+
+        @property
+        def direction(self):
+            return self._direction
+
+        @property
+        def width(self):
+            return self._width
+
+        def __eq__(self, other):
+            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+
+        def __repr__(self):
+            return f"FFBuffer.Signature({self.direction}, {self.width})"
+
+    def __init__(self, direction, port, *, i_domain=None, o_domain=None):
+        if not isinstance(port, PortLike):
+            raise TypeError(f"'port' must be a 'PortLike', not {port!r}")
+        self._port = port
+        super().__init__(FFBuffer.Signature(direction, len(port)).flip())
+        if self.signature.direction is not Direction.Output:
+            self._i_domain = i_domain or "sync"
+        elif i_domain is not None:
+            raise ValueError("Output buffer doesn't have an input domain")
+        if self.signature.direction is not Direction.Input:
+            self._o_domain = o_domain or "sync"
+        elif o_domain is not None:
+            raise ValueError("Input buffer doesn't have an output domain")
+        if port.direction is Direction.Input and self.direction is not Direction.Input:
+            raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
+        if port.direction is Direction.Output and self.direction is not Direction.Output:
+            raise ValueError(f"Output port cannot be used with {self.direction.name} buffer")
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def direction(self):
+        return self.signature.direction
+
+    @property
+    def i_domain(self):
+        if self.direction is Direction.Output:
+            raise AttributeError("Output buffer doesn't have an input domain")
+        return self._i_domain
+
+    @property
+    def o_domain(self):
+        if self.direction is Direction.Input:
+            raise AttributeError("Input buffer doesn't have an output domain")
+        return self._o_domain
+
+    def elaborate(self, platform):
+        if hasattr(platform, "get_io_buffer"):
+            return platform.get_io_buffer(self)
+
+        m = Module()
+
+        m.submodules.io_buffer = io_buffer = Buffer(self.direction, self.port)
+
+        if self.direction is not Direction.Output:
+            i_ff = Signal(len(self.port), reset_less=True)
+            m.d[self.i_domain] += i_ff.eq(io_buffer.i)
+            m.d.comb += self.i.eq(i_ff)
+
+        if self.direction is not Direction.Input:
+            o_ff = Signal(len(self.port), reset_less=True)
+            oe_ff = Signal(reset_less=True)
+            m.d[self.o_domain] += o_ff.eq(self.o)
+            m.d[self.o_domain] += oe_ff.eq(self.oe)
+            m.d.comb += io_buffer.o.eq(o_ff)
+            m.d.comb += io_buffer.oe.eq(oe_ff)
+
+        return m
+
+
+class DDRBuffer(wiring.Component):
+    """A double data rate registered I/O buffer.
+
+    In the input direction, the port is sampled at both edges of the input clock domain.
+    The data sampled on the active clock edge of the domain appears on :py:`i[0]` with a delay
+    of 1 clock cycle. The data sampled on the opposite clock edge appears on :py:`i[1]` with a delay
+    of 0.5 clock cycle. Both :py:`i[0]` and :py:`i[1]` thus change on the active clock edge of the domain.
+
+    In the output direction, both :py:`o[0]` and :py:`o[1]` are sampled on the active clock edge
+    of the domain.  The value of :py:`o[0]` immediately appears on the output port.  The value
+    of :py:`o[1]` then appears on the output port on the opposite edge, with a delay of 0.5 clock cycle.
+
+    Support for this compoment is platform-specific, and may be missing on some platforms.
+
+    Parameters
+    ----------
+    direction : :class:`Direction`
+    port : :class:`PortLike`
+    i_domain : :class:`str`
+        Domain for input register. Only used when :py:`direction in (Direction.Input, Direction.Bidir)`.
+    o_domain : :class:`str`
+        Domain for output and output enable registers. Only used when
+        :py:`direction in (Direction.Output, Direction.Bidir)`.
+
+    Attributes
+    ----------
+    signature : DDRBuffer.Signature
+        Created based on constructor arguments.
+    """
+    class Signature(wiring.Signature):
+        """A signature of a double data rate registered I/O buffer.
+
+        Parameters
+        ----------
+        direction : :class:`Direction`
+        width : :class:`int`
+
+        Attributes
+        ----------
+        i: :py:`unsigned(ArrayLayout(width, 2))` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
+        o: :py:`unsigned(ArrayLayout(width, 2))` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
+        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
+        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        """
+        def __init__(self, direction, width):
+            self._direction = Direction(direction)
+            self._width = operator.index(width)
+            members = {}
+            if self._direction is not Direction.Output:
+                members["i"] = wiring.In(data.ArrayLayout(self._width, 2))
+            if self._direction is not Direction.Input:
+                members["o"] = wiring.Out(data.ArrayLayout(self._width, 2))
+                members["oe"] = wiring.Out(1, init=int(self._direction is Direction.Output))
+            super().__init__(members)
+
+        @property
+        def direction(self):
+            return self._direction
+
+        @property
+        def width(self):
+            return self._width
+
+        def __eq__(self, other):
+            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+
+        def __repr__(self):
+            return f"DDRBuffer.Signature({self.direction}, {self.width})"
+
+    def __init__(self, direction, port, *, i_domain=None, o_domain=None):
+        if not isinstance(port, PortLike):
+            raise TypeError(f"'port' must be a 'PortLike', not {port!r}")
+        self._port = port
+        super().__init__(DDRBuffer.Signature(direction, len(port)).flip())
+        if self.signature.direction is not Direction.Output:
+            self._i_domain = i_domain or "sync"
+        elif i_domain is not None:
+            raise ValueError("Output buffer doesn't have an input domain")
+        if self.signature.direction is not Direction.Input:
+            self._o_domain = o_domain or "sync"
+        elif o_domain is not None:
+            raise ValueError("Input buffer doesn't have an output domain")
+        if port.direction is Direction.Input and self.direction is not Direction.Input:
+            raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
+        if port.direction is Direction.Output and self.direction is not Direction.Output:
+            raise ValueError(f"Output port cannot be used with {self.direction.name} buffer")
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def direction(self):
+        return self.signature.direction
+
+    @property
+    def i_domain(self):
+        if self.direction is Direction.Output:
+            raise AttributeError("Output buffer doesn't have an input domain")
+        return self._i_domain
+
+    @property
+    def o_domain(self):
+        if self.direction is Direction.Input:
+            raise AttributeError("Input buffer doesn't have an output domain")
+        return self._o_domain
+
+    def elaborate(self, platform):
+        if hasattr(platform, "get_io_buffer"):
+            return platform.get_io_buffer(self)
+
+        raise NotImplementedError("DDR buffers cannot be elaborated without a supported platform")
 
 
 class Pin(wiring.PureInterface):

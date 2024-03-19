@@ -102,6 +102,7 @@ Standard library changes
 * Added: :class:`amaranth.lib.data.Const` class. (`RFC 51`_)
 * Changed: :meth:`amaranth.lib.data.Layout.const` returns a :class:`amaranth.lib.data.Const`, not a view (`RFC 51`_)
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
+* Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
