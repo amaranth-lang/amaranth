@@ -2,6 +2,7 @@
 
 [tool.pdm.version]
 source = "scm"
+version_format = "pdm_build:format_version"
 
 [project]
 dynamic = ["version"]
@@ -39,7 +40,7 @@ amaranth-rpc = "amaranth.rpc:main"
 # Build system configuration
 
 [build-system]
-requires = ["pdm-backend"]
+requires = ["pdm-backend @ git+https://github.com/pdm-project/pdm-backend@885bc8d9b75d068a34b2df86c6324c5fdf5c0cc8"]
 build-backend = "pdm.backend"
 
 [tool.pdm]
