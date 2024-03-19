@@ -26,7 +26,7 @@ class Flow(enum.Enum):
     #: When used as the flow of a signature :class:`Member`, indicates that the data flow of
     #: the port members of the inner signature `remains the same`.
     #:
-    #: When included in the ``signature`` property of an :class:`Elaboratable`, the signature
+    #: When included in the :py:`signature` property of an :class:`Elaboratable`, the signature
     #: describes the elaboratable `driving` the corresponding signal. That is, the elaboratable is
     #: treated as the `initiator`.
     Out = "Out"
@@ -40,7 +40,7 @@ class Flow(enum.Enum):
     #: When used as the flow of a signature :class:`Member`, indicates that the data flow of
     #: the port members of the inner signature `is flipped`.
     #:
-    #: When included in the ``signature`` property of an :class:`Elaboratable`, the signature
+    #: When included in the :py:`signature` property of an :class:`Elaboratable`, the signature
     #: describes the elaboratable `sampling` the corresponding signal. That is, the elaboratable is
     #: treated as the `initiator`, the same as in the :attr:`Out` case.
     In = "In"
@@ -107,7 +107,7 @@ class Member:
 
     When a :class:`Signal` is created from a description of a port member, the signal's initial value
     is taken from the member description. If this signal is never explicitly assigned a value, it
-    will equal ``init``.
+    will equal :py:`init`.
 
     Although instances can be created directly, most often they will be created through
     :data:`In` and :data:`Out`, e.g. :py:`In(unsigned(1))` or :py:`Out(stream.Signature(RGBPixel))`.
@@ -825,7 +825,7 @@ class Signature(metaclass=SignatureMeta):
         It verifies that:
 
         * :py:`obj` has a :py:`signature` attribute whose value a :class:`Signature` instance
-          such that ``self == obj.signature``;
+          such that :py:`self == obj.signature`;
         * for each member, :py:`obj` has an attribute with the same name, whose value:
 
           * for members with :meth:`dimensions <Member.dimensions>` specified, contains a list or
@@ -1119,7 +1119,7 @@ class FlippedSignature:
             return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        """Assigns attribute :py:`name` of the unflipped signature to ``value``.
+        """Assigns attribute :py:`name` of the unflipped signature to :py:`value`.
 
         Performs :py:`setattr(unflipped, name, value)`, ensuring that, if :py:`name` refers to
         a property setter, its :py:`self` argument receives the flipped signature.
@@ -1296,7 +1296,7 @@ class FlippedInterface:
                 return getattr(self.__unflipped, name)
 
     def __setattr__(self, name, value):
-        """Assigns attribute :py:`name` of the unflipped interface to ``value``.
+        """Assigns attribute :py:`name` of the unflipped interface to :py:`value`.
 
         Performs :py:`setattr(unflipped, name, value)`, with the following caveats:
 
