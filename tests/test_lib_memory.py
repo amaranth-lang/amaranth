@@ -285,7 +285,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.shape, 8)
         self.assertEqual(m.depth, 4)
         self.assertEqual(m.init.shape, 8)
-        self.assertEqual(m.init.depth, 4)
+        self.assertEqual(len(m.init), 4)
         self.assertEqual(m.attrs, {})
         self.assertIsInstance(m.init, memory.Memory.Init)
         self.assertEqual(list(m.init), [1, 2, 3, 0])

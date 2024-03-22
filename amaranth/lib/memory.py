@@ -88,11 +88,6 @@ class Memory(wiring.Component):
         def shape(self):
             return self._shape
 
-        # TODO: redundant with __len__
-        @property
-        def depth(self):
-            return self._depth
-
         def __getitem__(self, index):
             return self._elems[index]
 
