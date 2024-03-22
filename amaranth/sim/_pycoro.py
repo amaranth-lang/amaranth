@@ -3,7 +3,7 @@ import inspect
 from ..hdl import *
 from ..hdl._ast import Statement, SignalSet, ValueCastable
 from ..hdl._mem import MemorySimRead, MemorySimWrite
-from .core import Tick, Settle, Delay, Passive, Active
+from .core import Tick, Settle, Delay, Passive, Active, _CombinableTrigger
 from ._base import BaseProcess, BaseMemoryState
 from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
 
@@ -104,6 +104,23 @@ class PyCoroProcess(BaseProcess):
                         self.add_trigger(domain.rst, trigger=1)
                     return
 
+                elif type(command) is _CombinableTrigger:
+                    delay_interval = None
+                    for trigger, *args in command._triggers:
+                        if trigger == 'edge':
+                            signal, value = args
+                            self.add_trigger(signal, trigger=value)
+                        elif trigger == 'changed':
+                            for signal in args:
+                                self.add_trigger(signal)
+                        elif trigger == 'delay':
+                            interval, = args
+                            if delay_interval is None or delay_interval > interval:
+                                delay_interval = interval
+                    if delay_interval is not None:
+                        self.state.wait_interval(self, delay_interval * 1e12)
+                    return
+
                 elif type(command) is Settle:
                     self.state.wait_interval(self, None)
                     return
@@ -136,10 +153,11 @@ class PyCoroProcess(BaseProcess):
                     exec(_RHSValueCompiler.compile(self.state, command._data, mode="curr"),
                         self.exec_locals)
                     data = Const(self.exec_locals["result"], command._data.shape()).value
+                    mask = command._mask
                     index = self.state.memories[command._identity]
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
-                    state.write(addr, data)
+                    state.write(addr, data, mask)
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "
