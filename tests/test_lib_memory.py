@@ -121,7 +121,7 @@ class WritePortTestCase(FHDLTestCase):
         m = memory.Memory(depth=16, shape=8, init=[])
         port = memory.WritePort(signature, memory=m, domain="sync")
         self.assertIs(port.memory, m)
-        self.assertEqual(m.w_ports, (port,))
+        self.assertEqual(m.write_ports, (port,))
 
         signature = memory.WritePort.Signature(shape=MyStruct, addr_width=4)
         port = signature.create()
@@ -228,7 +228,7 @@ class ReadPortTestCase(FHDLTestCase):
         m = memory.Memory(depth=16, shape=8, init=[])
         port = memory.ReadPort(signature, memory=m, domain="sync")
         self.assertIs(port.memory, m)
-        self.assertEqual(m.r_ports, (port,))
+        self.assertEqual(m.read_ports, (port,))
         write_port = m.write_port()
         port = memory.ReadPort(signature, memory=m, domain="sync", transparent_for=[write_port])
         self.assertIs(port.memory, m)
@@ -291,8 +291,8 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(list(m.init), [1, 2, 3, 0])
         self.assertEqual(m.init._raw, [1, 2, 3, 0])
         self.assertRepr(m.init, "Memory.Init([1, 2, 3, 0], shape=8, depth=4)")
-        self.assertEqual(m.r_ports, ())
-        self.assertEqual(m.w_ports, ())
+        self.assertEqual(m.read_ports, ())
+        self.assertEqual(m.write_ports, ())
 
     def test_constructor_shapecastable(self):
         init = [
@@ -375,8 +375,8 @@ class MemoryTestCase(FHDLTestCase):
             wp = m.write_port()
             self.assertEqual(wp.signature.addr_width, addr_width)
             self.assertEqual(wp.signature.shape, 8)
-            self.assertEqual(m.r_ports, (rp,))
-            self.assertEqual(m.w_ports, (wp,))
+            self.assertEqual(m.read_ports, (rp,))
+            self.assertEqual(m.write_ports, (wp,))
 
     def test_elaborate(self):
         m = memory.Memory(shape=MyStruct, depth=4, init=[{"a": 1, "b": 2}])
