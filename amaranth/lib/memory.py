@@ -294,7 +294,7 @@ class ReadPort:
 
         def __init__(self, *, addr_width, shape):
             if not isinstance(addr_width, int) or addr_width < 0:
-                raise TypeError(f"`addr_width` must be a non-negative int, not {addr_width!r}")
+                raise TypeError(f"Address width must be a non-negative integer, not {addr_width!r}")
             self._addr_width = addr_width
             self._shape = shape
             super().__init__({
@@ -326,24 +326,27 @@ class ReadPort:
 
     def __init__(self, signature, *, memory, domain, transparent_for=(), path=None, src_loc_at=0):
         if not isinstance(signature, ReadPort.Signature):
-            raise TypeError(f"Expected `ReadPort.Signature`, not {signature!r}")
+            raise TypeError(f"Expected signature to be ReadPort.Signature, not {signature!r}")
         if memory is not None: # may be None if created via `Signature.create()`
             if not isinstance(memory, Memory):
-                raise TypeError(f"Expected `Memory` or `None`, not {memory!r}")
-            if signature.shape != memory.shape or Shape.cast(signature.shape) != Shape.cast(memory.shape):
-                raise ValueError(f"Memory shape {memory.shape!r} doesn't match port shape {signature.shape!r}")
+                raise TypeError(f"Expected memory to be Memory or None, not {memory!r}")
+            if (signature.shape != memory.shape or
+                    Shape.cast(signature.shape) != Shape.cast(memory.shape)):
+                raise ValueError(f"Memory shape {memory.shape!r} doesn't match "
+                                 f"port shape {signature.shape!r}")
             if signature.addr_width != ceil_log2(memory.depth):
-                raise ValueError(f"Memory address width {ceil_log2(memory.depth)!r} doesn't match port address width {signature.addr_width!r}")
+                raise ValueError(f"Memory address width {ceil_log2(memory.depth)!r} doesn't match "
+                                 f"port address width {signature.addr_width!r}")
         if not isinstance(domain, str):
-            raise TypeError(f"Domain has to be a string, not {domain!r}")
+            raise TypeError(f"Domain must be a string, not {domain!r}")
         transparent_for = tuple(transparent_for)
         for port in transparent_for:
             if not isinstance(port, WritePort):
-                raise TypeError("`transparent_for` must contain only `WritePort` instances")
+                raise TypeError("Transparency set must contain only WritePort instances")
             if memory is not None and port not in memory._write_ports:
-                raise ValueError("Transparent write ports must belong to the same memory")
+                raise ValueError("Ports in transparency set must belong to the same memory")
             if port.domain != domain:
-                raise ValueError("Transparent write ports must belong to the same domain")
+                raise ValueError("Ports in transparency set must belong to the same domain")
         self._signature = signature
         self._memory = memory
         self._domain = domain
@@ -420,24 +423,26 @@ class WritePort:
 
         def __init__(self, *, addr_width, shape, granularity=None):
             if not isinstance(addr_width, int) or addr_width < 0:
-                raise TypeError(f"`addr_width` must be a non-negative int, not {addr_width!r}")
+                raise TypeError(f"Address width must be a non-negative integer, not {addr_width!r}")
             self._addr_width = addr_width
             self._shape = shape
             self._granularity = granularity
             if granularity is None:
                 en_width = 1
             elif not isinstance(granularity, int) or granularity < 0:
-                raise TypeError(f"Granularity must be a non-negative int or None, not {granularity!r}")
+                raise TypeError(f"Granularity must be a non-negative integer or None, "
+                                f"not {granularity!r}")
             elif not isinstance(shape, ShapeCastable):
                 actual_shape = Shape.cast(shape)
                 if actual_shape.signed:
-                    raise ValueError("Granularity cannot be specified with signed shape")
+                    raise ValueError("Granularity cannot be specified for a memory with "
+                                     "a signed shape")
                 elif actual_shape.width == 0:
                     en_width = 0
                 elif granularity == 0:
                     raise ValueError("Granularity must be positive")
                 elif actual_shape.width % granularity != 0:
-                    raise ValueError("Granularity must divide data width")
+                    raise ValueError("Granularity must evenly divide data width")
                 else:
                     en_width = actual_shape.width // granularity
             elif isinstance(shape, data.ArrayLayout):
@@ -446,11 +451,12 @@ class WritePort:
                 elif granularity == 0:
                     raise ValueError("Granularity must be positive")
                 elif shape.length % granularity != 0:
-                    raise ValueError("Granularity must divide data array length")
+                    raise ValueError("Granularity must evenly divide data array length")
                 else:
                     en_width = shape.length // granularity
             else:
-                raise TypeError("Granularity can only be specified for plain unsigned `Shape` or `ArrayLayout`")
+                raise TypeError("Granularity can only be specified for memories whose shape "
+                                "is unsigned or data.ArrayLayout")
             super().__init__({
                 "en": wiring.In(en_width),
                 "addr": wiring.In(addr_width),
@@ -486,18 +492,21 @@ class WritePort:
 
     def __init__(self, signature, *, memory, domain, path=None, src_loc_at=0):
         if not isinstance(signature, WritePort.Signature):
-            raise TypeError(f"Expected `WritePort.Signature`, not {signature!r}")
+            raise TypeError(f"Expected signature to be WritePort.Signature, not {signature!r}")
         if memory is not None: # may be None if created via `Signature.create()`
             if not isinstance(memory, Memory):
-                raise TypeError(f"Expected `Memory` or `None`, not {memory!r}")
-            if signature.shape != memory.shape or Shape.cast(signature.shape) != Shape.cast(memory.shape):
-                raise ValueError(f"Memory shape {memory.shape!r} doesn't match port shape {signature.shape!r}")
+                raise TypeError(f"Expected memory to be Memory or None, not {memory!r}")
+            if (signature.shape != memory.shape or
+                    Shape.cast(signature.shape) != Shape.cast(memory.shape)):
+                raise ValueError(f"Memory shape {memory.shape!r} doesn't match "
+                                 f"port shape {signature.shape!r}")
             if signature.addr_width != ceil_log2(memory.depth):
-                raise ValueError(f"Memory address width {ceil_log2(memory.depth)!r} doesn't match port address width {signature.addr_width!r}")
+                raise ValueError(f"Memory address width {ceil_log2(memory.depth)!r} doesn't match "
+                                 f"port address width {signature.addr_width!r}")
         if not isinstance(domain, str):
-            raise TypeError(f"Domain has to be a string, not {domain!r}")
+            raise TypeError(f"Domain must be a string, not {domain!r}")
         if domain == "comb":
-            raise ValueError("Write port domain cannot be \"comb\"")
+            raise ValueError("Write ports cannot be asynchronous")
         self._signature = signature
         self._memory = memory
         self._domain = domain
