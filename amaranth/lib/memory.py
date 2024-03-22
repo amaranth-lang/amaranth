@@ -207,18 +207,16 @@ class Memory(wiring.Component):
         return WritePort(signature, memory=self, domain=domain,
                          src_loc_at=1 + src_loc_at)
 
-    # TODO: rename to read_ports
     @property
-    def r_ports(self):
+    def read_ports(self):
         """All read ports defined so far.
 
         This property is provided for the :py:`platform.get_memory()` override.
         """
         return tuple(self._read_ports)
 
-    # TODO: rename to write_ports
     @property
-    def w_ports(self):
+    def write_ports(self):
         """All write ports defined so far.
 
         This property is provided for the :py:`platform.get_memory()` override.

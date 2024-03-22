@@ -131,9 +131,9 @@ Memories
 
     .. automethod:: write_port
 
-    .. autoproperty:: r_ports
+    .. autoproperty:: read_ports
 
-    .. autoproperty:: w_ports
+    .. autoproperty:: write_ports
 
 
 Memory ports
