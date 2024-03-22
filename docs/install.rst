@@ -29,7 +29,7 @@ For most workflows, Amaranth requires Yosys_ |yosys-version|. A `compatible vers
 
 Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging. As an alternative to GTKWave, the `Amaranth Playground`_ can be used to display waveforms for simple designs.
 
-Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain.
+Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain. The open source iCE40, ECP5, MachXO2/3, Nexus, and Gowin toolchains are distributed via PyPI_ for most popular platforms by the YoWASP_ project.
 
 .. TODO: Link to FPGA family docs here
 
@@ -40,6 +40,7 @@ Synthesizing, placing and routing an Amaranth design for an FPGA requires the FP
 .. _amaranth-yosys: https://pypi.org/project/amaranth-yosys/
 .. _PyPI: https://pypi.org/
 .. _GTKWave: https://gtkwave.sourceforge.net/
+.. _YoWASP: https://yowasp.org/
 
 
 .. _install-deps:
