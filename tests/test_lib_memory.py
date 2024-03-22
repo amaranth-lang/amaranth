@@ -58,28 +58,29 @@ class WritePortTestCase(FHDLTestCase):
 
     def test_signature_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                "^`addr_width` must be a non-negative int, not -2$"):
+                r"^Address width must be a non-negative integer, not -2$"):
             memory.WritePort.Signature(addr_width=-2, shape=8)
         with self.assertRaisesRegex(TypeError,
-                "^Granularity must be a non-negative int or None, not -2$"):
+                r"^Granularity must be a non-negative integer or None, not -2$"):
             memory.WritePort.Signature(addr_width=4, shape=8, granularity=-2)
         with self.assertRaisesRegex(ValueError,
-                "^Granularity cannot be specified with signed shape$"):
+                r"^Granularity cannot be specified for a memory with a signed shape$"):
             memory.WritePort.Signature(addr_width=2, shape=signed(8), granularity=2)
         with self.assertRaisesRegex(TypeError,
-                "^Granularity can only be specified for plain unsigned `Shape` or `ArrayLayout`$"):
+                r"^Granularity can only be specified for memories whose shape is unsigned or "
+                r"data.ArrayLayout$"):
             memory.WritePort.Signature(addr_width=2, shape=MyStruct, granularity=2)
         with self.assertRaisesRegex(ValueError,
-                "^Granularity must be positive$"):
+                r"^Granularity must be positive$"):
             memory.WritePort.Signature(addr_width=2, shape=8, granularity=0)
         with self.assertRaisesRegex(ValueError,
-                "^Granularity must be positive$"):
+                r"^Granularity must be positive$"):
             memory.WritePort.Signature(addr_width=2, shape=data.ArrayLayout(8, 8), granularity=0)
         with self.assertRaisesRegex(ValueError,
-                "^Granularity must divide data width$"):
+                r"^Granularity must evenly divide data width$"):
             memory.WritePort.Signature(addr_width=2, shape=8, granularity=3)
         with self.assertRaisesRegex(ValueError,
-                "^Granularity must divide data array length$"):
+                r"^Granularity must evenly divide data array length$"):
             memory.WritePort.Signature(addr_width=2, shape=data.ArrayLayout(8, 8), granularity=3)
 
     def test_signature_eq(self):
@@ -134,17 +135,17 @@ class WritePortTestCase(FHDLTestCase):
     def test_constructor_wrong(self):
         signature = memory.ReadPort.Signature(shape=8, addr_width=4)
         with self.assertRaisesRegex(TypeError,
-                r"^Expected `WritePort.Signature`, not ReadPort.Signature\(.*\)$"):
+                r"^Expected signature to be WritePort.Signature, not ReadPort.Signature\(.*\)$"):
             memory.WritePort(signature, memory=None, domain="sync")
         signature = memory.WritePort.Signature(shape=8, addr_width=4, granularity=2)
         with self.assertRaisesRegex(TypeError,
-                r"^Domain has to be a string, not None$"):
+                r"^Domain must be a string, not None$"):
             memory.WritePort(signature, memory=None, domain=None)
         with self.assertRaisesRegex(TypeError,
-                r"^Expected `Memory` or `None`, not 'a'$"):
+                r"^Expected memory to be Memory or None, not 'a'$"):
             memory.WritePort(signature, memory="a", domain="sync")
         with self.assertRaisesRegex(ValueError,
-                r"^Write port domain cannot be \"comb\"$"):
+                r"^Write ports cannot be asynchronous$"):
             memory.WritePort(signature, memory=None, domain="comb")
         signature = memory.WritePort.Signature(shape=8, addr_width=4)
         m = memory.Memory(depth=8, shape=8, init=[])
@@ -186,7 +187,7 @@ class ReadPortTestCase(FHDLTestCase):
 
     def test_signature_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                "^`addr_width` must be a non-negative int, not -2$"):
+                "^Address width must be a non-negative integer, not -2$"):
             memory.ReadPort.Signature(addr_width=-2, shape=8)
 
     def test_signature_eq(self):
@@ -245,14 +246,14 @@ class ReadPortTestCase(FHDLTestCase):
     def test_constructor_wrong(self):
         signature = memory.WritePort.Signature(shape=8, addr_width=4)
         with self.assertRaisesRegex(TypeError,
-                r"^Expected `ReadPort.Signature`, not WritePort.Signature\(.*\)$"):
+                r"^Expected signature to be ReadPort.Signature, not WritePort.Signature\(.*\)$"):
             memory.ReadPort(signature, memory=None, domain="sync")
         signature = memory.ReadPort.Signature(shape=8, addr_width=4)
         with self.assertRaisesRegex(TypeError,
-                r"^Domain has to be a string, not None$"):
+                r"^Domain must be a string, not None$"):
             memory.ReadPort(signature, memory=None, domain=None)
         with self.assertRaisesRegex(TypeError,
-                r"^Expected `Memory` or `None`, not 'a'$"):
+                r"^Expected memory to be Memory or None, not 'a'$"):
             memory.ReadPort(signature, memory="a", domain="sync")
         signature = memory.ReadPort.Signature(shape=8, addr_width=4)
         m = memory.Memory(depth=8, shape=8, init=[])
@@ -266,15 +267,15 @@ class ReadPortTestCase(FHDLTestCase):
         m = memory.Memory(depth=16, shape=8, init=[])
         port = m.read_port()
         with self.assertRaisesRegex(TypeError,
-                r"^`transparent_for` must contain only `WritePort` instances$"):
+                r"^Transparency set must contain only WritePort instances$"):
             memory.ReadPort(signature, memory=m, domain="sync", transparent_for=[port])
         write_port = m.write_port()
         m2 = memory.Memory(depth=16, shape=8, init=[])
         with self.assertRaisesRegex(ValueError,
-                r"^Transparent write ports must belong to the same memory$"):
+                r"^Ports in transparency set must belong to the same memory$"):
             memory.ReadPort(signature, memory=m2, domain="sync", transparent_for=[write_port])
         with self.assertRaisesRegex(ValueError,
-                r"^Transparent write ports must belong to the same domain$"):
+                r"^Ports in transparency set must belong to the same domain$"):
             memory.ReadPort(signature, memory=m, domain="other", transparent_for=[write_port])
 
 
