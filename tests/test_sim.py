@@ -1217,6 +1217,34 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             sim.run()
 
 
+class SimulatorTracesTestCase(FHDLTestCase):
+    def assertDef(self, traces, flat_traces):
+        frag = Fragment()
+        
+        for signal in flatten(s._rhs_signals() for v in flat_traces for s in Value.cast(v)):
+            frag.add_driver(signal)
+
+        sim = Simulator(frag)
+        with sim.write_vcd("test.vcd", "test.gtkw", traces=traces):
+            sim.run()
+
+    def test_signal(self):
+        a = Signal()
+        self.assertDef(a, [a])
+
+    def test_list(self):
+        a = Signal()
+        self.assertDef([a], [a])
+
+    def test_tuple(self):
+        a = Signal()
+        self.assertDef((a,), [a])
+
+    def test_dict(self):
+        a = Signal()
+        self.assertDef({"a": a}, [a])
+
+
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):
         dut = Module()
