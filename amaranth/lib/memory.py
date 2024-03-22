@@ -159,7 +159,7 @@ class Memory(wiring.Component):
     def attrs(self):
         return self._attrs
 
-    def read_port(self, *, domain="sync", transparent_for=()):
+    def read_port(self, *, domain="sync", transparent_for=(), src_loc_at=0):
         """Request a read port.
 
         If :py:`domain` is :py:`"comb"`, the created read port is asynchronous and always enabled
@@ -185,9 +185,10 @@ class Memory(wiring.Component):
         :class:`ReadPort`
         """
         signature = ReadPort.Signature(shape=self.shape, addr_width=ceil_log2(self.depth))
-        return ReadPort(signature, memory=self, domain=domain, transparent_for=transparent_for)
+        return ReadPort(signature, memory=self, domain=domain, transparent_for=transparent_for,
+                        src_loc_at=1 + src_loc_at)
 
-    def write_port(self, *, domain="sync", granularity=None):
+    def write_port(self, *, domain="sync", granularity=None, src_loc_at=0):
         """Request a write port.
 
         The created write port is synchronous, updating the contents of the selected row at each
@@ -208,7 +209,8 @@ class Memory(wiring.Component):
         """
         signature = WritePort.Signature(
             shape=self.shape, addr_width=ceil_log2(self.depth), granularity=granularity)
-        return WritePort(signature, memory=self, domain=domain)
+        return WritePort(signature, memory=self, domain=domain,
+                         src_loc_at=1 + src_loc_at)
 
     # TODO: rename to read_ports
     @property
