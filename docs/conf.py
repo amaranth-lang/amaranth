@@ -39,7 +39,11 @@ napoleon_numpy_docstring = True
 napoleon_use_ivar = True
 napoleon_include_init_with_doc = True
 napoleon_include_special_with_doc = True
-napoleon_custom_sections = ["Platform overrides"]
+napoleon_custom_sections = [
+    ("Attributes", "params_style"), # by default displays as "Variables", which is confusing
+    ("Members", "params_style"), # `lib.wiring` signature members
+    "Platform overrides"
+]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
