@@ -20,7 +20,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# this version requirement needs to be synchronized with the one in amaranth.back.verilog!
+# This version requirement needs to be synchronized with:
+# - pyproject.toml: tool.pdm.dev-dependencies.test
+# - amaranth/back/verilog.py: _convert_rtlil_text
+# - docs/install.rst: yosys-version
 builtin-yosys = ["amaranth-yosys>=0.38"]
 remote-build  = ["paramiko~=2.7"]
 
@@ -60,6 +63,7 @@ source-includes = [
 # Development workflow configuration
 
 [tool.pdm.dev-dependencies]
+# This version requirement needs to be synchronized with the one in pyproject.toml above!
 test = [
   "yowasp-yosys>=0.38",
   "coverage",
