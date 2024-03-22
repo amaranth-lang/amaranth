@@ -20,3 +20,6 @@ a { text-decoration: underline; }
 
 /* Many of our diagnostics are even longer */
 .rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre { white-space: pre-wrap; }
+
+/* Work around https://github.com/readthedocs/sphinx_rtd_theme/issues/1301 */
+.py.property { display: block !important; }
