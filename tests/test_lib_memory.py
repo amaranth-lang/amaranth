@@ -290,7 +290,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertIsInstance(m.init, memory.Memory.Init)
         self.assertEqual(list(m.init), [1, 2, 3, 0])
         self.assertEqual(m.init._raw, [1, 2, 3, 0])
-        self.assertRepr(m.init, "Memory.Init([1, 2, 3, 0])")
+        self.assertRepr(m.init, "Memory.Init([1, 2, 3, 0], shape=8, depth=4)")
         self.assertEqual(m.r_ports, ())
         self.assertEqual(m.w_ports, ())
 
