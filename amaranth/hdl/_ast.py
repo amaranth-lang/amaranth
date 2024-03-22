@@ -1039,7 +1039,7 @@ class Value(metaclass=ABCMeta):
     def shift_right(self, amount):
         """Right shift by constant amount.
 
-        If :py:`amount < 0`, performs the same operation as :py:`self.left_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.shift_left(-amount)`.
 
         Returns
         -------
@@ -1062,7 +1062,7 @@ class Value(metaclass=ABCMeta):
     def rotate_right(self, amount):
         """Right rotate by constant amount.
 
-        If :py:`amount < 0`, performs the same operation as :py:`self.rotate_right(-amount)`.
+        If :py:`amount < 0`, performs the same operation as :py:`self.rotate_left(-amount)`.
 
         Returns
         -------
