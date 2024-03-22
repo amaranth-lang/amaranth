@@ -117,7 +117,7 @@ class Memory(wiring.Component):
             return self._depth
 
         def __repr__(self):
-            return f"Memory.Init({self._elems!r})"
+            return f"Memory.Init({self._elems!r}, shape={self._shape!r}, depth={self._depth})"
 
 
     def __init__(self, *, shape, depth, init, attrs=None, src_loc_at=0):
