@@ -353,10 +353,10 @@ class MemoryTestCase(FHDLTestCase):
                 r"^Changing length of Memory.init is not allowed$"):
             m.init[1:] = [1, 2]
         with self.assertRaisesRegex(TypeError,
-                r"^Deleting items from Memory.init is not allowed$"):
+                r"^Deleting elements from Memory.init is not allowed$"):
             del m.init[1:2]
         with self.assertRaisesRegex(TypeError,
-                r"^Inserting items into Memory.init is not allowed$"):
+                r"^Inserting elements into Memory.init is not allowed$"):
             m.init.insert(1, 3)
 
     def test_port(self):
