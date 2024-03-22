@@ -88,7 +88,7 @@ class Simulator:
             yield from process()
         self._engine.add_coroutine_process(wrapper, default_cmd=None)
 
-    @deprecated("The `add_sync_process` method is deprecated per RFC 47. Use `add_process` or `add_testbench` instead.")
+    @deprecated("The `add_sync_process` method is deprecated per RFC 27. Use `add_process` or `add_testbench` instead.")
     def add_sync_process(self, process, *, domain="sync"):
         process = self._check_process(process)
         def wrapper():
