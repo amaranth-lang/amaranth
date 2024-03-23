@@ -2847,8 +2847,7 @@ class IOPort(IOValue):
     def __init__(self, width, *, name=None, attrs=None, metadata=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
-        if name is not None and not isinstance(name, str):
-            raise TypeError(f"Name must be a string, not {name!r}")
+        validate_name(name, "Name", none_ok=True)
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at)
 
         self._width = operator.index(width)

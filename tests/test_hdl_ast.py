@@ -1742,6 +1742,9 @@ class IOValueTestCase(FHDLTestCase):
         self.assertEqual(b.metadata, ("x", "y", "z"))
         self.assertEqual(b._ioports(), {b})
         self.assertRepr(b, "(io-port b)")
+        with self.assertRaisesRegex(NameError,
+                r"^Name must be a non-empty string$"):
+            IOPort(1, name="")
 
     def test_ioport_wrong(self):
         with self.assertRaisesRegex(TypeError,
