@@ -14,6 +14,7 @@ from amaranth.hdl._dsl import  *
 from amaranth.hdl._ir import *
 from amaranth.sim import *
 from amaranth.lib.memory import Memory
+from amaranth.lib.data import View, StructLayout
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -1040,6 +1041,21 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 r"^Cannot start writing waveforms after advancing simulation time$"):
             with open(os.path.devnull, "w") as f:
                 with sim.write_vcd(f):
+                    pass
+
+    def test_vcd_private_signal(self):
+        sim = Simulator(Module())
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot trace signal with private name$"):
+            with open(os.path.devnull, "w") as f:
+                with sim.write_vcd(f, traces=(Signal(name=""),)):
+                    pass
+
+        sim = Simulator(Module())
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot trace signal with private name \(within \(cat \(sig x\) \(sig\)\)\)$"):
+            with open(os.path.devnull, "w") as f:
+                with sim.write_vcd(f, traces=(Cat(Signal(name="x"), Signal(name="")),)):
                     pass
 
     def test_no_negated_boolean_warning(self):

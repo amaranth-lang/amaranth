@@ -962,6 +962,7 @@ class NamesTestCase(FHDLTestCase):
         o1 = Signal()
         o2 = Signal()
         o3 = Signal()
+        o4 = Signal(name="")
         i1 = Signal(name="i")
 
         f = Fragment()
@@ -980,6 +981,7 @@ class NamesTestCase(FHDLTestCase):
             "o1": (o1, PortDirection.Output),
             "o2": (o2, PortDirection.Output),
             "o3": (o3, PortDirection.Output),
+            "o4": (o4, PortDirection.Output),
         }
         design = f.prepare(ports)
         self.assertEqual(design.fragments[design.fragment].signal_names, SignalDict([
@@ -988,11 +990,19 @@ class NamesTestCase(FHDLTestCase):
             (o1, "o1"),
             (o2, "o2"),
             (o3, "o3"),
+            # (o4, "o4"), # Signal has a private name.
             (cd_sync.clk, "clk"),
-            (cd_sync.rst, "rst$6"),
+            (cd_sync.rst, "rst$7"),
             (cd_sync_norst.clk, "sync_norst_clk"),
-            (i1, "i$7"),
+            (i1, "i$8"),
         ]))
+
+    def test_wrong_private_unnamed_toplevel_ports(self):
+        s = Signal(name="")
+        f = Fragment()
+        with self.assertRaisesRegex(TypeError,
+                r"^Signals with private names cannot be used in unnamed top-level ports$"):
+            Design(f, ports=((None, s, None),), hierarchy=("top",))
 
     def test_assign_names_to_fragments(self):
         f = Fragment()

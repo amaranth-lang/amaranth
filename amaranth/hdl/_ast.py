@@ -1884,7 +1884,8 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         If not specified, ``shape`` defaults to 1-bit and non-signed.
     name : str
         Name hint for this signal. If ``None`` (default) the name is inferred from the variable
-        name this ``Signal`` is assigned to.
+        name this ``Signal`` is assigned to. If the empty string, then this ``Signal`` is treated
+        as private and is generally hidden from view.
     init : int or integral Enum
         Reset (synchronous) or default (combinatorial) value.
         When this ``Signal`` is assigned to in synchronous context and the corresponding clock
@@ -1920,7 +1921,10 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         if name is not None and not isinstance(name, str):
             raise TypeError(f"Name must be a string, not {name!r}")
-        self.name = name or tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
+        if name is None:
+            self.name = tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
+        else:
+            self.name = name
 
         orig_shape = shape
         if shape is None:
@@ -2102,7 +2106,10 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         return SignalSet((self,))
 
     def __repr__(self):
-        return f"(sig {self.name})"
+        if self.name != "":
+            return f"(sig {self.name})"
+        else:
+            return "(sig)"
 
 
 @final

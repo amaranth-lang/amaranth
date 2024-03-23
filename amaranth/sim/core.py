@@ -4,6 +4,7 @@ import warnings
 from .._utils import deprecated
 from ..hdl._cd import *
 from ..hdl._ir import *
+from ..hdl._ast import Value, ValueLike
 from ._base import BaseEngine
 
 
@@ -237,6 +238,16 @@ class Simulator:
                 if hasattr(file, "close"):
                     file.close()
             raise ValueError("Cannot start writing waveforms after advancing simulation time")
+
+        for trace in traces:
+            if isinstance(trace, ValueLike):
+                trace_cast = Value.cast(trace)
+                for trace_signal in trace_cast._rhs_signals():
+                    if trace_signal.name == "":
+                        if trace_signal is trace:
+                            raise TypeError("Cannot trace signal with private name")
+                        else:
+                            raise TypeError(f"Cannot trace signal with private name (within {trace!r})")
 
         return self._engine.write_vcd(vcd_file=vcd_file, gtkw_file=gtkw_file,
                                       traces=traces, fs_per_delta=fs_per_delta)

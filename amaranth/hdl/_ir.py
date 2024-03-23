@@ -552,6 +552,8 @@ class Design:
         assigned_names = {name for name, conn, dir in self.ports if name is not None}
         for name, conn, dir in self.ports:
             if name is None:
+                if conn.name == "": # Nothing to name this port!
+                    raise TypeError("Signals with private names cannot be used in unnamed top-level ports")
                 name = _add_name(assigned_names, conn.name)
                 assigned_names.add(name)
             new_ports.append((name, conn, dir))
@@ -590,7 +592,7 @@ class Design:
                     frag_info.io_port_names[conn] = name
 
         for signal in frag_info.used_signals:
-            if signal not in frag_info.signal_names:
+            if signal not in frag_info.signal_names and signal.name != "": # Private name shouldn't be added.
                 frag_info.signal_names[signal] = _add_name(frag_info.assigned_names, signal.name)
         for port in frag_info.used_io_ports:
             if port not in frag_info.io_port_names:
