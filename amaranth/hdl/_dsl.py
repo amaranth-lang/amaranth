@@ -611,6 +611,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if name == None:
             self._anon_submodules.append((submodule, src_loc))
         else:
+            validate_name(name, "Submodule name")
             if name in self._named_submodules:
                 raise NameError(f"Submodule named '{name}' already exists")
             self._named_submodules[name] = (submodule, src_loc)

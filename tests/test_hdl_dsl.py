@@ -879,6 +879,16 @@ class DSLTestCase(FHDLTestCase):
         self.assertEqual(m1._named_submodules.keys(), {"foo"})
         self.assertEqual(m1._named_submodules["foo"][0], m2)
 
+    def test_submodule_wrong_name(self):
+        m1 = Module()
+        m2 = Module()
+        with self.assertRaisesRegex(TypeError,
+                r"^Submodule name must be a string, not 1$"):
+            m1.submodules[1] = m2
+        with self.assertRaisesRegex(NameError,
+                r"^Submodule name must be a non-empty string$"):
+            m1.submodules[""] = m2
+
     def test_submodule_wrong(self):
         m = Module()
         with self.assertRaisesRegex(TypeError,
