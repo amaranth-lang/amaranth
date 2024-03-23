@@ -1180,6 +1180,8 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s1.name, "s1")
         s2 = Signal(name="sig")
         self.assertEqual(s2.name, "sig")
+        s3 = Signal(name="")
+        self.assertEqual(s3.name, "")
 
     def test_init(self):
         s1 = Signal(4, init=0b111, reset_less=True)
@@ -1294,6 +1296,8 @@ class SignalTestCase(FHDLTestCase):
     def test_repr(self):
         s1 = Signal()
         self.assertEqual(repr(s1), "(sig s1)")
+        s2 = Signal(name="")
+        self.assertEqual(repr(s2), "(sig)")
 
     def test_like(self):
         s1 = Signal.like(Signal(4))
