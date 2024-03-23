@@ -734,6 +734,17 @@ class InstanceTestCase(FHDLTestCase):
             ("io6", (io6, "io")),
         ]))
 
+    def test_wrong_name(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Instance type must be a string, not 1$"):
+            Instance(1)
+        with self.assertRaisesRegex(TypeError,
+                r"^Instance argument name must be a string, not 1$"):
+            Instance("foo", ("a", 1, 2))
+        with self.assertRaisesRegex(NameError,
+                r"^Instance keyword argument name ' ' contains whitespace/control character ' '$"):
+            Instance("foo", **{" ": 2})
+
     def test_cast_ports(self):
         inst = Instance("foo",
             ("i", "s1", 1),
