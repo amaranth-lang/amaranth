@@ -65,10 +65,13 @@ class BaseSimulation:
 
 
 class BaseEngine:
+    def add_clock_process(self, clock, *, phase, period):
+        raise NotImplementedError # :nocov:
+
     def add_coroutine_process(self, process, *, default_cmd):
         raise NotImplementedError # :nocov:
 
-    def add_clock_process(self, clock, *, phase, period):
+    def add_testbench_process(self, process):
         raise NotImplementedError # :nocov:
 
     def reset(self):

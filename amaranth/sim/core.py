@@ -115,33 +115,7 @@ class Simulator:
         self._engine.add_coroutine_process(wrapper, default_cmd=Tick(domain))
 
     def add_testbench(self, process):
-        process = self._check_process(process)
-        def wrapper():
-            generator = process()
-            # Only start a bench process after power-on reset finishes. Use object.__new__ to
-            # avoid deprecation warning.
-            yield object.__new__(Settle)
-            result = None
-            exception = None
-            while True:
-                try:
-                    if exception is None:
-                        command = generator.send(result)
-                    else:
-                        command = generator.throw(exception)
-                except StopIteration:
-                    break
-                if command is None or isinstance(command, Settle):
-                    exception = TypeError(f"Command {command!r} is not allowed in testbenches")
-                else:
-                    try:
-                        result = yield command
-                        exception = None
-                        yield object.__new__(Settle)
-                    except Exception as e:
-                        result = None
-                        exception = e
-        self._engine.add_coroutine_process(wrapper, default_cmd=None)
+        self._engine.add_testbench_process(self._check_process(process))
 
     def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
         """Add a clock process.

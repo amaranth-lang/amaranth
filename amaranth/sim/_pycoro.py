@@ -1,7 +1,7 @@
 import inspect
 
 from ..hdl import *
-from ..hdl._ast import Statement, SignalSet, ValueCastable
+from ..hdl._ast import Statement, Assign, SignalSet, ValueCastable
 from ..hdl._mem import MemorySimRead, MemorySimWrite
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess, BaseMemoryState
@@ -12,11 +12,12 @@ __all__ = ["PyCoroProcess"]
 
 
 class PyCoroProcess(BaseProcess):
-    def __init__(self, state, domains, constructor, *, default_cmd=None):
+    def __init__(self, state, domains, constructor, *, default_cmd=None, testbench=False):
         self.state = state
         self.domains = domains
         self.constructor = constructor
         self.default_cmd = default_cmd
+        self.testbench = testbench
 
         self.reset()
 
@@ -70,7 +71,7 @@ class PyCoroProcess(BaseProcess):
             except StopIteration:
                 self.passive = True
                 self.coroutine = None
-                return
+                return False # no assignment
 
             try:
                 if command is None:
@@ -88,6 +89,8 @@ class PyCoroProcess(BaseProcess):
                 elif isinstance(command, Statement):
                     exec(_StatementCompiler.compile(self.state, command),
                         self.exec_locals)
+                    if isinstance(command, Assign) and self.testbench:
+                        return True # assignment; run a delta cycle
 
                 elif type(command) is Tick:
                     domain = command.domain
@@ -102,17 +105,20 @@ class PyCoroProcess(BaseProcess):
                     self.add_trigger(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
                         self.add_trigger(domain.rst, trigger=1)
-                    return
+                    return False # no assignments
+
+                elif self.testbench and (command is None or isinstance(command, Settle)):
+                    raise TypeError(f"Command {command!r} is not allowed in testbenches")
 
                 elif type(command) is Settle:
                     self.state.wait_interval(self, None)
-                    return
+                    return False # no assignments
 
                 elif type(command) is Delay:
                     # Internal timeline is in 1ps integeral units, intervals are public API and in floating point
                     interval = int(command.interval * 1e12) if command.interval is not None else None
                     self.state.wait_interval(self, interval)
-                    return
+                    return False # no assignments
 
                 elif type(command) is Passive:
                     self.passive = True
@@ -140,6 +146,8 @@ class PyCoroProcess(BaseProcess):
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
                     state.write(addr, data)
+                    if self.testbench:
+                        return True # assignment; run a delta cycle
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "
