@@ -559,6 +559,7 @@ class Design:
                     raise TypeError("Signals with private names cannot be used in unnamed top-level ports")
                 name = _add_name(assigned_names, conn.name)
                 assigned_names.add(name)
+            validate_name(name, "Top-level port name")
             new_ports.append((name, conn, dir))
         self.ports = new_ports
 

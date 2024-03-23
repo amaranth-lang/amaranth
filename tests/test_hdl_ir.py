@@ -1054,6 +1054,12 @@ class NamesTestCase(FHDLTestCase):
         self.assertEqual(design.fragments[a1_f].name, ("top", "a"))
         self.assertEqual(design.fragments[a2_f].name, ("top", "a$1"))
 
+    def test_port_wrong_name(self):
+        f = Fragment()
+        with self.assertRaisesRegex(NameError,
+                r"^Top-level port name must be a non-empty string$"):
+            design = Design(f, ports=[("", Signal(), None)], hierarchy=("top",))
+
 
 class ElaboratesTo(Elaboratable):
     def __init__(self, lower):
