@@ -167,7 +167,7 @@ class FSM:
         if name not in self.encoding:
             self.encoding[name] = len(self.encoding)
             fsm_name = self._data["name"]
-            self._data["ongoing"][name] = Signal(name=f"{fsm_name}_ongoing_{name}")
+            self._data["ongoing"][name] = Signal(name="")
         return self._data["ongoing"][name]
 
 
@@ -462,7 +462,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if name not in fsm_data["encoding"]:
             fsm_name = fsm_data["name"]
             fsm_data["encoding"][name] = len(fsm_data["encoding"])
-            fsm_data["ongoing"][name] = Signal(name=f"{fsm_name}_ongoing_{name}")
+            fsm_data["ongoing"][name] = Signal(name="")
         try:
             _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
@@ -486,7 +486,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     if name not in ctrl_data["encoding"]:
                         fsm_name = ctrl_data["name"]
                         ctrl_data["encoding"][name] = len(ctrl_data["encoding"])
-                        ctrl_data["ongoing"][name] = Signal(name=f"{fsm_name}_ongoing_{name}")
+                        ctrl_data["ongoing"][name] = Signal(name="")
                     self._add_statement(
                         assigns=[FSMNextStatement(ctrl_data, name)],
                         domain=ctrl_data["domain"],

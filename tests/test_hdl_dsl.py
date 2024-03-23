@@ -603,8 +603,8 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
-            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
-            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
+            (eq (sig) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig) (== (sig fsm_state) (const 1'd1)))
         )
         """)
         self.assertRepr(frag.statements["sync"], """
@@ -627,8 +627,7 @@ class DSLTestCase(FHDLTestCase):
             "(sig a)": "comb",
             "(sig fsm_state)": "sync",
             "(sig b)": "sync",
-            "(sig fsm_ongoing_FIRST)": "comb",
-            "(sig fsm_ongoing_SECOND)": "comb",
+            "(sig)": "comb",
         })
         fsm  = frag.find_generated("fsm")
         self.assertIsInstance(fsm.state, Signal)
@@ -659,8 +658,8 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
-            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
-            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
+            (eq (sig) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig) (== (sig fsm_state) (const 1'd1)))
         )
         """)
         self.assertRepr(frag.statements["sync"], """
@@ -697,8 +696,8 @@ class DSLTestCase(FHDLTestCase):
                 )
                 (case 1 )
             )
-            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd0)))
-            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd1)))
+            (eq (sig) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig) (== (sig fsm_state) (const 1'd1)))
         )
         """)
         self.assertRepr(frag.statements["sync"], """
@@ -743,10 +742,10 @@ class DSLTestCase(FHDLTestCase):
         self.maxDiff = 10000
         self.assertRepr(frag.statements["comb"], """
         (
-            (eq (sig b) (sig fsm_ongoing_SECOND))
-            (eq (sig a) (sig fsm_ongoing_FIRST))
-            (eq (sig fsm_ongoing_SECOND) (== (sig fsm_state) (const 1'd0)))
-            (eq (sig fsm_ongoing_FIRST) (== (sig fsm_state) (const 1'd1)))
+            (eq (sig b) (sig))
+            (eq (sig a) (sig))
+            (eq (sig) (== (sig fsm_state) (const 1'd0)))
+            (eq (sig) (== (sig fsm_state) (const 1'd1)))
         )
         """)
 
