@@ -23,6 +23,9 @@ class ClockDomainTestCase(FHDLTestCase):
             ClockDomain()
         cd_reset = ClockDomain(local=True)
         self.assertEqual(cd_reset.local, True)
+        with self.assertRaisesRegex(TypeError,
+                r"^Clock domain name must be a string, not 1$"):
+            sync.rename(1)
 
     def test_edge(self):
         sync = ClockDomain()
@@ -64,6 +67,9 @@ class ClockDomainTestCase(FHDLTestCase):
         self.assertEqual(sync.name, "pix")
         self.assertEqual(sync.clk.name, "pix_clk")
         self.assertEqual(sync.rst.name, "pix_rst")
+        with self.assertRaisesRegex(TypeError,
+                r"^Clock domain name must be a string, not 1$"):
+            sync.rename(1)
 
     def test_rename_reset_less(self):
         sync = ClockDomain(reset_less=True)

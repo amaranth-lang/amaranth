@@ -1,5 +1,6 @@
 from .. import tracer
 from ._ast import Signal
+from .._utils import validate_name
 
 
 __all__ = ["ClockDomain", "DomainError"]
@@ -54,6 +55,7 @@ class ClockDomain:
                 name = tracer.get_var_name()
             except tracer.NameNotFound:
                 raise ValueError("Clock domain name must be specified explicitly")
+        validate_name(name, "Clock domain name")
         if name.startswith("cd_"):
             name = name[3:]
         if name == "comb":
@@ -78,6 +80,7 @@ class ClockDomain:
         self.local = local
 
     def rename(self, new_name):
+        validate_name(new_name, "Clock domain name")
         self.name = new_name
         self.clk.name = self._name_for(new_name, "clk")
         if self.rst is not None:

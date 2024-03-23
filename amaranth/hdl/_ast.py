@@ -2126,8 +2126,7 @@ class ClockSignal(Value):
     """
     def __init__(self, domain="sync", *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        if not isinstance(domain, str):
-            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
+        validate_name(domain, "Clock domain name")
         if domain == "comb":
             raise ValueError(f"Domain '{domain}' does not have a clock")
         self._domain = domain
@@ -2166,8 +2165,7 @@ class ResetSignal(Value):
     """
     def __init__(self, domain="sync", allow_reset_less=False, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        if not isinstance(domain, str):
-            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
+        validate_name(domain, "Clock domain name")
         if domain == "comb":
             raise ValueError(f"Domain '{domain}' does not have a reset")
         self._domain = domain
