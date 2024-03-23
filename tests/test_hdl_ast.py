@@ -1182,6 +1182,15 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s2.name, "sig")
         s3 = Signal(name="")
         self.assertEqual(s3.name, "")
+        s4 = Signal(name="$\\1a!\U0001F33C")
+        self.assertEqual(s4.name, "$\\1a!\U0001f33c") # Astral plane emoji "Blossom"
+
+    def test_wrong_name(self):
+        for bad in [" ", "\r", "\n", "\t", "\0", "\u009d"]: # Control character OSC
+            name = f"sig{bad}"
+            with self.assertRaises(NameError,
+                    msg="Name {name!r} contains whitespace/control character {bad!r}"):
+                Signal(name=name)
 
     def test_init(self):
         s1 = Signal(4, init=0b111, reset_less=True)

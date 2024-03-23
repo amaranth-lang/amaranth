@@ -1230,19 +1230,6 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim.add_testbench(process)
         sim.run()
 
-    def test_bug_595(self):
-        dut = Module()
-        dummy = Signal()
-        with dut.FSM(name="name with space"):
-            with dut.State(0):
-                dut.d.comb += dummy.eq(1)
-        sim = Simulator(dut)
-        with self.assertRaisesRegex(NameError,
-                r"^Signal 'bench\.top\.name with space_state' contains a whitespace character$"):
-            with open(os.path.devnull, "w") as f:
-                with sim.write_vcd(f):
-                    sim.run()
-
     def test_bug_588(self):
         dut = Module()
         a = Signal(32)

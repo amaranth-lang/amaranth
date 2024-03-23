@@ -3,12 +3,13 @@ import functools
 import warnings
 import linecache
 import re
+import unicodedata
 from collections import OrderedDict
 from collections.abc import Iterable
 
 
 __all__ = ["flatten", "union", "final", "deprecated", "get_linter_options",
-           "get_linter_option"]
+           "get_linter_option", "validate_name"]
 
 
 def flatten(i):
@@ -101,3 +102,25 @@ def get_linter_option(filename, name, type, default):
         except ValueError:
             return default
     assert False
+
+_invalid_categories = {
+    "Zs", # space separators
+    "Zl", # line separators
+    "Zp", # paragraph separators
+    "Cc", # control codepoints (e.g. \0)
+    "Cs", # UTF-16 surrogate pair codepoints (no thanks WTF-8)
+    "Cn", # unassigned codepoints
+}
+
+def validate_name(name, what, none_ok=False, empty_ok=False):
+    if not isinstance(name, str):
+        if name is None and none_ok: return
+        raise TypeError(f"{what} must be a string, not {name!r}")
+    if name == "" and not empty_ok:
+        raise NameError(f"{what} must be a non-empty string")
+
+    # RTLIL allows bytes >= 33. In the same spirit we allow all characters that
+    # Unicode does not declare as separator or control.
+    for c in name:
+        if unicodedata.category(c) in _invalid_categories:
+            raise NameError(f"{what} {name!r} contains whitespace/control character {c!r}")
