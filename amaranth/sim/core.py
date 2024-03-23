@@ -157,8 +157,8 @@ class Simulator:
             raise ValueError("Domain {!r} already has a clock driving it"
                              .format(domain.name))
 
-        # We represent times internally in 1 ps units, but users supply float quantities of seconds
-        period = int(period * 1e12)
+        # We represent times internally in 1 fs units, but users supply float quantities of seconds
+        period = int(period * 1e15)
 
         if phase is None:
             # By default, delay the first edge by half period. This causes any synchronous activity
@@ -166,7 +166,7 @@ class Simulator:
             # viewer.
             phase = period // 2
         else:
-            phase = int(phase * 1e12) + period // 2
+            phase = int(phase * 1e15) + period // 2
         self._engine.add_clock_process(domain.clk, phase=phase, period=period)
         self._clocked.add(domain)
 
@@ -207,13 +207,13 @@ class Simulator:
 
         If the simulation stops advancing, this function will never return.
         """
-        # Convert deadline in seconds into internal 1 ps units
-        deadline = deadline * 1e12
+        # Convert deadline in seconds into internal 1 fs units
+        deadline = deadline * 1e15
         assert self._engine.now <= deadline
         while (self.advance() or run_passive) and self._engine.now < deadline:
             pass
 
-    def write_vcd(self, vcd_file, gtkw_file=None, *, traces=()):
+    def write_vcd(self, vcd_file, gtkw_file=None, *, traces=(), fs_per_delta=0):
         """Write waveforms to a Value Change Dump file, optionally populating a GTKWave save file.
 
         This method returns a context manager. It can be used as: ::
@@ -238,4 +238,5 @@ class Simulator:
                     file.close()
             raise ValueError("Cannot start writing waveforms after advancing simulation time")
 
-        return self._engine.write_vcd(vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces)
+        return self._engine.write_vcd(vcd_file=vcd_file, gtkw_file=gtkw_file,
+                                      traces=traces, fs_per_delta=fs_per_delta)

@@ -115,8 +115,8 @@ class PyCoroProcess(BaseProcess):
                     return False # no assignments
 
                 elif type(command) is Delay:
-                    # Internal timeline is in 1ps integeral units, intervals are public API and in floating point
-                    interval = int(command.interval * 1e12) if command.interval is not None else None
+                    # Internal timeline is in 1 fs integeral units, intervals are public API and in floating point
+                    interval = int(command.interval * 1e15) if command.interval is not None else None
                     self.state.wait_interval(self, interval)
                     return False # no assignments
 
