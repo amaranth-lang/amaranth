@@ -5,7 +5,7 @@ from enum import Enum
 import warnings
 import sys
 
-from .._utils import flatten
+from .._utils import flatten, validate_name
 from ..utils import bits_for
 from .. import tracer
 from ._ast import *
@@ -426,6 +426,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             warnings.warn("`reset=` is deprecated, use `init=` instead",
                           DeprecationWarning, stacklevel=2)
             init = reset
+        validate_name(name, "FSM name")
+        validate_name(domain, "FSM clock domain")
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
             "init":     init,

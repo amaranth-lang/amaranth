@@ -792,6 +792,17 @@ class DSLTestCase(FHDLTestCase):
             with m.FSM():
                 m.next = "FOO"
 
+    def test_FSM_wrong_name(self):
+        m = Module()
+        with self.assertRaisesRegex(TypeError,
+                r"^FSM name must be a string, not 1$"):
+            with m.FSM(name=1):
+                pass
+        with self.assertRaisesRegex(TypeError,
+                r"^FSM clock domain must be a string, not 1$"):
+            with m.FSM(domain=1):
+                pass
+
     def test_If_inside_FSM_wrong(self):
         m = Module()
         with m.FSM():
