@@ -409,24 +409,27 @@ class PySimEngine(BaseEngine):
 
         self._design = design
         self._processes = _FragmentCompiler(self._state)(self._design.fragment)
+        self._testbenches = []
         self._vcd_writers = []
+
+    def add_clock_process(self, clock, *, phase, period):
+        self._processes.add(PyClockProcess(self._state, clock,
+                                           phase=phase, period=period))
 
     def add_coroutine_process(self, process, *, default_cmd):
         self._processes.add(PyCoroProcess(self._state, self._design.fragment.domains, process,
                                           default_cmd=default_cmd))
 
-    def add_clock_process(self, clock, *, phase, period):
-        self._processes.add(PyClockProcess(self._state, clock,
-                                           phase=phase, period=period))
+    def add_testbench_process(self, process):
+        self._testbenches.append(PyCoroProcess(self._state, self._design.fragment.domains, process,
+                                               testbench=True))
 
     def reset(self):
         self._state.reset()
         for process in self._processes:
             process.reset()
 
-    def _step(self):
-        changed = set() if self._vcd_writers else None
-
+    def _step_rtl(self, changed):
         # Performs the two phases of a delta cycle in a loop:
         converged = False
         while not converged:
@@ -438,6 +441,25 @@ class PySimEngine(BaseEngine):
 
             # 2. commit: apply every queued signal change, waking up any waiting processes
             converged = self._state.commit(changed)
+
+    def _step_tb(self):
+        changed = set() if self._vcd_writers else None
+
+        # Run processes waiting for an interval to expire (mainly `add_clock_process()``)
+        self._step_rtl(changed)
+
+        # Run testbenches waiting for an interval to expire, or for a signal to change state
+        converged = False
+        while not converged:
+            converged = True
+            # Schedule testbenches in a deterministic, predictable order by iterating a list
+            for testbench in self._testbenches:
+                if testbench.runnable:
+                    testbench.runnable = False
+                    while testbench.run():
+                        # Testbench has changed simulation state; run processes triggered by that
+                        converged = False
+                        self._step_rtl(changed)
 
         for vcd_writer in self._vcd_writers:
             for change in changed:
@@ -452,9 +474,9 @@ class PySimEngine(BaseEngine):
                     assert False # :nocov:
 
     def advance(self):
-        self._step()
+        self._step_tb()
         self._timeline.advance()
-        return any(not process.passive for process in self._processes)
+        return any(not process.passive for process in (*self._processes, *self._testbenches))
 
     @property
     def now(self):

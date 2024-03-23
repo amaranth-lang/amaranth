@@ -1174,6 +1174,22 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             Coverage hit at .*test_sim\.py:\d+: Counter: 009
         """).lstrip())
 
+    def test_testbench_preemption(self):
+        sig = Signal(8)
+        def testbench_1():
+            yield sig[0:4].eq(0b1010)
+            yield sig[4:8].eq(0b0101)
+        def testbench_2():
+            yield Passive()
+            while True:
+                val = yield sig
+                assert val in (0, 0b01011010), f"{val=:#010b}"
+                yield Delay(0)
+        sim = Simulator(Module())
+        sim.add_testbench(testbench_1)
+        sim.add_testbench(testbench_2)
+        sim.run()
+
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):
