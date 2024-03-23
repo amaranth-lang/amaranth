@@ -1191,6 +1191,15 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with sim.write_vcd("test.vcd", fs_per_delta=1):
             sim.run()
 
+    def test_process_name_collision(self):
+        def testbench():
+            yield Passive()
+        sim = Simulator(Module())
+        sim.add_testbench(testbench)
+        sim.add_testbench(testbench)
+        with sim.write_vcd("test.vcd", fs_per_delta=1):
+            sim.run()
+
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):

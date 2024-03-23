@@ -12,12 +12,14 @@ __all__ = ["PyCoroProcess"]
 
 
 class PyCoroProcess(BaseProcess):
-    def __init__(self, state, domains, constructor, *, default_cmd=None, testbench=False):
+    def __init__(self, state, domains, constructor, *, default_cmd=None, testbench=False,
+                 on_command=None):
         self.state = state
         self.domains = domains
         self.constructor = constructor
         self.default_cmd = default_cmd
         self.testbench = testbench
+        self.on_command = on_command
 
         self.reset()
 
@@ -78,6 +80,9 @@ class PyCoroProcess(BaseProcess):
                     command = self.default_cmd
                 response = None
                 exception = None
+
+                if self.on_command is not None:
+                    self.on_command(self, command)
 
                 if isinstance(command, ValueCastable):
                     command = Value.cast(command)

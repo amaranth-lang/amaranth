@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import itertools
 import re
+import os.path
 
 from ..hdl import *
 from ..hdl._repr import *
@@ -36,7 +37,7 @@ class _VCDWriter:
         else:
             raise NotImplementedError # :nocov:
 
-    def __init__(self, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0):
+    def __init__(self, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0, processes=()):
         self.fs_per_delta = fs_per_delta
 
         # Although pyvcd is a mandatory dependency, be resilient and import it as needed, so that
@@ -165,6 +166,26 @@ class _VCDWriter:
                 gtkw_names.append(gtkw_name)
 
 
+        self.vcd_process_vars = {}
+        if fs_per_delta == 0:
+            return # Not useful without delta cycle expansion.
+        for index, process in enumerate(processes):
+            func_name = process.constructor.__name__
+            func_file = os.path.basename(process.constructor.__code__.co_filename)
+            func_line = process.constructor.__code__.co_firstlineno
+            for name in (
+                f"{process.constructor.__name__}",
+                f"{process.constructor.__name__}!{func_file};{func_line}",
+                f"{process.constructor.__name__}#{index}",
+            ):
+                try:
+                    self.vcd_process_vars[process] = self.vcd_writer.register_var(
+                        scope=("debug", "proc"), name=name, var_type="string", size=None,
+                        init="(init)")
+                    break
+                except KeyError:
+                    pass # try another name
+
     def update_signal(self, timestamp, signal, value):
         for (vcd_var, repr) in self.vcd_signal_vars.get(signal, ()):
             var_value = self.eval_field(repr.value, signal, value)
@@ -175,6 +196,16 @@ class _VCDWriter:
     def update_memory(self, timestamp, memory, addr, value):
         vcd_var = self.vcd_memory_vars[memory._identity][addr]
         self.vcd_writer.change(vcd_var, timestamp, value)
+
+    def update_process(self, timestamp, process, command):
+        try:
+            vcd_var = self.vcd_process_vars[process]
+        except KeyError:
+            return
+        # Ensure that the waveform viewer displays a change point even if the previous command is
+        # the same as the next one.
+        self.vcd_writer.change(vcd_var, timestamp, "")
+        self.vcd_writer.change(vcd_var, timestamp, repr(command))
 
     def close(self, timestamp):
         if self.vcd_writer is not None:
@@ -425,7 +456,7 @@ class PySimEngine(BaseEngine):
 
     def add_testbench_process(self, process):
         self._testbenches.append(PyCoroProcess(self._state, self._design.fragment.domains, process,
-                                               testbench=True))
+                                               testbench=True, on_command=self._debug_process))
 
     def reset(self):
         self._state.reset()
@@ -462,6 +493,13 @@ class PySimEngine(BaseEngine):
 
             self._delta_cycles += 1
 
+    def _debug_process(self, process, command):
+        for vcd_writer in self._vcd_writers:
+            now_plus_deltas = self._now_plus_deltas(vcd_writer)
+            vcd_writer.update_process(now_plus_deltas, process, command)
+
+        self._delta_cycles += 1
+
     def _step_tb(self):
         # Run processes waiting for an interval to expire (mainly `add_clock_process()``)
         self._step_rtl()
@@ -494,7 +532,8 @@ class PySimEngine(BaseEngine):
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
         vcd_writer = _VCDWriter(self._design,
-            vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces, fs_per_delta=fs_per_delta)
+            vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces, fs_per_delta=fs_per_delta,
+            processes=self._testbenches)
         try:
             self._vcd_writers.append(vcd_writer)
             yield
