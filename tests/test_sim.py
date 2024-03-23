@@ -1188,7 +1188,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sim = Simulator(Module())
         sim.add_testbench(testbench_1)
         sim.add_testbench(testbench_2)
-        sim.run()
+        with sim.write_vcd("test.vcd", fs_per_delta=1):
+            sim.run()
 
 
 class SimulatorRegressionTestCase(FHDLTestCase):

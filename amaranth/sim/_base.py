@@ -84,5 +84,5 @@ class BaseEngine:
     def advance(self):
         raise NotImplementedError # :nocov:
 
-    def write_vcd(self, *, vcd_file, gtkw_file, traces):
+    def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
         raise NotImplementedError # :nocov:
