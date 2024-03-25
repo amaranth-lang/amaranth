@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import contextlib
 import itertools
 import re
 import os.path
@@ -7,7 +8,7 @@ from ..hdl import *
 from ..hdl._repr import *
 from ..hdl._mem import MemoryInstance, MemoryIdentity
 from ..hdl._ast import SignalDict, Slice, Operator
-from ..lib import wiring
+from ..lib import data, wiring
 from ._base import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
@@ -227,10 +228,14 @@ class _VCDWriter:
             self.gtkw_save.treeopen("top")
             def traverse_traces(traces):
                 if isinstance(traces, ValueLike):
-                    trace = Value.cast(traces)
-                    for trace_signal in trace._rhs_signals():
-                        for name in self.gtkw_signal_names[trace_signal]:
-                            self.gtkw_save.trace(name)
+                    ctx = contextlib.nullcontext()
+                    if isinstance(traces, data.View):
+                        ctx = self.gtkw_save.group("view")
+                    with ctx:
+                        trace = Value.cast(traces)
+                        for trace_signal in trace._rhs_signals():
+                            for name in self.gtkw_signal_names[trace_signal]:
+                                self.gtkw_save.trace(name)
                 elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
                     with self.gtkw_save.group("interface"):
                         for _, _, member in traces.signature.flatten(traces):
