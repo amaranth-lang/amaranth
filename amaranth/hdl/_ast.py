@@ -1919,12 +1919,11 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                  attrs=None, decoder=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
-        if name is not None and not isinstance(name, str):
-            raise TypeError(f"Name must be a string, not {name!r}")
         if name is None:
             self.name = tracer.get_var_name(depth=2 + src_loc_at, default="$signal")
         else:
             self.name = name
+        validate_name(self.name, "Name", empty_ok=True)
 
         orig_shape = shape
         if shape is None:
@@ -2127,8 +2126,7 @@ class ClockSignal(Value):
     """
     def __init__(self, domain="sync", *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        if not isinstance(domain, str):
-            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
+        validate_name(domain, "Clock domain name")
         if domain == "comb":
             raise ValueError(f"Domain '{domain}' does not have a clock")
         self._domain = domain
@@ -2167,8 +2165,7 @@ class ResetSignal(Value):
     """
     def __init__(self, domain="sync", allow_reset_less=False, *, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
-        if not isinstance(domain, str):
-            raise TypeError(f"Clock domain name must be a string, not {domain!r}")
+        validate_name(domain, "Clock domain name")
         if domain == "comb":
             raise ValueError(f"Domain '{domain}' does not have a reset")
         self._domain = domain
@@ -2850,8 +2847,7 @@ class IOPort(IOValue):
     def __init__(self, width, *, name=None, attrs=None, metadata=None, src_loc_at=0):
         super().__init__(src_loc_at=src_loc_at)
 
-        if name is not None and not isinstance(name, str):
-            raise TypeError(f"Name must be a string, not {name!r}")
+        validate_name(name, "Name", none_ok=True)
         self.name = name or tracer.get_var_name(depth=2 + src_loc_at)
 
         self._width = operator.index(width)

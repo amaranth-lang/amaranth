@@ -3,7 +3,7 @@ from collections import defaultdict, OrderedDict
 import enum
 import warnings
 
-from .._utils import flatten
+from .._utils import flatten, validate_name
 from .. import tracer, _unused
 from . import _ast, _cd, _ir, _nir
 
@@ -309,11 +309,13 @@ class Instance(Fragment):
     def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
         super().__init__(src_loc=src_loc or tracer.get_src_loc(src_loc_at))
 
+        validate_name(type, "Instance type")
         self.type        = type
         self.parameters  = OrderedDict()
         self.named_ports = OrderedDict()
 
         for (kind, name, value) in args:
+            validate_name(name, "Instance argument name")
             if kind == "a":
                 self.attrs[name] = value
             elif kind == "p":
@@ -331,6 +333,7 @@ class Instance(Fragment):
                                 .format((kind, name, value)))
 
         for kw, arg in kwargs.items():
+            validate_name(kw, "Instance keyword argument name")
             if kw.startswith("a_"):
                 self.attrs[kw[2:]] = arg
             elif kw.startswith("p_"):
@@ -556,6 +559,7 @@ class Design:
                     raise TypeError("Signals with private names cannot be used in unnamed top-level ports")
                 name = _add_name(assigned_names, conn.name)
                 assigned_names.add(name)
+            validate_name(name, "Top-level port name")
             new_ports.append((name, conn, dir))
         self.ports = new_ports
 

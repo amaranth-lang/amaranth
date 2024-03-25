@@ -117,9 +117,9 @@ class _VCDWriter:
 
                 vcd_var = None
                 for (*var_scope, var_name) in names:
+                    # Shouldn't happen, but avoid producing a corrupt file.
                     if re.search(r"[ \t\r\n]", var_name):
-                        raise NameError("Signal '{}.{}' contains a whitespace character"
-                                        .format(".".join(var_scope), var_name))
+                        assert False, f"invalid name {var_name!r} made it to writer" # :nocov:
 
                     field_name = var_name
                     for item in repr.path:

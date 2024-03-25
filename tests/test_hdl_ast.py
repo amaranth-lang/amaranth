@@ -1182,6 +1182,15 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s2.name, "sig")
         s3 = Signal(name="")
         self.assertEqual(s3.name, "")
+        s4 = Signal(name="$\\1a!\U0001F33C")
+        self.assertEqual(s4.name, "$\\1a!\U0001f33c") # Astral plane emoji "Blossom"
+
+    def test_wrong_name(self):
+        for bad in [" ", "\r", "\n", "\t", "\0", "\u009d"]: # Control character OSC
+            name = f"sig{bad}"
+            with self.assertRaises(NameError,
+                    msg="Name {name!r} contains whitespace/control character {bad!r}"):
+                Signal(name=name)
 
     def test_init(self):
         s1 = Signal(4, init=0b111, reset_less=True)
@@ -1733,6 +1742,9 @@ class IOValueTestCase(FHDLTestCase):
         self.assertEqual(b.metadata, ("x", "y", "z"))
         self.assertEqual(b._ioports(), {b})
         self.assertRepr(b, "(io-port b)")
+        with self.assertRaisesRegex(NameError,
+                r"^Name must be a non-empty string$"):
+            IOPort(1, name="")
 
     def test_ioport_wrong(self):
         with self.assertRaisesRegex(TypeError,

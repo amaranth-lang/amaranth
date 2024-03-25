@@ -792,6 +792,17 @@ class DSLTestCase(FHDLTestCase):
             with m.FSM():
                 m.next = "FOO"
 
+    def test_FSM_wrong_name(self):
+        m = Module()
+        with self.assertRaisesRegex(TypeError,
+                r"^FSM name must be a string, not 1$"):
+            with m.FSM(name=1):
+                pass
+        with self.assertRaisesRegex(TypeError,
+                r"^FSM clock domain must be a string, not 1$"):
+            with m.FSM(domain=1):
+                pass
+
     def test_If_inside_FSM_wrong(self):
         m = Module()
         with m.FSM():
@@ -867,6 +878,16 @@ class DSLTestCase(FHDLTestCase):
         self.assertEqual(m1._anon_submodules, [])
         self.assertEqual(m1._named_submodules.keys(), {"foo"})
         self.assertEqual(m1._named_submodules["foo"][0], m2)
+
+    def test_submodule_wrong_name(self):
+        m1 = Module()
+        m2 = Module()
+        with self.assertRaisesRegex(TypeError,
+                r"^Submodule name must be a string, not 1$"):
+            m1.submodules[1] = m2
+        with self.assertRaisesRegex(NameError,
+                r"^Submodule name must be a non-empty string$"):
+            m1.submodules[""] = m2
 
     def test_submodule_wrong(self):
         m = Module()
