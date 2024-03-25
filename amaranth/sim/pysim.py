@@ -7,7 +7,7 @@ from ..hdl import *
 from ..hdl._repr import *
 from ..hdl._mem import MemoryInstance, MemoryIdentity
 from ..hdl._ast import SignalDict, Slice, Operator
-from ..lib import data
+from ..lib import wiring
 from ._base import *
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
@@ -92,6 +92,9 @@ class _VCDWriter:
                             assert name not in assigned_names
                         trace_names[trace_signal] = {("bench", name)}
                         assigned_names.add(name)
+            elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
+                for name in traces.signature.members:
+                    traverse_traces(getattr(traces, name))
             elif hasattr(traces, "_identity") and isinstance(traces._identity, MemoryIdentity):
                 if not traces._identity in memories:
                     raise ValueError(f"{traces!r} is a memory not part of the elaborated design")
@@ -228,6 +231,10 @@ class _VCDWriter:
                     for trace_signal in trace._rhs_signals():
                         for name in self.gtkw_signal_names[trace_signal]:
                             self.gtkw_save.trace(name)
+                elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
+                    with self.gtkw_save.group("interface"):
+                        for _, _, member in traces.signature.flatten(traces):
+                            traverse_traces(member)
                 elif hasattr(traces, "_identity") and isinstance(traces._identity, MemoryIdentity):
                     for name in self.gtkw_memory_names[traces._identity]:
                         self.gtkw_save.trace(name)
@@ -235,8 +242,9 @@ class _VCDWriter:
                     for trace in traces:
                         traverse_traces(trace)
                 elif isinstance(traces, dict):
-                    for trace in traces.values():
-                        traverse_traces(trace)
+                    for name, trace in traces.items():
+                        with self.gtkw_save.group(name):
+                            traverse_traces(trace)
                 else:
                     assert False # :nocov:
             traverse_traces(self.traces)
