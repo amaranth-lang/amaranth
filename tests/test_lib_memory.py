@@ -404,3 +404,20 @@ class MemoryTestCase(FHDLTestCase):
         self.assertIs(f._read_ports[1]._addr, rp1.addr)
         self.assertIs(f._read_ports[1]._data, rp1.data.as_value())
         self.assertIs(f._read_ports[1]._en, rp1.en)
+
+    def test_freeze(self):
+        m = memory.Memory(shape=unsigned(8), depth=4, init=[])
+        m.write_port()
+        m.elaborate(None)
+        with self.assertRaisesRegex(memory.FrozenError,
+                r"^Cannot add a memory port to a memory that has already been elaborated$"):
+            m.write_port()
+        with self.assertRaisesRegex(memory.FrozenError,
+                r"^Cannot add a memory port to a memory that has already been elaborated$"):
+            m.read_port()
+        with self.assertRaisesRegex(memory.FrozenError,
+                r"^Cannot set 'init' on a memory that has already been elaborated$"):
+            m.init = [1, 2, 3, 4]
+        with self.assertRaisesRegex(memory.FrozenError,
+                r"^Cannot set 'init' on a memory that has already been elaborated$"):
+            m.init[0] = 1
