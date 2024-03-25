@@ -14,7 +14,7 @@ from amaranth.hdl._dsl import  *
 from amaranth.hdl._ir import *
 from amaranth.sim import *
 from amaranth.lib.memory import Memory
-from amaranth.lib.data import View, StructLayout
+from amaranth.lib import data, wiring
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -1215,6 +1215,61 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sim.add_testbench(testbench)
         with sim.write_vcd("test.vcd", fs_per_delta=1):
             sim.run()
+
+
+class SimulatorTracesTestCase(FHDLTestCase):
+    def assertDef(self, traces, flat_traces):
+        frag = Fragment()
+        
+        for trace in flat_traces:
+            if isinstance(trace, ValueLike):
+                for signal in flatten(s._rhs_signals() for s in Value.cast(trace)):
+                    frag.add_driver(signal)
+            elif hasattr(trace, "signature") and isinstance(trace.signature, wiring.Signature):
+                for _, _, signal in trace.signature.flatten(trace):
+                    frag.add_driver(signal)
+
+        def process():
+            yield Delay(1e-6)
+
+        sim = Simulator(frag)
+        sim.add_testbench(process)
+        with sim.write_vcd("test.vcd", "test.gtkw", traces=traces):
+            sim.run()
+
+    def test_signal(self):
+        a = Signal()
+        self.assertDef(a, [a])
+
+    def test_slice(self):
+        a = Signal(8)[2:4]
+        self.assertDef(a, [a])
+
+    def test_list(self):
+        a = Signal()
+        self.assertDef([a], [a])
+
+    def test_tuple(self):
+        a = Signal()
+        self.assertDef((a,), [a])
+
+    def test_dict(self):
+        a = Signal()
+        self.assertDef({"a": a}, [a])
+
+    def test_struct_view(self):
+        a = Signal(data.StructLayout({"a": 1, "b": 3}))
+        self.assertDef(a, [a])
+
+    def test_interface(self):
+        sig = wiring.Signature({
+            "a": wiring.In(1),
+            "b": wiring.Out(3),
+            "c": wiring.Out(2).array(4),
+            "d": wiring.In(wiring.Signature({"e": wiring.In(5)}))
+        })
+        a = sig.create()
+        self.assertDef(a, [a])
 
 
 class SimulatorRegressionTestCase(FHDLTestCase):
