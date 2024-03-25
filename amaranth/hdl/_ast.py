@@ -466,7 +466,7 @@ class Value(metaclass=ABCMeta):
     value-castable objects, and the Amaranth standard library provides several built-in ones:
 
     * :mod:`amaranth.lib.enum` classes are a drop-in replacement for the standard Python
-      :class:`enum` classes that can be defined with an Amaranth shape;
+      :mod:`enum` classes that can be defined with an Amaranth shape;
     * :mod:`amaranth.lib.data` classes allow defining complex data structures such as structures
       and unions.
 
@@ -1087,22 +1087,35 @@ class Value(metaclass=ABCMeta):
     def __getitem__(self, key):
         """Bit slicing.
 
-        .. todo::
+        Selects a constant-width, constant-offset part of :py:`self`. All three slicing syntaxes
+        (:py:`self[i]`, :py:`self[i:j]`, and :py:`self[i:j:k]`) as well as negative indices are
+        supported. Like with other Python containers, out-of-bounds indices are trimmed to
+        the bounds of :py:`self`.
 
-            Describe this operation.
+        To select a variable-offset part of :py:`self`, use :meth:`bit_select` or
+        :meth:`word_select` instead.
+
+        Returns
+        -------
+        :class:`Value`, :py:`unsigned(1)`, :ref:`assignable <lang-assignable>`
+            If :py:`key` is an :class:`int`.
+        :class:`Value`, :py:`unsigned(j - i)`, :ref:`assignable <lang-assignable>`
+            If :py:`key` is a slice :py:`i:j` where :py:`i` and :py:`j` are :class:`int`\\ s.
+        :class:`Value`, :py:`unsigned(len(range(*slice(i, j, k).indices(len(self)))))`, :ref:`assignable <lang-assignable>`
+            If :py:`key` is a slice :py:`i:j:k` where :py:`i`, :py:`j`, and :py:`k` are :class:`int`\\ s.
         """
-        n = len(self)
+        length = len(self)
         if isinstance(key, int):
-            if key not in range(-n, n):
-                raise IndexError(f"Index {key} is out of bounds for a {n}-bit value")
+            if key not in range(-length, length):
+                raise IndexError(f"Index {key} is out of bounds for a {length}-bit value")
             if key < 0:
-                key += n
+                key += length
             return Slice(self, key, key + 1, src_loc_at=1)
         elif isinstance(key, slice):
             if isinstance(key.start, Value) or isinstance(key.stop, Value):
                 raise TypeError(f"Cannot slice value with a value; use Value.bit_select() or "
                                 f"Value.word_select() instead")
-            start, stop, step = key.indices(n)
+            start, stop, step = key.indices(length)
             if step != 1:
                 return Cat(self[i] for i in range(start, stop, step))
             return Slice(self, start, stop, src_loc_at=1)
@@ -1220,14 +1233,19 @@ class Value(metaclass=ABCMeta):
         """Pattern matching.
 
         Matches against a set of patterns, recognizing the same grammar as :py:`with m.Case()`.
+        The pattern syntax is described in the :ref:`language guide <lang-matchop>`.
 
-        .. todo::
-
-            Describe the pattern language in detail.
+        Each of the :py:`patterns` may be a :class:`str` or a :ref:`constant-castable object
+        <lang-constcasting>`.
 
         Returns
         -------
         :class:`Value`, :py:`unsigned(1)`
+
+        Raises
+        ------
+        :exc:`SyntaxError`
+            If a pattern has invalid syntax.
         """
         matches = []
         # This code should accept exactly the same patterns as `with m.Case(...):`.
