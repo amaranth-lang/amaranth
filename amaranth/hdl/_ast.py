@@ -1972,9 +1972,11 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         if decoder is not None:
             # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
-            # this is the only way to add a custom filter to the signal right now. The setter sets
-            # `self._value_repr` as well as the compatibility `self.decoder`.
-            pass
+            # this is the only way to add a custom filter to the signal right now. 
+            if isinstance(decoder, type) and issubclass(decoder, Enum):
+                self._value_repr = (_repr.Repr(_repr.FormatEnum(decoder), self),)
+            else:
+                self._value_repr = (_repr.Repr(_repr.FormatCustom(decoder), self),)
         else:
             # If it's an enum, expose it via `self.decoder` for compatibility, whether it's a Python
             # enum or an Amaranth enum. This also sets the value representation, even for custom
@@ -1995,20 +1997,16 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                 self._value_repr = (_repr.Repr(_repr.FormatInt(), self),)
 
         # Compute the value representation that will be used by Amaranth.
-        if decoder is None:
-            self._value_repr = (_repr.Repr(_repr.FormatInt(), self),)
-            self._decoder = None
-        elif not (isinstance(decoder, type) and issubclass(decoder, Enum)):
-            self._value_repr = (_repr.Repr(_repr.FormatCustom(decoder), self),)
-            self._decoder = decoder
-        else: # Violence. In the name of backwards compatibility!
-            self._value_repr = (_repr.Repr(_repr.FormatEnum(decoder), self),)
+        if isinstance(decoder, type) and issubclass(decoder, Enum):
+            # Violence. In the name of backwards compatibility!
             def enum_decoder(value):
                 try:
                     return "{0.name:}/{0.value:}".format(decoder(value))
                 except ValueError:
                     return str(value)
             self._decoder = enum_decoder
+        else:
+            self._decoder = decoder
 
     @property
     def width(self):
