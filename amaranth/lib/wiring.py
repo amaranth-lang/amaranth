@@ -324,14 +324,11 @@ class Member:
 class SignatureError(Exception):
     """
     This exception is raised when an invalid operation specific to signature manipulation is
-    performed with :class:`SignatureMembers`, such as adding a member to a frozen signature.
-    Other exceptions, such as :exc:`TypeError` or :exc:`NameError`, will still be raised where
-    appropriate.
+    performed with :class:`SignatureMembers`. Other exceptions, such as :exc:`TypeError` or
+    :exc:`NameError`, will still be raised where appropriate.
     """
 
 
-# Inherits from Mapping and not MutableMapping because it's only mutable in a very limited way
-# and most of the methods (except for `update`) added by MutableMapping are useless.
 @final
 class SignatureMembers(Mapping):
     """Mapping of signature member names to their descriptions.
@@ -340,13 +337,7 @@ class SignatureMembers(Mapping):
     attribute of signature objects.
 
     The keys in this container must be valid Python attribute names that are public (do not begin
-    with an underscore. The values must be instances of :class:`Member`. The container is mutable
-    in a restricted manner: new keys may be added, but existing keys may not be modified or removed.
-    In addition, the container can be `frozen`, which disallows addition of new keys. Freezing
-    a container recursively freezes the members of any signatures inside.
-
-    In addition to the use of the superscript operator, multiple members can be added at once with
-    the :py:`+=` opreator.
+    with an underscore. The values must be instances of :class:`Member`. The container is immutable.
 
     The :meth:`create` method converts this mapping into a mapping of names to signature members
     (signals and interface objects) by creating them from their descriptions. The created mapping
