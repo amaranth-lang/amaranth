@@ -14,6 +14,9 @@ class FormatInt(Format):
     def format(self, value):
         return f"{value:d}"
 
+    def __repr__(self):
+        return f"FormatInt()"
+
 
 class FormatEnum(Format):
     def __init__(self, enum):
@@ -25,6 +28,9 @@ class FormatEnum(Format):
         except ValueError:
             return f"?/{value:d}"
 
+    def __repr__(self):
+        return f"FormatEnum({self.enum.__name__})"
+
 
 class FormatCustom(Format):
     def __init__(self, formatter):
@@ -32,6 +38,9 @@ class FormatCustom(Format):
 
     def format(self, value):
         return self.formatter(value)
+
+    def __repr__(self):
+        return f"FormatCustom({self.formatter})"
 
 
 class Repr:
@@ -44,3 +53,6 @@ class Repr:
         self.format = format
         self.value  = value
         self.path   = path
+
+    def __repr__(self):
+        return f"Repr({self.format!r}, {self.value!r}, {self.path!r})"

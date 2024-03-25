@@ -1321,6 +1321,7 @@ class SignalTestCase(FHDLTestCase):
         s = Signal(decoder=Color)
         self.assertEqual(s.decoder(1), "RED/1")
         self.assertEqual(s.decoder(3), "3")
+        self.assertRepr(s._value_repr, "(Repr(FormatEnum(Color), (sig s), ()),)")
 
     def test_enum(self):
         s1 = Signal(UnsignedEnum)
@@ -1328,12 +1329,17 @@ class SignalTestCase(FHDLTestCase):
         s2 = Signal(SignedEnum)
         self.assertEqual(s2.shape(), signed(2))
         self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
+        self.assertRepr(s2._value_repr, "(Repr(FormatEnum(SignedEnum), (sig s2), ()),)")
 
     def test_const_wrong(self):
         s1 = Signal()
         with self.assertRaisesRegex(TypeError,
                 r"^Value \(sig s1\) cannot be converted to an Amaranth constant$"):
             Const.cast(s1)
+
+    def test_value_repr(self):
+        s = Signal()
+        self.assertRepr(s._value_repr, "(Repr(FormatInt(), (sig s), ()),)")
 
 
 class ClockSignalTestCase(FHDLTestCase):
