@@ -5,11 +5,19 @@ from collections.abc import MutableSequence
 from ..hdl import MemoryIdentity, MemoryInstance, Shape, ShapeCastable, Const
 from ..hdl._mem import MemorySimRead
 from ..utils import ceil_log2
+from .._utils import final
 from .. import tracer
 from . import wiring, data
 
 
 __all__ = ["Memory", "ReadPort", "WritePort"]
+
+
+@final
+class FrozenError(Exception):
+    """This exception is raised when ports are added to a :class:`Memory` or its
+    :attr:`~Memory.init` attribute is changed after it has been elaborated once.
+    """
 
 
 class Memory(wiring.Component):
@@ -19,7 +27,8 @@ class Memory(wiring.Component):
     dimensions and initial contents using the :py:`shape`, :py:`depth`, and :py:`init` parameters,
     and then adding memory ports using the :meth:`read_port` and :meth:`write_port` methods.
     Because it is mutable, it should be created and used locally within
-    the :ref:`elaborate <lang-elaboration>` method.
+    the :ref:`elaborate <lang-elaboration>` method. It is an error to add ports to or change
+    initial contents of a memory after it has been elaborated.
 
     The :py:`init` parameter and assignment to the :py:`init` attribute have the same effect, with
     :class:`Memory.Init` converting elements of the iterable to match :py:`shape` and using
@@ -70,6 +79,7 @@ class Memory(wiring.Component):
                                 .format(depth))
             self._shape = shape
             self._depth = depth
+            self._frozen = False
 
             if isinstance(shape, ShapeCastable):
                 self._elems = [None] * depth
@@ -92,6 +102,9 @@ class Memory(wiring.Component):
             return self._elems[index]
 
         def __setitem__(self, index, value):
+            if self._frozen:
+                raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
+
             if isinstance(index, slice):
                 indices = range(*index.indices(len(self._elems)))
                 if len(value) != len(indices):
@@ -131,6 +144,7 @@ class Memory(wiring.Component):
         self._identity = MemoryIdentity()
         self._read_ports: "list[ReadPort]" = []
         self._write_ports: "list[WritePort]" = []
+        self._frozen = False
 
         super().__init__(wiring.Signature({}))
 
@@ -148,6 +162,8 @@ class Memory(wiring.Component):
 
     @init.setter
     def init(self, init):
+        if self._frozen:
+            raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
         self._init = Memory.Init(init, shape=self._shape, depth=self._depth)
 
     @property
@@ -179,6 +195,8 @@ class Memory(wiring.Component):
         -------
         :class:`ReadPort`
         """
+        if self._frozen:
+            raise FrozenError("Cannot add a memory port to a memory that has already been elaborated")
         signature = ReadPort.Signature(shape=self.shape, addr_width=ceil_log2(self.depth))
         return ReadPort(signature, memory=self, domain=domain, transparent_for=transparent_for,
                         src_loc_at=1 + src_loc_at)
@@ -202,6 +220,8 @@ class Memory(wiring.Component):
         -------
         :class:`WritePort`
         """
+        if self._frozen:
+            raise FrozenError("Cannot add a memory port to a memory that has already been elaborated")
         signature = WritePort.Signature(
             shape=self.shape, addr_width=ceil_log2(self.depth), granularity=granularity)
         return WritePort(signature, memory=self, domain=domain,
@@ -224,6 +244,8 @@ class Memory(wiring.Component):
         return tuple(self._write_ports)
 
     def elaborate(self, platform):
+        self._frozen = True
+        self._init._frozen = True
         if hasattr(platform, "get_memory"):
             return platform.get_memory(self)
 
