@@ -24,7 +24,7 @@ def _signed(value):
     elif isinstance(value, int):
         return value < 0
     elif isinstance(value, _ast.Const):
-        return value.signed
+        return value.shape().signed
     else:
         assert False, f"Invalid constant {value!r}"
 
@@ -41,8 +41,8 @@ def _const(value):
             width = max(32, bits_for(value))
             return _const(_ast.Const(value, width))
     elif isinstance(value, _ast.Const):
-        value_twos_compl = value.value & ((1 << value.width) - 1)
-        return "{}'{:0{}b}".format(value.width, value_twos_compl, value.width)
+        value_twos_compl = value.value & ((1 << len(value)) - 1)
+        return "{}'{:0{}b}".format(len(value), value_twos_compl, len(value))
     else:
         assert False, f"Invalid constant {value!r}"
 
@@ -389,9 +389,10 @@ class ModuleEmitter:
                 assert value == port_value
                 self.name_map[signal] = (*self.module.name, name)
             else:
-                wire = self.builder.wire(width=signal.width, signed=signal.signed,
-                                         name=name, attrs=attrs,
-                                         src=_src(signal.src_loc))
+                shape = signal.shape()
+                wire  = self.builder.wire(width=shape.width, signed=shape.signed,
+                                          name=name, attrs=attrs,
+                                          src=_src(signal.src_loc))
                 self.sigport_wires[name] = (wire, value)
                 self.name_map[signal] = (*self.module.name, wire[1:])
 
@@ -400,7 +401,7 @@ class ModuleEmitter:
         for port_id, (name, (value, flow)) in enumerate(self.module.ports.items()):
             signed = False
             if name in named_signals:
-                signed = named_signals[name].signed
+                signed = named_signals[name].shape().signed
             wire = self.builder.wire(width=len(value), signed=signed,
                                      port_id=port_id, port_kind=flow.value,
                                      name=name, attrs=self.value_attrs.get(value, {}),

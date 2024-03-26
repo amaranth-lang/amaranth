@@ -625,7 +625,7 @@ class NetlistDriver:
 
     def emit_value(self, builder):
         if self.domain is None:
-            init = _ast.Const(self.signal.init, self.signal.width)
+            init = _ast.Const(self.signal.init, len(self.signal))
             default, _signed = builder.emit_rhs(self.module_idx, init)
         else:
             default = builder.emit_signal(self.signal)
@@ -740,11 +740,13 @@ class NetlistEmitter:
         except KeyError:
             pass
         if isinstance(value, _ast.Const):
-            result = _nir.Value.from_const(value.value, value.width)
-            signed = value.signed
+            shape  = value.shape()
+            result = _nir.Value.from_const(value.value, shape.width)
+            signed = shape.signed
         elif isinstance(value, _ast.Signal):
+            shape  = value.shape()
             result = self.emit_signal(value)
-            signed = value.signed
+            signed = shape.signed
         elif isinstance(value, _ast.Operator):
             if len(value.operands) == 1:
                 operand_a, signed_a = self.emit_rhs(module_idx, value.operands[0])
@@ -1247,12 +1249,12 @@ class NetlistEmitter:
                 else:
                     dir = PortDirection.Input
             if dir == PortDirection.Input:
-                top.ports_i[name] = (next_input_bit, signal.width)
+                top.ports_i[name] = (next_input_bit, len(signal))
                 value = _nir.Value(
                     _nir.Net.from_cell(0, bit)
-                    for bit in range(next_input_bit, next_input_bit + signal.width)
+                    for bit in range(next_input_bit, next_input_bit + len(signal))
                 )
-                next_input_bit += signal.width
+                next_input_bit += len(signal)
                 self.connect(signal_value, value, src_loc=signal.src_loc)
             elif dir == PortDirection.Output:
                 top.ports_o[name] = signal_value
@@ -1276,7 +1278,7 @@ class NetlistEmitter:
                                           inputs=_nir.Value(cond),
                                           src_loc=driver.domain.rst.src_loc)
                 cond, = self.netlist.add_value_cell(1, cell)
-                init = _nir.Value.from_const(driver.signal.init, driver.signal.width)
+                init = _nir.Value.from_const(driver.signal.init, len(driver.signal))
                 driver.assignments.append(_nir.Assignment(cond=cond, start=0,
                                                          value=init, src_loc=driver.signal.src_loc))
             value = driver.emit_value(self)

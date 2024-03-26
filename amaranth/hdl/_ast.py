@@ -1542,7 +1542,7 @@ class Const(Value, metaclass=_ConstMeta):
             width = 0
             for part in obj.parts:
                 const  = Const.cast(part)
-                part_value = Const(const.value, unsigned(const.width)).value
+                part_value = Const(const.value, unsigned(len(const))).value
                 value |= part_value << width
                 width += len(const)
             return Const(value, width)
@@ -1567,34 +1567,40 @@ class Const(Value, metaclass=_ConstMeta):
                     category=SyntaxWarning,
                     stacklevel=3)
             shape = Shape.cast(shape, src_loc_at=1 + src_loc_at)
-        self._width  = shape.width
-        self._signed = shape.signed
         if shape.signed and value >> (shape.width - 1) & 1:
             value |= -(1 << shape.width)
         else:
             value &= (1 << shape.width) - 1
+        self._shape = shape
         self._value = value
+
+    def shape(self):
+        return self._shape
 
     @property
     def value(self):
         return self._value
 
+    # TODO(amaranth-0.6): remove
     @property
+    @deprecated("`const.width` is deprecated and will be removed in Amaranth 0.6; use `len(const)` instead")
     def width(self):
-        return self._width
+        return self.shape().width
 
+    # TODO(amaranth-0.6): remove
     @property
+    @deprecated("`const.signed` is deprecated and will be removed in Amaranth 0.6; use `const.shape().signed` instead")
     def signed(self):
-        return self._signed
-
-    def shape(self):
-        return Shape(self.width, self.signed)
+        return self.shape().signed
 
     def _rhs_signals(self):
         return SignalSet()
 
     def __repr__(self):
-        return "(const {}'{}d{})".format(self.width, "s" if self.signed else "", self.value)
+        if self._shape.signed:
+            return f"(const {self._shape.width}'sd{self._value})"
+        else:
+            return f"(const {self._shape.width}'d{self._value})"
 
 
 C = Const  # shorthand
@@ -1964,15 +1970,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                                 .format(orig_init))
         # Avoid false positives for all-zeroes and all-ones
         if orig_init is not None and not (isinstance(orig_init, int) and orig_init in (0, -1)):
-            if init.shape().signed and not self.signed:
+            if init.shape().signed and not self._signed:
                 warnings.warn(
                     message="Initial value {!r} is signed, but the signal shape is {!r}"
                             .format(orig_init, shape),
                     category=SyntaxWarning,
                     stacklevel=2)
-            elif (init.shape().width > self.width or
-                  init.shape().width == self.width and
-                    self.signed and not init.shape().signed):
+            elif (init.shape().width > self._width or
+                  init.shape().width == self._width and
+                    self._signed and not init.shape().signed):
                 warnings.warn(
                     message="Initial value {!r} will be truncated to the signal shape {!r}"
                             .format(orig_init, shape),
@@ -2030,13 +2036,20 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         else:
             self._decoder = decoder
 
-    @property
-    def width(self):
-        return self._width
+    def shape(self):
+        return Shape(self._width, self._signed)
 
+    # TODO(amaranth-0.6): remove
     @property
+    @deprecated("`signal.width` is deprecated and will be removed in Amaranth 0.6; use `len(signal)` instead")
+    def width(self):
+        return self.shape().width
+
+    # TODO(amaranth-0.6): remove
+    @property
+    @deprecated("`signal.signed` is deprecated and will be removed in Amaranth 0.6; use `signal.shape().signed` instead")
     def signed(self):
-        return self._signed
+        return self.shape().signed
 
     @property
     def init(self):
@@ -2095,9 +2108,6 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         if init is not None:
             kw["init"] = init
         return cls(**kw, src_loc_at=1 + src_loc_at)
-
-    def shape(self):
-        return Shape(self.width, self.signed)
 
     def _lhs_signals(self):
         return SignalSet((self,))
