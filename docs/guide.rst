@@ -1842,7 +1842,7 @@ Although an :class:`Instance` is not an elaboratable, as a special case, it can 
 I/O buffer instances
 ====================
 
-An *I/O buffer instance* is a submodule that allows assigning :ref:`I/O values <lang-iovalues>` to or from regular :ref:`values <lang-values>` without the use of an external, toolchain- and technology-dependent :ref:`instance <lang-instance>`. It can be created in four configurations: input, output, tristatable output, and bidirectional (input/output).
+An *I/O buffer instance* is a submodule that allows connecting :ref:`I/O values <lang-iovalues>` and regular :ref:`values <lang-values>` without the use of an external, toolchain- and technology-dependent :ref:`instance <lang-instance>`. It can be created in four configurations: input, output, tristatable output, and bidirectional (input/output).
 
 .. testcode::
 
@@ -1856,7 +1856,7 @@ In the input configuration, the buffer combinatorially drives a signal :py:`i` b
 
     port = IOPort(4)
     port_i = Signal(4)
-    m.submodules.ibuf = IOBufferInstance(port, i=port_i)
+    m.submodules += IOBufferInstance(port, i=port_i)
 
 In the output configuration, the buffer combinatorially drives the port by a value :py:`o`:
 
@@ -1864,7 +1864,7 @@ In the output configuration, the buffer combinatorially drives the port by a val
 
     port = IOPort(4)
     port_o = Signal(4)
-    m.submodules.obuf = IOBufferInstance(port, o=port_o)
+    m.submodules += IOBufferInstance(port, o=port_o)
 
 In the tristatable output configuration, the buffer combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
@@ -1873,7 +1873,7 @@ In the tristatable output configuration, the buffer combinatorially drives the p
     port = IOPort(4)
     port_o = Signal(4)
     port_oe = Signal()
-    m.submodules.obuft = IOBufferInstance(port, o=port_o, oe=port_oe)
+    m.submodules += IOBufferInstance(port, o=port_o, oe=port_oe)
 
 In the bidirectional (input/output) configuration, the buffer combiatorially drives a signal :py:`i` by the port, combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
@@ -1883,6 +1883,6 @@ In the bidirectional (input/output) configuration, the buffer combiatorially dri
     port_i = Signal(4)
     port_o = Signal(4)
     port_oe = Signal()
-    m.submodules.iobuf = IOBufferInstance(port, i=port_i, o=port_o, oe=port_oe)
+    m.submodules += IOBufferInstance(port, i=port_i, o=port_o, oe=port_oe)
 
 The width of the :py:`i` and :py:`o` values (when present) must be the same as the width of the port, and the width of the :py:`oe` value must be 1.
