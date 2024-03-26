@@ -309,9 +309,9 @@ class Instance(Fragment):
     def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
         super().__init__(src_loc=src_loc or tracer.get_src_loc(src_loc_at))
 
-        self.type        = type
-        self.parameters  = OrderedDict()
-        self.named_ports = OrderedDict()
+        self.type       = type
+        self.parameters = OrderedDict()
+        self.ports      = OrderedDict()
 
         for (kind, name, value) in args:
             if kind == "a":
@@ -324,7 +324,7 @@ class Instance(Fragment):
                 else:
                     if not isinstance(value, _ast.IOValue):
                         value = _ast.Value.cast(value)
-                self.named_ports[name] = (value, kind)
+                self.ports[name] = (value, kind)
             else:
                 raise NameError("Instance argument {!r} should be a tuple (kind, name, value) "
                                 "where kind is one of \"a\", \"p\", \"i\", \"o\", or \"io\""
@@ -338,13 +338,13 @@ class Instance(Fragment):
             elif kw.startswith("i_"):
                 if not isinstance(arg, _ast.IOValue):
                     arg = _ast.Value.cast(arg)
-                self.named_ports[kw[2:]] = (arg, "i")
+                self.ports[kw[2:]] = (arg, "i")
             elif kw.startswith("o_"):
                 if not isinstance(arg, _ast.IOValue):
                     arg = _ast.Value.cast(arg)
-                self.named_ports[kw[2:]] = (arg, "o")
+                self.ports[kw[2:]] = (arg, "o")
             elif kw.startswith("io_"):
-                self.named_ports[kw[3:]] = (_ast.IOValue.cast(arg), "io")
+                self.ports[kw[3:]] = (_ast.IOValue.cast(arg), "io")
             else:
                 raise NameError("Instance keyword argument {}={!r} does not start with one of "
                                 "\"a_\", \"p_\", \"i_\", \"o_\", or \"io_\""
@@ -481,7 +481,7 @@ class Design:
         """Collects used signals and IO ports for a fragment and all its subfragments."""
         from . import _mem
         if isinstance(fragment, _ir.Instance):
-            for conn, kind in fragment.named_ports.values():
+            for conn, kind in fragment.ports.values():
                 if isinstance(conn, _ast.IOValue):
                     for port in conn._ioports():
                         self._use_io_port(fragment, port)
@@ -1194,7 +1194,7 @@ class NetlistEmitter:
         ports_io = {}
         outputs = []
         next_output_bit = 0
-        for port_name, (port_conn, dir) in instance.named_ports.items():
+        for port_name, (port_conn, dir) in instance.ports.items():
             if isinstance(port_conn, _ast.IOValue):
                 if dir == 'i':
                     xlat_dir = _nir.IODirection.Input

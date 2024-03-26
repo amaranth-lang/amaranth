@@ -232,15 +232,15 @@ class FragmentTransformer:
         for subfragment, name, src_loc in fragment.subfragments:
             new_fragment.add_subfragment(self(subfragment), name, src_loc=src_loc)
 
-    def map_named_ports(self, fragment, new_fragment):
+    def map_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
-            for name, (value, dir) in fragment.named_ports.items():
+            for name, (value, dir) in fragment.ports.items():
                 if isinstance(value, Value):
-                    new_fragment.named_ports[name] = self.on_value(value), dir
+                    new_fragment.ports[name] = self.on_value(value), dir
                 else:
-                    new_fragment.named_ports[name] = value, dir
+                    new_fragment.ports[name] = value, dir
         else:
-            new_fragment.named_ports = OrderedDict(fragment.named_ports.items())
+            new_fragment.ports = OrderedDict(fragment.ports.items())
 
     def map_domains(self, fragment, new_fragment):
         for domain in fragment.iter_domains():
@@ -302,7 +302,7 @@ class FragmentTransformer:
         elif isinstance(fragment, Instance):
             new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
-            self.map_named_ports(fragment, new_fragment)
+            self.map_ports(fragment, new_fragment)
         elif isinstance(fragment, IOBufferInstance):
             if hasattr(self, "on_value"):
                 new_fragment = IOBufferInstance(
@@ -452,7 +452,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
                 self._add_used_domain(port._domain)
 
         if isinstance(fragment, Instance):
-            for name, (value, dir) in fragment.named_ports.items():
+            for name, (value, dir) in fragment.ports.items():
                 if not isinstance(value, IOValue):
                     self.on_value(value)
 
