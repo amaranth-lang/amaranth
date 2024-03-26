@@ -44,7 +44,7 @@ class MemoryInstance(Fragment):
             assert len(self._en) == 1
             if domain == "comb":
                 assert isinstance(self._en, Const)
-                assert self._en.width == 1
+                assert self._en.shape() == unsigned(1)
                 assert self._en.value == 1
                 assert not self._transparent_for
 

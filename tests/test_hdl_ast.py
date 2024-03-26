@@ -897,18 +897,16 @@ class SliceTestCase(FHDLTestCase):
     def test_const(self):
         a = Const.cast(Const(0x1234, 16)[4:12])
         self.assertEqual(a.value, 0x23)
-        self.assertEqual(a.width, 8)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(8))
         a = Const.cast(Const(-4, signed(8))[1:6])
         self.assertEqual(a.value, 0x1e)
-        self.assertEqual(a.width, 5)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(5))
 
 
 class BitSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal(range(self.c.width))
+        self.s = Signal(range(len(self.c)))
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
@@ -946,7 +944,7 @@ class BitSelectTestCase(FHDLTestCase):
 class WordSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal(range(self.c.width))
+        self.s = Signal(range(len(self.c)))
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
@@ -1043,12 +1041,10 @@ class CatTestCase(FHDLTestCase):
     def test_const(self):
         a = Const.cast(Cat(Const(1, 1), Const(0, 1), Const(3, 2), Const(2, 2)))
         self.assertEqual(a.value, 0x2d)
-        self.assertEqual(a.width, 6)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(6))
         a = Const.cast(Cat(Const(-4, 8), Const(-3, 8)))
         self.assertEqual(a.value, 0xfdfc)
-        self.assertEqual(a.width, 16)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(16))
 
 
 class ArrayTestCase(FHDLTestCase):

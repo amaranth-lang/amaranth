@@ -602,7 +602,7 @@ class _ControlInserter(FragmentTransformer):
 
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(Const(s.init, s.width)) for s in signals if not s.reset_less]
+        stmts = [s.eq(Const(s.init, s.shape())) for s in signals if not s.reset_less]
         fragment.add_statements(domain, Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
 
 
