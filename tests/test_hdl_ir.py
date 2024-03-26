@@ -721,7 +721,7 @@ class InstanceTestCase(FHDLTestCase):
             ("PARAM1", 0x1234),
             ("PARAM2", 0x5678),
         ]))
-        self.assertEqual(inst.named_ports, OrderedDict([
+        self.assertEqual(inst.ports, OrderedDict([
             ("s1", (s1, "i")),
             ("s2", (s2, "o")),
             ("io1", (io1, "i")),
@@ -741,10 +741,10 @@ class InstanceTestCase(FHDLTestCase):
             i_s3=3,
             io_s4=Cat(),
         )
-        self.assertRepr(inst.named_ports["s1"][0], "(const 1'd1)")
-        self.assertRepr(inst.named_ports["s2"][0], "(io-cat )")
-        self.assertRepr(inst.named_ports["s3"][0], "(const 2'd3)")
-        self.assertRepr(inst.named_ports["s4"][0], "(io-cat )")
+        self.assertRepr(inst.ports["s1"][0], "(const 1'd1)")
+        self.assertRepr(inst.ports["s2"][0], "(io-cat )")
+        self.assertRepr(inst.ports["s3"][0], "(const 2'd3)")
+        self.assertRepr(inst.ports["s4"][0], "(io-cat )")
 
     def test_wrong_construct_arg(self):
         s = Signal()
@@ -782,7 +782,7 @@ class InstanceTestCase(FHDLTestCase):
         f = self.inst
         self.assertEqual(f.type, "cpu")
         self.assertEqual(f.parameters, OrderedDict([("RESET", 0x1234)]))
-        self.assertEqual(list(f.named_ports.keys()), ["clk", "rst", "stb", "data", "pins"])
+        self.assertEqual(list(f.ports.keys()), ["clk", "rst", "stb", "data", "pins"])
 
     def test_prepare_attrs(self):
         self.setUp_cpu()
