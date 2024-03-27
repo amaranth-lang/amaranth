@@ -1042,15 +1042,15 @@ class _AggregateMeta(ShapeCastable, type):
             # be instantiated. It can also be subclassed, and used to share layout and behavior.
             layout  = dict()
             default = dict()
-            for name in {**namespace["__annotations__"]}:
+            for field_name in {**namespace["__annotations__"]}:
                 try:
-                    Shape.cast(namespace["__annotations__"][name])
+                    Shape.cast(namespace["__annotations__"][field_name])
                 except TypeError:
                     # Not a shape-castable annotation; leave as-is.
                     continue
-                layout[name] = namespace["__annotations__"].pop(name)
-                if name in namespace:
-                    default[name] = namespace.pop(name)
+                layout[field_name] = namespace["__annotations__"].pop(field_name)
+                if field_name in namespace:
+                    default[field_name] = namespace.pop(field_name)
             cls = type.__new__(metacls, name, bases, namespace)
             if cls.__layout_cls is UnionLayout:
                 if len(default) > 1:
