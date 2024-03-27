@@ -951,9 +951,6 @@ class NetlistEmitter:
                 elems = []
                 for patterns, elem, in value.cases:
                     if patterns is not None:
-                        if not patterns:
-                            # Hack: empty pattern set cannot be supported by RTLIL.
-                            continue
                         for pattern in patterns:
                             assert len(pattern) == len(test)
                         cell = _nir.Matches(module_idx, value=test, patterns=patterns,
@@ -1092,9 +1089,6 @@ class NetlistEmitter:
             elems = []
             for patterns, elem in lhs.cases:
                 if patterns is not None:
-                    if not patterns:
-                        # Hack: empty pattern set cannot be supported by RTLIL.
-                        continue
                     for pattern in patterns:
                         assert len(pattern) == len(test)
                     cell = _nir.Matches(module_idx, value=test, patterns=patterns,
@@ -1192,9 +1186,6 @@ class NetlistEmitter:
             case_stmts = []
             for patterns, stmts, case_src_loc in stmt.cases:
                 if patterns is not None:
-                    if not patterns:
-                        # Hack: empty pattern set cannot be supported by RTLIL.
-                        continue
                     for pattern in patterns:
                         assert len(pattern) == len(test)
                     cell = _nir.Matches(module_idx, value=test, patterns=patterns,
