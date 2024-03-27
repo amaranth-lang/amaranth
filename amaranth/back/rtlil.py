@@ -1,4 +1,5 @@
 from typing import Iterable
+from contextlib import contextmanager
 import io
 
 from ..utils import bits_for
@@ -47,89 +48,141 @@ def _const(value):
         assert False, f"Invalid constant {value!r}"
 
 
-class _Namer:
+def _src(src_loc):
+    if src_loc is None:
+        return None
+    file, line = src_loc
+    return f"{file}:{line}"
+
+
+class Emitter:
     def __init__(self):
-        super().__init__()
-        self._anon  = 0
-        self._index = 0
-        self._names = set()
+        self._indent = ""
+        self._lines = []
+        self.port_id = 0
 
-    def anonymous(self):
-        name = f"U$${self._anon}"
-        assert name not in self._names
-        self._anon += 1
-        return name
+    def __call__(self, line=None):
+        if line is not None:
+            self._lines.append(f"{self._indent}{line}\n")
+        else:
+            self._lines.append("\n")
 
-    def _make_name(self, name, local):
-        if name is None:
-            self._index += 1
-            name = f"${self._index}"
-        elif not local and name[0] not in "\\$":
-            name = f"\\{name}"
-        while name in self._names:
-            self._index += 1
-            name = f"{name}${self._index}"
-        self._names.add(name)
-        return name
-
-
-class _BufferedBuilder:
-    def __init__(self):
-        super().__init__()
-        self._buffer = io.StringIO()
+    @contextmanager
+    def indent(self):
+        orig = self._indent
+        self._indent += "  "
+        yield
+        self._indent = orig
 
     def __str__(self):
-        return self._buffer.getvalue()
-
-    def _append(self, fmt, *args, **kwargs):
-        self._buffer.write(fmt.format(*args, **kwargs))
+        return "".join(self._lines)
 
 
-class _AttrBuilder:
-    def __init__(self, emit_src, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class Design:
+    def __init__(self, emit_src=True):
+        self.modules = {}
         self.emit_src = emit_src
 
-    def _attribute(self, name, value, *, indent=0):
-        self._append("{}attribute \\{} {}\n",
-                     "  " * indent, name, _const(value))
+    def module(self, name, **kwargs):
+        assert name not in self.modules
+        self.modules[name] = res = Module(name, emit_src=self.emit_src, **kwargs)
+        return res
 
-    def _attributes(self, attrs, *, src=None, **kwargs):
-        for name, value in attrs.items():
-            self._attribute(name, value, **kwargs)
-        if src and self.emit_src:
-            self._attribute("src", src, **kwargs)
+    def __str__(self):
+        emitter = Emitter()
+        for module in self.modules.values():
+            module.emit(emitter)
+        return str(emitter)
 
 
-class _Builder(_BufferedBuilder, _Namer):
-    def __init__(self, emit_src):
-        super().__init__()
+class Module:
+    def __init__(self, name, src_loc=None, attrs=None, emit_src=True):
+        self.name = name
+        self._auto_index = 0
+        self.contents = {}
+        self.connections = []
+        self.attributes = {"generator": "Amaranth"}
         self.emit_src = emit_src
+        if src_loc is not None and emit_src:
+            self.attributes["src"] = _src(src_loc)
+        if attrs is not None:
+            self.attributes.update(attrs)
 
-    def module(self, name=None, attrs={}, *, src=None):
-        name = self._make_name(name, local=False)
-        return _ModuleBuilder(self, name, attrs, src=src)
+    def _auto_name(self):
+        self._auto_index += 1
+        return f"${self._auto_index}"
+
+    def _name(self, name):
+        if name is None:
+            name = self._auto_name()
+        else:
+            name = f"\\{name}"
+        assert name not in self.contents
+        return name
+
+    def wire(self, width, *, name=None, **kwargs):
+        name = self._name(name)
+        if not self.emit_src and "src_loc" in kwargs:
+            del kwargs["src_loc"]
+        self.contents[name] = res = Wire(width, name=name, **kwargs)
+        return res
+
+    def cell(self, kind, name=None, **kwargs):
+        name = self._name(name)
+        if not self.emit_src and "src_loc" in kwargs:
+            del kwargs["src_loc"]
+        self.contents[name] = res = Cell(kind, name=name, **kwargs)
+        return res
+
+    def memory(self, width, depth, name=None, **kwargs):
+        name = self._name(name)
+        if not self.emit_src and "src_loc" in kwargs:
+            del kwargs["src_loc"]
+        self.contents[name] = res = Memory(width, depth, name=name, **kwargs)
+        return res
+
+    def process(self, *, name=None, **kwargs):
+        name = self._name(name)
+        if not self.emit_src and "src_loc" in kwargs:
+            del kwargs["src_loc"]
+        self.contents[name] = res = Process(name=name, **kwargs)
+        return res
+
+    def connect(self, lhs, rhs):
+        self.connections.append((lhs, rhs))
+
+    def attribute(self, name, value):
+        assert name not in self.attributes
+        self.attributes[name] = value
+
+    def emit(self, line):
+        line.port_id = 0
+        for name, value in self.attributes.items():
+            line(f"attribute \\{name} {_const(value)}")
+        line(f"module \\{self.name}")
+        line()
+        with line.indent():
+            for item in self.contents.values():
+                item.emit(line)
+        for (lhs, rhs) in self.connections:
+            line(f"connect {lhs} {rhs}")
+        if self.connections:
+            line()
+        line("end")
+        line()
 
 
-class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
-    def __init__(self, rtlil, name, attrs, *, src=None):
-        super().__init__(emit_src=rtlil.emit_src)
-        self.rtlil = rtlil
-        self.name  = name
-        self.src   = src
-        self.attrs = {"generator": "Amaranth"}
-        self.attrs.update(attrs)
+def _make_attributes(attrs, src_loc):
+    res = {}
+    if src_loc is not None:
+        res["src"] = _src(src_loc)
+    if attrs is not None:
+        res.update(attrs)
+    return res
 
-    def __enter__(self):
-        self._attributes(self.attrs, src=self.src)
-        self._append("module {}\n", self.name)
-        return self
 
-    def __exit__(self, *args):
-        self._append("end\n")
-        self.rtlil._buffer.write(str(self))
-
-    def wire(self, width, port_id=None, port_kind=None, name=None, attrs={}, src="", signed=False):
+class Wire:
+    def __init__(self, width, *, name, src_loc=None, attrs=None, signed=False, port_kind=None):
         # Very large wires are unlikely to work. Verilog 1364-2005 requires the limit on vectors
         # to be at least 2**16 bits, and Yosys 0.9 cannot read RTLIL with wires larger than 2**32
         # bits. In practice, wires larger than 2**16 bits, although accepted, cause performance
@@ -137,131 +190,192 @@ class _ModuleBuilder(_AttrBuilder, _BufferedBuilder, _Namer):
         if width > 2 ** 16:
             raise OverflowError("Wire created at {} is {} bits wide, which is unlikely to "
                                 "synthesize correctly"
-                                .format(src or "unknown location", width))
+                                .format(_src(src_loc) or "unknown location", width))
+        self.name = name
+        self.width = width
+        self.signed = signed
+        self.port_kind = port_kind
+        self.attributes = _make_attributes(attrs, src_loc)
 
-        self._attributes(attrs, src=src, indent=1)
-        name = self._make_name(name, local=False)
-        signed = " signed" if signed else ""
-        if port_id is None:
-            self._append("  wire width {}{} {}\n", width, signed, name)
+    def attribute(self, name, value):
+        assert name not in self.attributes
+        self.attributes[name] = value
+
+    def emit(self, line):
+        for name, value in self.attributes.items():
+            line(f"attribute \\{name} {_const(value)}")
+        signed = " signed" if self.signed else ""
+        if self.port_kind is None:
+            line(f"wire width {self.width}{signed} {self.name}")
         else:
-            assert port_kind in ("input", "output", "inout")
-            # By convention, Yosys ports named $\d+ are positional, so there is no way to use
-            # a port with such a name. See amaranth-lang/amaranth#733.
-            assert port_id is not None
-            self._append("  wire width {} {} {}{} {}\n", width, port_kind, port_id, signed, name)
-        return name
-
-    def connect(self, lhs, rhs):
-        self._append("  connect {} {}\n", lhs, rhs)
-
-    def memory(self, width, size, name=None, attrs={}, src=""):
-        self._attributes(attrs, src=src, indent=1)
-        name = self._make_name(name, local=False)
-        self._append("  memory width {} size {} {}\n", width, size, name)
-        return name
-
-    def cell(self, kind, name=None, params={}, ports={}, attrs={}, src=""):
-        self._attributes(attrs, src=src, indent=1)
-        name = self._make_name(name, local=False)
-        self._append("  cell {} {}\n", kind, name)
-        for param, value in params.items():
-            if isinstance(value, float):
-                self._append("    parameter real \\{} \"{!r}\"\n",
-                             param, value)
-            elif _signed(value):
-                self._append("    parameter signed \\{} {}\n",
-                             param, _const(value))
-            else:
-                self._append("    parameter \\{} {}\n",
-                             param, _const(value))
-        for port, wire in ports.items():
-            self._append("    connect \\{} {}\n", port, wire)
-        self._append("  end\n")
-        return name
-
-    def process(self, name=None, attrs={}, src=""):
-        name = self._make_name(name, local=True)
-        return _ProcessBuilder(self, name, attrs, src)
+            line(f"wire width {self.width} {self.port_kind} {line.port_id} {signed} {self.name}")
+            line.port_id += 1
+        line()
 
 
-class _ProcessBuilder(_AttrBuilder, _BufferedBuilder):
-    def __init__(self, rtlil, name, attrs, src):
-        super().__init__(emit_src=rtlil.emit_src)
-        self.rtlil = rtlil
-        self.name  = name
-        self.attrs = {}
-        self.src   = src
+class Cell:
+    def __init__(self, kind, *, name, ports=None, parameters=None, attrs=None, src_loc=None):
+        self.kind = kind
+        self.name = name
+        self.parameters = parameters or {}
+        self.ports = ports or {}
+        self.attributes = _make_attributes(attrs, src_loc)
 
-    def __enter__(self):
-        self._attributes(self.attrs, src=self.src, indent=1)
-        self._append("  process {}\n", self.name)
-        return self
+    def port(self, name, value):
+        assert name not in self.ports
+        self.ports[name] = value
 
-    def __exit__(self, *args):
-        self._append("  end\n")
-        self.rtlil._buffer.write(str(self))
+    def parameter(self, name, value):
+        assert name not in self.parameters
+        self.parameters[name] = value
 
-    def case(self):
-        return _CaseBuilder(self, indent=2)
+    def attribute(self, name, value):
+        assert name not in self.attributes
+        self.attributes[name] = value
+
+    def emit(self, line):
+        for name, value in self.attributes.items():
+            line(f"attribute \\{name} {_const(value)}")
+        line(f"cell {self.kind} {self.name}")
+        with line.indent():
+            for name, value in self.parameters.items():
+                if isinstance(value, float):
+                    line(f"parameter real \\{name} \"{value!r}\"")
+                elif _signed(value):
+                    line(f"parameter signed \\{name} {_const(value)}")
+                else:
+                    line(f"parameter \\{name} {_const(value)}")
+            for name, value in self.ports.items():
+                line(f"connect \\{name} {value}")
+        line(f"end")
+        line()
 
 
-class _CaseBuilder:
-    def __init__(self, rtlil, indent):
-        self.rtlil  = rtlil
-        self.indent = indent
+class Memory:
+    def __init__(self, width, depth, *, name, attrs=None, src_loc=None):
+        self.width = width
+        self.depth = depth
+        self.name = name
+        self.attributes = _make_attributes(attrs, src_loc)
 
-    def _append(self, *args, **kwargs):
-        self.rtlil._append(*args, **kwargs)
+    def attribute(self, name, value):
+        assert name not in self.attributes
+        self.attributes[name] = value
 
-    def __enter__(self):
-        return self
+    def emit(self, line):
+        for name, value in self.attributes.items():
+            line(f"attribute \\{name} {_const(value)}")
+        line(f"memory width {self.width} size {self.depth} {self.name}")
+        line()
 
-    def __exit__(self, *args):
-        pass
+
+def _emit_process_contents(contents, emit):
+    index = 0
+    while index < len(contents) and isinstance(contents[index], Assignment):
+        contents[index].emit(emit)
+        index += 1
+    while index < len(contents):
+        if isinstance(contents[index], Assignment):
+            emit(f"switch {{}}")
+            with emit.indent():
+                emit(f"case")
+                with emit.indent():
+                    while index < len(contents) and isinstance(contents[index], Assignment):
+                        contents[index].emit(emit)
+                        index += 1
+            emit(f"end")
+        else:
+            contents[index].emit(emit)
+            index += 1
+
+
+class Process:
+    def __init__(self, *, name, attrs=None, src_loc=None):
+        self.name = name
+        self.contents = []
+        self.attributes = _make_attributes(attrs, src_loc)
+
+    def attribute(self, name, value):
+        assert name not in self.attributes
+        self.attributes[name] = value
 
     def assign(self, lhs, rhs):
-        self._append("{}assign {} {}\n", "  " * self.indent, lhs, rhs)
+        self.contents.append(Assignment(lhs, rhs))
 
-    def switch(self, cond, attrs={}, src=""):
-        return _SwitchBuilder(self.rtlil, cond, attrs, src, self.indent)
+    def switch(self, sel):
+        res = Switch(sel)
+        self.contents.append(res)
+        return res
+
+    def emit(self, line):
+        for name, value in self.attributes.items():
+            line(f"attribute \\{name} {_const(value)}")
+        line(f"process {self.name}")
+        with line.indent():
+            _emit_process_contents(self.contents, line)
+        line(f"end")
+        line()
 
 
-class _SwitchBuilder(_AttrBuilder):
-    def __init__(self, rtlil, cond, attrs, src, indent):
-        super().__init__(emit_src=rtlil.emit_src)
-        self.rtlil  = rtlil
-        self.cond   = cond
-        self.attrs  = attrs
-        self.src    = src
-        self.indent = indent
+class Assignment:
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
 
-    def _append(self, *args, **kwargs):
-        self.rtlil._append(*args, **kwargs)
+    def emit(self, line):
+        line(f"assign {self.lhs} {self.rhs}")
 
-    def __enter__(self):
-        self._attributes(self.attrs, src=self.src, indent=self.indent)
-        self._append("{}switch {}\n", "  " * self.indent, self.cond)
-        return self
 
-    def __exit__(self, *args):
-        self._append("{}end\n", "  " * self.indent)
+class Switch:
+    def __init__(self, sel):
+        self.sel = sel
+        self.cases = []
 
-    def case(self, *values, attrs={}, src=""):
-        self._attributes(attrs, src=src, indent=self.indent + 1)
-        if values == ():
-            self._append("{}case\n", "  " * (self.indent + 1))
+    def case(self, patterns):
+        res = Case(patterns)
+        if patterns:
+            # RTLIL doesn't support cases with empty pattern list (they get interpreted
+            # as a default case instead, which is batshit and the exact opposite of
+            # what we want). When such a case is requested, return a case so that
+            # the caller can emit stuff into it, but don't actually include it in
+            # the switch.
+            self.cases.append(res)
+        return res
+
+    def default(self):
+        res = Case(())
+        self.cases.append(res)
+        return res
+
+    def emit(self, line):
+        line(f"switch {self.sel}")
+        with line.indent():
+            for case in self.cases:
+                case.emit(line)
+        line("end")
+
+
+class Case:
+    def __init__(self, patterns):
+        self.patterns = patterns
+        self.contents = []
+
+    def assign(self, lhs, rhs):
+        self.contents.append(Assignment(lhs, rhs))
+
+    def switch(self, sel):
+        res = Switch(sel)
+        self.contents.append(res)
+        return res
+
+    def emit(self, line):
+        if self.patterns:
+            patterns = ", ".join(f"{len(pattern)}'{pattern}" for pattern in self.patterns)
+            line(f"case {patterns}")
         else:
-            self._append("{}case {}\n", "  " * (self.indent + 1),
-                         ", ".join(f"{len(value)}'{value}" for value in values))
-        return _CaseBuilder(self.rtlil, self.indent + 2)
-
-
-def _src(src_loc):
-    if src_loc is None:
-        return None
-    file, line = src_loc
-    return f"{file}:{line}"
+            line(f"case")
+        with line.indent():
+            _emit_process_contents(self.contents, line)
 
 
 class MemoryInfo:
@@ -316,7 +430,7 @@ class ModuleEmitter:
             if isinstance(cell, _nir.Memory):
                 self.memories[cell_idx] = MemoryInfo(
                     self.builder.memory(cell.width, cell.depth, name=cell.name,
-                                       attrs=cell.attributes, src=_src(cell.src_loc)))
+                                        attrs=cell.attributes, src_loc=cell.src_loc).name)
 
         for cell_idx in self.module.cells:
             cell = self.netlist.cells[cell_idx]
@@ -392,9 +506,9 @@ class ModuleEmitter:
                 shape = signal.shape()
                 wire  = self.builder.wire(width=shape.width, signed=shape.signed,
                                           name=name, attrs=attrs,
-                                          src=_src(signal.src_loc))
+                                          src_loc=signal.src_loc)
                 self.sigport_wires[name] = (wire, value)
-                self.name_map[signal] = (*self.module.name, wire[1:])
+                self.name_map[signal] = (*self.module.name, wire.name[1:])
 
     def emit_port_wires(self):
         named_signals = {name: signal for signal, name in self.module.signal_names.items()}
@@ -403,9 +517,9 @@ class ModuleEmitter:
             if name in named_signals:
                 signed = named_signals[name].shape().signed
             wire = self.builder.wire(width=len(value), signed=signed,
-                                     port_id=port_id, port_kind=flow.value,
+                                     port_kind=flow.value,
                                      name=name, attrs=self.value_attrs.get(value, {}),
-                                     src=_src(self.value_src_loc.get(value)))
+                                     src_loc=self.value_src_loc.get(value))
             self.sigport_wires[name] = (wire, value)
             if flow == _nir.ModuleNetFlow.Output:
                 continue
@@ -425,9 +539,9 @@ class ModuleEmitter:
                 attrs = {}
                 src_loc = None
             wire = self.builder.wire(width=len(value),
-                                     port_id=port_id, port_kind=dir.value,
+                                     port_kind=dir.value,
                                      name=name, attrs=attrs,
-                                     src=_src(src_loc))
+                                     src_loc=src_loc)
             for bit, net in enumerate(value):
                 self.ionets[net] = (wire, bit)
 
@@ -516,9 +630,9 @@ class ModuleEmitter:
                     bit += 1
                 width = end_pos - begin_pos
                 if width == 1:
-                    chunks.append(f"{wire} [{start_bit}]")
+                    chunks.append(f"{wire.name} [{start_bit}]")
                 else:
-                    chunks.append(f"{wire} [{start_bit + width - 1}:{start_bit}]")
+                    chunks.append(f"{wire.name} [{start_bit + width - 1}:{start_bit}]")
             begin_pos = end_pos
 
         if len(chunks) == 1:
@@ -538,9 +652,9 @@ class ModuleEmitter:
                 bit += 1
             width = end_pos - begin_pos
             if width == 1:
-                chunks.append(f"{wire} [{start_bit}]")
+                chunks.append(f"{wire.name} [{start_bit}]")
             else:
-                chunks.append(f"{wire} [{start_bit + width - 1}:{start_bit}]")
+                chunks.append(f"{wire.name} [{start_bit + width - 1}:{start_bit}]")
             begin_pos = end_pos
 
         if len(chunks) == 1:
@@ -550,7 +664,7 @@ class ModuleEmitter:
     def emit_connects(self):
         for name, (wire, value) in self.sigport_wires.items():
             if name not in self.driven_sigports:
-                self.builder.connect(wire, self.sigspec(value))
+                self.builder.connect(wire.name, self.sigspec(value))
 
     def emit_submodules(self):
         for submodule_idx in self.module.submodules:
@@ -563,7 +677,7 @@ class ModuleEmitter:
                 for name, (value, _dir) in submodule.io_ports.items():
                     ports[name] = self.io_sigspec(value)
                 self.builder.cell(f"\\{dotted_name}", submodule.name[-1], ports=ports,
-                                  src=_src(submodule.cell_src_loc))
+                                  src_loc=submodule.cell_src_loc)
 
     def emit_assignment_list(self, cell_idx, cell):
         def emit_assignments(case, cond):
@@ -573,30 +687,13 @@ class ModuleEmitter:
             # letting parent invocation take care of the remaining assignments.
             nonlocal pos
 
-            emitted_switch = False
             while pos < len(cell.assignments):
                 assign = cell.assignments[pos]
-                if assign.cond == cond and not emitted_switch:
-                    # Not nested, and we didn't emit a switch yet, so emit the assignment.
+                if assign.cond == cond:
+                    # Not nested, so emit the assignment.
                     case.assign(self.sigspec(lhs[assign.start:assign.start + len(assign.value)]),
                                 self.sigspec(assign.value))
                     pos += 1
-                elif assign.cond == cond:
-                    # Not nested, but we emitted a subswitch. Wrap the assignments in a dummy
-                    # switch. This is necessary because Yosys executes all assignments before all
-                    # subswitches (but allows you to mix asssignments and switches in RTLIL, for
-                    # maximum confusion).
-                    with case.switch("{ }") as switch:
-                        with switch.case("") as subcase:
-                            while pos < len(cell.assignments):
-                                assign = cell.assignments[pos]
-                                if assign.cond == cond:
-                                    subcase.assign(self.sigspec(lhs[assign.start:assign.start +
-                                                                    len(assign.value)]),
-                                                   self.sigspec(assign.value))
-                                    pos += 1
-                                else:
-                                    break
                 else:
                     # Condition doesn't match this case's condition — either we encountered
                     # a nested condition, or we should break out.  Try to find out exactly
@@ -627,31 +724,25 @@ class ModuleEmitter:
                             break
                     # Now emit cases for all PriorityMatch inputs, in sequence. Consume as many
                     # assignments as possible along the way.
-                    with case.switch(self.sigspec(test)) as switch:
-                        for bit, net in enumerate(priority_cell.inputs):
-                            subcond = _nir.Net.from_cell(priority_cell_idx, bit)
-                            if net == _nir.Net.from_const(1):
-                                patterns = ()
-                            else:
-                                # Validate the above assumptions.
-                                matches_cell = self.netlist.cells[net.cell]
-                                assert isinstance(matches_cell, _nir.Matches)
-                                assert test == matches_cell.value
-                                patterns = matches_cell.patterns
-                                # RTLIL cannot support empty pattern sets.
-                                assert patterns
-                            with switch.case(*patterns) as subcase:
-                                emit_assignments(subcase, subcond)
-                    emitted_switch = True
+                    switch = case.switch(self.sigspec(test))
+                    for bit, net in enumerate(priority_cell.inputs):
+                        subcond = _nir.Net.from_cell(priority_cell_idx, bit)
+                        if net == _nir.Net.from_const(1):
+                            emit_assignments(switch.default(), subcond)
+                        else:
+                            # Validate the above assumptions.
+                            matches_cell = self.netlist.cells[net.cell]
+                            assert isinstance(matches_cell, _nir.Matches)
+                            assert test == matches_cell.value
+                            patterns = matches_cell.patterns
+                            emit_assignments(switch.case(patterns), subcond)
 
         lhs = _nir.Value(_nir.Net.from_cell(cell_idx, bit) for bit in range(len(cell.default)))
-        with self.builder.process(src=_src(cell.src_loc)) as proc:
-            with proc.case() as root_case:
-                root_case.assign(self.sigspec(lhs), self.sigspec(cell.default))
-
-                pos = 0 # nonlocally used in `emit_assignments`
-                emit_assignments(root_case, _nir.Net.from_const(1))
-                assert pos == len(cell.assignments)
+        proc = self.builder.process(src_loc=cell.src_loc)
+        proc.assign(self.sigspec(lhs), self.sigspec(cell.default))
+        pos = 0 # nonlocally used in `emit_assignments`
+        emit_assignments(proc, _nir.Net.from_const(1))
+        assert pos == len(cell.assignments)
 
     def emit_operator(self, cell_idx, cell):
         UNARY_OPERATORS = {
@@ -693,12 +784,12 @@ class ModuleEmitter:
             operand, = cell.inputs
             self.builder.cell(cell_type, ports={
                 "A": self.sigspec(operand),
-                "Y": self.cell_wires[cell_idx]
-            }, params={
+                "Y": self.cell_wires[cell_idx].name
+            }, parameters={
                 "A_SIGNED": False,
                 "A_WIDTH": len(operand),
                 "Y_WIDTH": cell.width,
-            }, src=_src(cell.src_loc))
+            }, src_loc=cell.src_loc)
         elif len(cell.inputs) == 2:
             cell_type, a_signed, b_signed = BINARY_OPERATORS[cell.operator]
             operand_a, operand_b = cell.inputs
@@ -707,43 +798,43 @@ class ModuleEmitter:
                 self.builder.cell(cell_type, ports={
                     "A": self.sigspec(operand_a),
                     "B": self.sigspec(operand_b),
-                    "Y": result,
-                }, params={
+                    "Y": result.name,
+                }, parameters={
                     "A_SIGNED": a_signed,
                     "B_SIGNED": b_signed,
                     "A_WIDTH": len(operand_a),
                     "B_WIDTH": len(operand_b),
                     "Y_WIDTH": cell.width,
-                }, src=_src(cell.src_loc))
+                }, src_loc=cell.src_loc)
                 nonzero = self.builder.wire(1)
                 self.builder.cell("$reduce_bool", ports={
                     "A": self.sigspec(operand_b),
-                    "Y": nonzero,
-                }, params={
+                    "Y": nonzero.name,
+                }, parameters={
                     "A_SIGNED": False,
                     "A_WIDTH": len(operand_b),
                     "Y_WIDTH": 1,
-                }, src=_src(cell.src_loc))
+                }, src_loc=cell.src_loc)
                 self.builder.cell("$mux", ports={
-                    "S": nonzero,
+                    "S": nonzero.name,
                     "A": self.sigspec(_nir.Value.zeros(cell.width)),
-                    "B": result,
-                    "Y": self.cell_wires[cell_idx]
-                }, params={
+                    "B": result.name,
+                    "Y": self.cell_wires[cell_idx].name
+                }, parameters={
                     "WIDTH": cell.width,
-                }, src=_src(cell.src_loc))
+                }, src_loc=cell.src_loc)
             else:
                 self.builder.cell(cell_type, ports={
                     "A": self.sigspec(operand_a),
                     "B": self.sigspec(operand_b),
-                    "Y": self.cell_wires[cell_idx],
-                }, params={
+                    "Y": self.cell_wires[cell_idx].name,
+                }, parameters={
                     "A_SIGNED": a_signed,
                     "B_SIGNED": b_signed,
                     "A_WIDTH": len(operand_a),
                     "B_WIDTH": len(operand_b),
                     "Y_WIDTH": cell.width,
-                }, src=_src(cell.src_loc))
+                }, src_loc=cell.src_loc)
         else:
             assert cell.operator == "m"
             condition, if_true, if_false = cell.inputs
@@ -751,10 +842,10 @@ class ModuleEmitter:
                 "S": self.sigspec(condition),
                 "A": self.sigspec(if_false),
                 "B": self.sigspec(if_true),
-                "Y": self.cell_wires[cell_idx]
-            }, params={
+                "Y": self.cell_wires[cell_idx].name
+            }, parameters={
                 "WIDTH": cell.width,
-            }, src=_src(cell.src_loc))
+            }, src_loc=cell.src_loc)
 
     def emit_part(self, cell_idx, cell):
         if cell.stride == 1:
@@ -762,38 +853,38 @@ class ModuleEmitter:
             offset_width = len(cell.offset)
         else:
             stride = _ast.Const(cell.stride)
-            offset_width = len(cell.offset) + stride.width
-            offset = self.builder.wire(offset_width)
+            offset_width = len(cell.offset) + len(stride)
+            offset = self.builder.wire(offset_width).name
             self.builder.cell("$mul", ports={
                 "A": self.sigspec(cell.offset),
                 "B": _const(stride),
                 "Y": offset,
-            }, params={
+            }, parameters={
                 "A_SIGNED": False,
                 "B_SIGNED": False,
                 "A_WIDTH": len(cell.offset),
-                "B_WIDTH": stride.width,
+                "B_WIDTH": len(stride),
                 "Y_WIDTH": offset_width,
-            }, src=_src(cell.src_loc))
+            }, src_loc=cell.src_loc)
         self.builder.cell("$shift", ports={
             "A": self.sigspec(cell.value),
             "B": offset,
-            "Y": self.cell_wires[cell_idx],
-        }, params={
+            "Y": self.cell_wires[cell_idx].name,
+        }, parameters={
             "A_SIGNED": cell.value_signed,
             "B_SIGNED": False,
             "A_WIDTH": len(cell.value),
             "B_WIDTH": offset_width,
             "Y_WIDTH": cell.width,
-        }, src=_src(cell.src_loc))
+        }, src_loc=cell.src_loc)
 
     def emit_flip_flop(self, cell_idx, cell):
         ports = {
             "D": self.sigspec(cell.data),
             "CLK": self.sigspec(cell.clk),
-            "Q": self.cell_wires[cell_idx]
+            "Q": self.cell_wires[cell_idx].name
         }
-        params = {
+        parameters = {
             "WIDTH": len(cell.data),
             "CLK_POLARITY": {
                 "pos": True,
@@ -805,9 +896,9 @@ class ModuleEmitter:
         else:
             cell_type = "$adff"
             ports["ARST"] = self.sigspec(cell.arst)
-            params["ARST_POLARITY"] = True
-            params["ARST_VALUE"] = _ast.Const(cell.init, len(cell.data))
-        self.builder.cell(cell_type, ports=ports, params=params, src=_src(cell.src_loc))
+            parameters["ARST_POLARITY"] = True
+            parameters["ARST_VALUE"] = _ast.Const(cell.init, len(cell.data))
+        self.builder.cell(cell_type, ports=ports, parameters=parameters, src_loc=cell.src_loc)
 
     def emit_io_buffer(self, cell_idx, cell):
         if cell.dir is not _nir.IODirection.Input:
@@ -818,11 +909,11 @@ class ModuleEmitter:
                     "Y": self.io_sigspec(cell.port),
                     "A": self.sigspec(cell.o),
                     "EN": self.sigspec(cell.oe),
-                }, params={
+                }, parameters={
                     "WIDTH": len(cell.port),
-                }, src=_src(cell.src_loc))
+                }, src_loc=cell.src_loc)
         if cell.dir is not _nir.IODirection.Output:
-            self.builder.connect(self.cell_wires[cell_idx], self.io_sigspec(cell.port))
+            self.builder.connect(self.cell_wires[cell_idx].name, self.io_sigspec(cell.port))
 
     def emit_memory(self, cell_idx, cell):
         memory_info = self.memories[cell_idx]
@@ -834,13 +925,13 @@ class ModuleEmitter:
                 for bit in range(cell.width)
             ),
             "EN": self.sigspec(_nir.Value.ones(cell.width)),
-        }, params={
+        }, parameters={
             "MEMID": memory_info.memid,
             "ABITS": 0,
             "WIDTH": cell.width,
             "WORDS": cell.depth,
             "PRIORITY": 0,
-        }, src=_src(cell.src_loc))
+        }, src_loc=cell.src_loc)
 
     def emit_write_port(self, cell_idx, cell):
         memory_info = self.memories[cell.memory]
@@ -850,7 +941,7 @@ class ModuleEmitter:
             "EN": self.sigspec(cell.en),
             "CLK": self.sigspec(cell.clk),
         }
-        params = {
+        parameters = {
             "MEMID": memory_info.memid,
             "ABITS": len(cell.addr),
             "WIDTH": len(cell.data),
@@ -862,13 +953,13 @@ class ModuleEmitter:
             "PORTID": memory_info.write_port_ids[cell_idx],
             "PRIORITY_MASK": 0,
         }
-        self.builder.cell(f"$memwr_v2", ports=ports, params=params, src=_src(cell.src_loc))
+        self.builder.cell(f"$memwr_v2", ports=ports, parameters=parameters, src_loc=cell.src_loc)
 
     def emit_read_port(self, cell_idx, cell):
         memory_info = self.memories[cell.memory]
         ports = {
             "ADDR": self.sigspec(cell.addr),
-            "DATA": self.cell_wires[cell_idx],
+            "DATA": self.cell_wires[cell_idx].name,
             "ARST": self.sigspec(_nir.Net.from_const(0)),
             "SRST": self.sigspec(_nir.Net.from_const(0)),
         }
@@ -879,7 +970,7 @@ class ModuleEmitter:
                 1 << memory_info.write_port_ids[write_port_cell_index]
                 for write_port_cell_index in cell.transparent_for
             )
-        params = {
+        parameters = {
             "MEMID": memory_info.memid,
             "ABITS": len(cell.addr),
             "WIDTH": cell.width,
@@ -895,7 +986,7 @@ class ModuleEmitter:
                 "EN": self.sigspec(_nir.Net.from_const(1)),
                 "CLK": self.sigspec(_nir.Net.from_const(0)),
             })
-            params.update({
+            parameters.update({
                 "CLK_ENABLE": False,
                 "CLK_POLARITY": True,
             })
@@ -904,14 +995,14 @@ class ModuleEmitter:
                 "EN": self.sigspec(cell.en),
                 "CLK": self.sigspec(cell.clk),
             })
-            params.update({
+            parameters.update({
                 "CLK_ENABLE": True,
                 "CLK_POLARITY": {
                     "pos": True,
                     "neg": False,
                 }[cell.clk_edge],
             })
-        self.builder.cell(f"$memrd_v2", ports=ports, params=params, src=_src(cell.src_loc))
+        self.builder.cell(f"$memrd_v2", ports=ports, parameters=parameters, src_loc=cell.src_loc)
 
     def emit_print(self, cell_idx, cell):
         args = []
@@ -964,50 +1055,51 @@ class ModuleEmitter:
             "EN": self.sigspec(cell.en),
             "ARGS": self.sigspec(_nir.Value(args)),
         }
-        params = {
+        parameters = {
             "FORMAT": "".join(format),
             "ARGS_WIDTH": len(args),
             "PRIORITY": -cell_idx,
         }
         if isinstance(cell, (_nir.AsyncPrint, _nir.AsyncProperty)):
             ports["TRG"] = self.sigspec(_nir.Value())
-            params["TRG_ENABLE"] = False
-            params["TRG_WIDTH"] = 0
-            params["TRG_POLARITY"] = 0
+            parameters["TRG_ENABLE"] = False
+            parameters["TRG_WIDTH"] = 0
+            parameters["TRG_POLARITY"] = 0
         if isinstance(cell, (_nir.SyncPrint, _nir.SyncProperty)):
             ports["TRG"] = self.sigspec(cell.clk)
-            params["TRG_ENABLE"] = True
-            params["TRG_WIDTH"] = 1
-            params["TRG_POLARITY"] = cell.clk_edge == "pos"
+            parameters["TRG_ENABLE"] = True
+            parameters["TRG_WIDTH"] = 1
+            parameters["TRG_POLARITY"] = cell.clk_edge == "pos"
         if isinstance(cell, (_nir.AsyncPrint, _nir.SyncPrint)):
-            self.builder.cell(f"$print", params=params, ports=ports, src=_src(cell.src_loc))
+            self.builder.cell(f"$print", parameters=parameters, ports=ports, src_loc=cell.src_loc)
         if isinstance(cell, (_nir.AsyncProperty, _nir.SyncProperty)):
-            params["FLAVOR"] = cell.kind
+            parameters["FLAVOR"] = cell.kind
             ports["A"] = self.sigspec(cell.test)
-            self.builder.cell(f"$check", params=params, ports=ports, src=_src(cell.src_loc))
+            self.builder.cell(f"$check", parameters=parameters, ports=ports, src_loc=cell.src_loc)
 
     def emit_any_value(self, cell_idx, cell):
         self.builder.cell(f"${cell.kind}", ports={
-            "Y": self.cell_wires[cell_idx],
-        }, params={
+            "Y": self.cell_wires[cell_idx].name,
+        }, parameters={
             "WIDTH": cell.width,
-        }, src=_src(cell.src_loc))
+        }, src_loc=cell.src_loc)
 
     def emit_initial(self, cell_idx, cell):
         self.builder.cell("$initstate", ports={
-            "Y": self.cell_wires[cell_idx],
-        }, src=_src(cell.src_loc))
+            "Y": self.cell_wires[cell_idx].name,
+        }, src_loc=cell.src_loc)
 
     def emit_instance(self, cell_idx, cell):
         ports = {}
         for name, nets in cell.ports_i.items():
             ports[name] = self.sigspec(nets)
         for name in cell.ports_o:
-            ports[name] = self.instance_wires[cell_idx, name]
+            ports[name] = self.instance_wires[cell_idx, name].name
         for name, (ionets, _dir) in cell.ports_io.items():
             ports[name] = self.io_sigspec(ionets)
-        self.builder.cell(f"\\{cell.type}", cell.name, ports=ports, params=cell.parameters,
-                          attrs=cell.attributes, src=_src(cell.src_loc))
+        self.builder.cell(f"\\{cell.type}", cell.name, ports=ports,
+                          parameters=cell.parameters, attrs=cell.attributes,
+                          src_loc=cell.src_loc)
 
     def emit_cells(self):
         for cell_idx in self.module.cells:
@@ -1071,16 +1163,15 @@ def convert_fragment(fragment, ports=(), name="top", *, emit_src=True, **kwargs)
     name_map = _ast.SignalDict()
     netlist = _ir.build_netlist(fragment, ports=ports, name=name, **kwargs)
     empty_checker = EmptyModuleChecker(netlist)
-    builder = _Builder(emit_src=emit_src)
+    builder = Design(emit_src=emit_src)
     for module_idx, module in enumerate(netlist.modules):
         if empty_checker.is_empty(module_idx):
             continue
-        attrs = {}
+        module_builder = builder.module(".".join(module.name), src_loc=module.src_loc)
         if module_idx == 0:
-            attrs["top"] = 1
-        with builder.module(".".join(module.name), attrs=attrs, src=_src(module.src_loc)) as module_builder:
-            ModuleEmitter(module_builder, netlist, module, name_map,
-                          empty_checker=empty_checker).emit()
+            module_builder.attribute("top", 1)
+        ModuleEmitter(module_builder, netlist, module, name_map,
+                      empty_checker=empty_checker).emit()
     return str(builder), name_map
 
 
