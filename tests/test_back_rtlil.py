@@ -1889,6 +1889,127 @@ class PrintTestCase(RTLILTestCase):
         end
         """)
 
+    def test_print_char(self):
+        i = Signal(21)
+        m = Module()
+        m.d.comb += [
+            Print(Format("{:c} {:-<5c} {:->5c}", i, i, i)),
+        ]
+        self.assertRTLIL(m, [i], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 21 input 0 \i
+            wire width 1 $1
+            process $2
+                assign $1 [0] 1'0
+                assign $1 [0] 1'1
+            end
+            cell $print $3
+                parameter \FORMAT "{21:U} {21:U}---- ----{21:U}\n"
+                parameter \ARGS_WIDTH 63
+                parameter signed \PRIORITY 32'11111111111111111111111111111110
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $1 [0]
+                connect \ARGS { \i [20:0] \i [20:0] \i [20:0] }
+                connect \TRG { }
+            end
+        end
+        """)
+
+    def test_print_base(self):
+        i = Signal(8)
+        m = Module()
+        m.d.comb += [
+            Print(Format("{:b} {:o} {:d} {:x} {:X} {:#x} {:#d} {:#_x}", i, i, i, i, i, i, i, i)),
+        ]
+        self.assertRTLIL(m, [i], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 8 input 0 \i
+            wire width 1 $1
+            process $2
+                assign $1 [0] 1'0
+                assign $1 [0] 1'1
+            end
+            cell $print $3
+                parameter \FORMAT "{8:> bu} {8:> ou} {8:> du} {8:> hu} {8:> Hu} {8:> h#u} {8:> du} {8:> h#_u}\n"
+                parameter \ARGS_WIDTH 64
+                parameter signed \PRIORITY 32'11111111111111111111111111111110
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $1 [0]
+                connect \ARGS { \i [7:0] \i [7:0] \i [7:0] \i [7:0] \i [7:0] \i [7:0] \i [7:0] \i [7:0] }
+                connect \TRG { }
+            end
+        end
+        """)
+
+    def test_print_sign(self):
+        i = Signal(8)
+        m = Module()
+        m.d.comb += [
+            Print(Format("{:5x} {:-5x} {:+5x} {: 5x}", i, i, i, i)),
+        ]
+        self.assertRTLIL(m, [i], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 8 input 0 \i
+            wire width 1 $1
+            process $2
+                assign $1 [0] 1'0
+                assign $1 [0] 1'1
+            end
+            cell $print $3
+                parameter \FORMAT "{8:> 5hu} {8:> 5h-u} {8:> 5h+u} {8:> 5h u}\n"
+                parameter \ARGS_WIDTH 32
+                parameter signed \PRIORITY 32'11111111111111111111111111111110
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $1 [0]
+                connect \ARGS { \i [7:0] \i [7:0] \i [7:0] \i [7:0] }
+                connect \TRG { }
+            end
+        end
+        """)
+
+    def test_print_align(self):
+        i = Signal(8)
+        m = Module()
+        m.d.comb += [
+            Print(Format("{:<5x} {:>5x} {:=5x} {:05x} {:-<5x}", i, i, i, i, i)),
+        ]
+        self.assertRTLIL(m, [i], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 8 input 0 \i
+            wire width 1 $1
+            process $2
+                assign $1 [0] 1'0
+                assign $1 [0] 1'1
+            end
+            cell $print $3
+                parameter \FORMAT "{8:< 5hu} {8:> 5hu} {8:= 5hu} {8:=05hu} {8:<-5hu}\n"
+                parameter \ARGS_WIDTH 40
+                parameter signed \PRIORITY 32'11111111111111111111111111111110
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $1 [0]
+                connect \ARGS { \i [7:0] \i [7:0] \i [7:0] \i [7:0] \i [7:0] }
+                connect \TRG { }
+            end
+        end
+        """)
+
+
 class ComponentTestCase(RTLILTestCase):
     def test_component(self):
         class MyComponent(wiring.Component):
@@ -1907,4 +2028,3 @@ class ComponentTestCase(RTLILTestCase):
         connect \o 8'00000000
         end
         """)
-

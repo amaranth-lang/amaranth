@@ -2691,7 +2691,8 @@ class Format:
             (?P<align>[<>=^])
         )?
         (?P<sign>[-+ ])?
-        (?P<options>[#]?[0]?)
+        (?P<show_base>[#]?)
+        (?P<width_zero>[0]?)
         (?P<width>[1-9][0-9]*)?
         (?P<grouping>[_,])?
         (?P<type>[bodxXcsn])?
@@ -2713,9 +2714,9 @@ class Format:
                 raise ValueError(f"Cannot print signed value with format specifier {match['type']!r}")
             if match["align"] == "=":
                 raise ValueError(f"Alignment {match['align']!r} is not allowed with format specifier {match['type']!r}")
-            if "#" in match["options"]:
+            if match["show_base"]:
                 raise ValueError(f"Alternate form is not allowed with format specifier {match['type']!r}")
-            if "0" in match["options"]:
+            if match["width_zero"] != "":
                 raise ValueError(f"Zero fill is not allowed with format specifier {match['type']!r}")
             if match["sign"] is not None:
                 raise ValueError(f"Sign is not allowed with format specifier {match['type']!r}")
@@ -2723,15 +2724,20 @@ class Format:
                 raise ValueError(f"Cannot specify {match['grouping']!r} with format specifier {match['type']!r}")
         if match["type"] == "s" and shape.width % 8 != 0:
             raise ValueError(f"Value width must be divisible by 8 with format specifier {match['type']!r}")
+        fill = match["fill"]
+        align = match["align"]
+        if match["width_zero"] and align is None:
+            fill = "0"
+            align = "="
         return {
             # Single character or None.
-            "fill": match["fill"],
+            "fill": fill,
             # '<', '>', '=', or None. Cannot be '=' for types 'c' and 's'.
-            "align": match["align"],
+            "align": align,
             # '-', '+', ' ', or None. Always None for types 'c' and 's'.
             "sign": match["sign"],
-            # "", "#", "0", or "#0". Always "" for types 'c' and 's'.
-            "options": match["options"],
+            # A bool. Always False for types 'c' and 's'.
+            "show_base": match["show_base"] == "#",
             # An int.
             "width": int(match["width"]) if match["width"] is not None else 0,
             # '_' or None. Always None for types 'c' and 's'.
