@@ -1090,35 +1090,42 @@ class ModuleEmitter:
                         args += chunk.value
                     if type is None:
                         type = "d"
-                    if type == "x" or type == "X":
-                        # TODO(yosys): "H" type
+                    elif type == "x":
                         type = "h"
-                    if type == "s":
-                        # TODO(yosys): support for single unicode character?
+                    elif type == "X":
+                        type = "H"
+                    elif type == "c":
+                        type = "U"
+                    elif type == "s":
                         type = "c"
                     width = spec["width"]
                     align = spec["align"]
                     if align is None:
-                        align = ">" if type != "c" else "<"
-                    if align == "=":
-                        # TODO(yosys): "=" alignment
-                        align = ">"
+                        align = "<" if type in ("c", "U") else ">"
                     fill = spec["fill"]
-                    if fill not in (" ", "0"):
-                        # TODO(yosys): arbitrary fill
-                        fill = " "
-                    # TODO(yosys): support for options, grouping
+                    if fill is None:
+                        fill = ' '
+                    if ord(fill) >= 0x80:
+                        raise NotImplementedError(f"non-ASCII fill character {fill!r} is not supported in RTLIL")
                     sign = spec["sign"]
-                    if sign != "+":
-                        # TODO(yosys): support " " sign
+                    if sign is None:
                         sign = ""
-                    if type == "c":
+                    if type in ("c", "U"):
                         signed = ""
                     elif chunk.signed:
                         signed = "s"
                     else:
                         signed = "u"
-                    format.append(f"{{{len(chunk.value)}:{align}{fill}{width or ''}{type}{sign}{signed}}}")
+                    show_base = "#" if spec["show_base"] and type != "d" else ""
+                    grouping = spec["grouping"] or ""
+                    if type == "U":
+                        if align != "<" and width != 0:
+                            format.append(fill * (width - 1))
+                        format.append(f"{{{len(chunk.value)}:U}}")
+                        if align == "<" and width != 0:
+                            format.append(fill * (width - 1))
+                    else:
+                        format.append(f"{{{len(chunk.value)}:{align}{fill}{width or ''}{type}{sign}{show_base}{grouping}{signed}}}")
         ports = {
             "EN": self.sigspec(cell.en),
             "ARGS": self.sigspec(_nir.Value(args)),
