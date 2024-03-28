@@ -1134,9 +1134,9 @@ class NetlistEmitter:
 
     def emit_memory(self, module_idx: int, fragment: '_mem.MemoryInstance', name: str):
         cell = _nir.Memory(module_idx,
-            width=fragment._width,
-            depth=fragment._depth,
-            init=fragment._init,
+            width=_ast.Shape.cast(fragment._data._shape).width,
+            depth=fragment._data._depth,
+            init=fragment._data._init._raw,
             name=name,
             attributes=fragment._attrs,
             src_loc=fragment.src_loc,

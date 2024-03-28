@@ -53,6 +53,7 @@ Implemented RFCs
 .. _RFC 51: https://amaranth-lang.org/rfcs/0051-const-from-bits.html
 .. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
 .. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
+.. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -75,6 +76,7 @@ Language changes
 * Added: :class:`Format` objects, :class:`Print` statements, messages in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
 * Added: :meth:`ShapeCastable.from_bits` method. (`RFC 51`_)
 * Added: IO values, :class:`IOPort` objects, :class:`IOBufferInstance` objects. (`RFC 53`_)
+* Added: :class:`MemoryData` objects. (`RFC 62`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
 * Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.

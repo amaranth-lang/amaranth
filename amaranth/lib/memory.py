@@ -2,8 +2,8 @@ import operator
 from collections import OrderedDict
 from collections.abc import MutableSequence
 
-from ..hdl import MemoryIdentity, MemoryInstance, Shape, ShapeCastable, Const
-from ..hdl._mem import MemorySimRead
+from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const
+from ..hdl._mem import MemorySimRead, FrozenError
 from ..utils import ceil_log2
 from .._utils import final
 from .. import tracer
@@ -11,13 +11,6 @@ from . import wiring, data
 
 
 __all__ = ["Memory", "ReadPort", "WritePort"]
-
-
-@final
-class FrozenError(Exception):
-    """This exception is raised when ports are added to a :class:`Memory` or its
-    :attr:`~Memory.init` attribute is changed after it has been elaborated once.
-    """
 
 
 class Memory(wiring.Component):
@@ -55,93 +48,30 @@ class Memory(wiring.Component):
     :class:`Memory`, e.g. to instantiate library cells directly.
     """
 
-    class Init(MutableSequence):
-        """Memory initialization data.
+    Init = MemoryData.Init
 
-        This is a special container used only for the :attr:`Memory.init` attribute. It is similar
-        to :class:`list`, but does not support inserting or deleting elements; its length is always
-        the same as the depth of the memory it belongs to.
-
-        If :py:`shape` is a :ref:`custom shape-castable object <lang-shapecustom>`, then:
-
-        * Each element must be convertible to :py:`shape` via :meth:`.ShapeCastable.const`, and
-        * Elements that are not explicitly initialized default to :py:`shape.const(None)`.
-
-        Otherwise (when :py:`shape` is a :class:`.Shape`):
-
-        * Each element must be an :class:`int`, and
-        * Elements that are not explicitly initialized default to :py:`0`.
-        """
-        def __init__(self, elems, *, shape, depth):
-            Shape.cast(shape)
-            if not isinstance(depth, int) or depth < 0:
-                raise TypeError("Memory depth must be a non-negative integer, not {!r}"
-                                .format(depth))
-            self._shape = shape
-            self._depth = depth
-            self._frozen = False
-
-            if isinstance(shape, ShapeCastable):
-                self._elems = [None] * depth
-                self._raw = [Const.cast(Const(None, shape)).value] * depth
-            else:
-                self._elems = [0] * depth
-                self._raw = self._elems # intentionally mutably aliased
-            try:
-                for index, item in enumerate(elems):
-                    self[index] = item
-            except (TypeError, ValueError) as e:
-                raise type(e)("Memory initialization value at address {:x}: {}"
-                              .format(index, e)) from None
-
-        @property
-        def shape(self):
-            return self._shape
-
-        def __getitem__(self, index):
-            return self._elems[index]
-
-        def __setitem__(self, index, value):
-            if self._frozen:
-                raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
-
-            if isinstance(index, slice):
-                indices = range(*index.indices(len(self._elems)))
-                if len(value) != len(indices):
-                    raise ValueError("Changing length of Memory.init is not allowed")
-                for actual_index, actual_value in zip(indices, value):
-                    self[actual_index] = actual_value
-            else:
-                if isinstance(self._shape, ShapeCastable):
-                    self._raw[index] = Const.cast(Const(value, self._shape)).value
-                else:
-                    value = operator.index(value)
-                    # self._raw[index] assigned by the following line
-                self._elems[index] = value
-
-        def __delitem__(self, index):
-            raise TypeError("Deleting elements from Memory.init is not allowed")
-
-        def insert(self, index, value):
-            """:meta private:"""
-            raise TypeError("Inserting elements into Memory.init is not allowed")
-
-        def __len__(self):
-            return self._depth
-
-        def __repr__(self):
-            return f"Memory.Init({self._elems!r}, shape={self._shape!r}, depth={self._depth})"
-
-
-    def __init__(self, *, shape, depth, init, attrs=None, src_loc_at=0):
-        # shape and depth validation is performed in Memory.Init()
-        self._shape = shape
-        self._depth = depth
-        self._init = Memory.Init(init, shape=shape, depth=depth)
+    def __init__(self, data=None, *, shape=None, depth=None, init=None, attrs=None, src_loc_at=0):
+        if data is None:
+            if shape is None:
+                raise ValueError("Either 'data' or 'shape' needs to be given")
+            if depth is None:
+                raise ValueError("Either 'data' or 'depth' needs to be given")
+            if init is None:
+                raise ValueError("Either 'data' or 'init' needs to be given")
+            data = MemoryData(shape=shape, depth=depth, init=init, src_loc_at=1 + src_loc_at)
+        else:
+            if not isinstance(data, MemoryData):
+                raise TypeError(f"'data' must be a MemoryData instance, not {data!r}")
+            if shape is not None:
+                raise ValueError("'data' and 'shape' cannot be given at the same time")
+            if depth is not None:
+                raise ValueError("'data' and 'depth' cannot be given at the same time")
+            if init is not None:
+                raise ValueError("'data' and 'init' cannot be given at the same time")
+        self._data = data
         self._attrs = {} if attrs is None else dict(attrs)
         self.src_loc = tracer.get_src_loc(src_loc_at=src_loc_at)
 
-        self._identity = MemoryIdentity()
         self._read_ports: "list[ReadPort]" = []
         self._write_ports: "list[WritePort]" = []
         self._frozen = False
@@ -149,22 +79,24 @@ class Memory(wiring.Component):
         super().__init__(wiring.Signature({}))
 
     @property
+    def data(self):
+        return self._data
+
+    @property
     def shape(self):
-        return self._shape
+        return self._data.shape
 
     @property
     def depth(self):
-        return self._depth
+        return self._data.depth
 
     @property
     def init(self):
-        return self._init
+        return self._data.init
 
     @init.setter
     def init(self, init):
-        if self._frozen:
-            raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
-        self._init = Memory.Init(init, shape=self._shape, depth=self._depth)
+        self._data.init = init
 
     @property
     def attrs(self):
@@ -245,13 +177,12 @@ class Memory(wiring.Component):
 
     def elaborate(self, platform):
         self._frozen = True
-        self._init._frozen = True
+        self._data.freeze()
         if hasattr(platform, "get_memory"):
             return platform.get_memory(self)
 
         shape = Shape.cast(self.shape)
-        instance = MemoryInstance(identity=self._identity, width=shape.width, depth=self.depth,
-                                  init=self.init._raw, attrs=self.attrs, src_loc=self.src_loc)
+        instance = MemoryInstance(data=self._data, attrs=self.attrs, src_loc=self.src_loc)
         write_ports = {}
         for port in self._write_ports:
             write_ports[port] = instance.write_port(
@@ -265,7 +196,7 @@ class Memory(wiring.Component):
 
     def __getitem__(self, index):
         """Simulation only."""
-        return MemorySimRead(self._identity, index)
+        return self._data[index]
 
 
 class ReadPort:

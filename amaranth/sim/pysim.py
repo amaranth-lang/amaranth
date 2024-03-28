@@ -5,7 +5,7 @@ import os.path
 
 from ..hdl import *
 from ..hdl._repr import *
-from ..hdl._mem import MemoryInstance, MemoryIdentity
+from ..hdl._mem import MemoryInstance
 from ..hdl._ast import SignalDict, Slice, Operator
 from ._base import *
 from ._pyrtl import _FragmentCompiler
@@ -75,7 +75,7 @@ class _VCDWriter:
                     signal_names[signal] = set()
                 signal_names[signal].add((*fragment_name, signal_name))
             if isinstance(fragment, MemoryInstance):
-                memories[fragment._identity] = (fragment, fragment_name)
+                memories[fragment._data] = fragment_name
 
         trace_names = SignalDict()
         assigned_names = set()
@@ -92,10 +92,16 @@ class _VCDWriter:
                         trace_names[trace_signal] = {("bench", name)}
                         assigned_names.add(name)
                     self.traces.append(trace_signal)
-            elif hasattr(trace, "_identity") and isinstance(trace._identity, MemoryIdentity):
-                if not trace._identity in memories:
-                    raise ValueError(f"{trace!r} is a memory not part of the elaborated design")
-                self.traces.append(trace._identity)
+            elif isinstance(trace, MemoryData):
+                if not trace in memories:
+                    if trace.name not in assigned_names:
+                        name = trace.name
+                    else:
+                        name = f"{trace.name}${len(assigned_names)}"
+                        assert name not in assigned_names
+                    memories[trace] = ("bench", name)
+                    assigned_names.add(name)
+                self.traces.append(trace)
             else:
                 raise TypeError(f"{trace!r} is not a traceable object")
 
@@ -146,19 +152,20 @@ class _VCDWriter:
 
                 self.vcd_signal_vars[signal].append((vcd_var, repr))
 
-        for memory, memory_name in memories.values():
-            self.vcd_memory_vars[memory._identity] = vcd_vars = []
-            self.gtkw_memory_names[memory._identity] = gtkw_names = []
-            if memory._width > 1:
-                suffix = f"[{memory._width - 1}:0]"
+        for memory, memory_name in memories.items():
+            self.vcd_memory_vars[memory] = vcd_vars = []
+            self.gtkw_memory_names[memory] = gtkw_names = []
+            width = Shape.cast(memory.shape).width
+            if width > 1:
+                suffix = f"[{width - 1}:0]"
             else:
                 suffix = ""
-            for idx, init in enumerate(memory._init):
+            for idx, init in enumerate(memory._init._raw):
                 field_name = "\\" + memory_name[-1] + f"[{idx}]"
                 var_scope = memory_name[:-1]
                 vcd_var = self.vcd_writer.register_var(
                     scope=var_scope, name=field_name,
-                    var_type="wire", size=memory._width, init=init,
+                    var_type="wire", size=width, init=init,
                 )
                 vcd_vars.append(vcd_var)
                 gtkw_field_name = field_name + suffix
@@ -194,7 +201,7 @@ class _VCDWriter:
             self.vcd_writer.change(vcd_var, timestamp, var_value)
 
     def update_memory(self, timestamp, memory, addr, value):
-        vcd_var = self.vcd_memory_vars[memory._identity][addr]
+        vcd_var = self.vcd_memory_vars[memory][addr]
         self.vcd_writer.change(vcd_var, timestamp, value)
 
     def update_process(self, timestamp, process, command):
@@ -325,7 +332,7 @@ class _PyMemoryState(BaseMemoryState):
         self.reset()
 
     def reset(self):
-        self.data = list(self.memory._init)
+        self.data = list(self.memory._init._raw)
         self.write_queue = []
 
     def commit(self):
@@ -344,19 +351,19 @@ class _PyMemoryState(BaseMemoryState):
         return awoken_any
 
     def read(self, addr):
-        if addr not in range(self.memory._depth):
+        if addr not in range(self.memory.depth):
             return 0
 
         return self.data[addr]
 
     def write(self, addr, value, mask=None):
-        if addr not in range(self.memory._depth):
+        if addr not in range(self.memory.depth):
             return
         if mask == 0:
             return
 
         if mask is None:
-            mask = (1 << self.memory._width) - 1
+            mask = (1 << Shape.cast(self.memory.shape).width) - 1
 
         self.write_queue.append((addr, value, mask))
         self.pending.add(self)
@@ -369,10 +376,6 @@ class _PySimulation(BaseSimulation):
         self.memories  = {}
         self.slots     = []
         self.pending   = set()
-
-    def add_memory(self, fragment):
-        self.memories[fragment._identity] = len(self.slots)
-        self.slots.append(_PyMemoryState(fragment, self.pending))
 
     def reset(self):
         self.timeline.reset()
@@ -395,6 +398,15 @@ class _PySimulation(BaseSimulation):
             self.signals[signal] = index
             return index
 
+    def get_memory(self, memory):
+        try:
+            return self.memories[memory]
+        except KeyError:
+            index = len(self.slots)
+            self.slots.append(_PyMemoryState(memory, self.pending))
+            self.memories[memory] = index
+            return index
+
     def add_trigger(self, process, signal, *, trigger=None):
         index = self.get_signal(signal)
         assert (process not in self.slots[index].waiters or
@@ -406,12 +418,12 @@ class _PySimulation(BaseSimulation):
         assert process in self.slots[index].waiters
         del self.slots[index].waiters[process]
 
-    def add_memory_trigger(self, process, identity):
-        index = self.memories[identity]
+    def add_memory_trigger(self, process, memory):
+        index = self.get_memory(memory)
         self.slots[index].waiters[process] = None
 
-    def remove_memory_trigger(self, process, identity):
-        index = self.memories[identity]
+    def remove_memory_trigger(self, process, memory):
+        index = self.get_memory(memory)
         assert process in self.slots[index].waiters
         del self.slots[index].waiters[process]
 

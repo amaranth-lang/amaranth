@@ -481,7 +481,6 @@ class _FragmentCompiler:
         domains = set(fragment.statements)
 
         if isinstance(fragment, MemoryInstance):
-            self.state.add_memory(fragment)
             for port in fragment._read_ports:
                 domains.add(port._domain)
             for port in fragment._write_ports:
@@ -510,8 +509,8 @@ class _FragmentCompiler:
                 _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)
 
                 if isinstance(fragment, MemoryInstance):
-                    self.state.add_memory_trigger(domain_process, fragment._identity)
-                    memory_index = self.state.memories[fragment._identity]
+                    self.state.add_memory_trigger(domain_process, fragment._data)
+                    memory_index = self.state.get_memory(fragment._data)
                     rhs = _RHSValueCompiler(self.state, emitter, mode="curr", inputs=inputs)
                     lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
 
@@ -554,7 +553,7 @@ class _FragmentCompiler:
                                 emitter.append(f"next_{signal_index} = {signal.init}")
 
                 if isinstance(fragment, MemoryInstance):
-                    memory_index = self.state.memories[fragment._identity]
+                    memory_index = self.state.get_memory(fragment._data)
                     rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
                     lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
 
