@@ -2,13 +2,25 @@ import contextlib
 import functools
 import warnings
 import linecache
+import operator
 import re
 from collections import OrderedDict
 from collections.abc import Iterable
 
 
-__all__ = ["flatten", "union", "final", "deprecated", "get_linter_options",
+__all__ = ["to_binary", "flatten", "union", "final", "deprecated", "get_linter_options",
            "get_linter_option"]
+
+
+def to_binary(n: int, width: int) -> str:
+    """Formats ``n`` as exactly ``width`` binary digits, including when ``width`` is 0"""
+    n = operator.index(n)
+    width = operator.index(width)
+    if n not in range(1 << width):
+        raise ValueError(f"{n} does not fit in {width} bits")
+    if width == 0:
+        return ""
+    return f"{n:0{width}b}"
 
 
 def flatten(i):

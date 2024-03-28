@@ -3,7 +3,7 @@ from collections import defaultdict, OrderedDict
 import enum
 import warnings
 
-from .._utils import flatten
+from .._utils import flatten, to_binary
 from .. import tracer, _unused
 from . import _ast, _cd, _ir, _nir
 
@@ -880,7 +880,7 @@ class NetlistEmitter:
             conds = []
             for case_index in range(len(elems)):
                 cell = _nir.Matches(module_idx, value=index,
-                                       patterns=(f"{case_index:0{len(index)}b}",),
+                                       patterns=(to_binary(case_index, len(index)),),
                                        src_loc=value.src_loc)
                 subcond, = self.netlist.add_value_cell(1, cell)
                 conds.append(subcond)
@@ -985,7 +985,7 @@ class NetlistEmitter:
             conds = []
             for case_index in range(num_cases):
                 cell = _nir.Matches(module_idx, value=offset,
-                                    patterns=(f"{case_index:0{len(offset)}b}",),
+                                    patterns=(to_binary(case_index, len(offset)),),
                                     src_loc=lhs.src_loc)
                 subcond, = self.netlist.add_value_cell(1, cell)
                 conds.append(subcond)
@@ -1006,7 +1006,7 @@ class NetlistEmitter:
             conds = []
             for case_index in range(len(lhs.elems)):
                 cell = _nir.Matches(module_idx, value=index,
-                                       patterns=(f"{case_index:0{len(index)}b}",),
+                                       patterns=(to_binary(case_index, len(index)),),
                                        src_loc=lhs.src_loc)
                 subcond, = self.netlist.add_value_cell(1, cell)
                 conds.append(subcond)

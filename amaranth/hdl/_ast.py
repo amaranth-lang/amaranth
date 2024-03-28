@@ -2768,15 +2768,9 @@ class Switch(Statement):
                 if isinstance(key, str):
                     key = "".join(key.split()) # remove whitespace
                 elif isinstance(key, int):
-                    key = format(key & key_mask, "b").rjust(len(self.test), "0")
-                    # fixup for 0-width test
-                    if key_mask == 0:
-                        key = ""
+                    key = to_binary(key & key_mask, len(self.test))
                 elif isinstance(key, Enum):
-                    key = format(key.value & key_mask, "b").rjust(len(self.test), "0")
-                    # fixup for 0-width test
-                    if key_mask == 0:
-                        key = ""
+                    key = to_binary(key.value & key_mask, len(self.test))
                 else:
                     raise TypeError("Object {!r} cannot be used as a switch key"
                                     .format(key))
