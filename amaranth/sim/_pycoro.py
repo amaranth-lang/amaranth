@@ -135,7 +135,7 @@ class PyCoroProcess(BaseProcess):
                     exec(_RHSValueCompiler.compile(self.state, command._addr, mode="curr"),
                         self.exec_locals)
                     addr = Const(self.exec_locals["result"], command._addr.shape()).value
-                    index = self.state.memories[command._identity]
+                    index = self.state.get_memory(command._memory)
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
                     response = state.read(addr)
@@ -147,7 +147,7 @@ class PyCoroProcess(BaseProcess):
                     exec(_RHSValueCompiler.compile(self.state, command._data, mode="curr"),
                         self.exec_locals)
                     data = Const(self.exec_locals["result"], command._data.shape()).value
-                    index = self.state.memories[command._identity]
+                    index = self.state.get_memory(command._memory)
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
                     state.write(addr, data)

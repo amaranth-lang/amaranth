@@ -287,12 +287,22 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.init.shape, 8)
         self.assertEqual(len(m.init), 4)
         self.assertEqual(m.attrs, {})
-        self.assertIsInstance(m.init, memory.Memory.Init)
+        self.assertIsInstance(m.init, MemoryData.Init)
         self.assertEqual(list(m.init), [1, 2, 3, 0])
         self.assertEqual(m.init._raw, [1, 2, 3, 0])
-        self.assertRepr(m.init, "Memory.Init([1, 2, 3, 0], shape=8, depth=4)")
+        self.assertRepr(m.init, "MemoryData.Init([1, 2, 3, 0], shape=8, depth=4)")
         self.assertEqual(m.read_ports, ())
         self.assertEqual(m.write_ports, ())
+
+        data = MemoryData(shape=8, depth=4, init=[1, 2, 3])
+        m = memory.Memory(data)
+        self.assertIs(m.data, data)
+        self.assertEqual(m.shape, 8)
+        self.assertEqual(m.depth, 4)
+        self.assertEqual(m.init.shape, 8)
+        self.assertEqual(len(m.init), 4)
+        self.assertEqual(m.attrs, {})
+        self.assertEqual(list(m.init), [1, 2, 3, 0])
 
     def test_constructor_shapecastable(self):
         init = [
@@ -303,7 +313,7 @@ class MemoryTestCase(FHDLTestCase):
         self.assertEqual(m.shape, MyStruct)
         self.assertEqual(m.depth, 4)
         self.assertEqual(m.attrs, {"ram_style": "block"})
-        self.assertIsInstance(m.init, memory.Memory.Init)
+        self.assertIsInstance(m.init, MemoryData.Init)
         self.assertEqual(list(m.init), [{"a": 0, "b": 1}, {"a": 2, "b": 3}, None, None])
         self.assertEqual(m.init._raw, [8, 0x1a, 0, 0])
 
@@ -321,6 +331,28 @@ class MemoryTestCase(FHDLTestCase):
                 (r"^Memory initialization value at address 1: "
                     r"'str' object cannot be interpreted as an integer$")):
             memory.Memory(shape=8, depth=4, init=[1, "0"])
+        with self.assertRaisesRegex(ValueError,
+                r"^Either 'data' or 'shape' needs to be given$"):
+            memory.Memory(depth=4, init=[])
+        with self.assertRaisesRegex(ValueError,
+                r"^Either 'data' or 'depth' needs to be given$"):
+            memory.Memory(shape=8, init=[])
+        with self.assertRaisesRegex(ValueError,
+                r"^Either 'data' or 'init' needs to be given$"):
+            memory.Memory(shape=8, depth=4)
+        data = MemoryData(shape=8, depth=4, init=[])
+        with self.assertRaisesRegex(ValueError,
+                r"^'data' and 'shape' cannot be given at the same time$"):
+            memory.Memory(data, shape=8)
+        with self.assertRaisesRegex(ValueError,
+                r"^'data' and 'depth' cannot be given at the same time$"):
+            memory.Memory(data, depth=4)
+        with self.assertRaisesRegex(ValueError,
+                r"^'data' and 'init' cannot be given at the same time$"):
+            memory.Memory(data, init=[])
+        with self.assertRaisesRegex(TypeError,
+                r"^'data' must be a MemoryData instance, not 'abc'$"):
+            memory.Memory("abc")
 
     def test_init_set(self):
         m = memory.Memory(shape=8, depth=4, init=[])
@@ -385,10 +417,8 @@ class MemoryTestCase(FHDLTestCase):
         rp1 = m.read_port(domain="comb")
         f = m.elaborate(None)
         self.assertIsInstance(f, MemoryInstance)
-        self.assertIs(f._identity, m._identity)
-        self.assertEqual(f._depth, 4)
-        self.assertEqual(f._width, 5)
-        self.assertEqual(f._init, (0x11, 0, 0, 0))
+        self.assertIs(f._data, m.data)
+        self.assertEqual(f._data._init._raw, [0x11, 0, 0, 0])
         self.assertEqual(f._write_ports[0]._domain, "sync")
         self.assertEqual(f._write_ports[0]._granularity, 5)
         self.assertIs(f._write_ports[0]._addr, wp.addr)

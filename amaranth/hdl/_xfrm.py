@@ -272,10 +272,7 @@ class FragmentTransformer:
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
             new_fragment = MemoryInstance(
-                identity=fragment._identity,
-                width=fragment._width,
-                depth=fragment._depth,
-                init=fragment._init,
+                data=fragment._data,
                 attrs=fragment._attrs,
                 src_loc=fragment.src_loc
             )

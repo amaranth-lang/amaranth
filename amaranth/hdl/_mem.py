@@ -1,33 +1,160 @@
 import operator
 from collections import OrderedDict
+from collections.abc import MutableSequence
 
 from .. import tracer
 from ._ast import *
 from ._ir import Elaboratable, Fragment
 from ..utils import ceil_log2
-from .._utils import deprecated
+from .._utils import deprecated, final
 
 
-__all__ = ["Memory", "ReadPort", "WritePort", "DummyPort"]
+__all__ = ["MemoryData", "Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
-class MemoryIdentity: pass
+@final
+class FrozenError(Exception):
+    """This exception is raised when ports are added to a :class:`Memory` or its
+    :attr:`~Memory.init` attribute is changed after it has been elaborated once.
+    """
+
+
+@final
+class MemoryData:
+    @final
+    class Init(MutableSequence):
+        """Memory initialization data.
+
+        This is a special container used only for initial contents of memories. It is similar
+        to :class:`list`, but does not support inserting or deleting elements; its length is always
+        the same as the depth of the memory it belongs to.
+
+        If :py:`shape` is a :ref:`custom shape-castable object <lang-shapecustom>`, then:
+
+        * Each element must be convertible to :py:`shape` via :meth:`.ShapeCastable.const`, and
+        * Elements that are not explicitly initialized default to :py:`shape.const(None)`.
+
+        Otherwise (when :py:`shape` is a :class:`.Shape`):
+
+        * Each element must be an :class:`int`, and
+        * Elements that are not explicitly initialized default to :py:`0`.
+        """
+        def __init__(self, elems, *, shape, depth):
+            Shape.cast(shape)
+            if not isinstance(depth, int) or depth < 0:
+                raise TypeError("Memory depth must be a non-negative integer, not {!r}"
+                                .format(depth))
+            self._shape = shape
+            self._depth = depth
+            self._frozen = False
+
+            if isinstance(shape, ShapeCastable):
+                self._elems = [None] * depth
+                self._raw = [Const.cast(Const(None, shape)).value] * depth
+            else:
+                self._elems = [0] * depth
+                self._raw = self._elems # intentionally mutably aliased
+            elems = list(elems)
+            if len(elems) > depth:
+                raise ValueError(f"Memory initialization value count exceeds memory depth ({len(elems)} > {depth})")
+            for index, item in enumerate(elems):
+                try:
+                    self[index] = item
+                except (TypeError, ValueError) as e:
+                    raise type(e)(f"Memory initialization value at address {index:x}: {e}") from None
+
+        @property
+        def shape(self):
+            return self._shape
+
+        def __getitem__(self, index):
+            return self._elems[index]
+
+        def __setitem__(self, index, value):
+            if self._frozen:
+                raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
+
+            if isinstance(index, slice):
+                indices = range(*index.indices(len(self._elems)))
+                if len(value) != len(indices):
+                    raise ValueError("Changing length of Memory.init is not allowed")
+                for actual_index, actual_value in zip(indices, value):
+                    self[actual_index] = actual_value
+            else:
+                if isinstance(self._shape, ShapeCastable):
+                    self._raw[index] = Const.cast(Const(value, self._shape)).value
+                else:
+                    value = operator.index(value)
+                    # self._raw[index] assigned by the following line
+                self._elems[index] = value
+
+        def __delitem__(self, index):
+            raise TypeError("Deleting elements from Memory.init is not allowed")
+
+        def insert(self, index, value):
+            """:meta private:"""
+            raise TypeError("Inserting elements into Memory.init is not allowed")
+
+        def __len__(self):
+            return self._depth
+
+        def __repr__(self):
+            return f"MemoryData.Init({self._elems!r}, shape={self._shape!r}, depth={self._depth})"
+
+
+    def __init__(self, *, shape, depth, init, src_loc_at=0):
+        # shape and depth validation is performed in MemoryData.Init()
+        self._shape = shape
+        self._depth = depth
+        self._init = MemoryData.Init(init, shape=shape, depth=depth)
+        self.src_loc = tracer.get_src_loc(src_loc_at=src_loc_at)
+        self.name = tracer.get_var_name(depth=2+src_loc_at, default="$memory")
+        self._frozen = False
+
+    def freeze(self):
+        self._frozen = True
+        self._init._frozen = True
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def depth(self):
+        return self._depth
+
+    @property
+    def init(self):
+        return self._init
+
+    @init.setter
+    def init(self, init):
+        if self._frozen:
+            raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
+        self._init = MemoryData.Init(init, shape=self._shape, depth=self._depth)
+
+    def __repr__(self):
+        return f"(memory-data {self.name})"
+
+    def __getitem__(self, index):
+        """Simulation only."""
+        return MemorySimRead(self, index)
 
 
 class MemorySimRead:
-    def __init__(self, identity, addr):
-        assert isinstance(identity, MemoryIdentity)
-        self._identity = identity
+    def __init__(self, memory, addr):
+        assert isinstance(memory, MemoryData)
+        self._memory = memory
         self._addr = Value.cast(addr)
 
     def eq(self, value):
-        return MemorySimWrite(self._identity, self._addr, value)
+        return MemorySimWrite(self._memory, self._addr, value)
 
 
 class MemorySimWrite:
-    def __init__(self, identity, addr, data):
-        assert isinstance(identity, MemoryIdentity)
-        self._identity = identity
+    def __init__(self, memory, addr, data):
+        assert isinstance(memory, MemoryData)
+        self._memory = memory
         self._addr = Value.cast(addr)
         self._data = Value.cast(data)
 
@@ -66,26 +193,20 @@ class MemoryInstance(Fragment):
             return len(self._data) // len(self._en)
 
 
-    def __init__(self, *, identity, width, depth, init=None, attrs=None, src_loc=None):
+    def __init__(self, *, data, attrs=None, src_loc=None):
         super().__init__(src_loc=src_loc)
-        assert isinstance(identity, MemoryIdentity)
-        self._identity = identity
-        self._width = operator.index(width)
-        self._depth = operator.index(depth)
-        mask = (1 << self._width) - 1
-        self._init = tuple(item & mask for item in init) if init is not None else ()
-        assert len(self._init) <= self._depth
-        self._init += (0,) * (self._depth - len(self._init))
-        for x in self._init:
-            assert isinstance(x, int)
+        assert isinstance(data, MemoryData)
+        data.freeze()
+        self._data = data
         self._attrs = attrs or {}
         self._read_ports: "list[MemoryInstance._ReadPort]" = []
         self._write_ports: "list[MemoryInstance._WritePort]" = []
 
     def read_port(self, *, domain, addr, data, en, transparent_for):
         port = self._ReadPort(domain=domain, addr=addr, data=data, en=en, transparent_for=transparent_for)
-        assert len(port._data) == self._width
-        assert len(port._addr) == ceil_log2(self._depth)
+        shape = Shape.cast(self._data.shape)
+        assert len(port._data) == shape.width
+        assert len(port._addr) == ceil_log2(self._data.depth)
         for idx in port._transparent_for:
             assert isinstance(idx, int)
             assert idx in range(len(self._write_ports))
@@ -96,8 +217,9 @@ class MemoryInstance(Fragment):
 
     def write_port(self, *, domain, addr, data, en):
         port = self._WritePort(domain=domain, addr=addr, data=data, en=en)
-        assert len(port._data) == self._width
-        assert len(port._addr) == ceil_log2(self._depth)
+        shape = Shape.cast(self._data.shape)
+        assert len(port._data) == shape.width
+        assert len(port._addr) == ceil_log2(self._data.depth)
         self._write_ports.append(port)
         return len(self._write_ports) - 1
 
@@ -145,28 +267,17 @@ class Memory(Elaboratable):
         self.depth = depth
         self.attrs = OrderedDict(() if attrs is None else attrs)
 
-        self.init = init
         self._read_ports = []
         self._write_ports = []
-        self._identity = MemoryIdentity()
+        self._data = MemoryData(shape=width, depth=depth, init=init or [])
 
     @property
     def init(self):
-        return self._init
+        return self._data.init
 
     @init.setter
     def init(self, new_init):
-        self._init = [] if new_init is None else list(new_init)
-        if len(self.init) > self.depth:
-            raise ValueError("Memory initialization value count exceed memory depth ({} > {})"
-                             .format(len(self.init), self.depth))
-
-        try:
-            for addr, val in enumerate(self._init):
-                operator.index(val)
-        except TypeError as e:
-            raise TypeError("Memory initialization value at address {:x}: {}"
-                            .format(addr, e)) from None
+        self._data.init = new_init
 
     def read_port(self, *, src_loc_at=0, **kwargs):
         """Get a read port.
@@ -202,10 +313,10 @@ class Memory(Elaboratable):
 
     def __getitem__(self, index):
         """Simulation only."""
-        return MemorySimRead(self._identity, index)
+        return MemorySimRead(self._data, index)
 
     def elaborate(self, platform):
-        f = MemoryInstance(identity=self._identity, width=self.width, depth=self.depth, init=self.init, attrs=self.attrs, src_loc=self.src_loc)
+        f = MemoryInstance(data=self._data, attrs=self.attrs, src_loc=self.src_loc)
         write_ports = {}
         for port in self._write_ports:
             port._MustUse__used = True
