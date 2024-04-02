@@ -139,7 +139,7 @@ class Member:
             # TODO: We need a simpler way to check for "is this a valid constant initializer"
             if issubclass(type(self._description), ShapeCastable):
                 try:
-                    self._init_as_const = Const.cast(self._description.const(self._init))
+                    self._init_as_const = Const.cast(Const(self._init, self._description))
                 except Exception as e:
                     raise TypeError(f"Port member initial value {self._init!r} is not a valid "
                                     f"constant initializer for {self._description}") from e

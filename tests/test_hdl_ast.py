@@ -522,9 +522,15 @@ class ConstTestCase(FHDLTestCase):
             hash(Const(0))
 
     def test_shape_castable(self):
-        class MockConstValue:
+        class MockConstValue(ValueCastable):
             def __init__(self, value):
                 self.value = value
+
+            def shape(self):
+                return MockConstShape()
+            
+            def as_value(self):
+                return Const(self.value, 8)
 
         class MockConstShape(ShapeCastable):
             def as_shape(self):
