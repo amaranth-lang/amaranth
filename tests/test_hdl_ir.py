@@ -668,6 +668,20 @@ class FragmentDomainsTestCase(FHDLTestCase):
                     r"domain 'sync' \(defines 'foo'\)\.$")):
             f1._propagate_domains(missing_domain=lambda name: f2)
 
+    def test_propagate_up_use(self):
+        a = Signal()
+        m = Module()
+        m1 = Module()
+        m2 = Module()
+        m.submodules.m1 = m1
+        m.submodules.m2 = m2
+        m1.d.test += a.eq(1)
+        m2.domains.test = ClockDomain()
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Domain 'test' is used in 'top.m1', but defined in 'top.m2', which will not be "
+                r"supported in Amaranth 0.6; define the domain in 'top' or one of its parents$"):
+            Fragment.get(m, None).prepare()
+
 
 class FragmentHierarchyConflictTestCase(FHDLTestCase):
     def test_no_conflict_local_domains(self):

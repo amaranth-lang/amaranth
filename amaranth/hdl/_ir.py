@@ -67,6 +67,7 @@ class Fragment:
         self.generated = OrderedDict()
         self.src_loc = src_loc
         self.origins = None
+        self.domains_propagated_up = {}
 
     def add_driver(self, signal, domain="comb"):
         assert isinstance(domain, str)
@@ -179,22 +180,37 @@ class Fragment:
                 self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name, src_loc)
 
         # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
-        for subfrag, name, src_loc in self.subfragments:
+        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
+            hier_name = name
+            if hier_name is None:
+                hier_name = f"<unnamed #{i}>"
             for domain_name, domain in subfrag.domains.items():
                 if domain.local:
                     continue
                 self.add_domains(domain)
+                if domain_name in subfrag.domains_propagated_up:
+                    _used_in, defined_in = subfrag.domains_propagated_up[domain_name]
+                else:
+                    defined_in = (*hierarchy, hier_name)
+                self.domains_propagated_up[domain_name] = (hierarchy, defined_in)
 
-    def _propagate_domains_down(self):
+    def _propagate_domains_down(self, hierarchy=("top",)):
         # For each domain defined in this fragment, ensure it also exists in all subfragments.
-        for subfrag, name, src_loc in self.subfragments:
+        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
+            hier_name = name
+            if hier_name is None:
+                hier_name = f"<unnamed #{i}>"
+
             for domain in self.iter_domains():
                 if domain in subfrag.domains:
                     assert self.domains[domain] is subfrag.domains[domain]
                 else:
                     subfrag.add_domains(self.domains[domain])
+                    if domain in self.domains_propagated_up:
+                        _used_in, defined_in = self.domains_propagated_up[domain]
+                        subfrag.domains_propagated_up[domain] = (hierarchy + (hier_name,)), defined_in
 
-            subfrag._propagate_domains_down()
+            subfrag._propagate_domains_down(hierarchy + (hier_name,))
 
     def _create_missing_domains(self, missing_domain, *, platform=None):
         from ._xfrm import DomainCollector
