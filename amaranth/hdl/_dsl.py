@@ -169,12 +169,11 @@ def resolve_statement(stmt):
     elif isinstance(stmt, Switch):
         return Switch(
             test=stmt.test,
-            cases=OrderedDict(
-                (patterns, resolve_statements(stmts))
-                for patterns, stmts in stmt.cases.items()
-            ),
+            cases=[
+                (patterns, resolve_statements(stmts), src_loc)
+                for patterns, stmts, src_loc in stmt.cases
+            ],
             src_loc=stmt.src_loc,
-            case_src_locs=stmt.case_src_locs,
         )
     elif isinstance(stmt, (Assign, Property, Print)):
         return stmt
@@ -318,9 +317,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Switch", context=None)
         switch_data = self._set_ctrl("Switch", {
             "test":    Value.cast(test),
-            "cases":   OrderedDict(),
+            "cases":   [],
             "src_loc": tracer.get_src_loc(src_loc_at=1),
-            "case_src_locs": {},
+            "got_default": False,
         })
         try:
             self._ctrl_context = "Switch"
@@ -336,7 +335,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Case", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        if () in switch_data["cases"]:
+        if switch_data["got_default"]:
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
         new_patterns = _normalize_patterns(patterns, switch_data["test"].shape())
@@ -345,12 +344,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            # If none of the provided cases can possibly be true, omit this branch completely.
-            # Likewise, omit this branch if another branch with this exact set of patterns already
-            # exists (since otherwise we'd overwrite the previous branch's slot in the dict).
-            if new_patterns and new_patterns not in switch_data["cases"]:
-                switch_data["cases"][new_patterns] = self._statements
-                switch_data["case_src_locs"][new_patterns] = src_loc
+            switch_data["cases"].append((new_patterns, self._statements, src_loc))
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
@@ -360,7 +354,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Default", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        if () in switch_data["cases"]:
+        if switch_data["got_default"]:
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
         try:
@@ -368,9 +362,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            if () not in switch_data["cases"]:
-                switch_data["cases"][()] = self._statements
-                switch_data["case_src_locs"][()] = src_loc
+            switch_data["cases"].append((None, self._statements, src_loc))
+            switch_data["got_default"] = True
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
@@ -471,8 +464,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     domains[domain] = None
 
             for domain in domains:
-                tests, cases = [], OrderedDict()
-                for if_test, if_case in zip(if_tests + [None], if_bodies):
+                tests, cases = [], []
+                for if_test, if_case, if_src_loc in zip(if_tests + [None], if_bodies, if_src_locs):
                     if if_test is not None:
                         if len(if_test) != 1:
                             if_test = if_test.bool()
@@ -482,27 +475,26 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                         match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
                     else:
                         match = None
-                    cases[match] = if_case.get(domain, [])
+                    cases.append((match, if_case.get(domain, []), if_src_loc))
 
                 self._statements.setdefault(domain, []).append(Switch(Cat(tests), cases,
-                    src_loc=src_loc, case_src_locs=dict(zip(cases, if_src_locs))))
+                    src_loc=src_loc))
 
         if name == "Switch":
             switch_test, switch_cases = data["test"], data["cases"]
-            switch_case_src_locs = data["case_src_locs"]
 
             domains = {}
-            for stmts in switch_cases.values():
+            for _patterns, stmts, _src_loc in switch_cases:
                 for domain in stmts:
                     domains[domain] = None
 
             for domain in domains:
-                domain_cases = OrderedDict()
-                for patterns, stmts in switch_cases.items():
-                    domain_cases[patterns] = stmts.get(domain, [])
+                domain_cases = []
+                for patterns, stmts, case_src_loc in switch_cases:
+                    domain_cases.append((patterns, stmts.get(domain, []), case_src_loc))
 
                 self._statements.setdefault(domain, []).append(Switch(switch_test, domain_cases,
-                    src_loc=src_loc, case_src_locs=switch_case_src_locs))
+                    src_loc=src_loc))
 
         if name == "FSM":
             fsm_name, fsm_init, fsm_encoding, fsm_decoding, fsm_states, fsm_ongoing = \
@@ -536,9 +528,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     domain_states[state] = stmts.get(domain, [])
 
                 self._statements.setdefault(domain, []).append(Switch(fsm_signal,
-                    OrderedDict((fsm_encoding[name], stmts) for name, stmts in domain_states.items()),
-                    src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
-                                                    for name in fsm_states}))
+                    [
+                        (fsm_encoding[name], stmts, fsm_state_src_locs[name])
+                        for name, stmts in domain_states.items()
+                    ],
+                    src_loc=src_loc))
 
     def _add_statement(self, assigns, domain, depth):
         while len(self._ctrl_stack) > self.domain._depth:

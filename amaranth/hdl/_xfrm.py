@@ -183,8 +183,6 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_unknown_statement(stmt)
         if isinstance(new_stmt, Statement) and self.replace_statement_src_loc(stmt, new_stmt):
             new_stmt.src_loc = stmt.src_loc
-            if isinstance(new_stmt, Switch) and isinstance(stmt, Switch):
-                new_stmt.case_src_locs = stmt.case_src_locs
         if isinstance(new_stmt, (Print, Property)):
             new_stmt._MustUse__used = True
         return new_stmt
@@ -221,7 +219,7 @@ class StatementTransformer(StatementVisitor):
         return Property(stmt.kind, self.on_value(stmt.test), message)
 
     def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
+        cases = [(k, self.on_statement(s), l) for k, s, l in stmt.cases]
         return Switch(self.on_value(stmt.test), cases)
 
     def on_statements(self, stmts):
@@ -429,7 +427,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
     def on_Switch(self, stmt):
         self.on_value(stmt.test)
-        for stmts in stmt.cases.values():
+        for _patterns, stmts, _src_loc in stmt.cases:
             self.on_statement(stmts)
 
     def on_statements(self, stmts):
@@ -624,7 +622,7 @@ class _ControlInserter(FragmentTransformer):
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
         stmts = [s.eq(Const(s.init, s.shape())) for s in signals if not s.reset_less]
-        fragment.add_statements(domain, Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
+        fragment.add_statements(domain, Switch(self.controls[domain], [(1, stmts, None)], src_loc=self.src_loc))
 
 
 class EnableInserter(_ControlInserter):
@@ -632,7 +630,7 @@ class EnableInserter(_ControlInserter):
         if domain in fragment.statements:
             fragment.statements[domain] = _StatementList([Switch(
                 self.controls[domain],
-                {1: fragment.statements[domain]},
+                [(1, fragment.statements[domain], None)],
                 src_loc=self.src_loc,
             )])
 

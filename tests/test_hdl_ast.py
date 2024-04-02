@@ -1687,38 +1687,38 @@ class AssertTestCase(FHDLTestCase):
 
 class SwitchTestCase(FHDLTestCase):
     def test_default_case(self):
-        s = Switch(Const(0), {None: []})
-        self.assertEqual(s.cases, {(): []})
+        s = Switch(Const(0), [(None, [], None)])
+        self.assertEqual(s.cases, ((None, [], None),))
 
     def test_int_case(self):
-        s = Switch(Const(0, 8), {10: []})
-        self.assertEqual(s.cases, {("00001010",): []})
+        s = Switch(Const(0, 8), [(10, [], None)])
+        self.assertEqual(s.cases, ((("00001010",), [], None),))
 
     def test_int_neg_case(self):
-        s = Switch(Const(0, signed(8)), {-10: []})
-        self.assertEqual(s.cases, {("11110110",): []})
+        s = Switch(Const(0, signed(8)), [(-10, [], None)])
+        self.assertEqual(s.cases, ((("11110110",), [], None),))
 
     def test_int_zero_width(self):
-        s = Switch(Const(0, 0), {0: []})
-        self.assertEqual(s.cases, {("",): []})
+        s = Switch(Const(0, 0), [(0, [], None)])
+        self.assertEqual(s.cases, ((("",), [], None),))
 
     def test_int_zero_width_enum(self):
         class ZeroEnum(Enum):
             A = 0
-        s = Switch(Const(0, 0), {ZeroEnum.A: []})
-        self.assertEqual(s.cases, {("",): []})
+        s = Switch(Const(0, 0), [(ZeroEnum.A, [], None)])
+        self.assertEqual(s.cases, ((("",), [], None),))
 
     def test_enum_case(self):
-        s = Switch(Const(0, UnsignedEnum), {UnsignedEnum.FOO: []})
-        self.assertEqual(s.cases, {("01",): []})
+        s = Switch(Const(0, UnsignedEnum), [(UnsignedEnum.FOO, [], None)])
+        self.assertEqual(s.cases, ((("01",), [], None),))
 
     def test_str_case(self):
-        s = Switch(Const(0, 8), {"0000 11\t01": []})
-        self.assertEqual(s.cases, {("00001101",): []})
+        s = Switch(Const(0, 8), [("0000 11\t01", [], None)])
+        self.assertEqual(s.cases, ((("00001101",), [], None),))
 
     def test_two_cases(self):
-        s = Switch(Const(0, 8), {("00001111", 123): []})
-        self.assertEqual(s.cases, {("00001111", "01111011"): []})
+        s = Switch(Const(0, 8), [(("00001111", 123), [], None)])
+        self.assertEqual(s.cases, ((("00001111", "01111011"), [], None),))
 
 
 class IOValueTestCase(FHDLTestCase):
