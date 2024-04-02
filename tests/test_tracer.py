@@ -1,4 +1,5 @@
 from amaranth.hdl.ast import *
+from amaranth.hdl import ast
 from types import SimpleNamespace
 
 from .utils import *
@@ -9,6 +10,22 @@ class TracerTestCase(FHDLTestCase):
         self.assertEqual(s1.name, "s1")
         s2 = Signal()
         self.assertEqual(s2.name, "s2")
+
+    def test_call_variants(self):
+        args = []
+        kwargs = {}
+        s1 = Signal()
+        self.assertEqual(s1.name, "s1")
+        s2 = Signal(reset=0)
+        self.assertEqual(s2.name, "s2")
+        s3 = Signal(*args, **kwargs)
+        self.assertEqual(s3.name, "s3")
+        s4 = ast.Signal()
+        self.assertEqual(s4.name, "s4")
+        s5 = ast.Signal(reset=0)
+        self.assertEqual(s5.name, "s5")
+        s6 = ast.Signal(*args, **kwargs)
+        self.assertEqual(s6.name, "s6")
 
     def test_name(self):
         class Dummy:
