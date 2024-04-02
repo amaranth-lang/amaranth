@@ -18,6 +18,12 @@ class PortGroup:
     pass
 
 
+class PortMetadata:
+    def __init__(self, name, attrs):
+        self.name = name
+        self.attrs = attrs
+
+
 class ResourceManager:
     def __init__(self, resources, connectors):
         self.resources  = OrderedDict()
@@ -133,12 +139,21 @@ class ResourceManager:
                     direction = phys.dir
                 if isinstance(phys, Pins):
                     phys_names = phys.names
-                    io = IOPort(len(phys), name="__".join(path) + "__io")
+                    io = IOPort(len(phys), name="__".join(path) + "__io", metadata=[
+                        PortMetadata(name, attrs)
+                        for name in phys.names
+                    ])
                     port = SingleEndedPort(io, invert=phys.invert, direction=direction)
                 if isinstance(phys, DiffPairs):
                     phys_names = []
-                    p = IOPort(len(phys), name="__".join(path) + "__p")
-                    n = IOPort(len(phys), name="__".join(path) + "__n")
+                    p = IOPort(len(phys), name="__".join(path) + "__p", metadata=[
+                        PortMetadata(name, attrs)
+                        for name in phys.p.names
+                    ])
+                    n = IOPort(len(phys), name="__".join(path) + "__n", metadata=[
+                        PortMetadata(name, attrs)
+                        for name in phys.n.names
+                    ])
                     if not self.should_skip_port_component(None, attrs, "p"):
                         phys_names += phys.p.names
                     if not self.should_skip_port_component(None, attrs, "n"):
