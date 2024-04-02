@@ -795,7 +795,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_enum(self):
         s = Signal(SignedEnum)
         self.assertRepr(s.matches(SignedEnum.FOO), """
-        (== (sig s) (const 2'sd-1))
+        (== (sig s) (const 1'sd-1))
         """)
 
     def test_matches_const_castable(self):
@@ -807,28 +807,28 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_width_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern '--' must have the same width as match value \(which is 4\)$"):
+                r"^Pattern '--' must have the same width as match value \(which is 4\)$"):
             s.matches("--")
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Match pattern '22' \(5'10110\) is wider than match value \(which has "
-                r"width 4\); comparison will never be true$"):
+                r"^Pattern '22' \(5'10110\) is not representable in match value shape "
+                r"\(unsigned\(4\)\); comparison will never be true$"):
             s.matches(0b10110)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Match pattern '\(cat \(const 1'd0\) \(const 4'd11\)\)' \(5'10110\) is wider "
-                r"than match value \(which has width 4\); comparison will never be true$"):
+                r"^Pattern '\(cat \(const 1'd0\) \(const 4'd11\)\)' \(5'10110\) is not "
+                r"representable in match value shape \(unsigned\(4\)\); comparison will never be true$"):
             s.matches(Cat(0, C(0b1011, 4)))
 
     def test_matches_bits_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
+                r"^Pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
                 r"and may include whitespace$"):
             s.matches("abc")
 
     def test_matches_pattern_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern must be a string or a constant-castable expression, not 1\.0$"):
+                r"^Pattern must be a string or a constant-castable expression, not 1\.0$"):
             s.matches(1.0)
 
     def test_hash(self):
@@ -1695,7 +1695,7 @@ class SwitchTestCase(FHDLTestCase):
         self.assertEqual(s.cases, {("00001010",): []})
 
     def test_int_neg_case(self):
-        s = Switch(Const(0, 8), {-10: []})
+        s = Switch(Const(0, signed(8)), {-10: []})
         self.assertEqual(s.cases, {("11110110",): []})
 
     def test_int_zero_width(self):

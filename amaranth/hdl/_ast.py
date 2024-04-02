@@ -16,6 +16,7 @@ from .._unused import *
 
 
 __all__ = [
+    "SyntaxError", "SyntaxWarning",
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
     "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat",
     "Array", "ArrayProxy",
@@ -28,6 +29,14 @@ __all__ = [
     "IOValue", "IOPort", "IOConcat", "IOSlice",
     "SignalKey", "SignalDict", "SignalSet",
 ]
+
+
+class SyntaxError(Exception):
+    pass
+
+
+class SyntaxWarning(Warning):
+    pass
 
 
 class DUID:
@@ -424,6 +433,37 @@ class ShapeLike(metaclass=_ShapeLikeMeta):
     """
     def __new__(cls, *args, **kwargs):
         raise TypeError("ShapeLike is an abstract class and cannot be instantiated")
+
+
+def _normalize_patterns(patterns, shape, *, src_loc_at=1):
+    new_patterns = []
+    for pattern in patterns:
+        orig_pattern = pattern
+        if isinstance(pattern, str):
+            if any(bit not in "01- \t" for bit in pattern):
+                raise SyntaxError(f"Pattern '{pattern}' must consist of 0, 1, and - (don't "
+                                  f"care) bits, and may include whitespace")
+            pattern = "".join(pattern.split()) # remove whitespace
+            if len(pattern) != shape.width:
+                raise SyntaxError(f"Pattern '{orig_pattern}' must have the same width as "
+                                  f"match value (which is {shape.width})")
+        else:
+            try:
+                pattern = Const.cast(pattern)
+            except TypeError as e:
+                raise SyntaxError(f"Pattern must be a string or a constant-castable "
+                                  f"expression, not {pattern!r}") from e
+            cast_pattern = Const(pattern.value, shape)
+            if cast_pattern.value != pattern.value:
+                warnings.warn(f"Pattern '{orig_pattern!r}' "
+                              f"({pattern.shape().width}'{pattern.value:b}) is not "
+                              f"representable in match value shape "
+                              f"({shape!r}); comparison will never be true",
+                              SyntaxWarning, stacklevel=2 + src_loc_at)
+                continue
+            pattern = pattern.value
+        new_patterns.append(pattern)
+    return tuple(new_patterns)
 
 
 def _overridable_by_reflected(method_name):
@@ -1248,36 +1288,12 @@ class Value(metaclass=ABCMeta):
             If a pattern has invalid syntax.
         """
         matches = []
-        # This code should accept exactly the same patterns as `with m.Case(...):`.
-        for pattern in patterns:
-            if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
-                raise SyntaxError("Match pattern '{}' must consist of 0, 1, and - (don't care) "
-                                  "bits, and may include whitespace"
-                                  .format(pattern))
-            if (isinstance(pattern, str) and
-                    len("".join(pattern.split())) != len(self)):
-                raise SyntaxError("Match pattern '{}' must have the same width as match value "
-                                  "(which is {})"
-                                  .format(pattern, len(self)))
+        for pattern in _normalize_patterns(patterns, self.shape()):
             if isinstance(pattern, str):
-                pattern = "".join(pattern.split()) # remove whitespace
-                mask    = int(pattern.replace("0", "1").replace("-", "0"), 2)
-                pattern = int(pattern.replace("-", "0"), 2)
+                mask    = int("0" + pattern.replace("0", "1").replace("-", "0"), 2)
+                pattern = int("0" + pattern.replace("-", "0"), 2)
                 matches.append((self & mask) == pattern)
             else:
-                try:
-                    orig_pattern, pattern = pattern, Const.cast(pattern)
-                except TypeError as e:
-                    raise SyntaxError("Match pattern must be a string or a constant-castable "
-                                      "expression, not {!r}"
-                                      .format(pattern)) from e
-                pattern_len = bits_for(pattern.value)
-                if pattern_len > len(self):
-                    warnings.warn("Match pattern '{!r}' ({}'{:b}) is wider than match value "
-                                  "(which has width {}); comparison will never be true"
-                                  .format(orig_pattern, pattern_len, pattern.value, len(self)),
-                                  SyntaxWarning, stacklevel=2)
-                    continue
                 matches.append(self == pattern)
         if not matches:
             return Const(0)
@@ -2770,17 +2786,9 @@ class Switch(Statement):
             # Map: 2 -> "0010"; "0010" -> "0010"
             new_keys = ()
             key_mask = (1 << len(self.test)) - 1
-            for key in keys:
-                if isinstance(key, str):
-                    key = "".join(key.split()) # remove whitespace
-                elif isinstance(key, int):
+            for key in _normalize_patterns(keys, self._test.shape()):
+                if isinstance(key, int):
                     key = to_binary(key & key_mask, len(self.test))
-                elif isinstance(key, Enum):
-                    key = to_binary(key.value & key_mask, len(self.test))
-                else:
-                    raise TypeError("Object {!r} cannot be used as a switch key"
-                                    .format(key))
-                assert len(key) == len(self.test)
                 new_keys = (*new_keys, key)
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
