@@ -487,17 +487,17 @@ class DSLTestCase(FHDLTestCase):
         dummy = Signal()
         with m.Switch(self.w1):
             with self.assertRaisesRegex(SyntaxError,
-                    r"^Case pattern '--' must have the same width as switch value \(which is 4\)$"):
+                    r"^Pattern '--' must have the same width as match value \(which is 4\)$"):
                 with m.Case("--"):
                     m.d.comb += dummy.eq(0)
             with self.assertWarnsRegex(SyntaxWarning,
-                    r"^Case pattern '22' \(5'10110\) is wider than switch value \(which has "
-                    r"width 4\); comparison will never be true$"):
+                    r"^Pattern '22' \(5'10110\) is not representable in match value shape "
+                    r"\(unsigned\(4\)\); comparison will never be true$"):
                 with m.Case(0b10110):
                     m.d.comb += dummy.eq(0)
             with self.assertWarnsRegex(SyntaxWarning,
-                    r"^Case pattern '<Color.RED: 170>' \(8'10101010\) is wider than switch value "
-                    r"\(which has width 4\); comparison will never be true$"):
+                    r"^Pattern '<Color.RED: 170>' \(8'10101010\) is not representable in "
+                    r"match value shape \(unsigned\(4\)\); comparison will never be true$"):
                 with m.Case(Color.RED):
                     m.d.comb += dummy.eq(0)
         self.assertEqual(m._statements, {})
@@ -521,7 +521,7 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaisesRegex(SyntaxError,
-                    (r"^Case pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
+                    (r"^Pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
                         r"and may include whitespace$")):
                 with m.Case("abc"):
                     pass
@@ -530,7 +530,7 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         with m.Switch(self.w1):
             with self.assertRaisesRegex(SyntaxError,
-                    r"^Case pattern must be a string or a constant-castable expression, "
+                    r"^Pattern must be a string or a constant-castable expression, "
                     r"not 1\.0$"):
                 with m.Case(1.0):
                     pass

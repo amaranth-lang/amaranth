@@ -4,6 +4,7 @@ import sys
 import unittest
 
 from amaranth import *
+from amaranth.hdl import *
 from amaranth.lib.enum import Enum, EnumMeta, Flag, IntEnum, EnumView, FlagView
 
 from .utils import *

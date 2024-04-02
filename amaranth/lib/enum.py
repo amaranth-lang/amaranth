@@ -2,7 +2,7 @@ import enum as py_enum
 import warnings
 import operator
 
-from ..hdl._ast import Value, ValueCastable, Shape, ShapeCastable, Const
+from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning
 from ..hdl._repr import *
 
 

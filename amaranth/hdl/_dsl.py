@@ -9,21 +9,13 @@ from .._utils import flatten
 from ..utils import bits_for
 from .. import tracer
 from ._ast import *
-from ._ast import _StatementList, _LateBoundStatement, Property, Print
+from ._ast import _StatementList, _LateBoundStatement, _normalize_patterns
 from ._ir import *
 from ._cd import *
 from ._xfrm import *
 
 
 __all__ = ["SyntaxError", "SyntaxWarning", "Module"]
-
-
-class SyntaxError(Exception):
-    pass
-
-
-class SyntaxWarning(Warning):
-    pass
 
 
 class _ModuleBuilderProxy:
@@ -344,41 +336,10 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Case", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        new_patterns = ()
         if () in switch_data["cases"]:
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
-        # This code should accept exactly the same patterns as `v.matches(...)`.
-        for pattern in patterns:
-            if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
-                raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) "
-                                  "bits, and may include whitespace"
-                                  .format(pattern))
-            if (isinstance(pattern, str) and
-                    len("".join(pattern.split())) != len(switch_data["test"])):
-                raise SyntaxError("Case pattern '{}' must have the same width as switch value "
-                                  "(which is {})"
-                                  .format(pattern, len(switch_data["test"])))
-            if isinstance(pattern, str):
-                new_patterns = (*new_patterns, pattern)
-            else:
-                try:
-                    orig_pattern, pattern = pattern, Const.cast(pattern)
-                except TypeError as e:
-                    raise SyntaxError("Case pattern must be a string or a constant-castable "
-                                      "expression, not {!r}"
-                                      .format(pattern)) from e
-                pattern_len = bits_for(pattern.value)
-                if pattern.value == 0:
-                    pattern_len = 0
-                if pattern_len > len(switch_data["test"]):
-                    warnings.warn("Case pattern '{!r}' ({}'{:b}) is wider than switch value "
-                                  "(which has width {}); comparison will never be true"
-                                  .format(orig_pattern, pattern_len, pattern.value,
-                                          len(switch_data["test"])),
-                                  SyntaxWarning, stacklevel=3)
-                    continue
-                new_patterns = (*new_patterns, pattern.value)
+        new_patterns = _normalize_patterns(patterns, switch_data["test"].shape())
         try:
             _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
