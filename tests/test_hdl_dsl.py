@@ -411,6 +411,7 @@ class DSLTestCase(FHDLTestCase):
         (
             (switch (sig w1)
                 (case 0011 (eq (sig c1) (const 1'd1)))
+                (case () (eq (sig c2) (const 1'd1)))
             )
         )
         """)
@@ -500,7 +501,14 @@ class DSLTestCase(FHDLTestCase):
                     r"match value shape \(unsigned\(4\)\); comparison will never be true$"):
                 with m.Case(Color.RED):
                     m.d.comb += dummy.eq(0)
-        self.assertEqual(m._statements, {})
+        self.assertRepr(m._statements["comb"], """
+        (
+            (switch (sig w1)
+                (case () (eq (sig dummy) (const 1'd0)))
+                (case () (eq (sig dummy) (const 1'd0)))
+            )
+        )
+        """)
 
     def test_Switch_zero_width(self):
         m = Module()

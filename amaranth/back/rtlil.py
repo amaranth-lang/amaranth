@@ -638,6 +638,8 @@ class ModuleEmitter:
                                 assert isinstance(matches_cell, _nir.Matches)
                                 assert test == matches_cell.value
                                 patterns = matches_cell.patterns
+                                # RTLIL cannot support empty pattern sets.
+                                assert patterns
                             with switch.case(*patterns) as subcase:
                                 emit_assignments(subcase, subcond)
                     emitted_switch = True

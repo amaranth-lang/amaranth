@@ -396,10 +396,12 @@ class _StatementCompiler(StatementVisitor, _Compiler):
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
         gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1:#x} & {gen_test_value}")
-        for index, (patterns, stmts) in enumerate(stmt.cases.items()):
+        for index, (patterns, stmts, _src_loc) in enumerate(stmt.cases):
             gen_checks = []
-            if not patterns:
+            if patterns is None:
                 gen_checks.append(f"True")
+            elif not patterns:
+                gen_checks.append(f"False")
             else:
                 for pattern in patterns:
                     if "-" in pattern:

@@ -1110,20 +1110,25 @@ class NetlistEmitter:
         elif isinstance(stmt, _ast.Switch):
             test, _signed = self.emit_rhs(module_idx, stmt.test)
             conds = []
-            for patterns in stmt.cases:
-                if patterns:
+            case_stmts = []
+            for patterns, stmts, case_src_loc in stmt.cases:
+                if patterns is not None:
+                    if not patterns:
+                        # Hack: empty pattern set cannot be supported by RTLIL.
+                        continue
                     for pattern in patterns:
                         assert len(pattern) == len(test)
                     cell = _nir.Matches(module_idx, value=test, patterns=patterns,
-                                        src_loc=stmt.case_src_locs.get(patterns))
+                                        src_loc=case_src_loc)
                     net, = self.netlist.add_value_cell(1, cell)
                     conds.append(net)
                 else:
                     conds.append(_nir.Net.from_const(1))
+                case_stmts.append(stmts)
             cell = _nir.PriorityMatch(module_idx, en=cond, inputs=_nir.Value(conds),
                                       src_loc=stmt.src_loc)
             conds = self.netlist.add_value_cell(len(conds), cell)
-            for subcond, substmts in zip(conds, stmt.cases.values()):
+            for subcond, substmts in zip(conds, case_stmts):
                 for substmt in substmts:
                     self.emit_stmt(module_idx, fragment, domain, substmt, subcond)
         else:

@@ -2763,38 +2763,34 @@ class _LateBoundStatement(Statement):
 
 @final
 class Switch(Statement):
-    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0, case_src_locs={}):
+    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0):
         if src_loc is None:
             super().__init__(src_loc_at=src_loc_at)
         else:
             # Switch is a bit special in terms of location tracking because it is usually created
             # long after the control has left the statement that directly caused its creation.
             self.src_loc = src_loc
-        # Switch is also a bit special in that its parts also have location information. It can't
-        # be automatically traced, so whatever constructs a Switch may optionally provide it.
-        self.case_src_locs = {}
 
         self._test  = Value.cast(test)
-        self._cases = OrderedDict()
-        for orig_keys, stmts in cases.items():
-            # Map: None -> (); key -> (key,); (key...) -> (key...)
-            keys = orig_keys
-            if keys is None:
-                keys = ()
-            if not isinstance(keys, tuple):
-                keys = (keys,)
-            # Map: 2 -> "0010"; "0010" -> "0010"
-            new_keys = ()
-            key_mask = (1 << len(self.test)) - 1
-            for key in _normalize_patterns(keys, self._test.shape()):
-                if isinstance(key, int):
-                    key = to_binary(key & key_mask, len(self.test))
-                new_keys = (*new_keys, key)
+        self._cases = []
+        for patterns, stmts, case_src_loc in cases:
+            if patterns is not None:
+                # Map: key -> (key,); (key...) -> (key...)
+                if not isinstance(patterns, tuple):
+                    patterns = (patterns,)
+                # Map: 2 -> "0010"; "0010" -> "0010"
+                new_patterns = ()
+                key_mask = (1 << len(self.test)) - 1
+                for key in _normalize_patterns(patterns, self._test.shape()):
+                    if isinstance(key, int):
+                        key = to_binary(key & key_mask, len(self.test))
+                    new_patterns = (*new_patterns, key)
+            else:
+                new_patterns = None
             if not isinstance(stmts, Iterable):
                 stmts = [stmts]
-            self._cases[new_keys] = Statement.cast(stmts)
-            if orig_keys in case_src_locs:
-                self.case_src_locs[new_keys] = case_src_locs[orig_keys]
+            self._cases.append((new_patterns, Statement.cast(stmts), case_src_loc))
+        self._cases = tuple(self._cases)
 
     @property
     def test(self):
@@ -2805,22 +2801,22 @@ class Switch(Statement):
         return self._cases
 
     def _lhs_signals(self):
-        return union((s._lhs_signals() for s in self.cases.values()), start=SignalSet())
+        return union((stmts._lhs_signals() for _patterns, stmts, _src_loc in self.cases), start=SignalSet())
 
     def _rhs_signals(self):
-        signals = union((s._rhs_signals() for s in self.cases.values()), start=SignalSet())
+        signals = union((stmts._rhs_signals() for _patterns, stmts, _src_loc in self.cases), start=SignalSet())
         return self.test._rhs_signals() | signals
 
     def __repr__(self):
-        def case_repr(keys, stmts):
+        def case_repr(patterns, stmts):
             stmts_repr = " ".join(map(repr, stmts))
-            if keys == ():
+            if patterns is None:
                 return f"(default {stmts_repr})"
-            elif len(keys) == 1:
-                return f"(case {keys[0]} {stmts_repr})"
+            elif len(patterns) == 1:
+                return f"(case {patterns[0]} {stmts_repr})"
             else:
-                return "(case ({}) {})".format(" ".join(keys), stmts_repr)
-        case_reprs = [case_repr(keys, stmts) for keys, stmts in self.cases.items()]
+                return "(case ({}) {})".format(" ".join(patterns), stmts_repr)
+        case_reprs = [case_repr(patterns, stmts) for patterns, stmts, _src_loc in self.cases]
         return "(switch {!r} {})".format(self.test, " ".join(case_reprs))
 
 
