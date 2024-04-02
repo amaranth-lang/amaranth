@@ -83,7 +83,7 @@ class Memory(wiring.Component):
 
             if isinstance(shape, ShapeCastable):
                 self._elems = [None] * depth
-                self._raw = [Const.cast(shape.const(None)).value] * depth
+                self._raw = [Const.cast(Const(None, shape)).value] * depth
             else:
                 self._elems = [0] * depth
                 self._raw = self._elems # intentionally mutably aliased
@@ -113,7 +113,7 @@ class Memory(wiring.Component):
                     self[actual_index] = actual_value
             else:
                 if isinstance(self._shape, ShapeCastable):
-                    self._raw[index] = Const.cast(self._shape.const(value)).value
+                    self._raw[index] = Const.cast(Const(value, self._shape)).value
                 else:
                     value = operator.index(value)
                     # self._raw[index] assigned by the following line

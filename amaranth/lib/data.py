@@ -223,12 +223,7 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             field = self[key]
             cast_field_shape = Shape.cast(field.shape)
             if isinstance(field.shape, ShapeCastable):
-                key_value = hdl.Const.cast(field.shape.const(key_value))
-                if key_value.shape() != cast_field_shape:
-                    raise ValueError("Constant returned by {!r}.const() must have the shape that "
-                                     "it casts to, {!r}, and not {!r}"
-                                     .format(field.shape, cast_field_shape,
-                                             key_value.shape()))
+                key_value = hdl.Const.cast(hdl.Const(key_value, field.shape))
             elif not isinstance(key_value, hdl.Const):
                 key_value = hdl.Const(key_value, cast_field_shape)
             mask = ((1 << cast_field_shape.width) - 1) << field.offset

@@ -1503,7 +1503,13 @@ class ValueLike(metaclass=_ValueLikeMeta):
 class _ConstMeta(ABCMeta):
     def __call__(cls, value, shape=None, src_loc_at=0, **kwargs):
         if isinstance(shape, ShapeCastable):
-            return shape.const(value)
+            value = shape.const(value)
+            cast_shape = Shape.cast(shape)
+            cast_value = Const.cast(value)
+            if cast_value.shape() != cast_shape:
+                raise ValueError(f"Constant returned by {shape!r}.const() must have the shape that "
+                                 f"it casts to, {cast_shape!r}, and not {cast_value.shape()!r}")
+            return value
         return super().__call__(value, shape, **kwargs, src_loc_at=src_loc_at + 1)
 
 
