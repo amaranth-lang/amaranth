@@ -1,3 +1,4 @@
+import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
@@ -539,11 +540,26 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
     def __init__(self, domains=None):
         self.domains = domains
+        self.domains_propagated_up = {}
+
+    def _warn_on_propagation_up(self, domain, src_loc):
+        if domain in self.domains_propagated_up:
+            used_in, defined_in = self.domains_propagated_up[domain]
+            common_prefix = []
+            for u, d in zip(used_in, defined_in):
+                if u == d:
+                    common_prefix.append(u)
+            warnings.warn_explicit(f"Domain '{domain}' is used in '{'.'.join(used_in)}', but "
+                                   f"defined in '{'.'.join(defined_in)}', which will not be "
+                                   f"supported in Amaranth 0.6; define the domain in "
+                                   f"'{'.'.join(common_prefix)}' or one of its parents",
+                                   DeprecationWarning, filename=src_loc[0], lineno=src_loc[1])
 
     def _resolve(self, domain, context):
         if domain not in self.domains:
             raise DomainError("Signal {!r} refers to nonexistent domain '{}'"
                               .format(context, domain))
+        self._warn_on_propagation_up(domain, context.src_loc)
         return self.domains[domain]
 
     def map_drivers(self, fragment, new_fragment):
@@ -569,6 +585,14 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
 
     def on_fragment(self, fragment):
         self.domains = fragment.domains
+        self.domains_propagated_up = fragment.domains_propagated_up
+        for domain, statements in fragment.statements.items():
+            self._warn_on_propagation_up(domain, statements[0].src_loc)
+        if isinstance(fragment, MemoryInstance):
+            for port in fragment._read_ports:
+                self._warn_on_propagation_up(port._domain, fragment.src_loc)
+            for port in fragment._write_ports:
+                self._warn_on_propagation_up(port._domain, fragment.src_loc)
         return super().on_fragment(fragment)
 
 

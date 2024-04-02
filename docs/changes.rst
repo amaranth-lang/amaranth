@@ -38,6 +38,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace imports of ``amaranth.asserts.{Assert, Assume, Cover}`` with imports from ``amaranth.hdl``
 * Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
 * Ensure all elaboratables are subclasses of :class:`Elaboratable`
+* Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
 
 
 Implemented RFCs
@@ -53,6 +54,7 @@ Implemented RFCs
 .. _RFC 51: https://amaranth-lang.org/rfcs/0051-const-from-bits.html
 .. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
 .. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
+.. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
 .. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
 
 * `RFC 17`_: Remove ``log2_int``
@@ -64,6 +66,7 @@ Implemented RFCs
 * `RFC 50`_: ``Print`` statement and string formatting
 * `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
 * `RFC 53`_: Low-level I/O primitives
+* `RFC 59`_: Get rid of upwards propagation of clock domains
 
 
 Language changes
@@ -88,6 +91,7 @@ Language changes
 * Changed: :class:`Instance` IO ports now accept only IO values, not plain values. (`RFC 53`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
+* Deprecated: upwards propagation of clock domains. (`RFC 59`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
