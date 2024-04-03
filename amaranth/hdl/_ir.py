@@ -9,8 +9,8 @@ from . import _ast, _cd, _ir, _nir
 
 
 __all__ = [
-    "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment", "Instance",
-    "IOBufferInstance", "PortDirection", "Design", "build_netlist",
+    "UnusedElaboratable", "Elaboratable", "DuplicateElaboratable", "DriverConflict", "Fragment",
+    "Instance", "IOBufferInstance", "PortDirection", "Design", "build_netlist",
 ]
 
 
@@ -27,6 +27,10 @@ class Elaboratable(_unused.MustUse):
 
 
 class DriverConflict(UserWarning):
+    pass
+
+
+class DuplicateElaboratable(Exception):
     pass
 
 
@@ -430,6 +434,7 @@ class Design:
         self.hierarchy = hierarchy
         self.fragments: dict[Fragment, DesignFragmentInfo] = {}
         self.signal_lca = _ast.SignalDict()
+        self.elaboratables: dict[Elaboratable, Fragment] = {}
         self._compute_fragment_depth_parent(fragment, None, 0)
         self._collect_used_signals(fragment)
         self._add_io_ports()
@@ -597,6 +602,15 @@ class Design:
 
         frag_info = self.fragments[fragment]
         frag_info.name = hierarchy
+
+        if fragment.origins is not None:
+            for origin in fragment.origins:
+                if origin in self.elaboratables:
+                    other_hierarchy = self.fragments[self.elaboratables[origin]].name
+                    raise DuplicateElaboratable(f"Elaboratable {origin!r} is included twice "
+                                                f"in the hierarchy, as {'.'.join(other_hierarchy)} "
+                                                f"and {'.'.join(hierarchy)}")
+                self.elaboratables[origin] = fragment
 
         if fragment is self.fragment:
             # Reserve names for top-level ports. If equal to the signal name, let the signal share it.
