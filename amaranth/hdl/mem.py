@@ -1,4 +1,5 @@
 import operator
+import warnings
 from collections import OrderedDict
 
 from .. import tracer
@@ -116,6 +117,10 @@ class Memory(Elaboratable):
 
     def __getitem__(self, index):
         """Simulation only."""
+        if not isinstance(index, int):
+            warnings.warn(f"Memory index is {index!r} instead of an 'int'; indexing a memory with "
+                          f"values is deprecated and will be removed in Amaranth 0.5",
+                          DeprecationWarning, stacklevel=2)
         return self._array[index]
 
     def elaborate(self, platform):
