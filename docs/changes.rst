@@ -9,6 +9,8 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.4.5 <https://amaranth-lang.org/docs/amaranth/v0.4.5/>`_
+* `Amaranth 0.4.4 <https://amaranth-lang.org/docs/amaranth/v0.4.4/>`_
 * `Amaranth 0.4.3 <https://amaranth-lang.org/docs/amaranth/v0.4.3/>`_
 * `Amaranth 0.4.2 <https://amaranth-lang.org/docs/amaranth/v0.4.2/>`_
 * `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
