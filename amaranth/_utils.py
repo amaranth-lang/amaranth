@@ -76,16 +76,6 @@ def _ignore_deprecated(f=None):
         return decorator_like
 
 
-def extend(cls):
-    def decorator(f):
-        if isinstance(f, property):
-            name = f.fget.__name__
-        else:
-            name = f.__name__
-        setattr(cls, name, f)
-    return decorator
-
-
 def get_linter_options(filename):
     first_line = linecache.getline(filename, 1)
     if first_line:
