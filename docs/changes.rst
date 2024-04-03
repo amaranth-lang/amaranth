@@ -107,6 +107,7 @@ Standard library changes
 * Added: :mod:`amaranth.lib.memory`. (`RFC 45`_)
 * Added: :class:`amaranth.lib.data.Const` class. (`RFC 51`_)
 * Changed: :meth:`amaranth.lib.data.Layout.const` returns a :class:`amaranth.lib.data.Const`, not a view (`RFC 51`_)
+* Changed: :meth:`amaranth.lib.wiring.Signature.is_compliant` no longer rejects reset-less signals.
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)

@@ -893,10 +893,6 @@ class Signature(metaclass=SignatureMeta):
                                            f"the initial value {member.init!r}, but it has "
                                            f"the initial value {attr_value_cast.init!r}")
                         return False
-                    if attr_value_cast.reset_less:
-                        if reasons is not None:
-                            reasons.append(f"{_format_path(path)} is expected to not be reset-less")
-                        return False
                 return True
             if member.is_signature:
                 return member.signature.is_compliant(attr_value, reasons=reasons, path=path)
