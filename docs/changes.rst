@@ -56,6 +56,7 @@ Implemented RFCs
 .. _RFC 51: https://amaranth-lang.org/rfcs/0051-const-from-bits.html
 .. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
 .. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
+.. _RFC 58: https://amaranth-lang.org/rfcs/0058-valuecastable-format.html
 .. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
 .. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
 
@@ -68,6 +69,7 @@ Implemented RFCs
 * `RFC 50`_: ``Print`` statement and string formatting
 * `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
 * `RFC 53`_: Low-level I/O primitives
+* `RFC 58`_: Core support for ``ValueCastable`` formatting
 * `RFC 59`_: Get rid of upwards propagation of clock domains
 * `RFC 62`_: The `MemoryData`` class
 

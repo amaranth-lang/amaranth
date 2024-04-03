@@ -385,6 +385,27 @@ class ShapeCastable:
         """
         return super().__call__(*args, **kwargs) # :nocov:
 
+    def format(self, obj, spec):
+        """Format a value.
+
+        This method is called by the Amaranth language to implement formatting for custom
+        shapes. Whenever :py:`"{obj:spec}"` is encountered by :class:`Format`, and :py:`obj`
+        has a custom shape that has a :meth:`format` method, :py:`obj.shape().format(obj, "spec")`
+        is called, and the format specifier is replaced with the result.
+
+        The default :meth:`format` implementation is:
+
+        .. code::
+
+            def format(self, obj, spec):
+                return Format(f"{{:{spec}}}", Value.cast(obj))
+
+        Returns
+        -------
+        :class:`Format`
+        """
+        return Format(f"{{:{spec}}}", Value.cast(obj))
+
     # TODO: write an RFC for turning this into a proper interface method
     def _value_repr(self, value):
         return (_repr.Repr(_repr.FormatInt(), value),)
@@ -2576,14 +2597,26 @@ class Format:
             chunks.append(literal)
             if field_name is not None:
                 obj = get_field(field_name)
-                obj = fmt.convert_field(obj, conversion)
+                if conversion == "v":
+                    obj = Value.cast(obj)
+                else:
+                    obj = fmt.convert_field(obj, conversion)
                 format_spec = subformat(format_spec)
                 if isinstance(obj, Value):
                     # Perform validation.
                     self._parse_format_spec(format_spec, obj.shape())
                     chunks.append((obj, format_spec))
                 elif isinstance(obj, ValueCastable):
-                    raise TypeError("'ValueCastable' formatting is not supported")
+                    shape = obj.shape()
+                    if isinstance(shape, ShapeCastable):
+                        fmt = shape.format(obj, format_spec)
+                        if not isinstance(fmt, Format):
+                            raise TypeError(f"`ShapeCastable.format` must return a 'Format' instance, not {fmt!r}")
+                        chunks += fmt._chunks
+                    else:
+                        obj = Value.cast(obj)
+                        self._parse_format_spec(format_spec, obj.shape())
+                        chunks.append((obj, format_spec))
                 elif isinstance(obj, Format):
                     if format_spec != "":
                         raise ValueError(f"Format specifiers ({format_spec!r}) cannot be used for 'Format' objects")
