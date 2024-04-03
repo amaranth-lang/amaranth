@@ -610,13 +610,14 @@ The following table lists the reduction operations provided by Amaranth:
 Operation    Description                                   Notes
 ============ ============================================= ======
 ``a.all()``  reduction AND; are all bits set?              [#opR1]_
-``a.any()``  reduction OR; is any bit set?                 [#opR1]_
+``a.any()``  reduction OR; is any bit set?                 [#opR1]_ [#opR3]_
 ``a.xor()``  reduction XOR; is an odd number of bits set?
-``a.bool()`` conversion to boolean; is non-zero?           [#opR2]_
+``a.bool()`` conversion to boolean; is non-zero?           [#opR2]_ [#opR3]_
 ============ ============================================= ======
 
 .. [#opR1] Conceptually the same as applying the Python :func:`all` or :func:`any` function to the value viewed as a collection of bits.
-.. [#opR2] Conceptually the same as applying the Python :func:`bool` function to the value viewed as an integer.
+.. [#opR2] Conceptually the same as applying the Python :class:`bool` function to the value viewed as an integer.
+.. [#opR3] While the :meth:`Value.any()` and :meth:`Value.bool`  operators return the same value, the use of ``a.any()`` implies that ``a`` is semantically a bit sequence, and the use of ``a.bool()`` implies that ``a`` is semantically a number.
 
 
 .. _lang-logicops:
