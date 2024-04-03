@@ -3,7 +3,7 @@ from collections import OrderedDict
 from collections.abc import MutableSequence
 
 from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const
-from ..hdl._mem import MemorySimRead, FrozenError
+from ..hdl._mem import FrozenError
 from ..utils import ceil_log2
 from .._utils import final
 from .. import tracer
@@ -193,10 +193,6 @@ class Memory(wiring.Component):
                 domain=port.domain, data=port.data, addr=port.addr, en=port.en,
                 transparent_for=transparent_for)
         return instance
-
-    def __getitem__(self, index):
-        """Simulation only."""
-        return self._data[index]
 
 
 class ReadPort:

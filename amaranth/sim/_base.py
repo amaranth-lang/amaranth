@@ -35,7 +35,7 @@ class BaseMemoryState:
     def read(self, addr):
         raise NotImplementedError # :nocov:
 
-    def write(self, addr, value):
+    def write(self, addr, value, mask=None):
         raise NotImplementedError # :nocov:
 
 

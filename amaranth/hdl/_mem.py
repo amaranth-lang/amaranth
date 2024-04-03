@@ -102,6 +102,28 @@ class MemoryData:
             return f"MemoryData.Init({self._elems!r}, shape={self._shape!r}, depth={self._depth})"
 
 
+    @final
+    class _Row(Value):
+        def __init__(self, memory, index, *, src_loc_at=0):
+            assert isinstance(memory, MemoryData)
+            self._memory = memory
+            self._index = operator.index(index)
+            assert self._index in range(memory.depth)
+            super().__init__(src_loc_at=src_loc_at)
+
+        def shape(self):
+            return Shape.cast(self._memory.shape)
+
+        def _lhs_signals(self):
+            # This value cannot ever appear in a design.
+            raise NotImplementedError # :nocov:
+        
+        _rhs_signals = _lhs_signals
+
+        def __repr__(self):
+            return f"(memory-row {self._memory!r} {self._index})"
+
+
     def __init__(self, *, shape, depth, init, src_loc_at=0):
         # shape and depth validation is performed in MemoryData.Init()
         self._shape = shape
@@ -137,26 +159,14 @@ class MemoryData:
         return f"(memory-data {self.name})"
 
     def __getitem__(self, index):
-        """Simulation only."""
-        return MemorySimRead(self, index)
-
-
-class MemorySimRead:
-    def __init__(self, memory, addr):
-        assert isinstance(memory, MemoryData)
-        self._memory = memory
-        self._addr = Value.cast(addr)
-
-    def eq(self, value):
-        return MemorySimWrite(self._memory, self._addr, value)
-
-
-class MemorySimWrite:
-    def __init__(self, memory, addr, data):
-        assert isinstance(memory, MemoryData)
-        self._memory = memory
-        self._addr = Value.cast(addr)
-        self._data = Value.cast(data)
+        index = operator.index(index)
+        if index not in range(self.depth):
+            raise IndexError(f"Index {index} is out of bounds (memory has {self.depth} rows)")
+        row = MemoryData._Row(self, index)
+        if isinstance(self.shape, ShapeCastable):
+            return self.shape(row)
+        else:
+            return row
 
 
 class MemoryInstance(Fragment):
@@ -312,8 +322,7 @@ class Memory(Elaboratable):
         return WritePort(self, src_loc_at=1 + src_loc_at, **kwargs)
 
     def __getitem__(self, index):
-        """Simulation only."""
-        return MemorySimRead(self._data, index)
+        return self._data[index]
 
     def elaborate(self, platform):
         f = MemoryInstance(data=self._data, attrs=self.attrs, src_loc=self.src_loc)

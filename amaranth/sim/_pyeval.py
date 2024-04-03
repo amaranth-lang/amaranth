@@ -1,4 +1,5 @@
 from amaranth.hdl._ast import *
+from amaranth.hdl._mem import MemoryData
 
 
 def _eval_matches(test, patterns):
@@ -118,6 +119,9 @@ def eval_value(sim, value):
     elif isinstance(value, Signal):
         slot = sim.get_signal(value)
         return sim.slots[slot].curr
+    elif isinstance(value, MemoryData._Row):
+        slot = sim.get_memory(value._memory)
+        return sim.slots[slot].read(value._index)
     elif isinstance(value, (ResetSignal, ClockSignal, AnyValue, Initial)):
         raise ValueError(f"Value {value!r} cannot be used in simulation")
     else:
@@ -142,6 +146,15 @@ def _eval_assign_inner(sim, lhs, lhs_start, rhs, rhs_len):
         if lhs._signed and (value & (1 << (len(lhs) - 1))):
             value |= -1 << (len(lhs) - 1)
         sim.slots[slot].set(value)
+    elif isinstance(lhs, MemoryData._Row):
+        lhs_stop = lhs_start + rhs_len
+        if lhs_stop > len(lhs):
+            lhs_stop = len(lhs)
+        if lhs_start >= len(lhs):
+            return
+        slot = sim.get_memory(lhs._memory)
+        mask = (1 << lhs_stop) - (1 << lhs_start)
+        sim.slots[slot].write(lhs._index, rhs << lhs_start, mask)
     elif isinstance(lhs, Slice):
         _eval_assign_inner(sim, lhs.value, lhs_start + lhs.start, rhs, rhs_len)
     elif isinstance(lhs, Concat):

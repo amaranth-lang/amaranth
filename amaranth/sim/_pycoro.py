@@ -2,7 +2,6 @@ import inspect
 
 from ..hdl import *
 from ..hdl._ast import Statement, Assign, SignalSet, ValueCastable
-from ..hdl._mem import MemorySimRead, MemorySimWrite
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess, BaseMemoryState
 from ._pyeval import eval_value, eval_assign
@@ -122,23 +121,6 @@ class PyCoroProcess(BaseProcess):
 
                 elif type(command) is Active:
                     self.passive = False
-
-                elif type(command) is MemorySimRead:
-                    addr = eval_value(self.state, command._addr)
-                    index = self.state.get_memory(command._memory)
-                    state = self.state.slots[index]
-                    assert isinstance(state, BaseMemoryState)
-                    response = state.read(addr)
-
-                elif type(command) is MemorySimWrite:
-                    addr = eval_value(self.state, command._addr)
-                    data = eval_value(self.state, command._data)
-                    index = self.state.get_memory(command._memory)
-                    state = self.state.slots[index]
-                    assert isinstance(state, BaseMemoryState)
-                    state.write(addr, data)
-                    if self.testbench:
-                        return True # assignment; run a delta cycle
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "

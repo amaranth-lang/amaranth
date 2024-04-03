@@ -5,6 +5,7 @@ from .._utils import deprecated
 from ..hdl._cd import *
 from ..hdl._ir import *
 from ..hdl._ast import Value, ValueLike
+from ..hdl._mem import MemoryData
 from ._base import BaseEngine
 
 
@@ -242,6 +243,8 @@ class Simulator:
         for trace in traces:
             if isinstance(trace, ValueLike):
                 trace_cast = Value.cast(trace)
+                if isinstance(trace_cast, MemoryData._Row):
+                    continue
                 for trace_signal in trace_cast._rhs_signals():
                     if trace_signal.name == "":
                         if trace_signal is trace:

@@ -82,16 +82,28 @@ class _VCDWriter:
         for trace in traces:
             if isinstance(trace, ValueLike):
                 trace = Value.cast(trace)
-                for trace_signal in trace._rhs_signals():
-                    if trace_signal not in signal_names:
-                        if trace_signal.name not in assigned_names:
-                            name = trace_signal.name
+                if isinstance(trace, MemoryData._Row):
+                    memory = trace._memory
+                    if not memory in memories:
+                        if memory.name not in assigned_names:
+                            name = memory.name
                         else:
-                            name = f"{trace_signal.name}${len(assigned_names)}"
+                            name = f"{memory.name}${len(assigned_names)}"
                             assert name not in assigned_names
-                        trace_names[trace_signal] = {("bench", name)}
+                        memories[memory] = ("bench", name)
                         assigned_names.add(name)
-                    self.traces.append(trace_signal)
+                    self.traces.append(trace)
+                else:
+                    for trace_signal in trace._rhs_signals():
+                        if trace_signal not in signal_names:
+                            if trace_signal.name not in assigned_names:
+                                name = trace_signal.name
+                            else:
+                                name = f"{trace_signal.name}${len(assigned_names)}"
+                                assert name not in assigned_names
+                            trace_names[trace_signal] = {("bench", name)}
+                            assigned_names.add(name)
+                        self.traces.append(trace_signal)
             elif isinstance(trace, MemoryData):
                 if not trace in memories:
                     if trace.name not in assigned_names:
@@ -223,13 +235,16 @@ class _VCDWriter:
             self.gtkw_save.dumpfile_size(self.vcd_file.tell())
 
             self.gtkw_save.treeopen("top")
-            for signal in self.traces:
-                if isinstance(signal, Signal):
-                    for name in self.gtkw_signal_names[signal]:
+            for trace in self.traces:
+                if isinstance(trace, Signal):
+                    for name in self.gtkw_signal_names[trace]:
                         self.gtkw_save.trace(name)
-                elif isinstance(signal, MemoryIdentity):
-                    for name in self.gtkw_memory_names[signal]:
+                elif isinstance(trace, MemoryData):
+                    for name in self.gtkw_memory_names[trace]:
                         self.gtkw_save.trace(name)
+                elif isinstance(trace, MemoryData._Row):
+                    name = self.gtkw_memory_names[trace._memory][trace._index]
+                    self.gtkw_save.trace(name)
                 else:
                     assert False # :nocov:
 
