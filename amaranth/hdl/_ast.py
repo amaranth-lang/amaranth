@@ -1681,10 +1681,6 @@ class Operator(Value):
             if self.operator == ">>":
                 assert not b_shape.signed
                 return Shape(a_shape.width, a_shape.signed)
-        elif len(op_shapes) == 3:
-            if self.operator == "m":
-                s_shape, a_shape, b_shape = op_shapes
-                return Shape._unify((a_shape, b_shape))
         raise NotImplementedError # :nocov:
 
     def _lhs_signals(self):
@@ -1715,7 +1711,7 @@ def Mux(sel, val1, val0):
     Value, out
         Output ``Value``. If ``sel`` is asserted, the Mux returns ``val1``, else ``val0``.
     """
-    return Operator("m", [sel, val1, val0])
+    return SwitchValue(sel, ((0, val0), (None, val1)), src_loc_at=1)
 
 
 @final

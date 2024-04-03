@@ -244,10 +244,6 @@ class _RHSValueCompiler(_ValueCompiler):
                 return f"({sign(lhs)} > {sign(rhs)})"
             if value.operator == ">=":
                 return f"({sign(lhs)} >= {sign(rhs)})"
-        elif len(value.operands) == 3:
-            if value.operator == "m":
-                sel, val1, val0 = value.operands
-                return f"({sign(val1)} if {mask(sel)} else {sign(val0)})"
         raise NotImplementedError(f"Operator '{value.operator}' not implemented") # :nocov:
 
     def on_Slice(self, value):
@@ -274,7 +270,7 @@ class _RHSValueCompiler(_ValueCompiler):
         gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self(value.test)}")
         gen_value = self.emitter.def_var("rhs_switch", "0")
         def case_handler(patterns, elem):
-            self.emitter.append(f"{gen_value} = {self(elem)}")
+            self.emitter.append(f"{gen_value} = {self.sign(elem)}")
         self._emit_switch(gen_test, value.cases, case_handler)
         return gen_value
 

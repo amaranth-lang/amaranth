@@ -406,10 +406,10 @@ class EnableInserterTestCase(FHDLTestCase):
         mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
         self.assertRepr(f._write_ports[0]._en, """
-        (m
+        (switch-value
             (sig c1)
-            (sig mem_w_en)
-            (const 4'd0)
+            (case 0 (const 4'd0))
+            (default (sig mem_w_en))
         )
         """)
 
