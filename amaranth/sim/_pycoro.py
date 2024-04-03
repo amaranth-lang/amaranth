@@ -5,7 +5,7 @@ from ..hdl._ast import Statement, Assign, SignalSet, ValueCastable
 from ..hdl._mem import MemorySimRead, MemorySimWrite
 from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess, BaseMemoryState
-from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
+from ._pyeval import eval_value, eval_assign
 
 
 __all__ = ["PyCoroProcess"]
@@ -28,11 +28,6 @@ class PyCoroProcess(BaseProcess):
         self.passive = False
 
         self.coroutine = self.constructor()
-        self.exec_locals = {
-            "slots": self.state.slots,
-            "result": None,
-            **_ValueCompiler.helpers
-        }
         self.waits_on = SignalSet()
 
     def src_loc(self):
@@ -87,14 +82,11 @@ class PyCoroProcess(BaseProcess):
                 if isinstance(command, ValueCastable):
                     command = Value.cast(command)
                 if isinstance(command, Value):
-                    exec(_RHSValueCompiler.compile(self.state, command, mode="curr"),
-                        self.exec_locals)
-                    response = Const(self.exec_locals["result"], command.shape()).value
+                    response = eval_value(self.state, command)
 
-                elif isinstance(command, Statement):
-                    exec(_StatementCompiler.compile(self.state, command),
-                        self.exec_locals)
-                    if isinstance(command, Assign) and self.testbench:
+                elif isinstance(command, Assign):
+                    eval_assign(self.state, command.lhs, eval_value(self.state, command.rhs))
+                    if self.testbench:
                         return True # assignment; run a delta cycle
 
                 elif type(command) is Tick:
@@ -132,21 +124,15 @@ class PyCoroProcess(BaseProcess):
                     self.passive = False
 
                 elif type(command) is MemorySimRead:
-                    exec(_RHSValueCompiler.compile(self.state, command._addr, mode="curr"),
-                        self.exec_locals)
-                    addr = Const(self.exec_locals["result"], command._addr.shape()).value
+                    addr = eval_value(self.state, command._addr)
                     index = self.state.get_memory(command._memory)
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)
                     response = state.read(addr)
 
                 elif type(command) is MemorySimWrite:
-                    exec(_RHSValueCompiler.compile(self.state, command._addr, mode="curr"),
-                        self.exec_locals)
-                    addr = Const(self.exec_locals["result"], command._addr.shape()).value
-                    exec(_RHSValueCompiler.compile(self.state, command._data, mode="curr"),
-                        self.exec_locals)
-                    data = Const(self.exec_locals["result"], command._data.shape()).value
+                    addr = eval_value(self.state, command._addr)
+                    data = eval_value(self.state, command._data)
                     index = self.state.get_memory(command._memory)
                     state = self.state.slots[index]
                     assert isinstance(state, BaseMemoryState)

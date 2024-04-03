@@ -43,11 +43,30 @@ class SimulatorUnitTestCase(FHDLTestCase):
         with sim.write_vcd("test.vcd", "test.gtkw", traces=[*isigs, osig]):
             sim.run()
 
+        frag = Fragment()
+        sim = Simulator(frag)
+        def process():
+            for isig, input in zip(isigs, inputs):
+                yield isig.eq(input)
+            yield Delay(0)
+            if isinstance(stmt, Assign):
+                yield stmt
+            else:
+                yield from stmt
+            yield Delay(0)
+            self.assertEqual((yield osig), output.value)
+        sim.add_testbench(process)
+        with sim.write_vcd("test.vcd", "test.gtkw", traces=[*isigs, osig]):
+            sim.run()
+
+
     def test_invert(self):
         stmt = lambda y, a: y.eq(~a)
         self.assertStatement(stmt, [C(0b0000, 4)], C(0b1111, 4))
         self.assertStatement(stmt, [C(0b1010, 4)], C(0b0101, 4))
         self.assertStatement(stmt, [C(0,      4)], C(-1,     4))
+        self.assertStatement(stmt, [C(0b0000, signed(4))], C(-1, signed(4)))
+        self.assertStatement(stmt, [C(0b1010, signed(4))], C(0b0101, signed(4)))
 
     def test_neg(self):
         stmt = lambda y, a: y.eq(-a)
@@ -126,6 +145,7 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
     def test_floordiv(self):
         stmt = lambda y, a, b: y.eq(a // b)
+        self.assertStatement(stmt, [C(2,  4), C(0,  4)], C(0,   8))
         self.assertStatement(stmt, [C(2,  4), C(1,  4)], C(2,   8))
         self.assertStatement(stmt, [C(2,  4), C(2,  4)], C(1,   8))
         self.assertStatement(stmt, [C(7,  4), C(2,  4)], C(3,   8))
@@ -285,6 +305,17 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = lambda y, a: [Cat(l, m, n).eq(a), y.eq(Cat(n, m, l))]
         self.assertStatement(stmt, [C(0b100101110, 9)], C(0b110101100, 9))
 
+    def test_cat_slice_lhs(self):
+        l = Signal(3)
+        m = Signal(3)
+        n = Signal(3)
+        o = Signal(3)
+        p = Signal(3)
+        stmt = lambda y, a: [Cat(l, m, n, o, p).eq(-1), Cat(l, m, n, o, p)[4:11].eq(a), y.eq(Cat(p, o, n, m, l))]
+        self.assertStatement(stmt, [C(0b0000000, 7)], C(0b111001000100111, 15))
+        self.assertStatement(stmt, [C(0b1001011, 7)], C(0b111111010110111, 15))
+        self.assertStatement(stmt, [C(0b1111111, 7)], C(0b111111111111111, 15))
+
     def test_nested_cat_lhs(self):
         l = Signal(3)
         m = Signal(3)
@@ -326,6 +357,16 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(0), C(0b000)], C(0b111100000))
         self.assertStatement(stmt, [C(1), C(0b010)], C(0b111010001))
         self.assertStatement(stmt, [C(2), C(0b100)], C(0b100100001))
+
+    def test_array_lhs_heterogenous(self):
+        l = Signal(1, init=1)
+        m = Signal(3, init=4)
+        n = Signal(5, init=7)
+        array = Array([l, m, n])
+        stmt = lambda y, a, b: [array[a].eq(b), y.eq(Cat(*array))]
+        self.assertStatement(stmt, [C(0), C(0b000)], C(0b001111000, 9))
+        self.assertStatement(stmt, [C(1), C(0b010)], C(0b001110101, 9))
+        self.assertStatement(stmt, [C(2), C(0b100)], C(0b001001001, 9))
 
     def test_array_lhs_oob(self):
         l = Signal(3)
