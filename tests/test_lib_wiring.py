@@ -453,10 +453,10 @@ class SignatureTestCase(unittest.TestCase):
             r"^'obj\.a' is expected to have the initial value 1, but it has the initial value 0$",
             sig=Signature({"a": In(1, init=1)}),
             obj=NS(a=Signal(1)))
-        self.assertNotCompliant(
-            r"^'obj\.a' is expected to not be reset-less$",
-            sig=Signature({"a": In(1)}),
-            obj=NS(a=Signal(1, reset_less=True)))
+        self.assertTrue(
+            Signature({"a": In(1)}).is_compliant(
+                NS(signature=Signature({"a": In(1)}),
+                   a=Signal(1, reset_less=True))))
         self.assertNotCompliant(
             r"^'obj\.a' does not have an attribute 'b'$",
             sig=Signature({"a": Out(Signature({"b": In(1)}))}),
