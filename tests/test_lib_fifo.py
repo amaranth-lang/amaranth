@@ -1,12 +1,11 @@
 # amaranth: UnusedElaboratable=no
 
-import warnings
-
 from amaranth.hdl import *
 from amaranth.asserts import Initial, AnyConst
 from amaranth.sim import *
 from amaranth.lib.fifo import *
 from amaranth.lib.memory import *
+from amaranth.lib import stream
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -63,6 +62,20 @@ class FIFOTestCase(FHDLTestCase):
                 (r"^AsyncFIFOBuffered only supports depths that are one higher than powers of 2; "
                     r"requested exact depth 16 is not$")):
             AsyncFIFOBuffered(width=8, depth=16, exact_depth=True)
+
+    def test_w_stream(self):
+        fifo = SyncFIFOBuffered(width=8, depth=16)
+        self.assertEqual(fifo.w_stream.signature, stream.Signature(8).flip())
+        self.assertIs(fifo.w_stream.payload, fifo.w_data)
+        self.assertIs(fifo.w_stream.valid, fifo.w_en)
+        self.assertIs(fifo.w_stream.ready, fifo.w_rdy)
+
+    def test_r_stream(self):
+        fifo = SyncFIFOBuffered(width=8, depth=16)
+        self.assertEqual(fifo.r_stream.signature, stream.Signature(8))
+        self.assertIs(fifo.r_stream.payload, fifo.r_data)
+        self.assertIs(fifo.r_stream.valid, fifo.r_rdy)
+        self.assertIs(fifo.r_stream.ready, fifo.r_en)
 
 
 class FIFOModel(Elaboratable, FIFOInterface):

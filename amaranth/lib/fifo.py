@@ -6,6 +6,7 @@ from ..asserts import Initial
 from ..utils import ceil_log2
 from .cdc import FFSynchronizer, AsyncFFSynchronizer
 from .memory import Memory
+from . import stream
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
@@ -92,6 +93,22 @@ class FIFOInterface:
         self.r_rdy  = Signal() # readable; not empty
         self.r_en   = Signal()
         self.r_level = Signal(range(depth + 1))
+
+    @property
+    def w_stream(self):
+        w_stream = stream.Signature(self.width).flip().create()
+        w_stream.payload = self.w_data
+        w_stream.valid = self.w_en
+        w_stream.ready = self.w_rdy
+        return w_stream
+
+    @property
+    def r_stream(self):
+        r_stream = stream.Signature(self.width).create()
+        r_stream.payload = self.r_data
+        r_stream.valid = self.r_rdy
+        r_stream.ready = self.r_en
+        return r_stream
 
 
 def _incr(signal, modulo):
