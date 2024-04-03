@@ -18,7 +18,7 @@ from .._unused import *
 __all__ = [
     "SyntaxError", "SyntaxWarning",
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
-    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat", "SwitchValue",
+    "Value", "Const", "C", "AnyValue", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat", "SwitchValue",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
