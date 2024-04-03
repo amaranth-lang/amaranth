@@ -221,8 +221,6 @@ class MemoryInstance(Fragment):
             assert isinstance(idx, int)
             assert idx in range(len(self._write_ports))
             assert self._write_ports[idx]._domain == port._domain
-        for signal in port._data._rhs_signals():
-            self.add_driver(signal, port._domain)
         self._read_ports.append(port)
 
     def write_port(self, *, domain, addr, data, en):

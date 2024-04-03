@@ -34,9 +34,6 @@ class DomainRenamerTestCase(FHDLTestCase):
             "sync",
             self.s3.eq(0),
         )
-        f.add_driver(self.s1, "comb")
-        f.add_driver(self.s2, "comb")
-        f.add_driver(self.s3, "sync")
 
         f = DomainRenamer("pix")(f)
         self.assertRepr(f.statements["comb"], """
@@ -53,10 +50,6 @@ class DomainRenamerTestCase(FHDLTestCase):
         )
         """)
         self.assertFalse("sync" in f.statements)
-        self.assertEqual(f.drivers, {
-            "comb": SignalSet((self.s1, self.s2)),
-            "pix": SignalSet((self.s3,)),
-        })
 
     def test_rename_multi(self):
         f = Fragment()
@@ -204,20 +197,6 @@ class DomainLowererTestCase(FHDLTestCase):
         )
         """)
 
-    def test_lower_drivers(self):
-        sync = ClockDomain()
-        pix = ClockDomain()
-        f = Fragment()
-        f.add_domains(sync, pix)
-        f.add_driver(ClockSignal("pix"), "comb")
-        f.add_driver(ResetSignal("pix"), "sync")
-
-        f = DomainLowerer()(f)
-        self.assertEqual(f.drivers, {
-            "comb": SignalSet((pix.clk,)),
-            "sync": SignalSet((pix.rst,))
-        })
-
     def test_lower_wrong_domain(self):
         f = Fragment()
         f.add_statements(
@@ -256,7 +235,6 @@ class ResetInserterTestCase(FHDLTestCase):
             "sync",
             self.s1.eq(1)
         )
-        f.add_driver(self.s1, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements["sync"], """
@@ -273,8 +251,6 @@ class ResetInserterTestCase(FHDLTestCase):
         f.add_statements("sync", self.s1.eq(1))
         f.add_statements("pix", self.s2.eq(0))
         f.add_domains(ClockDomain("sync"))
-        f.add_driver(self.s1, "sync")
-        f.add_driver(self.s2, "pix")
 
         f = ResetInserter({"pix": self.c1})(f)
         self.assertRepr(f.statements["sync"], """
@@ -294,7 +270,6 @@ class ResetInserterTestCase(FHDLTestCase):
     def test_reset_value(self):
         f = Fragment()
         f.add_statements("sync", self.s2.eq(0))
-        f.add_driver(self.s2, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements["sync"], """
@@ -309,7 +284,6 @@ class ResetInserterTestCase(FHDLTestCase):
     def test_reset_less(self):
         f = Fragment()
         f.add_statements("sync", self.s3.eq(0))
-        f.add_driver(self.s3, "sync")
 
         f = ResetInserter(self.c1)(f)
         self.assertRepr(f.statements["sync"], """
@@ -332,7 +306,6 @@ class EnableInserterTestCase(FHDLTestCase):
     def test_enable_default(self):
         f = Fragment()
         f.add_statements("sync", self.s1.eq(1))
-        f.add_driver(self.s1, "sync")
 
         f = EnableInserter(self.c1)(f)
         self.assertRepr(f.statements["sync"], """
@@ -347,8 +320,6 @@ class EnableInserterTestCase(FHDLTestCase):
         f = Fragment()
         f.add_statements("sync", self.s1.eq(1))
         f.add_statements("pix", self.s2.eq(0))
-        f.add_driver(self.s1, "sync")
-        f.add_driver(self.s2, "pix")
 
         f = EnableInserter({"pix": self.c1})(f)
         self.assertRepr(f.statements["sync"], """
@@ -367,11 +338,9 @@ class EnableInserterTestCase(FHDLTestCase):
     def test_enable_subfragment(self):
         f1 = Fragment()
         f1.add_statements("sync", self.s1.eq(1))
-        f1.add_driver(self.s1, "sync")
 
         f2 = Fragment()
         f2.add_statements("sync", self.s2.eq(1))
-        f2.add_driver(self.s2, "sync")
         f1.add_subfragment(f2)
 
         f1 = EnableInserter(self.c1)(f1)
@@ -421,7 +390,6 @@ class _MockElaboratable(Elaboratable):
     def elaborate(self, platform):
         f = Fragment()
         f.add_statements("sync", self.s1.eq(1))
-        f.add_driver(self.s1, "sync")
         return f
 
 

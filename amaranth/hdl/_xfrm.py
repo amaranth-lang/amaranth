@@ -252,10 +252,6 @@ class FragmentTransformer:
             for domain, statements in fragment.statements.items():
                 new_fragment.add_statements(domain, statements)
 
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signal in fragment.iter_drivers():
-            new_fragment.add_driver(signal, domain)
-
     def map_memory_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
             for port in new_fragment._read_ports:
@@ -322,7 +318,6 @@ class FragmentTransformer:
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
-        self.map_drivers(fragment, new_fragment)
         return new_fragment
 
     def __call__(self, value, *, src_loc_at=0):
@@ -518,13 +513,6 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 map(self.on_statement, statements)
             )
 
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signals in fragment.drivers.items():
-            if domain in self.domain_map:
-                domain = self.domain_map[domain]
-            for signal in signals:
-                new_fragment.add_driver(self.on_value(signal), domain)
-
     def map_memory_ports(self, fragment, new_fragment):
         super().map_memory_ports(fragment, new_fragment)
         for port in new_fragment._read_ports:
@@ -559,10 +547,6 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                               .format(context, domain))
         self._warn_on_propagation_up(domain, context.src_loc)
         return self.domains[domain]
-
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signal in fragment.iter_drivers():
-            new_fragment.add_driver(self.on_value(signal), domain)
 
     def replace_value_src_loc(self, value, new_value):
         return not isinstance(value, (ClockSignal, ResetSignal))
@@ -605,9 +589,12 @@ class _ControlInserter(FragmentTransformer):
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        for domain, signals in fragment.drivers.items():
+        for domain, statements in fragment.statements.items():
             if domain == "comb" or domain not in self.controls:
                 continue
+            signals = SignalSet()
+            for stmt in statements:
+                signals |= stmt._lhs_signals()
             self._insert_control(new_fragment, domain, signals)
         return new_fragment
 
