@@ -1412,6 +1412,79 @@ class MockValueCastable(ValueCastable):
         return self.dest
 
 
+class MockShapeCastableFormat(ShapeCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def as_shape(self):
+        return self.dest
+
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.dest)
+
+    def from_bits(self, bits):
+        return bits
+
+    def format(self, value, format_desc):
+        return Format("_{}_{}_", Value.cast(value), format_desc)
+
+
+class MockValueCastableFormat(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastableFormat(Value.cast(self.dest).shape())
+
+    def as_value(self):
+        return self.dest
+
+
+class MockValueCastableNoFormat(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastable(Value.cast(self.dest).shape())
+
+    def as_value(self):
+        return self.dest
+
+
+class MockShapeCastableFormatWrong(ShapeCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def as_shape(self):
+        return self.dest
+
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.dest)
+
+    def from_bits(self, bits):
+        return bits
+
+    def format(self, value, format_desc):
+        return Value.cast(value)
+
+
+class MockValueCastableFormatWrong(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastableFormatWrong(Value.cast(self.dest).shape())
+
+    def as_value(self):
+        return self.dest
+
+
 class MockValueCastableChanges(ValueCastable):
     def __init__(self, width=0):
         self.width = width
@@ -1567,6 +1640,21 @@ class FormatTestCase(FHDLTestCase):
         fmt = Format("sub: {}, c: {:4x}", subfmt, c)
         self.assertRepr(fmt, "(format 'sub: a: {:2x}, b: {:3x}, c: {:4x}' (sig a) (sig b) (sig c))")
 
+    def test_construct_valuecastable(self):
+        a = Signal()
+        b = MockValueCastable(a)
+        fmt = Format("{:x}", b)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+        c = MockValueCastableFormat(a)
+        fmt = Format("{:meow}", c)
+        self.assertRepr(fmt, "(format '_{}_meow_' (sig a))")
+        d = MockValueCastableNoFormat(a)
+        fmt = Format("{:x}", d)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+        e = MockValueCastableFormat(a)
+        fmt = Format("{!v:x}", e)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+
     def test_construct_wrong(self):
         a = Signal()
         b = Signal(signed(16))
@@ -1576,9 +1664,6 @@ class FormatTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^cannot switch from automatic field numbering to manual field specification$"):
             Format("{}, {1}", a, b)
-        with self.assertRaisesRegex(TypeError,
-                r"^'ValueCastable' formatting is not supported$"):
-            Format("{}", MockValueCastable(Const(0)))
         with self.assertRaisesRegex(ValueError,
                 r"^Format specifiers \('s'\) cannot be used for 'Format' objects$"):
             Format("{:s}", Format(""))
@@ -1621,6 +1706,14 @@ class FormatTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Cannot specify '_' with format specifier 'c'$"):
             Format("{a:_c}", a=a)
+
+    def test_construct_valuecastable_wrong(self):
+        a = Signal()
+        b = MockValueCastableFormatWrong(a)
+        with self.assertRaisesRegex(TypeError,
+                r"^`ShapeCastable.format` must return a 'Format' instance, "
+                r"not \(sig a\)$"):
+            fmt = Format("{:x}", b)
 
     def test_plus(self):
         a = Signal()
