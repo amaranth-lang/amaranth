@@ -58,7 +58,7 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_ArrayProxy(self, value):
+    def on_SwitchValue(self, value):
         pass # :nocov:
 
     @abstractmethod
@@ -90,8 +90,8 @@ class ValueVisitor(metaclass=ABCMeta):
             new_value = self.on_Part(value)
         elif type(value) is Concat:
             new_value = self.on_Concat(value)
-        elif type(value) is ArrayProxy:
-            new_value = self.on_ArrayProxy(value)
+        elif type(value) is SwitchValue:
+            new_value = self.on_SwitchValue(value)
         elif type(value) is Initial:
             new_value = self.on_Initial(value)
         else:
@@ -133,9 +133,8 @@ class ValueTransformer(ValueVisitor):
     def on_Concat(self, value):
         return Concat(self.on_value(o) for o in value.parts)
 
-    def on_ArrayProxy(self, value):
-        return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
-                          self.on_value(value.index))
+    def on_SwitchValue(self, value):
+        return SwitchValue(self.on_value(value.test), [(patterns, self.on_value(val)) for patterns, val in value.cases])
 
     def on_Initial(self, value):
         return value
@@ -399,10 +398,10 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         for o in value.parts:
             self.on_value(o)
 
-    def on_ArrayProxy(self, value):
-        for elem in value._iter_as_values():
-            self.on_value(elem)
-        self.on_value(value.index)
+    def on_SwitchValue(self, value):
+        self.on_value(value.test)
+        for patterns, val in value.cases:
+            self.on_value(val)
 
     def on_Initial(self, value):
         pass

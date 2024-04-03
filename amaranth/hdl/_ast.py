@@ -18,7 +18,7 @@ from .._unused import *
 __all__ = [
     "SyntaxError", "SyntaxWarning",
     "Shape", "signed", "unsigned", "ShapeCastable", "ShapeLike",
-    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat",
+    "Value", "Const", "C", "AnyConst", "AnySeq", "Operator", "Mux", "Part", "Slice", "Cat", "Concat", "SwitchValue",
     "Array", "ArrayProxy",
     "Signal", "ClockSignal", "ResetSignal",
     "ValueCastable", "ValueLike",
@@ -1892,6 +1892,60 @@ class Concat(Value):
         return "(cat {})".format(" ".join(map(repr, self.parts)))
 
 
+@final
+class SwitchValue(Value):
+    def __init__(self, test, cases, *, src_loc=None, src_loc_at=0):
+        if src_loc is None:
+            super().__init__(src_loc_at=src_loc_at)
+        else:
+            self.src_loc = src_loc
+        self._test = Value.cast(test)
+        new_cases = []
+        for patterns, value in cases:
+            if patterns is not None:
+                if not isinstance(patterns, tuple):
+                    patterns = (patterns,)
+                new_patterns = ()
+                key_mask = (1 << len(self.test)) - 1
+                for key in _normalize_patterns(patterns, self._test.shape()):
+                    if isinstance(key, int):
+                        key = to_binary(key & key_mask, len(self.test))
+                    new_patterns = (*new_patterns, key)
+            else:
+                new_patterns = None
+            new_cases.append((new_patterns, Value.cast(value)))
+        self._cases = tuple(new_cases)
+
+    @property
+    def test(self):
+        return self._test
+
+    @property
+    def cases(self):
+        return self._cases
+
+    def shape(self):
+        return Shape._unify(value.shape() for _patterns, value in self._cases)
+
+    def _lhs_signals(self):
+        return union((value._lhs_signals() for _patterns, value in self.cases), start=SignalSet())
+
+    def _rhs_signals(self):
+        signals = union((value._rhs_signals() for _patterns, value in self.cases), start=SignalSet())
+        return self.test._rhs_signals() | signals
+
+    def __repr__(self):
+        def case_repr(patterns, value):
+            if patterns is None:
+                return f"(default {value!r})"
+            elif len(patterns) == 1:
+                return f"(case {patterns[0]} {value!r})"
+            else:
+                return "(case ({}) {!r})".format(" ".join(patterns), value)
+        case_reprs = (case_repr(patterns, value) for patterns, value in self.cases)
+        return "(switch-value {!r} {})".format(self.test, " ".join(case_reprs))
+
+
 class _SignalMeta(ABCMeta):
     def __call__(cls, shape=None, src_loc_at=0, **kwargs):
         signal = super().__call__(shape, **kwargs, src_loc_at=src_loc_at + 1)
@@ -2356,10 +2410,17 @@ class Array(MutableSequence):
                                        ", ".join(map(repr, self._inner)))
 
 
+def _proxy_value(name):
+    @functools.wraps(getattr(Value, name))
+    def inner(self, *args, **kwargs):
+        return getattr(Value.cast(self), name)(*args, **kwargs)
+    return inner
+
+
 @final
-class ArrayProxy(Value):
+class ArrayProxy(ValueCastable):
     def __init__(self, elems, index, *, src_loc_at=0):
-        super().__init__(src_loc_at=1 + src_loc_at)
+        self.src_loc = tracer.get_src_loc(1 + src_loc_at)
         self._elems = elems
         self._index = Value.cast(index)
 
@@ -2385,18 +2446,72 @@ class ArrayProxy(Value):
         # elements. I.e., shape-wise, an array proxy must be identical to an equivalent mux tree.
         return Shape._unify(elem.shape() for elem in self._iter_as_values())
 
-    def _lhs_signals(self):
-        signals = union((elem._lhs_signals() for elem in self._iter_as_values()),
-                        start=SignalSet())
-        return signals
+    def as_value(self):
+        return SwitchValue(
+            self._index,
+            (
+                (index, value)
+                for index, value in enumerate(self._elems)
+                if index in range(1 << len(self._index))
+            ),
+            src_loc=self.src_loc,
+        )
 
-    def _rhs_signals(self):
-        signals = union((elem._rhs_signals() for elem in self._iter_as_values()),
-                        start=SignalSet())
-        return self.index._rhs_signals() | signals
+    def eq(self, value, *, src_loc_at=0):
+        return self.as_value().eq(value, src_loc_at=1 + src_loc_at)
 
     def __repr__(self):
         return "(proxy (array [{}]) {!r})".format(", ".join(map(repr, self.elems)), self.index)
+
+    as_signed = _proxy_value("as_signed")
+    as_unsigned = _proxy_value("as_unsigned")
+    __len__ = _proxy_value("__len__")
+    __bool__ = _proxy_value("__bool__")
+    bool = _proxy_value("bool")
+    __pos__ = _proxy_value("__pos__")
+    __neg__ = _proxy_value("__neg__")
+    __add__ = _proxy_value("__add__")
+    __radd__ = _proxy_value("__radd__")
+    __sub__ = _proxy_value("__sub__")
+    __rsub__ = _proxy_value("__rsub__")
+    __mul__ = _proxy_value("__mul__")
+    __rmul__ = _proxy_value("__rmul__")
+    __floordiv__ = _proxy_value("__floordiv__")
+    __rfloordiv__ = _proxy_value("__rfloordiv__")
+    __mod__ = _proxy_value("__mod__")
+    __rmod__ = _proxy_value("__rmod__")
+    __eq__ = _proxy_value("__eq__")
+    __ne__ = _proxy_value("__ne__")
+    __lt__ = _proxy_value("__lt__")
+    __le__ = _proxy_value("__le__")
+    __gt__ = _proxy_value("__gt__")
+    __ge__ = _proxy_value("__ge__")
+    __abs__ = _proxy_value("__abs__")
+    __invert__ = _proxy_value("__invert__")
+    __and__ = _proxy_value("__and__")
+    __rand__ = _proxy_value("__rand__")
+    __or__ = _proxy_value("__or__")
+    __ror__ = _proxy_value("__ror__")
+    __xor__ = _proxy_value("__xor__")
+    __rxor__ = _proxy_value("__rxor__")
+    any = _proxy_value("any")
+    all = _proxy_value("all")
+    xor = _proxy_value("xor")
+    implies = _proxy_value("implies")
+    __lshift__ = _proxy_value("__lshift__")
+    __rlshift__ = _proxy_value("__rlshift__")
+    __rshift__ = _proxy_value("__rshift__")
+    __rrshift__ = _proxy_value("__rrshift__")
+    shift_left = _proxy_value("shift_left")
+    shift_right = _proxy_value("shift_right")
+    rotate_left = _proxy_value("rotate_left")
+    rotate_right = _proxy_value("rotate_right")
+    __contains__ = _proxy_value("__contains__")
+    bit_select = _proxy_value("bit_select")
+    word_select = _proxy_value("word_select")
+    replicate = _proxy_value("replicate")
+    matches = _proxy_value("matches")
+    __format__ = _proxy_value("__format__")
 
 
 @final
@@ -2772,7 +2887,7 @@ class Switch(Statement):
             self.src_loc = src_loc
 
         self._test  = Value.cast(test)
-        self._cases = []
+        new_cases = []
         for patterns, stmts, case_src_loc in cases:
             if patterns is not None:
                 # Map: key -> (key,); (key...) -> (key...)
@@ -2787,10 +2902,8 @@ class Switch(Statement):
                     new_patterns = (*new_patterns, key)
             else:
                 new_patterns = None
-            if not isinstance(stmts, Iterable):
-                stmts = [stmts]
-            self._cases.append((new_patterns, Statement.cast(stmts), case_src_loc))
-        self._cases = tuple(self._cases)
+            new_cases.append((new_patterns, Statement.cast(stmts), case_src_loc))
+        self._cases = tuple(new_cases)
 
     @property
     def test(self):
@@ -2816,7 +2929,7 @@ class Switch(Statement):
                 return f"(case {patterns[0]} {stmts_repr})"
             else:
                 return "(case ({}) {})".format(" ".join(patterns), stmts_repr)
-        case_reprs = [case_repr(patterns, stmts) for patterns, stmts, _src_loc in self.cases]
+        case_reprs = (case_repr(patterns, stmts) for patterns, stmts, _src_loc in self.cases)
         return "(switch {!r} {})".format(self.test, " ".join(case_reprs))
 
 

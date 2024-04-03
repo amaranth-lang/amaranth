@@ -1623,6 +1623,69 @@ class AssignTestCase(FHDLTestCase):
         )
         """)
 
+    def test_switchvalue(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        s5 = Signal(8)
+        s6 = Signal(8)
+        s7 = Signal(8)
+        f = Fragment()
+        f.add_statements("comb", [
+            SwitchValue(s5[:4], [
+                (1, s1),
+                ((2, 3), s2),
+                ((), s3),
+                ('11--', s4),
+            ]).eq(s6),
+            SwitchValue(s5[4:], [
+                (4, s1),
+                (5, s2),
+                (6, s3),
+                (None, s4),
+            ]).eq(s7),
+        ])
+        f.add_driver(s1, "comb")
+        f.add_driver(s2, "comb")
+        f.add_driver(s3, "comb")
+        f.add_driver(s4, "comb")
+        nl = build_netlist(f, ports=[s1, s2, s3, s4, s5, s6, s7])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's5' 0.2:10)
+                (input 's6' 0.10:18)
+                (input 's7' 0.18:26)
+                (output 's1' 9.0:8)
+                (output 's2' 10.0:8)
+                (output 's3' 12.0:8)
+                (output 's4' 11.0:8)
+            )
+            (cell 0 0 (top
+                (input 's5' 2:10)
+                (input 's6' 10:18)
+                (input 's7' 18:26)
+                (output 's1' 9.0:8)
+                (output 's2' 10.0:8)
+                (output 's3' 12.0:8)
+                (output 's4' 11.0:8)
+            ))
+            (cell 1 0 (matches 0.2:6 0001))
+            (cell 2 0 (matches 0.2:6 0010 0011))
+            (cell 3 0 (matches 0.2:6 11--))
+            (cell 4 0 (priority_match 1 (cat 1.0 2.0 3.0)))
+            (cell 5 0 (matches 0.6:10 0100))
+            (cell 6 0 (matches 0.6:10 0101))
+            (cell 7 0 (matches 0.6:10 0110))
+            (cell 8 0 (priority_match 1 (cat 5.0 6.0 7.0 1'd1)))
+            (cell 9 0 (assignment_list 8'd0 (4.0 0:8 0.10:18) (8.0 0:8 0.18:26)))
+            (cell 10 0 (assignment_list 8'd0 (4.1 0:8 0.10:18) (8.1 0:8 0.18:26)))
+            (cell 11 0 (assignment_list 8'd0 (4.2 0:8 0.10:18) (8.3 0:8 0.18:26)))
+            (cell 12 0 (assignment_list 8'd0 (8.2 0:8 0.18:26)))
+        )
+        """)
+
     def test_sliced_slice(self):
         s1 = Signal(12)
         s2 = Signal(4)
@@ -2953,7 +3016,7 @@ class RhsTestCase(FHDLTestCase):
             (cell 2 0 (matches 0.50:54 0001))
             (cell 3 0 (matches 0.50:54 0010))
             (cell 4 0 (priority_match 1 (cat 1.0 2.0 3.0)))
-            (cell 5 0 (assignment_list 0.2:10
+            (cell 5 0 (assignment_list 8'd0
                 (4.0 0:8 0.2:10)
                 (4.1 0:8 0.10:18)
                 (4.2 0:8 0.18:26)
@@ -2962,7 +3025,7 @@ class RhsTestCase(FHDLTestCase):
             (cell 7 0 (matches 0.50:54 0001))
             (cell 8 0 (matches 0.50:54 0010))
             (cell 9 0 (priority_match 1 (cat 6.0 7.0 8.0)))
-            (cell 10 0 (assignment_list (cat 0.2:10 1'd0)
+            (cell 10 0 (assignment_list 9'd0
                 (9.0 0:9 (cat 0.2:10 1'd0))
                 (9.1 0:9 (cat 0.10:18 1'd0))
                 (9.2 0:9 (cat 0.42:50 0.49))
@@ -2971,7 +3034,7 @@ class RhsTestCase(FHDLTestCase):
             (cell 12 0 (matches 0.50:54 0001))
             (cell 13 0 (matches 0.50:54 0010))
             (cell 14 0 (priority_match 1 (cat 11.0 12.0 13.0)))
-            (cell 15 0 (assignment_list 0.26:34
+            (cell 15 0 (assignment_list 8'd0
                 (14.0 0:8 0.26:34)
                 (14.1 0:8 0.34:42)
                 (14.2 0:8 0.42:50)
@@ -2980,10 +3043,71 @@ class RhsTestCase(FHDLTestCase):
             (cell 17 0 (matches 0.50:54 0001))
             (cell 18 0 (matches 0.50:54 0010))
             (cell 19 0 (priority_match 1 (cat 16.0 17.0 18.0)))
-            (cell 20 0 (assignment_list 0.26:34
+            (cell 20 0 (assignment_list 8'd0
                 (19.0 0:8 0.26:34)
                 (19.1 0:8 0.34:42)
                 (19.2 0:8 (cat 0.50:54 4'd0))
+            ))
+        )
+        """)
+
+    def test_switchvalue(self):
+        i8ua = Signal(8)
+        i8ub = Signal(8)
+        i8uc = Signal(8)
+        i8ud = Signal(8)
+        i4 = Signal(4)
+        o1 = Signal(10)
+        o2 = Signal(10)
+        m = Module()
+        m.d.comb += o1.eq(SwitchValue(i4, [
+            (1, i8ua),
+            ((2, 3), i8ub),
+            ('11--', i8uc),
+        ]))
+        m.d.comb += o2.eq(SwitchValue(i4, [
+            ((4, 5), i8ua),
+            ((), i8ub),
+            ((6, 7), i8uc),
+            (None, i8ud),
+        ]))
+        nl = build_netlist(Fragment.get(m, None), [i8ua, i8ub, i8uc, i8ud, i4, o1, o2])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'i8ua' 0.2:10)
+                (input 'i8ub' 0.10:18)
+                (input 'i8uc' 0.18:26)
+                (input 'i8ud' 0.26:34)
+                (input 'i4' 0.34:38)
+                (output 'o1' (cat 5.0:8 2'd0))
+                (output 'o2' (cat 9.0:8 2'd0))
+            )
+            (cell 0 0 (top
+                (input 'i8ua' 2:10)
+                (input 'i8ub' 10:18)
+                (input 'i8uc' 18:26)
+                (input 'i8ud' 26:34)
+                (input 'i4' 34:38)
+                (output 'o1' (cat 5.0:8 2'd0))
+                (output 'o2' (cat 9.0:8 2'd0))
+            ))
+            (cell 1 0 (matches 0.34:38 0001))
+            (cell 2 0 (matches 0.34:38 0010 0011))
+            (cell 3 0 (matches 0.34:38 11--))
+            (cell 4 0 (priority_match 1 (cat 1.0 2.0 3.0)))
+            (cell 5 0 (assignment_list 8'd0
+                (4.0 0:8 0.2:10)
+                (4.1 0:8 0.10:18)
+                (4.2 0:8 0.18:26)
+            ))
+            (cell 6 0 (matches 0.34:38 0100 0101))
+            (cell 7 0 (matches 0.34:38 0110 0111))
+            (cell 8 0 (priority_match 1 (cat 6.0 7.0 1'd1)))
+            (cell 9 0 (assignment_list 8'd0
+                (8.0 0:8 0.2:10)
+                (8.1 0:8 0.18:26)
+                (8.2 0:8 0.26:34)
             ))
         )
         """)

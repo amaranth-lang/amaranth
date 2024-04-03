@@ -1144,6 +1144,7 @@ class ArrayProxyTestCase(FHDLTestCase):
         s = Signal(range(3))
         v = a[s]
         self.assertEqual(repr(v), "(proxy (array [1, 2, 3]) (sig s))")
+        self.assertEqual(repr(v.as_value()), "(switch-value (sig s) (case 00 (const 1'd1)) (case 01 (const 2'd2)) (case 10 (const 2'd3)))")
 
 
 class SignalTestCase(FHDLTestCase):

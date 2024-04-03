@@ -314,8 +314,8 @@ class SimulatorUnitTestCase(FHDLTestCase):
     def test_array_oob(self):
         array = Array([1, 4, 10])
         stmt = lambda y, a: y.eq(array[a])
-        self.assertStatement(stmt, [C(3)], C(10))
-        self.assertStatement(stmt, [C(4)], C(10))
+        self.assertStatement(stmt, [C(3)], C(0))
+        self.assertStatement(stmt, [C(4)], C(0))
 
     def test_array_lhs(self):
         l = Signal(3, init=1)
@@ -333,8 +333,8 @@ class SimulatorUnitTestCase(FHDLTestCase):
         n = Signal(3)
         array = Array([l, m, n])
         stmt = lambda y, a, b: [array[a].eq(b), y.eq(Cat(*array))]
-        self.assertStatement(stmt, [C(3), C(0b001)], C(0b001000000))
-        self.assertStatement(stmt, [C(4), C(0b010)], C(0b010000000))
+        self.assertStatement(stmt, [C(3), C(0b001)], C(0))
+        self.assertStatement(stmt, [C(4), C(0b010)], C(0))
 
     def test_array_index(self):
         array = Array(Array(x * y for y in range(10)) for x in range(10))
@@ -513,6 +513,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.m.Switch(self.s):
             with self.m.Case(0):
                 self.m.d.sync += self.o.eq(self.a + self.b)
+            with self.m.Case():
+                self.m.d.sync += self.o.eq(self.a * self.b)
             with self.m.Case(1):
                 self.m.d.sync += self.o.eq(self.a - self.b)
             with self.m.Default():
