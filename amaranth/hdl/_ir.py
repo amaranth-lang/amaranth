@@ -885,30 +885,39 @@ class NetlistEmitter:
                              stride=value.stride, offset=offset, src_loc=value.src_loc)
             result = self.netlist.add_value_cell(value.width, cell)
             signed = False
-        elif isinstance(value, _ast.ArrayProxy):
-            elems = [self.emit_rhs(module_idx, elem) for elem in value.elems]
+        elif isinstance(value, _ast.SwitchValue):
+            test, _signed = self.emit_rhs(module_idx, value.test)
+            conds = []
+            elems = []
+            for patterns, elem, in value.cases:
+                if patterns is not None:
+                    if not patterns:
+                        # Hack: empty pattern set cannot be supported by RTLIL.
+                        continue
+                    for pattern in patterns:
+                        assert len(pattern) == len(test)
+                    cell = _nir.Matches(module_idx, value=test, patterns=patterns,
+                                        src_loc=value.src_loc)
+                    net, = self.netlist.add_value_cell(1, cell)
+                    conds.append(net)
+                else:
+                    conds.append(_nir.Net.from_const(1))
+                elems.append(self.emit_rhs(module_idx, elem))
+            cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1),
+                                      inputs=_nir.Value(conds),
+                                      src_loc=value.src_loc)
+            conds = self.netlist.add_value_cell(len(conds), cell)
             shape = _ast.Shape._unify(
                 _ast.Shape(len(value), signed)
                 for value, signed in elems
             )
             elems = tuple(self.extend(elem, elem_signed, shape.width) for elem, elem_signed in elems)
-            index, _signed = self.emit_rhs(module_idx, value.index)
-            conds = []
-            for case_index in range(len(elems)):
-                cell = _nir.Matches(module_idx, value=index,
-                                       patterns=(to_binary(case_index, len(index)),),
-                                       src_loc=value.src_loc)
-                subcond, = self.netlist.add_value_cell(1, cell)
-                conds.append(subcond)
-            conds = _nir.Value(conds)
-            cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1), inputs=conds, src_loc=value.src_loc)
-            conds = self.netlist.add_value_cell(len(conds), cell)
             assignments = [
-                _nir.Assignment(cond=cond, start=0, value=elem, src_loc=value.src_loc)
-                for cond, elem in zip(conds, elems)
+                _nir.Assignment(cond=subcond, start=0, value=elem, src_loc=value.src_loc)
+                for subcond, elem in zip(conds, elems)
             ]
-            cell = _nir.AssignmentList(module_idx, default=elems[0], assignments=assignments,
-                                 src_loc=value.src_loc)
+            cell = _nir.AssignmentList(module_idx, default=_nir.Value.from_const(0, shape.width),
+                                       assignments=assignments, src_loc=value.src_loc)
             result = self.netlist.add_value_cell(shape.width, cell)
             signed = shape.signed
         elif isinstance(value, _ast.Concat):
@@ -1017,19 +1026,29 @@ class NetlistEmitter:
                 else:
                     subrhs = rhs
                 self.emit_assign(module_idx, cd, lhs.value, start, subrhs, subcond, src_loc=src_loc)
-        elif isinstance(lhs, _ast.ArrayProxy):
-            index, _signed = self.emit_rhs(module_idx, lhs.index)
+        elif isinstance(lhs, _ast.SwitchValue):
+            test, _signed = self.emit_rhs(module_idx, lhs.test)
             conds = []
-            for case_index in range(len(lhs.elems)):
-                cell = _nir.Matches(module_idx, value=index,
-                                       patterns=(to_binary(case_index, len(index)),),
-                                       src_loc=lhs.src_loc)
-                subcond, = self.netlist.add_value_cell(1, cell)
-                conds.append(subcond)
+            elems = []
+            for patterns, elem in lhs.cases:
+                if patterns is not None:
+                    if not patterns:
+                        # Hack: empty pattern set cannot be supported by RTLIL.
+                        continue
+                    for pattern in patterns:
+                        assert len(pattern) == len(test)
+                    cell = _nir.Matches(module_idx, value=test, patterns=patterns,
+                                        src_loc=lhs.src_loc)
+                    net, = self.netlist.add_value_cell(1, cell)
+                    conds.append(net)
+                else:
+                    conds.append(_nir.Net.from_const(1))
+                elems.append(elem)
             conds = _nir.Value(conds)
-            cell = _nir.PriorityMatch(module_idx, en=cond, inputs=conds, src_loc=lhs.src_loc)
+            cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1),
+                                      inputs=conds, src_loc=lhs.src_loc)
             conds = self.netlist.add_value_cell(len(conds), cell)
-            for subcond, val in zip(conds, lhs.elems):
+            for subcond, val in zip(conds, elems):
                 self.emit_assign(module_idx, cd, val, lhs_start, rhs[:len(val)], subcond, src_loc=src_loc)
         elif isinstance(lhs, _ast.Operator):
             assert lhs.operator in ('u', 's')

@@ -67,6 +67,53 @@ class _Compiler:
         self.state = state
         self.emitter = emitter
 
+    def _emit_switch(self, test, cases, case_handler):
+        if not cases:
+            return
+        use_match = _USE_PATTERN_MATCHING
+        for patterns, *_ in cases:
+            if patterns is None:
+                continue
+            for pattern in patterns:
+                if "-" in pattern:
+                    use_match = False
+        if use_match:
+            self.emitter.append(f"match {test}:")
+            with self.emitter.indent():
+                for case in cases:
+                    patterns = case[0]
+                    if patterns is None:
+                        self.emitter.append(f"case _:")
+                    elif not patterns:
+                        self.emitter.append(f"case _ if False:")
+                    else:
+                        self.emitter.append(f"case {' | '.join(f'0b0{pattern}' for pattern in patterns)}:")
+                    with self.emitter.indent():
+                        case_handler(*case)
+        else:
+            for index, case in enumerate(cases):
+                patterns = case[0]
+                gen_checks = []
+                if patterns is None:
+                    gen_checks.append(f"True")
+                elif not patterns:
+                    gen_checks.append(f"False")
+                else:
+                    for pattern in patterns:
+                        if "-" in pattern:
+                            mask  = int("".join("0" if b == "-" else "1" for b in pattern), 2)
+                            value = int("".join("0" if b == "-" else  b  for b in pattern), 2)
+                            gen_checks.append(f"{value} == ({mask} & {test})")
+                        else:
+                            value = int(pattern or "0", 2)
+                            gen_checks.append(f"{value} == {test}")
+                if index == 0:
+                    self.emitter.append(f"if {' or '.join(gen_checks)}:")
+                else:
+                    self.emitter.append(f"elif {' or '.join(gen_checks)}:")
+                with self.emitter.indent():
+                    case_handler(*case)
+
 
 class _ValueCompiler(ValueVisitor, _Compiler):
     helpers = {
@@ -223,36 +270,13 @@ class _RHSValueCompiler(_ValueCompiler):
             return f"({' | '.join(gen_parts)})"
         return f"0"
 
-    def on_ArrayProxy(self, value):
-        index_mask = (1 << len(value.index)) - 1
-        gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
-        gen_value = self.emitter.gen_var("rhs_proxy")
-        if value.elems:
-            if _USE_PATTERN_MATCHING:
-                self.emitter.append(f"match {gen_index}:")
-                with self.emitter.indent():
-                    for index, elem in enumerate(value.elems):
-                        self.emitter.append(f"case {index}:")
-                        with self.emitter.indent():
-                            self.emitter.append(f"{gen_value} = {self(elem)}")
-                    self.emitter.append("case _:")
-                    with self.emitter.indent():
-                            self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
-            else:
-                for index, elem in enumerate(value.elems):
-                    if index == 0:
-                        self.emitter.append(f"if {index} == {gen_index}:")
-                    else:
-                        self.emitter.append(f"elif {index} == {gen_index}:")
-                    with self.emitter.indent():
-                        self.emitter.append(f"{gen_value} = {self(elem)}")
-                self.emitter.append(f"else:")
-                with self.emitter.indent():
-                    self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
-
-            return gen_value
-        else:
-            return f"0"
+    def on_SwitchValue(self, value):
+        gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self(value.test)}")
+        gen_value = self.emitter.def_var("rhs_switch", "0")
+        def case_handler(patterns, elem):
+            self.emitter.append(f"{gen_value} = {self(elem)}")
+        self._emit_switch(gen_test, value.cases, case_handler)
+        return gen_value
 
     @classmethod
     def compile(cls, state, value, *, mode):
@@ -323,34 +347,12 @@ class _LHSValueCompiler(_ValueCompiler):
                 offset += len(part)
         return gen
 
-    def on_ArrayProxy(self, value):
+    def on_SwitchValue(self, value):
         def gen(arg):
-            index_mask = (1 << len(value.index)) - 1
-            gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask:#x}")
-            if value.elems:
-                if _USE_PATTERN_MATCHING:
-                    self.emitter.append(f"match {gen_index}:")
-                    with self.emitter.indent():
-                        for index, elem in enumerate(value.elems):
-                            self.emitter.append(f"case {index}:")
-                            with self.emitter.indent():
-                                self(elem)(arg)
-                        self.emitter.append("case _:")
-                        with self.emitter.indent():
-                            self(value.elems[-1])(arg)
-                else:
-                    for index, elem in enumerate(value.elems):
-                        if index == 0:
-                            self.emitter.append(f"if {index} == {gen_index}:")
-                        else:
-                            self.emitter.append(f"elif {index} == {gen_index}:")
-                        with self.emitter.indent():
-                            self(elem)(arg)
-                    self.emitter.append(f"else:")
-                    with self.emitter.indent():
-                        self(value.elems[-1])(arg)
-            else:
-                self.emitter.append(f"pass")
+            gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self.rrhs(value.test)}")
+            def case_handler(patterns, elem):
+                self(elem)(arg)
+            self._emit_switch(gen_test, value.cases, case_handler)
         return gen
 
 
@@ -396,27 +398,9 @@ class _StatementCompiler(StatementVisitor, _Compiler):
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
         gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1:#x} & {gen_test_value}")
-        for index, (patterns, stmts, _src_loc) in enumerate(stmt.cases):
-            gen_checks = []
-            if patterns is None:
-                gen_checks.append(f"True")
-            elif not patterns:
-                gen_checks.append(f"False")
-            else:
-                for pattern in patterns:
-                    if "-" in pattern:
-                        mask  = int("".join("0" if b == "-" else "1" for b in pattern), 2)
-                        value = int("".join("0" if b == "-" else  b  for b in pattern), 2)
-                        gen_checks.append(f"{value} == ({mask} & {gen_test})")
-                    else:
-                        value = int(pattern or "0", 2)
-                        gen_checks.append(f"{value} == {gen_test}")
-            if index == 0:
-                self.emitter.append(f"if {' or '.join(gen_checks)}:")
-            else:
-                self.emitter.append(f"elif {' or '.join(gen_checks)}:")
-            with self.emitter.indent():
-                self(stmts)
+        def case_handler(pattern, stmt, src_loc):
+            self(stmt)
+        self._emit_switch(gen_test, stmt.cases, case_handler)
 
     def emit_format(self, format):
         format_string = []
