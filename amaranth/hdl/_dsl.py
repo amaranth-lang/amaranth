@@ -13,9 +13,88 @@ from ._ast import _StatementList, _LateBoundStatement, _normalize_patterns
 from ._ir import *
 from ._cd import *
 from ._xfrm import *
+from ._mem import MemoryData
 
 
 __all__ = ["SyntaxError", "SyntaxWarning", "Module"]
+
+
+class _Visitor:
+    def __init__(self):
+        self.driven_signals = SignalSet()
+
+    def visit_stmt(self, stmt):
+        if isinstance(stmt, _StatementList):
+            for s in stmt:
+                self.visit_stmt(s)
+        elif isinstance(stmt, Assign):
+            self.visit_lhs(stmt.lhs)
+            self.visit_rhs(stmt.rhs)
+        elif isinstance(stmt, Print):
+            for chunk in stmt.message._chunks:
+                if not isinstance(chunk, str):
+                    obj, format_spec = chunk
+                    self.visit_rhs(obj)
+        elif isinstance(stmt, Property):
+            self.visit_rhs(stmt.test)
+            if stmt.message is not None:
+                for chunk in stmt.message._chunks:
+                    if not isinstance(chunk, str):
+                        obj, format_spec = chunk
+                        self.visit_rhs(obj)
+        elif isinstance(stmt, Switch):
+            self.visit_rhs(stmt.test)
+            for _patterns, stmts, _src_loc in stmt.cases:
+                self.visit_stmt(stmts)
+        elif isinstance(stmt, _LateBoundStatement):
+            pass
+        else:
+            assert False # :nocov:
+
+    def visit_lhs(self, value):
+        if isinstance(value, Operator) and value.operator in ("u", "s"):
+            self.visit_lhs(value.operands[0])
+        elif isinstance(value, (Signal, ClockSignal, ResetSignal)):
+            self.driven_signals.add(value)
+        elif isinstance(value, Slice):
+            self.visit_lhs(value.value)
+        elif isinstance(value, Part):
+            self.visit_lhs(value.value)
+            self.visit_rhs(value.offset)
+        elif isinstance(value, Concat):
+            for part in value.parts:
+                self.visit_lhs(part)
+        elif isinstance(value, SwitchValue):
+            self.visit_rhs(value.test)
+            for _patterns, elem in value.cases:
+                self.visit_lhs(elem)
+        elif isinstance(value, MemoryData._Row):
+            raise ValueError(f"Value {value!r} can only be used in simulator processes")
+        else:
+            raise ValueError(f"Value {value!r} cannot be assigned to")
+
+    def visit_rhs(self, value):
+        if isinstance(value, (Const, Signal, ClockSignal, ResetSignal, Initial, AnyValue)):
+            pass
+        elif isinstance(value, Operator):
+            for op in value.operands:
+                self.visit_rhs(op)
+        elif isinstance(value, Slice):
+            self.visit_rhs(value.value)
+        elif isinstance(value, Part):
+            self.visit_rhs(value.value)
+            self.visit_rhs(value.offset)
+        elif isinstance(value, Concat):
+            for part in value.parts:
+                self.visit_rhs(part)
+        elif isinstance(value, SwitchValue):
+            self.visit_rhs(value.test)
+            for _patterns, elem in value.cases:
+                self.visit_rhs(elem)
+        elif isinstance(value, MemoryData._Row):
+            raise ValueError(f"Value {value!r} can only be used in simulator processes")
+        else:
+            assert False # :nocov:
 
 
 class _ModuleBuilderProxy:
@@ -545,15 +624,16 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
             stmt._MustUse__used = True
 
-            if isinstance(stmt, Assign):
-                for signal in stmt._lhs_signals():
-                    if signal not in self._driving:
-                        self._driving[signal] = domain
-                    elif self._driving[signal] != domain:
-                        cd_curr = self._driving[signal]
-                        raise SyntaxError(
-                            f"Driver-driver conflict: trying to drive {signal!r} from d.{domain}, but it is "
-                            f"already driven from d.{cd_curr}")
+            visitor = _Visitor()
+            visitor.visit_stmt(stmt)
+            for signal in visitor.driven_signals:
+                if signal not in self._driving:
+                    self._driving[signal] = domain
+                elif self._driving[signal] != domain:
+                    cd_curr = self._driving[signal]
+                    raise SyntaxError(
+                        f"Driver-driver conflict: trying to drive {signal!r} from d.{domain}, but it is "
+                        f"already driven from d.{cd_curr}")
 
             self._statements.setdefault(domain, []).append(stmt)
 
@@ -595,10 +675,14 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         for domain, statements in self._statements.items():
             statements = resolve_statements(statements)
             fragment.add_statements(domain, statements)
-            for signal in statements._lhs_signals():
+            visitor = _Visitor()
+            visitor.visit_stmt(statements)
+            for signal in visitor.driven_signals:
                 fragment.add_driver(signal, domain)
         fragment.add_statements("comb", self._top_comb_statements)
-        for signal in self._top_comb_statements._lhs_signals():
+        visitor = _Visitor()
+        visitor.visit_stmt(self._top_comb_statements)
+        for signal in visitor.driven_signals:
             fragment.add_driver(signal, "comb")
         fragment.add_domains(self._domains.values())
         fragment.generated.update(self._generated)

@@ -69,6 +69,7 @@ Implemented RFCs
 * `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
 * `RFC 53`_: Low-level I/O primitives
 * `RFC 59`_: Get rid of upwards propagation of clock domains
+* `RFC 62`_: The `MemoryData`` class
 
 
 Language changes
