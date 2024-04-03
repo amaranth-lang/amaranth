@@ -70,13 +70,6 @@ class FragmentGeneratedTestCase(FHDLTestCase):
                          SignalKey(sig))
 
 
-class FragmentDriversTestCase(FHDLTestCase):
-    def test_empty(self):
-        f = Fragment()
-        self.assertEqual(list(f.iter_comb()), [])
-        self.assertEqual(list(f.iter_sync()), [])
-
-
 class DuplicateElaboratableTestCase(FHDLTestCase):
     def test_duplicate(self):
         sub = Module()
@@ -255,7 +248,6 @@ class FragmentPortsTestCase(FHDLTestCase):
         cd_sync = ClockDomain()
         ctr = Signal(4)
         f.add_domains(cd_sync)
-        f.add_driver(ctr, "sync")
         f.add_statements("sync", ctr.eq(ctr + 1))
         nl = build_netlist(f, ports=[
             ClockSignal("sync"),
@@ -277,7 +269,6 @@ class FragmentPortsTestCase(FHDLTestCase):
     def test_port_autodomain(self):
         f = Fragment()
         ctr = Signal(4)
-        f.add_driver(ctr, "sync")
         f.add_statements("sync", ctr.eq(ctr + 1))
         nl = build_netlist(f, ports=[ctr])
         self.assertRepr(nl, """
@@ -299,7 +290,6 @@ class FragmentPortsTestCase(FHDLTestCase):
         a = Signal(4)
         b = Signal(4)
         c = Signal(3)
-        f1.add_driver(c)
         f1.add_statements("comb", c.eq((a * b).shift_right(4)))
         nl = build_netlist(f, ports=[a, b, c])
         self.assertRepr(nl, """
@@ -546,16 +536,14 @@ class FragmentDomainsTestCase(FHDLTestCase):
         fa.add_domains(cda)
         fb = Fragment()
         fb.add_domains(cdb)
-        fb.add_driver(ResetSignal("sync"), "comb")
+        fb.add_statements("comb", ResetSignal("sync").eq(1))
         f = Fragment()
         f.add_subfragment(fa, "a")
         f.add_subfragment(fb, "b")
 
         f._propagate_domains_up()
         fb_new, _, _ = f.subfragments[1]
-        self.assertEqual(fb_new.drivers, OrderedDict({
-            "comb": SignalSet((ResetSignal("b_sync"),))
-        }))
+        self.assertRepr(fb_new.statements["comb"], "((eq (rst b_sync) (const 1'd1)))")
 
     def test_domain_conflict_rename_drivers_before_creating_missing(self):
         cda = ClockDomain("sync")
@@ -569,7 +557,7 @@ class FragmentDomainsTestCase(FHDLTestCase):
         f = Fragment()
         f.add_subfragment(fa, "a")
         f.add_subfragment(fb, "b")
-        f.add_driver(s, "b_sync")
+        f.add_statements("b_sync", s.eq(1))
 
         f._propagate_domains(lambda name: ClockDomain(name))
 
@@ -701,11 +689,11 @@ class FragmentHierarchyConflictTestCase(FHDLTestCase):
         f1 = Fragment()
         cd1 = ClockDomain("d", local=True)
         f1.add_domains(cd1)
-        f1.add_driver(ClockSignal("d"))
+        f1.add_statements("comb", ClockSignal("d").eq(1))
         f2 = Fragment()
         cd2 = ClockDomain("d", local=True)
         f2.add_domains(cd2)
-        f2.add_driver(ClockSignal("d"))
+        f2.add_statements("comb", ClockSignal("d").eq(1))
         f3 = Fragment()
         f3.add_subfragment(f1)
         f3.add_subfragment(f2)
@@ -997,11 +985,8 @@ class NamesTestCase(FHDLTestCase):
         f.add_domains(cd_sync := ClockDomain())
         f.add_domains(cd_sync_norst := ClockDomain(reset_less=True))
         f.add_statements("comb", [o1.eq(0)])
-        f.add_driver(o1, domain="comb")
         f.add_statements("sync", [o2.eq(i1)])
-        f.add_driver(o2, domain="sync")
         f.add_statements("sync_norst", [o3.eq(i1)])
-        f.add_driver(o3, domain="sync_norst")
 
         ports = {
             "i": (i, PortDirection.Input),
@@ -1242,7 +1227,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1265,7 +1249,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1288,7 +1271,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1311,7 +1293,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1334,7 +1315,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1[2:6].eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1359,7 +1339,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.bit_select(s3, 4).eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1404,7 +1383,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.bit_select(s3, 4).eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1441,7 +1419,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.word_select(s3, 4).eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1478,7 +1455,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.word_select(s3, 4).eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1518,9 +1494,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             Cat(s1, s2, s3).eq(s4)
         )
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4])
         self.assertRepr(nl, """
         (
@@ -1549,9 +1522,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             Cat(s1, s2, s3).eq(s4)
         )
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4])
         self.assertRepr(nl, """
         (
@@ -1579,8 +1549,6 @@ class AssignTestCase(FHDLTestCase):
             s1.as_signed().eq(s3),
             s2.as_unsigned().eq(s3),
         ])
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1607,9 +1575,6 @@ class AssignTestCase(FHDLTestCase):
         f.add_statements("comb", [
             Array([s1, s2, s3])[s4].eq(s5),
         ])
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4, s5])
         self.assertRepr(nl, """
         (
@@ -1660,10 +1625,6 @@ class AssignTestCase(FHDLTestCase):
                 (None, s4),
             ]).eq(s7),
         ])
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
-        f.add_driver(s4, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4, s5, s6, s7])
         self.assertRepr(nl, """
         (
@@ -1708,7 +1669,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1[1:11][2:6].eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2])
         self.assertRepr(nl, """
         (
@@ -1736,11 +1696,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             Cat(s1, s2, s3, s4, s5)[5:14].eq(s6)
         )
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
-        f.add_driver(s4, "comb")
-        f.add_driver(s5, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4, s5, s6])
         self.assertRepr(nl, """
         (
@@ -1774,7 +1729,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.bit_select(s3, 6)[2:4].eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1817,7 +1771,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1.word_select(s3, 4)[1:3].eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1851,9 +1804,6 @@ class AssignTestCase(FHDLTestCase):
         f.add_statements("comb", [
             Array([s1, s2, s3])[s4][2:7].eq(s5),
         ])
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
-        f.add_driver(s3, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3, s4, s5])
         self.assertRepr(nl, """
         (
@@ -1890,7 +1840,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1[1:7].bit_select(s3, 4).eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1931,7 +1880,6 @@ class AssignTestCase(FHDLTestCase):
             "comb",
             s1[3:9].bit_select(s3, 4)[1:3].eq(s2)
         )
-        f.add_driver(s1, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (
@@ -1971,8 +1919,6 @@ class AssignTestCase(FHDLTestCase):
             s1.as_signed()[2:7].eq(s3),
             s2.as_unsigned()[2:7].eq(s3),
         ])
-        f.add_driver(s1, "comb")
-        f.add_driver(s2, "comb")
         nl = build_netlist(f, ports=[s1, s2, s3])
         self.assertRepr(nl, """
         (

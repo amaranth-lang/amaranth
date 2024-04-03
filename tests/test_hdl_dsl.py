@@ -631,12 +631,6 @@ class DSLTestCase(FHDLTestCase):
             )
         )
         """)
-        self.assertEqual({repr(sig): k for k, v in frag.drivers.items() for sig in v}, {
-            "(sig a)": "comb",
-            "(sig fsm_state)": "sync",
-            "(sig b)": "sync",
-            "(sig)": "comb",
-        })
         fsm  = frag.find_generated("fsm")
         self.assertIsInstance(fsm.state, Signal)
         self.assertEqual(fsm.encoding, OrderedDict({
@@ -960,9 +954,6 @@ class DSLTestCase(FHDLTestCase):
             (eq (sig c1) (sig s1))
         )
         """)
-        self.assertEqual(f1.drivers, {
-            "comb": SignalSet((self.c1,))
-        })
         self.assertEqual(len(f1.subfragments), 1)
         (f2, f2_name, _), = f1.subfragments
         self.assertEqual(f2_name, "foo")
@@ -976,8 +967,4 @@ class DSLTestCase(FHDLTestCase):
             (eq (sig c3) (sig s3))
         )
         """)
-        self.assertEqual(f2.drivers, {
-            "comb": SignalSet((self.c2,)),
-            "sync": SignalSet((self.c3,))
-        })
         self.assertEqual(len(f2.subfragments), 0)

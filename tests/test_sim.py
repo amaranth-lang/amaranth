@@ -31,8 +31,6 @@ class SimulatorUnitTestCase(FHDLTestCase):
         stmt = stmt(osig, *isigs)
         frag = Fragment()
         frag.add_statements("comb", stmt)
-        for signal in flatten(s._lhs_signals() for s in Statement.cast(stmt)):
-            frag.add_driver(signal)
 
         sim = Simulator(frag)
         def process():

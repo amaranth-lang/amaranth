@@ -63,7 +63,6 @@ class Fragment:
             obj = new_obj
 
     def __init__(self, *, src_loc=None):
-        self.drivers = OrderedDict()
         self.statements = {}
         self.domains = OrderedDict()
         self.subfragments = []
@@ -72,28 +71,6 @@ class Fragment:
         self.src_loc = src_loc
         self.origins = None
         self.domains_propagated_up = {}
-
-    def add_driver(self, signal, domain="comb"):
-        assert isinstance(domain, str)
-        if domain not in self.drivers:
-            self.drivers[domain] = _ast.SignalSet()
-        self.drivers[domain].add(signal)
-
-    def iter_drivers(self):
-        for domain, signals in self.drivers.items():
-            for signal in signals:
-                yield domain, signal
-
-    def iter_comb(self):
-        if "comb" in self.drivers:
-            yield from self.drivers["comb"]
-
-    def iter_sync(self):
-        for domain, signals in self.drivers.items():
-            if domain == "comb":
-                continue
-            for signal in signals:
-                yield domain, signal
 
     def add_domains(self, *domains):
         for domain in flatten(domains):

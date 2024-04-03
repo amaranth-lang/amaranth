@@ -675,15 +675,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         for domain, statements in self._statements.items():
             statements = resolve_statements(statements)
             fragment.add_statements(domain, statements)
-            visitor = _Visitor()
-            visitor.visit_stmt(statements)
-            for signal in visitor.driven_signals:
-                fragment.add_driver(signal, domain)
         fragment.add_statements("comb", self._top_comb_statements)
-        visitor = _Visitor()
-        visitor.visit_stmt(self._top_comb_statements)
-        for signal in visitor.driven_signals:
-            fragment.add_driver(signal, "comb")
         fragment.add_domains(self._domains.values())
         fragment.generated.update(self._generated)
         return fragment
