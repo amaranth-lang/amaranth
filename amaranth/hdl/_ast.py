@@ -3000,10 +3000,6 @@ class IOValue(metaclass=ABCMeta):
         else:
             raise TypeError(f"Cannot index IO value with {key!r}")
 
-    @abstractmethod
-    def _ioports(self):
-        raise NotImplementedError # :nocov:
-
 
 @final
 class IOPort(IOValue):
@@ -3035,9 +3031,6 @@ class IOPort(IOValue):
     def metadata(self):
         return self._metadata
 
-    def _ioports(self):
-        return {self}
-
     def __repr__(self):
         return f"(io-port {self.name})"
 
@@ -3058,9 +3051,6 @@ class IOConcat(IOValue):
     @property
     def metadata(self):
         return tuple(obj for part in self._parts for obj in part.metadata)
-
-    def _ioports(self):
-        return {port for part in self._parts for port in part._ioports()}
 
     def __repr__(self):
         return "(io-cat {})".format(" ".join(map(repr, self.parts)))
@@ -3114,9 +3104,6 @@ class IOSlice(IOValue):
     @property
     def metadata(self):
         return self._value.metadata[self.start:self.stop]
-
-    def _ioports(self):
-        return self.value._ioports()
 
     def __repr__(self):
         return f"(io-slice {self.value!r} {self.start}:{self.stop})"

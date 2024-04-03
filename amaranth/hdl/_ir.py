@@ -498,50 +498,96 @@ class Design:
         if frag_info.parent is not None:
             self._use_io_port(frag_info.parent, port)
 
+    def _collect_used_signals_format(self, fragment: Fragment, fmt: _ast.Format):
+        for chunk in fmt._chunks:
+            if not isinstance(chunk, str):
+                obj, _spec = chunk
+                self._collect_used_signals_value(fragment, obj)
+
+    def _collect_used_signals_value(self, fragment: Fragment, value: _ast.Value):
+        if isinstance(value, (_ast.Const, _ast.Initial, _ast.AnyValue)):
+            pass
+        elif isinstance(value, _ast.Signal):
+            self._use_signal(fragment, value)
+        elif isinstance(value, _ast.Operator):
+            for op in value.operands:
+                self._collect_used_signals_value(fragment, op)
+        elif isinstance(value, _ast.Slice):
+            self._collect_used_signals_value(fragment, value.value)
+        elif isinstance(value, _ast.Part):
+            self._collect_used_signals_value(fragment, value.value)
+            self._collect_used_signals_value(fragment, value.offset)
+        elif isinstance(value, _ast.SwitchValue):
+            self._collect_used_signals_value(fragment, value.test)
+            for _patterns, elem in value.cases:
+                self._collect_used_signals_value(fragment, elem)
+        elif isinstance(value, _ast.Concat):
+            for part in value.parts:
+                self._collect_used_signals_value(fragment, part)
+        else:
+            raise NotImplementedError # :nocov:
+
+    def _collect_used_signals_io_value(self, fragment: Fragment, value: _ast.IOValue):
+        if isinstance(value, _ast.IOPort):
+            self._use_io_port(fragment, value)
+        elif isinstance(value, _ast.IOSlice):
+            self._collect_used_signals_io_value(fragment, value.value)
+        elif isinstance(value, _ast.IOConcat):
+            for part in value.parts:
+                self._collect_used_signals_io_value(fragment, part)
+        else:
+            raise NotImplementedError # :nocov:
+
+    def _collect_used_signals_stmt(self, fragment: Fragment, stmt: _ast.Statement):
+        if isinstance(stmt, _ast.Assign):
+            self._collect_used_signals_value(fragment, stmt.lhs)
+            self._collect_used_signals_value(fragment, stmt.rhs)
+        elif isinstance(stmt, _ast.Print):
+            self._collect_used_signals_format(fragment, stmt.message)
+        elif isinstance(stmt, _ast.Property):
+            self._collect_used_signals_value(fragment, stmt.test)
+            if stmt.message is not None:
+                self._collect_used_signals_format(fragment, stmt.message)
+        elif isinstance(stmt, _ast.Switch):
+            self._collect_used_signals_value(fragment, stmt.test)
+            for _patterns, stmts, _src_loc in stmt.cases:
+                for s in stmts:
+                    self._collect_used_signals_stmt(fragment, s)
+        else:
+            raise NotImplementedError # :nocov:
+
     def _collect_used_signals(self, fragment: Fragment):
         """Collects used signals and IO ports for a fragment and all its subfragments."""
         from . import _mem
         if isinstance(fragment, _ir.Instance):
             for conn, kind in fragment.ports.values():
                 if isinstance(conn, _ast.IOValue):
-                    for port in conn._ioports():
-                        self._use_io_port(fragment, port)
+                    self._collect_used_signals_io_value(fragment, conn)
                 elif isinstance(conn, _ast.Value):
-                    for signal in conn._rhs_signals():
-                        self._use_signal(fragment, signal)
+                    self._collect_used_signals_value(fragment, conn)
                 else:
                     assert False # :nocov:
         elif isinstance(fragment, _ir.IOBufferInstance):
-            for port in fragment.port._ioports():
-                self._use_io_port(fragment, port)
+            self._collect_used_signals_io_value(fragment, fragment.port)
             if fragment.i is not None:
-                for signal in fragment.i._rhs_signals():
-                    self._use_signal(fragment, signal)
+                self._collect_used_signals_value(fragment, fragment.i)
             if fragment.o is not None:
-                for signal in fragment.o._rhs_signals():
-                    self._use_signal(fragment, signal)
-                for signal in fragment.oe._rhs_signals():
-                    self._use_signal(fragment, signal)
+                self._collect_used_signals_value(fragment, fragment.o)
+                self._collect_used_signals_value(fragment, fragment.oe)
         elif isinstance(fragment, _mem.MemoryInstance):
             for port in fragment._read_ports:
-                for signal in port._addr._rhs_signals():
-                    self._use_signal(fragment, signal)
-                for signal in port._data._rhs_signals():
-                    self._use_signal(fragment, signal)
-                for signal in port._en._rhs_signals():
-                    self._use_signal(fragment, signal)
+                self._collect_used_signals_value(fragment, port._addr)
+                self._collect_used_signals_value(fragment, port._data)
+                self._collect_used_signals_value(fragment, port._en)
                 if port._domain != "comb":
                     domain = fragment.domains[port._domain]
                     self._use_signal(fragment, domain.clk)
                     if domain.rst is not None:
                         self._use_signal(fragment, domain.rst)
             for port in fragment._write_ports:
-                for signal in port._addr._rhs_signals():
-                    self._use_signal(fragment, signal)
-                for signal in port._data._rhs_signals():
-                    self._use_signal(fragment, signal)
-                for signal in port._en._rhs_signals():
-                    self._use_signal(fragment, signal)
+                self._collect_used_signals_value(fragment, port._addr)
+                self._collect_used_signals_value(fragment, port._data)
+                self._collect_used_signals_value(fragment, port._en)
                 domain = fragment.domains[port._domain]
                 self._use_signal(fragment, domain.clk)
                 if domain.rst is not None:
@@ -554,9 +600,7 @@ class Design:
                     if domain.rst is not None:
                         self._use_signal(fragment, domain.rst)
                 for statement in statements:
-                    for signal in statement._lhs_signals() | statement._rhs_signals():
-                        if not isinstance(signal, (_ast.ClockSignal, _ast.ResetSignal)):
-                            self._use_signal(fragment, signal)
+                    self._collect_used_signals_stmt(fragment, statement)
             for subfragment, _name, _src_loc in fragment.subfragments:
                 self._collect_used_signals(subfragment)
 
