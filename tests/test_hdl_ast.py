@@ -746,7 +746,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux(self):
         s  = Const(0)
         v1 = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
-        self.assertEqual(repr(v1), "(m (const 1'd0) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v1), "(switch-value (const 1'd0) (case 0 (const 6'd0)) (default (const 4'd0)))")
         self.assertEqual(v1.shape(), unsigned(6))
         v2 = Mux(s, Const(0, signed(4)), Const(0, signed(6)))
         self.assertEqual(v2.shape(), signed(6))
@@ -758,11 +758,11 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux_wide(self):
         s = Const(0b100)
         v = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
-        self.assertEqual(repr(v), "(m (const 3'd4) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v), "(switch-value (const 3'd4) (case 000 (const 6'd0)) (default (const 4'd0)))")
 
     def test_mux_bool(self):
         v = Mux(True, Const(0), Const(0))
-        self.assertEqual(repr(v), "(m (const 1'd1) (const 1'd0) (const 1'd0))")
+        self.assertEqual(repr(v), "(switch-value (const 1'd1) (case 0 (const 1'd0)) (default (const 1'd0)))")
 
     def test_any(self):
         v = Const(0b101).any()
@@ -842,7 +842,7 @@ class OperatorTestCase(FHDLTestCase):
         """)
         s = Signal(signed(4))
         self.assertRepr(abs(s), """
-        (slice (m (>= (sig s) (const 1'd0)) (sig s) (- (sig s))) 0:4)
+        (slice (switch-value (>= (sig s) (const 1'd0)) (case 0 (- (sig s))) (default (sig s))) 0:4)
         """)
         self.assertEqual(abs(s).shape(), unsigned(4))
 

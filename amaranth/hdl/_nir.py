@@ -559,8 +559,8 @@ class Operator(Cell):
 
     The ternary operators are:
 
-    - 'm': like AST, first input needs to have width of 1, second and third operand need to have the same
-      width as output
+    - 'm': multiplexer, first input needs to have width of 1, second and third operand need to have 
+      the same width as output; implements arg0 ? arg1 : arg2
 
     Attributes
     ----------
