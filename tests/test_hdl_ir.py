@@ -77,6 +77,18 @@ class FragmentDriversTestCase(FHDLTestCase):
         self.assertEqual(list(f.iter_sync()), [])
 
 
+class DuplicateElaboratableTestCase(FHDLTestCase):
+    def test_duplicate(self):
+        sub = Module()
+        m = Module()
+        m.submodules.a = sub
+        m.submodules.b = sub
+        with self.assertRaisesRegex(DuplicateElaboratable,
+                r"^Elaboratable .* is included twice in the hierarchy, as "
+                r"top\.a and top\.b$"):
+            Fragment.get(m, None).prepare()
+
+
 class FragmentPortsTestCase(FHDLTestCase):
     def setUp(self):
         self.s1 = Signal()

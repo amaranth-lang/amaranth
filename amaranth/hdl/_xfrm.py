@@ -318,6 +318,7 @@ class FragmentTransformer:
         else:
             new_fragment = Fragment(src_loc=fragment.src_loc)
         new_fragment.attrs = OrderedDict(fragment.attrs)
+        new_fragment.origins = fragment.origins
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
