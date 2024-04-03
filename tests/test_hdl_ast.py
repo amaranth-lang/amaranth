@@ -1728,13 +1728,11 @@ class IOValueTestCase(FHDLTestCase):
         self.assertEqual(len(a), 4)
         self.assertEqual(a.attrs, {})
         self.assertEqual(a.metadata, (None, None, None, None))
-        self.assertEqual(a._ioports(), {a})
         self.assertRepr(a, "(io-port a)")
         b = IOPort(3, name="b", attrs={"a": "b"}, metadata=["x", "y", "z"])
         self.assertEqual(len(b), 3)
         self.assertEqual(b.attrs, {"a": "b"})
         self.assertEqual(b.metadata, ("x", "y", "z"))
-        self.assertEqual(b._ioports(), {b})
         self.assertRepr(b, "(io-port b)")
 
     def test_ioport_wrong(self):
@@ -1756,32 +1754,26 @@ class IOValueTestCase(FHDLTestCase):
         s = a[2:5]
         self.assertEqual(len(s), 3)
         self.assertEqual(s.metadata, ("c", "d", "e"))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-slice (io-port a) 2:5)")
         s = a[-5:-2]
         self.assertEqual(len(s), 3)
         self.assertEqual(s.metadata, ("d", "e", "f"))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-slice (io-port a) 3:6)")
         s = IOSlice(a, -5, -2)
         self.assertEqual(len(s), 3)
         self.assertEqual(s.metadata, ("d", "e", "f"))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-slice (io-port a) 3:6)")
         s = a[5]
         self.assertEqual(len(s), 1)
         self.assertEqual(s.metadata, ("f",))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-slice (io-port a) 5:6)")
         s = a[-1]
         self.assertEqual(len(s), 1)
         self.assertEqual(s.metadata, ("h",))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-slice (io-port a) 7:8)")
         s = a[::2]
         self.assertEqual(len(s), 4)
         self.assertEqual(s.metadata, ("a", "c", "e", "g"))
-        self.assertEqual(s._ioports(), {a})
         self.assertRepr(s, "(io-cat (io-slice (io-port a) 0:1) (io-slice (io-port a) 2:3) (io-slice (io-port a) 4:5) (io-slice (io-port a) 6:7))")
 
     def test_ioslice_wrong(self):
@@ -1809,12 +1801,10 @@ class IOValueTestCase(FHDLTestCase):
         c = Cat(a, b)
         self.assertEqual(len(c), 5)
         self.assertEqual(c.metadata, ("a", "b", "c", "x", "y"))
-        self.assertEqual(c._ioports(), {a, b})
         self.assertRepr(c, "(io-cat (io-port a) (io-port b))")
         c = Cat(a, Cat())
         self.assertEqual(len(c), 3)
         self.assertEqual(c.metadata, ("a", "b", "c"))
-        self.assertEqual(c._ioports(), {a})
         self.assertRepr(c, "(io-cat (io-port a) (io-cat ))")
         c = Cat(a, Cat()[:])
         self.assertEqual(len(c), 3)
