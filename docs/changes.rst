@@ -65,6 +65,7 @@ Implemented RFCs
 .. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
 .. _RFC 58: https://amaranth-lang.org/rfcs/0058-valuecastable-format.html
 .. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
+.. _RFC 61: https://amaranth-lang.org/rfcs/0061-minimal-streams.html
 .. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
 .. _RFC 63: https://amaranth-lang.org/rfcs/0063-remove-lib-coding.html
 .. _RFC 65: https://amaranth-lang.org/rfcs/0065-format-struct-enum.html
@@ -83,6 +84,7 @@ Implemented RFCs
 * `RFC 55`_: New ``lib.io`` components
 * `RFC 58`_: Core support for ``ValueCastable`` formatting
 * `RFC 59`_: Get rid of upwards propagation of clock domains
+* `RFC 61`_: Minimal streams
 * `RFC 62`_: The ``MemoryData`` class
 * `RFC 63`_: Remove ``amaranth.lib.coding``
 * `RFC 65`_: Special formatting for structures and enums
@@ -130,6 +132,7 @@ Standard library changes
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
 * Added: :mod:`amaranth.lib.meta`, :class:`amaranth.lib.wiring.ComponentMetadata`. (`RFC 30`_)
+* Added: :mod:`amaranth.lib.stream`. (`RFC 61`_)
 * Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with :py:`fwft=False`. (`RFC 20`_)

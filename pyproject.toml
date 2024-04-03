@@ -76,7 +76,7 @@ test = [
 docs = [
   "sphinx~=7.1",
   "sphinxcontrib-platformpicker~=1.3",
-  "sphinxcontrib-yowasp-wavedrom==1.6", # exact version to avoid changes in rendering
+  "sphinxcontrib-yowasp-wavedrom==1.7", # exact version to avoid changes in rendering
   "sphinx-rtd-theme~=2.0",
   "sphinx-autobuild",
 ]
