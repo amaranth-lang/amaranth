@@ -622,7 +622,8 @@ class Value(metaclass=ABCMeta):
     def bool(self):
         """Conversion to boolean.
 
-        Performs the same operation as :meth:`any`.
+        Returns the same value as :meth:`any`, but should be used where :py:`self` is semantically
+        a number.
 
         Returns
         -------
@@ -933,6 +934,9 @@ class Value(metaclass=ABCMeta):
 
     def any(self):
         """Reduction OR; is any bit :py:`1`?
+
+        Performs the same operation as :meth:`bool`, but should be used where :py:`self` is
+        semantically a bit sequence.
 
         Returns
         -------
@@ -2072,7 +2076,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         if decoder is not None:
             # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
-            # this is the only way to add a custom filter to the signal right now. 
+            # this is the only way to add a custom filter to the signal right now.
             if isinstance(decoder, type) and issubclass(decoder, Enum):
                 self._value_repr = (_repr.Repr(_repr.FormatEnum(decoder), self),)
             else:
