@@ -1076,7 +1076,7 @@ class NetlistEmitter:
                     conds.append(_nir.Net.from_const(1))
                 elems.append(elem)
             conds = _nir.Value(conds)
-            cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1),
+            cell = _nir.PriorityMatch(module_idx, en=cond,
                                       inputs=conds, src_loc=lhs.src_loc)
             conds = self.netlist.add_value_cell(len(conds), cell)
             for subcond, val in zip(conds, elems):

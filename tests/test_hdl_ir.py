@@ -1662,6 +1662,41 @@ class AssignTestCase(FHDLTestCase):
         )
         """)
 
+    def test_mux_en(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        s3 = Signal(8)
+        s4 = Signal(8)
+        en = Signal()
+        m = Module()
+        with m.If(en):
+            m.d.comb += Mux(s1, s2, s3).eq(s4)
+        nl = build_netlist(Fragment.get(m, None), ports=[s1, s2, s3, s4, en])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 's1' 0.2:10)
+                (input 's4' 0.10:18)
+                (input 'en' 0.18)
+                (output 's2' 6.0:8)
+                (output 's3' 5.0:8)
+            )
+            (cell 0 0 (top
+                (input 's1' 2:10)
+                (input 's4' 10:18)
+                (input 'en' 18:19)
+                (output 's2' 6.0:8)
+                (output 's3' 5.0:8)
+            ))
+            (cell 1 0 (matches 0.18 1))
+            (cell 2 0 (priority_match 1 1.0))
+            (cell 3 0 (matches 0.2:10 00000000))
+            (cell 4 0 (priority_match 2.0 (cat 3.0 1'd1)))
+            (cell 5 0 (assignment_list 8'd0 (4.0 0:8 0.10:18)))
+            (cell 6 0 (assignment_list 8'd0 (4.1 0:8 0.10:18)))
+        )
+        """)
+
     def test_sliced_slice(self):
         s1 = Signal(12)
         s2 = Signal(4)
