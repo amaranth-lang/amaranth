@@ -496,7 +496,7 @@ class ModuleEmitter:
                     enum = repr.format.enum
                     attrs["enum_base_type"] = enum.__name__
                     for enum_value in enum:
-                        attrs["enum_value_{:0{}b}".format(enum_value.value, signal.width)] = enum_value.name
+                        attrs["enum_value_{:0{}b}".format(enum_value.value, len(signal))] = enum_value.name
 
             if name in self.module.ports:
                 port_value, _flow = self.module.ports[name]
