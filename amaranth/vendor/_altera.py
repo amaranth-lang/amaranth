@@ -1,7 +1,182 @@
 from abc import abstractmethod
 
 from ..hdl import *
+from ..hdl import _ast
+from ..lib import io, wiring
 from ..build import *
+
+
+# The altiobuf_* and altddio_* primitives are explained in the following Intel documents:
+# * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altiobuf.pdf
+# * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altddio.pdf
+# See also errata mentioned in: https://www.intel.com/content/www/us/en/programmable/support/support-resources/knowledge-base/solutions/rd11192012_735.html.
+
+
+# Horrible hack here. To get Quartus to pack FFs into IOEs, the port needs to have an
+# ``useioff`` attribute. Unfortunately, this means that FF packing can only be controlled
+# with port granularity, not bit granularity. However, Quartus doesn't seem to mind
+# this attribute being set when it's not possible to pack a FF — it's just ignored with
+# a warning. So, we just set it on whatever is passed to ``FFBuffer`` — at worst, we'll
+# cause some extra random FFs to be opportunistically packed into the IOE for other bits
+# of a sliced port.
+#
+# This function is also used by ``DDRBuffer`` to pack the output enable FF.
+def _add_useioff(value):
+    if isinstance(value, _ast.IOPort):
+        value.attrs["useioff"] = 1
+    elif isinstance(value, _ast.IOConcat):
+        for part in value.parts:
+            _add_useioff(part)
+    elif isinstance(value, _ast.IOSlice):
+        _add_useioff(value.value)
+    else:
+        raise NotImplementedError # :nocov:
+
+
+class InnerBuffer(wiring.Component):
+    """A private component used to implement ``lib.io`` buffers.
+
+    Works like ``lib.io.Buffer``, with the following differences:
+
+    - ``port.invert`` is ignored (handling the inversion is the outer buffer's responsibility)
+    - output enable is per-pin
+    """
+    def __init__(self, direction, port, *, useioff=False):
+        self.direction = direction
+        self.port = port
+        members = {}
+        if direction is not io.Direction.Output:
+            members["i"] = wiring.In(len(port))
+        if direction is not io.Direction.Input:
+            members["o"] = wiring.Out(len(port))
+            members["oe"] = wiring.Out(len(port))
+        super().__init__(wiring.Signature(members).flip())
+        if useioff:
+            if isinstance(port, io.SingleEndedPort):
+                _add_useioff(port.io)
+            elif isinstance(port, io.DifferentialPort):
+                _add_useioff(port.p)
+                _add_useioff(port.n)
+
+    def elaborate(self, platform):
+        kwargs = dict(
+            p_enable_bus_hold="FALSE",
+            p_number_of_channels=len(self.port),
+        )
+        if isinstance(self.port, io.SingleEndedPort):
+            kwargs["p_use_differential_mode"] = "FALSE"
+        elif isinstance(self.port, io.DifferentialPort):
+            kwargs["p_use_differential_mode"] = "TRUE"
+        else:
+            raise TypeError(f"Unknown port type {self.port!r}")
+
+        if self.direction is io.Direction.Input:
+            if isinstance(self.port, io.SingleEndedPort):
+                kwargs["i_datain"] = self.port.io
+            else:
+                kwargs["i_datain"] = self.port.p,
+                kwargs["i_datain_b"] = self.port.n,
+            return Instance("altiobuf_in",
+                o_dataout=self.i,
+                **kwargs,
+            )
+        elif self.direction is io.Direction.Output:
+            if isinstance(self.port, io.SingleEndedPort):
+                kwargs["o_dataout"] = self.port.io
+            else:
+                kwargs["o_dataout"] = self.port.p,
+                kwargs["o_dataout_b"] = self.port.n,
+            return Instance("altiobuf_out",
+                p_use_oe="TRUE",
+                i_datain=self.o,
+                i_oe=self.oe,
+                **kwargs,
+            )
+        elif self.direction is io.Direction.Bidir:
+            if isinstance(self.port, io.SingleEndedPort):
+                kwargs["io_dataio"] = self.port.io
+            else:
+                kwargs["io_dataio"] = self.port.p,
+                kwargs["io_dataio_b"] = self.port.n,
+            return Instance("altiobuf_bidir",
+                i_datain=self.o,
+                i_oe=self.oe,
+                o_dataout=self.i,
+                **kwargs,
+            )
+        else:
+            assert False # :nocov:
+
+
+class IOBuffer(io.Buffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            m.d.comb += self.i.eq(buf.i ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.d.comb += buf.o.eq(self.o ^ inv_mask)
+            m.d.comb += buf.oe.eq(self.oe.replicate(len(self.port)))
+
+        return m
+
+
+class FFBuffer(io.FFBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port, useioff=True)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i_inv = Signal.like(self.i)
+            m.d[self.i_domain] += i_inv.eq(buf.i)
+            m.d.comb += self.i.eq(i_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.d[self.o_domain] += buf.o.eq(self.o ^ inv_mask)
+            m.d[self.o_domain] += buf.oe.eq(self.oe.replicate(len(self.port)))
+
+        return m
+
+
+class DDRBuffer(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port, useioff=True)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_reg = Signal(len(self.port))
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            m.submodules.i_ddr = Instance("altddio_in",
+                p_width=len(self.port),
+                i_datain=buf.i,
+                i_inclock=ClockSignal(self.i_domain),
+                o_dataout_h=i0_inv,
+                o_dataout_l=i1_inv,
+            )
+            m.d[self.i_domain] += i0_reg.eq(i0_inv)
+            m.d.comb += self.i[0].eq(i0_reg ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.submodules.o_ddr = Instance("altddio_out",
+                p_width=len(self.port),
+                o_dataout=buf.o,
+                i_outclock=ClockSignal(self.o_domain),
+                i_datain_h=self.o[0] ^ inv_mask,
+                i_datain_l=self.o[1] ^ inv_mask,
+            )
+            m.d[self.o_domain] += buf.oe.eq(self.oe.replicate(len(self.port)))
+
+        return m
 
 
 class AlteraPlatform(TemplatedPlatform):
@@ -67,6 +242,9 @@ class AlteraPlatform(TemplatedPlatform):
         10935,  # Verilog casex/casez overlaps with a previous casex/vasez item expression
         12125,  # Using design file which is not specified as a design file for the current project, but contains definitions used in project
         18236,  # Number of processors not specified in QSF
+        176225, # Can't pack node <node> to I/O pin
+        176250, # Ignoring invalid fast I/O register assignments.
+        176272, # Can't pack node <node> and I/O cell
         292013, # Feature is only available with a valid subscription license
     ]
 
@@ -293,247 +471,21 @@ class AlteraPlatform(TemplatedPlatform):
         else:
             return super().create_missing_domain(name)
 
-    # The altiobuf_* and altddio_* primitives are explained in the following Intel documents:
-    # * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altiobuf.pdf
-    # * https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/ug/ug_altddio.pdf
-    # See also errata mentioned in: https://www.intel.com/content/www/us/en/programmable/support/support-resources/knowledge-base/solutions/rd11192012_735.html.
-
-    @staticmethod
-    def _get_ireg(m, pin, invert):
-        def get_ineg(i):
-            if invert:
-                i_neg = Signal.like(i, name_suffix="_neg")
-                m.d.comb += i.eq(~i_neg)
-                return i_neg
-            else:
-                return i
-
-        if pin.xdr == 0:
-            return get_ineg(pin.i)
-        elif pin.xdr == 1:
-            i_sdr = Signal(pin.width, name="{}_i_sdr")
-            i_neg = get_ineg(pin.i)
-            for bit in range(pin.width):
-                m.submodules += Instance("dff",
-                    i_clk=pin.i_clk,
-                    i_d=i_sdr[bit],
-                    o_q=i_neg[bit],
-                    o_clrn=Const(1),
-                    o_prn=Const(1),
-                )
-            return i_sdr
-        elif pin.xdr == 2:
-            i_ddr = Signal(pin.width, name=f"{pin.name}_i_ddr")
-            m.submodules[f"{pin.name}_i_ddr"] = Instance("altddio_in",
-                p_width=pin.width,
-                i_datain=i_ddr,
-                i_inclock=pin.i_clk,
-                o_dataout_h=get_ineg(pin.i0),
-                o_dataout_l=get_ineg(pin.i1),
-            )
-            return i_ddr
-        assert False
-
-    @staticmethod
-    def _get_oreg(m, pin, invert):
-        def get_oneg(o):
-            if invert:
-                o_neg = Signal.like(o, name_suffix="_neg")
-                m.d.comb += o_neg.eq(~o)
-                return o_neg
-            else:
-                return o
-
-        if pin.xdr == 0:
-            return get_oneg(pin.o)
-        elif pin.xdr == 1:
-            o_sdr = Signal(pin.width, name=f"{pin.name}_o_sdr")
-            for bit in range(pin.width):
-                o_neg = get_oneg(pin.o)
-                m.submodules += Instance("dff",
-                    i_clk=pin.o_clk,
-                    i_d=o_neg[bit],
-                    o_q=o_sdr[bit],
-                    o_clrn=Const(1),
-                    o_prn=Const(1),
-                )
-            return o_sdr
-        elif pin.xdr == 2:
-            o_ddr = Signal(pin.width, name=f"{pin.name}_o_ddr")
-            m.submodules[f"{pin.name}_o_ddr"] = Instance("altddio_out",
-                p_width=pin.width,
-                o_dataout=o_ddr,
-                i_outclock=pin.o_clk,
-                i_datain_h=get_oneg(pin.o0),
-                i_datain_l=get_oneg(pin.o1),
-            )
-            return o_ddr
-        assert False
-
-    @staticmethod
-    def _get_oereg(m, pin):
-        # altiobuf_ requires an output enable signal for each pin, but pin.oe is 1 bit wide.
-        if pin.xdr == 0:
-            return pin.oe.replicate(pin.width)
-        elif pin.xdr in (1, 2):
-            oe_reg = Signal(pin.width, name=f"{pin.name}_oe_reg")
-            oe_reg.attrs["useioff"] = "1"
-            for bit in range(pin.width):
-                m.submodules += Instance("dff",
-                    i_clk=pin.o_clk,
-                    i_d=pin.oe,
-                    o_q=oe_reg[bit],
-                    o_clrn=Const(1),
-                    o_prn=Const(1),
-                )
-            return oe_reg
-        assert False
-
-    def get_input(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_in",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="FALSE",
-            i_datain=port.io,
-            o_dataout=self._get_ireg(m, pin, invert)
-        )
-        return m
-
-    def get_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_out",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="FALSE",
-            p_use_oe="FALSE",
-            i_datain=self._get_oreg(m, pin, invert),
-            o_dataout=port.io,
-        )
-        return m
-
-    def get_tristate(self, pin, port, attrs, invert):
-        self._check_feature("single-ended tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_out",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="FALSE",
-            p_use_oe="TRUE",
-            i_datain=self._get_oreg(m, pin, invert),
-            o_dataout=port.io,
-            i_oe=self._get_oereg(m, pin)
-        )
-        return m
-
-    def get_input_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_bidir",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="FALSE",
-            i_datain=self._get_oreg(m, pin, invert),
-            io_dataio=port.io,
-            o_dataout=self._get_ireg(m, pin, invert),
-            i_oe=self._get_oereg(m, pin),
-        )
-        return m
-
-    def get_diff_input(self, pin, port, attrs, invert):
-        self._check_feature("differential input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.p.attrs["useioff"] = 1
-            port.n.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_in",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="TRUE",
-            i_datain=port.p,
-            i_datain_b=port.n,
-            o_dataout=self._get_ireg(m, pin, invert)
-        )
-        return m
-
-    def get_diff_output(self, pin, port, attrs, invert):
-        self._check_feature("differential output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.p.attrs["useioff"] = 1
-            port.n.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_out",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="TRUE",
-            p_use_oe="FALSE",
-            i_datain=self._get_oreg(m, pin, invert),
-            o_dataout=port.p,
-            o_dataout_b=port.n,
-        )
-        return m
-
-    def get_diff_tristate(self, pin, port, attrs, invert):
-        self._check_feature("differential tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.p.attrs["useioff"] = 1
-            port.n.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_out",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="TRUE",
-            p_use_oe="TRUE",
-            i_datain=self._get_oreg(m, pin, invert),
-            o_dataout=port.p,
-            o_dataout_b=port.n,
-            i_oe=self._get_oereg(m, pin),
-        )
-        return m
-
-    def get_diff_input_output(self, pin, port, attrs, invert):
-        self._check_feature("differential input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        if pin.xdr == 1:
-            port.p.attrs["useioff"] = 1
-            port.n.attrs["useioff"] = 1
-
-        m = Module()
-        m.submodules[pin.name] = Instance("altiobuf_bidir",
-            p_enable_bus_hold="FALSE",
-            p_number_of_channels=pin.width,
-            p_use_differential_mode="TRUE",
-            i_datain=self._get_oreg(m, pin, invert),
-            io_dataio=port.p,
-            io_dataio_b=port.n,
-            o_dataout=self._get_ireg(m, pin, invert),
-            i_oe=self._get_oereg(m, pin),
-        )
-        return m
+    def get_io_buffer(self, buffer):
+        if isinstance(buffer, io.Buffer):
+            result = IOBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.FFBuffer):
+            result = FFBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.DDRBuffer):
+            result = DDRBuffer(buffer.direction, buffer.port)
+        else:
+            raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
+        if buffer.direction is not io.Direction.Output:
+            result.i = buffer.i
+        if buffer.direction is not io.Direction.Input:
+            result.o = buffer.o
+            result.oe = buffer.oe
+        return result
 
     # The altera_std_synchronizer{,_bundle} megafunctions embed SDC constraints that mark false
     # paths, so use them instead of our default implementation.
