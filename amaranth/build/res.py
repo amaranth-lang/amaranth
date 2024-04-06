@@ -242,7 +242,11 @@ class ResourceManager:
                     yield f"{port_name}[{bit}]", pin_name, attrs
 
     def add_clock_constraint(self, clock, frequency):
-        if not isinstance(clock, Signal):
+        if isinstance(clock, ClockSignal):
+            raise TypeError(f"A clock constraint can only be applied to a Signal, but a "
+                            f"ClockSignal is provided; assign the ClockSignal to an "
+                            f"intermediate signal and constrain the latter instead.")
+        elif not isinstance(clock, Signal):
             raise TypeError(f"Object {clock!r} is not a Signal")
         if not isinstance(frequency, (int, float)):
             raise TypeError(f"Frequency must be a number, not {frequency!r}")
