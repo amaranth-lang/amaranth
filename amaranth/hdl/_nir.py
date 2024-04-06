@@ -659,6 +659,8 @@ class Matches(Cell):
     def __init__(self, module_idx, *, value, patterns, src_loc):
         super().__init__(module_idx, src_loc=src_loc)
 
+        for pattern in patterns:
+            assert len(pattern) == len(value)
         self.value = Value(value)
         self.patterns = tuple(patterns)
 

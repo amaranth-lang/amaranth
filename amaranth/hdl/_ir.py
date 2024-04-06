@@ -697,6 +697,8 @@ class NetlistEmitter:
         self.drivers = _ast.SignalDict()
         self.io_ports: dict[_ast.IOPort, int] = {}
         self.rhs_cache: dict[int, Tuple[_nir.Value, bool, _ast.Value]] = {}
+        self.matches_cache = {}
+        self.priority_match_cache = {}
         self.fragment_module_idx: dict[Fragment, int] = {}
 
         # Collected for driver conflict diagnostics only.
@@ -774,6 +776,26 @@ class NetlistEmitter:
     def emit_operator(self, module_idx: int, operator: str, *inputs: _nir.Value, src_loc):
         op = _nir.Operator(module_idx, operator=operator, inputs=inputs, src_loc=src_loc)
         return self.netlist.add_value_cell(op.width, op)
+    
+    def emit_matches(self, module_idx: int, value: _nir.Value, patterns, *, src_loc):
+        key = module_idx, value, patterns, src_loc
+        try:
+            return self.matches_cache[key]
+        except KeyError:
+            cell = _nir.Matches(module_idx, value=value, patterns=patterns, src_loc=src_loc)
+            net, = self.netlist.add_value_cell(1, cell)
+            self.matches_cache[key] = net
+            return net
+
+    def emit_priority_match(self, module_idx: int, en: _nir.Net, inputs: _nir.Value, *, src_loc):
+        key = module_idx, en, inputs, src_loc
+        try:
+            return self.priority_match_cache[key]
+        except KeyError:
+            cell = _nir.PriorityMatch(module_idx, en=en, inputs=inputs, src_loc=src_loc)
+            res = self.netlist.add_value_cell(len(inputs), cell)
+            self.priority_match_cache[key] = res
+            return res
 
     def unify_shapes_bitwise(self,
             operand_a: _nir.Value, signed_a: bool, operand_b: _nir.Value, signed_b: bool):
@@ -928,19 +950,13 @@ class NetlistEmitter:
                 elems = []
                 for patterns, elem, in value.cases:
                     if patterns is not None:
-                        for pattern in patterns:
-                            assert len(pattern) == len(test)
-                        cell = _nir.Matches(module_idx, value=test, patterns=patterns,
-                                            src_loc=value.src_loc)
-                        net, = self.netlist.add_value_cell(1, cell)
+                        net = self.emit_matches(module_idx, test, patterns, src_loc=value.src_loc)
                         conds.append(net)
                     else:
                         conds.append(_nir.Net.from_const(1))
                     elems.append(self.emit_rhs(module_idx, elem))
-                cell = _nir.PriorityMatch(module_idx, en=_nir.Net.from_const(1),
-                                          inputs=_nir.Value(conds),
-                                          src_loc=value.src_loc)
-                conds = self.netlist.add_value_cell(len(conds), cell)
+                conds = self.emit_priority_match(module_idx, _nir.Net.from_const(1),
+                                                 _nir.Value(conds), src_loc=value.src_loc)
                 shape = _ast.Shape._unify(
                     _ast.Shape(len(value), signed)
                     for value, signed in elems
@@ -1043,14 +1059,12 @@ class NetlistEmitter:
             num_cases = min((width + lhs.stride - 1) // lhs.stride, 1 << len(offset))
             conds = []
             for case_index in range(num_cases):
-                cell = _nir.Matches(module_idx, value=offset,
-                                    patterns=(to_binary(case_index, len(offset)),),
-                                    src_loc=lhs.src_loc)
-                subcond, = self.netlist.add_value_cell(1, cell)
+                subcond = self.emit_matches(module_idx, offset,
+                                            (to_binary(case_index, len(offset)),),
+                                            src_loc=lhs.src_loc)
                 conds.append(subcond)
-            conds = _nir.Value(conds)
-            cell = _nir.PriorityMatch(module_idx, en=cond, inputs=conds, src_loc=lhs.src_loc)
-            conds = self.netlist.add_value_cell(len(conds), cell)
+            conds = self.emit_priority_match(module_idx, cond, _nir.Value(conds),
+                                             src_loc=lhs.src_loc)
             for idx, subcond in enumerate(conds):
                 start = lhs_start + idx * lhs.stride
                 if start >= width:
@@ -1066,19 +1080,13 @@ class NetlistEmitter:
             elems = []
             for patterns, elem in lhs.cases:
                 if patterns is not None:
-                    for pattern in patterns:
-                        assert len(pattern) == len(test)
-                    cell = _nir.Matches(module_idx, value=test, patterns=patterns,
-                                        src_loc=lhs.src_loc)
-                    net, = self.netlist.add_value_cell(1, cell)
+                    net = self.emit_matches(module_idx, test, patterns, src_loc=lhs.src_loc)
                     conds.append(net)
                 else:
                     conds.append(_nir.Net.from_const(1))
                 elems.append(elem)
-            conds = _nir.Value(conds)
-            cell = _nir.PriorityMatch(module_idx, en=cond,
-                                      inputs=conds, src_loc=lhs.src_loc)
-            conds = self.netlist.add_value_cell(len(conds), cell)
+            conds = self.emit_priority_match(module_idx, cond, _nir.Value(conds),
+                                             src_loc=lhs.src_loc)
             for subcond, val in zip(conds, elems):
                 self.emit_assign(module_idx, cd, val, lhs_start, rhs[:len(val)], subcond, src_loc=src_loc)
         elif isinstance(lhs, _ast.Operator):
@@ -1163,18 +1171,13 @@ class NetlistEmitter:
             case_stmts = []
             for patterns, stmts, case_src_loc in stmt.cases:
                 if patterns is not None:
-                    for pattern in patterns:
-                        assert len(pattern) == len(test)
-                    cell = _nir.Matches(module_idx, value=test, patterns=patterns,
-                                        src_loc=case_src_loc)
-                    net, = self.netlist.add_value_cell(1, cell)
+                    net = self.emit_matches(module_idx, test, patterns, src_loc=case_src_loc)
                     conds.append(net)
                 else:
                     conds.append(_nir.Net.from_const(1))
                 case_stmts.append(stmts)
-            cell = _nir.PriorityMatch(module_idx, en=cond, inputs=_nir.Value(conds),
-                                      src_loc=stmt.src_loc)
-            conds = self.netlist.add_value_cell(len(conds), cell)
+            conds = self.emit_priority_match(module_idx, cond, _nir.Value(conds),
+                                             src_loc=stmt.src_loc)
             for subcond, substmts in zip(conds, case_stmts):
                 for substmt in substmts:
                     self.emit_stmt(module_idx, fragment, domain, substmt, subcond)
@@ -1337,15 +1340,13 @@ class NetlistEmitter:
                     driver.domain.rst is not None and
                     not driver.domain.async_reset and
                     not driver.signal.reset_less):
-                cell = _nir.Matches(driver.module_idx,
-                                    value=self.emit_signal(driver.domain.rst),
-                                    patterns=("1",),
-                                    src_loc=driver.domain.rst.src_loc)
-                cond, = self.netlist.add_value_cell(1, cell)
-                cell = _nir.PriorityMatch(driver.module_idx, en=_nir.Net.from_const(1),
-                                          inputs=_nir.Value(cond),
-                                          src_loc=driver.domain.rst.src_loc)
-                cond, = self.netlist.add_value_cell(1, cell)
+                cond = self.emit_matches(driver.module_idx,
+                                         self.emit_signal(driver.domain.rst),
+                                         ("1",),
+                                         src_loc=driver.domain.rst.src_loc)
+                cond, = self.emit_priority_match(driver.module_idx, _nir.Net.from_const(1),
+                                                 _nir.Value(cond),
+                                                 src_loc=driver.domain.rst.src_loc)
                 init = _nir.Value.from_const(driver.signal.init, len(driver.signal))
                 driver.assignments.append(_nir.Assignment(cond=cond, start=0,
                                                          value=init, src_loc=driver.signal.src_loc))
