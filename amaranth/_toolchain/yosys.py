@@ -120,8 +120,8 @@ class _BuiltinYosys(YosysBinary):
     @classmethod
     def version(cls):
         version = importlib_metadata.version(cls.YOSYS_PACKAGE)
-        match = re.match(r"^(\d+)\.(\d+)(?:\.post(\d+))?", version)
-        return (int(match[1]), int(match[2]), int(match[3] or 0))
+        match = re.match(r"^(\d+)\.(\d+)\.(?:\d+)(?:\.(\d+))?(?:\.post(\d+))?", version)
+        return (int(match[1]), int(match[2]), int(match[3] or 0), int(match[4] or 0))
 
     @classmethod
     def data_dir(cls):

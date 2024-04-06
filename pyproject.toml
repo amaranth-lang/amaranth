@@ -44,7 +44,7 @@ build-backend = "pdm.backend"
 
 [tool.pdm]
 # Remove this once we no longer support Python 3.8.
-ignore_package_warnings = ["sphinx*"]
+ignore_package_warnings = ["sphinx*", "alabaster"]
 
 [tool.pdm.build]
 # If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
