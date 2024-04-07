@@ -23,3 +23,7 @@ a { text-decoration: underline; }
 
 /* Work around https://github.com/readthedocs/sphinx_rtd_theme/issues/1301 */
 .py.property { display: block !important; }
+
+/* WaveDrom diagram theming */
+:root[data-theme="light"] { img { color-scheme: light; } }
+:root[data-theme="dark"] { img { color-scheme: dark; } }

@@ -16,6 +16,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
+    "sphinx_rtd_dark_mode",
     "sphinxcontrib.platformpicker",
     "sphinxcontrib.yowasp_wavedrom",
 ]
@@ -45,8 +46,6 @@ napoleon_custom_sections = [
     ("Members", "params_style"), # `lib.wiring` signature members
     "Platform overrides"
 ]
-
-yowasp_wavedrom_skin = "light"
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
