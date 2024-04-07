@@ -4,11 +4,160 @@ import math
 import re
 
 from ..hdl import *
+from ..lib import io, wiring
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
 # Acknowledgments:
 #   Parts of this file originate from https://github.com/tcjie/Gowin
+
+
+class InnerBuffer(wiring.Component):
+    """A private component used to implement ``lib.io`` buffers.
+
+    Works like ``lib.io.Buffer``, with the following differences:
+
+    - ``port.invert`` is ignored (handling the inversion is the outer buffer's responsibility)
+    - ``t`` is per-pin inverted output enable
+    """
+    def __init__(self, direction, port):
+        self.direction = direction
+        self.port = port
+        members = {}
+        if direction is not io.Direction.Output:
+            members["i"] = wiring.In(len(port))
+        if direction is not io.Direction.Input:
+            members["o"] = wiring.Out(len(port))
+            members["t"] = wiring.Out(len(port))
+        super().__init__(wiring.Signature(members).flip())
+
+    def elaborate(self, platform):
+        m = Module()
+
+        for bit in range(len(self.port)):
+            name = f"buf{bit}"
+            if isinstance(self.port, io.SingleEndedPort):
+                if self.direction is io.Direction.Input:
+                    m.submodules[name] = Instance("IBUF",
+                        i_I=self.port.io[bit],
+                        o_O=self.i[bit],
+                    )
+                elif self.direction is io.Direction.Output:
+                    m.submodules[name] = Instance("TBUF",
+                        i_OEN=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.port.io[bit],
+                    )
+                elif self.direction is io.Direction.Bidir:
+                    m.submodules[name] = Instance("IOBUF",
+                        i_OEN=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.i[bit],
+                        io_IO=self.port.io[bit],
+                    )
+                else:
+                    assert False # :nocov:
+            elif isinstance(self.port, io.DifferentialPort):
+                if self.direction is io.Direction.Input:
+                    m.submodules[name] = Instance("TLVDS_IBUF",
+                        i_I=self.port.p[bit],
+                        i_IB=self.port.n[bit],
+                        o_O=self.i[bit],
+                    )
+                elif self.direction is io.Direction.Output:
+                    m.submodules[name] = Instance("TLVDS_TBUF",
+                        i_OEN=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.port.p[bit],
+                        o_OB=self.port.n[bit],
+                    )
+                elif self.direction is io.Direction.Bidir:
+                    m.submodules[name] = Instance("TLVDS_IOBUF",
+                        i_OEN=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.i[bit],
+                        io_IO=self.port.p[bit],
+                        io_IOB=self.port.n[bit],
+                    )
+                else:
+                    assert False # :nocov:
+            else:
+                raise TypeError(f"Unknown port type {self.port!r}")
+
+        return m
+
+
+class IOBuffer(io.Buffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            m.d.comb += self.i.eq(buf.i ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.d.comb += buf.o.eq(self.o ^ inv_mask)
+            m.d.comb += buf.t.eq(~self.oe.replicate(len(self.port)))
+
+        return m
+
+
+class FFBuffer(io.FFBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i_inv = Signal.like(self.i)
+            m.d[self.i_domain] += i_inv.eq(buf.i)
+            m.d.comb += self.i.eq(i_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.d[self.o_domain] += buf.o.eq(self.o ^ inv_mask)
+            m.d[self.o_domain] += buf.t.eq(~self.oe.replicate(len(self.port)))
+
+        return m
+
+
+class DDRBuffer(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            for bit in range(len(self.port)):
+                m.submodules.i_ddr = Instance("IDDR",
+                    i_CLK=ClockSignal(self.i_domain),
+                    i_D=buf.i[bit],
+                    o_Q0=i0_inv[bit],
+                    o_Q1=i1_inv[bit],
+                )
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = self.o[0] ^ inv_mask
+            o1_inv = self.o[1] ^ inv_mask
+            for bit in range(len(self.port)):
+                m.submodules.o_ddr = Instance("ODDR",
+                    p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
+                    i_CLK=ClockSignal(self.o_domain),
+                    i_D0=o0_inv[bit],
+                    i_D1=o1_inv[bit],
+                    i_TX=~self.oe,
+                    o_Q0=buf.o[bit],
+                    o_Q1=buf.t[bit],
+                )
+
+        return m
 
 
 class GowinPlatform(TemplatedPlatform):
@@ -390,222 +539,18 @@ class GowinPlatform(TemplatedPlatform):
 
             return m
 
-    def _get_xdr_buffer(self, m, pin, i_invert=False, o_invert=False):
-
-        def get_ireg(clk,d,q):
-            for bit in range(len(q)):
-                m.submodules += Instance("DFF",
-                    i_CLK=clk,
-                    i_D=d[bit],
-                    o_Q=q[bit],
-                )
-
-        def get_oreg(clk,d,q):
-            for bit in range(len(q)):
-                m.submodules += Instance("DFF",
-                    i_CLK=clk,
-                    i_D=d[bit],
-                    o_Q=q[bit]
-                )
-
-        def get_iddr(clk,d,q0,q1):
-            for bit in range(len(d)):
-                m.submodules += Instance("IDDR",
-                    i_CLK=clk,
-                    i_D=d[bit],
-                    o_Q0=q0[bit],
-                    o_Q1=q1[bit]
-                )
-
-        def get_oddr(clk,d0,d1,q):
-            for bit in range(len(q)):
-                m.submodules += Instance("ODDR",
-                    p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
-                    i_CLK=clk,
-                    i_D0=d0[bit],
-                    i_D1=d1[bit],
-                    o_Q0=q[bit]
-                )
-
-        def get_oeddr(clk,d0,d1,tx,q0,q1):
-            for bit in range(len(q0)):
-                m.submodules += Instance("ODDR",
-                    p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
-                    i_CLK=clk,
-                    i_D0=d0[bit],
-                    i_D1=d1[bit],
-                    i_TX=tx,
-                    o_Q0=q0[bit],
-                    o_Q1=q1
-                )
-
-        def get_ineg(y, invert):
-            if invert:
-                a = Signal.like(y, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return a
-            else:
-                return y
-
-        def get_oneg(a, invert):
-            if invert:
-                y = Signal.like(a, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return y
-            else:
-                return a
-
-
-        if "i" in pin.dir:
-            if pin.xdr < 2:
-                pin_i = get_ineg(pin.i, i_invert)
-            elif pin.xdr == 2:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
-        if "o" in pin.dir:
-            if pin.xdr < 2:
-                pin_o = get_oneg(pin.o, o_invert)
-            elif pin.xdr == 2:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
-
-        i = o = t = None
-
-        if "i" in pin.dir:
-            i = Signal(pin.width, name=f"{pin.name}_xdr_i")
-        if "o" in pin.dir:
-            o = Signal(pin.width, name=f"{pin.name}_xdr_o")
-        if pin.dir in ("oe", "io"):
-            t = Signal(1,         name=f"{pin.name}_xdr_t")
-
-        if pin.xdr == 0:
-            if "i" in pin.dir:
-                i = pin_i
-            if "o" in pin.dir:
-                o = pin_o
-            if pin.dir in ("oe", "io"):
-                t = ~pin.oe
-        elif pin.xdr == 1:
-            if "i" in pin.dir:
-                get_ireg(pin.i_clk, i, pin_i)
-            if "o" in pin.dir:
-                get_oreg(pin.o_clk, pin_o, o)
-            if pin.dir in ("oe", "io"):
-                get_oreg(pin.o_clk, ~pin.oe, t)
-        elif pin.xdr == 2:
-            if "i" in pin.dir:
-                get_iddr(pin.i_clk, i, pin_i0, pin_i1)
-            if pin.dir in ("o",):
-                get_oddr(pin.o_clk, pin_o0, pin_o1, o)
-            if pin.dir in ("oe", "io"):
-                get_oeddr(pin.o_clk, pin_o0, pin_o1, ~pin.oe, o, t)
+    def get_io_buffer(self, buffer):
+        if isinstance(buffer, io.Buffer):
+            result = IOBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.FFBuffer):
+            result = FFBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.DDRBuffer):
+            result = DDRBuffer(buffer.direction, buffer.port)
         else:
-            assert False
-
-        return (i, o, t)
-
-    def get_input(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUF",
-                i_I=port.io[bit],
-                o_O=i[bit]
-            )
-        return m
-
-    def get_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, port.io, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUF",
-                i_I=o[bit],
-                o_O=port.io[bit]
-            )
-        return m
-
-    def get_tristate(self, pin, port, attrs, invert):
-        self._check_feature("single-ended tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("TBUF",
-                i_OEN=t,
-                i_I=o[bit],
-                o_O=port.io[bit]
-            )
-        return m
-
-    def get_input_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUF",
-                i_OEN=t,
-                i_I=o[bit],
-                o_O=i[bit],
-                io_IO=port.io[bit]
-            )
-        return m
-
-    def get_diff_input(self, pin, port, attrs, invert):
-        self._check_feature("differential input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert)
-        for bit in range(pin.wodth):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_IBUF",
-                i_I=port.p[bit],
-                i_IB=port.n[bit],
-                o_O=i[bit]
-            )
-        return m
-
-    def get_diff_output(self, pin, port, attrs, invert):
-        self._check_feature("differential output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_OBUF",
-                i_I=o[bit],
-                o_O=port.p[bit],
-                o_OB=port.n[bit],
-            )
-        return m
-
-    def get_diff_tristate(self, pin, port, attrs, invert):
-        self._check_feature("differential tristate", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_TBUF",
-                i_OEN=t,
-                i_I=o[bit],
-                o_O=port.p[bit],
-                o_OB=port.n[bit]
-            )
-        return m
-
-    def get_diff_input_output(self, pin, port, attrs, invert):
-        self._check_feature("differential input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, i_invert=invert, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("TLVDS_IOBUF",
-                i_OEN=t,
-                i_I=o[bit],
-                o_O=i[bit],
-                io_IO=port.p[bit],
-                io_IOB=port.n[bit]
-            )
-        return m
+            raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
+        if buffer.direction is not io.Direction.Output:
+            result.i = buffer.i
+        if buffer.direction is not io.Direction.Input:
+            result.o = buffer.o
+            result.oe = buffer.oe
+        return result
