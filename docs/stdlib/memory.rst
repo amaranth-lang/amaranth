@@ -74,7 +74,25 @@ In the following example, a read-only memory is used to output a fixed message i
 
 In this example, the memory read port is asynchronous, and a change of the address input (labelled `a` on the diagram below) results in an immediate change of the data output (labelled `d`).
 
-.. image:: _images/memory/example_hello.svg
+.. wavedrom:: memory/example_hello
+
+    {
+        "signal": [
+            {"name": "clk",
+             "wave": "0P............"},
+            {"name": "rd_port.addr",
+             "wave": "==============",
+             "data": [0,1,2,3,4,5,6,7,8,9,10,11,0,1],
+             "node": ".a"},
+            {"name": "rd_port.data",
+             "wave": "==============",
+             "data": ["H","e","l","l","o"," ","w","o","r","l","d","\\n","H","e"],
+             "node": ".d"}
+        ],
+        "edge": [
+            "a-|d"
+        ]
+    }
 
 
 First-in, first-out queue
@@ -112,7 +130,44 @@ In this example, the memory read and write ports are synchronous. A write operat
 
 However, the memory read port is also configured to be *transparent* relative to the memory write port. This means that if a write and a read operation (labelled `t`, `u` respectively) access the same row with address 3, the new contents will be read out, reducing the minimum push-to-pop latency to one cycle, down from two cycles that would be required without the use of transparency.
 
-.. image:: _images/memory/example_fifo.svg
+.. wavedrom:: memory/example_fifo
+
+    {
+        "signal": [
+            {"name": "clk",
+             "wave": "P........"},
+            {"name": "push",
+             "wave": "01..0.10.",
+             "node": ".x"},
+            {"name": "wr_port.addr",
+             "wave": "=.===..=.",
+             "data": ["0", "1", "2", "3", "4", "5"]},
+            {"name": "wr_port.data",
+             "wave": "====..=..",
+             "data": ["00", "AA", "BB", "CC", "DD"],
+             "node": ".w....t"},
+            {"name": "memory[0]",
+             "wave": "=.=......",
+             "data": ["00", "AA"],
+             "node": "..G"},
+            {"name": "memory[3]",
+             "wave": "=......=.",
+             "data": ["00", "DD"],
+             "node": ".......H"},
+            {"name": "pop",
+             "wave": "0..1...0.",
+             "node": "...y"},
+            {"name": "rd_port.addr",
+             "wave": "=...====.",
+             "data": ["0", "1", "2", "3", "4", "5"]},
+            {"name": "rd_port.data",
+             "wave": "=...====.",
+             "data": ["00", "AA", "BB", "CC", "DD"],
+             "node": "....r..u"}
+        ], "edge": [
+            "x-~>G", "w->G", "y-~>r", "t->H", "t->u"
+        ]
+    }
 
 
 Memories
