@@ -1,3 +1,6 @@
+# Currently owned by Lattice, originally designed and built by a startup called SiliconBlue, which
+# was acquired by Lattice. The primitives are prefixed with `SB_` for that reason.
+
 from abc import abstractmethod
 
 from ..hdl import *
@@ -6,7 +9,7 @@ from ..lib import io
 from ..build import *
 
 
-class LatticeICE40Platform(TemplatedPlatform):
+class SiliconBluePlatform(TemplatedPlatform):
     """
     .. rubric:: IceStorm toolchain
 
