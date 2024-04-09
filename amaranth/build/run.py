@@ -9,6 +9,7 @@ import warnings
 import zipfile
 import hashlib
 import pathlib
+import random
 
 
 __all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts", "RemoteSSHBuildProducts"]
@@ -135,14 +136,22 @@ class BuildPlan:
         Returns :class:`LocalBuildProducts`.
         """
         build_dir = self.extract(root)
-        subprocess.check_call([
-            "docker", "run", *docker_args,
-            "--rm", # remove the container after running
-            "--mount", f"type=bind,source={build_dir},target=/build",
-            "--workdir", "/build",
-            image,
-            "sh", f"{self.script}.sh",
-        ])
+        container_name = f"amaranth_build_{random.randbytes(8).hex()}"
+        try:
+            subprocess.check_call([
+                "docker", "run", *docker_args,
+                "--rm", # remove the container after running
+                "--init", # run an init process as PID 1. Helps exit faster
+                "--name", container_name,
+                "--mount", f"type=bind,source={build_dir},target=/build",
+                "--workdir", "/build",
+                image,
+                "sh", f"{self.script}.sh",
+            ])
+        except KeyboardInterrupt:
+            subprocess.check_call([
+                "docker", "stop", container_name
+            ], stdout=subprocess.DEVNULL)
         return LocalBuildProducts(build_dir)
 
 
