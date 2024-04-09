@@ -170,17 +170,39 @@ However, the memory read port is also configured to be *transparent* relative to
     }
 
 
-Memories
-========
+Simulation
+==========
+
+.. todo::
+
+    This section will be written once the simulator itself is documented.
+
+
+Memory description
+==================
+
+.. autoexception:: amaranth.hdl.FrozenMemory
+
+.. autoclass:: amaranth.hdl.MemoryData
+
+
+Memory component
+================
 
 ..
     attributes are not documented because they can be easily used to break soundness and we don't
     document them for signals either; they are rarely necessary for interoperability
 
-.. autoclass:: Memory(*, depth, shape, init, src_loc_at=0)
-    :no-members:
+..
+    the following two directives document a pair of overloads of :class:`Memory`; this is a little
+    weird and not really how rst/sphinx are supposed to work but it results in a comprehensible
+    generated document. be careful to not break this!
 
-    .. autoclass:: amaranth.lib.memory::Memory.Init(...)
+.. class:: Memory(data, *, src_loc_at=0)
+
+.. autoclass:: Memory(*, shape, depth, init, src_loc_at=0)
+    :noindex:
+    :no-members:
 
     .. automethod:: read_port
 

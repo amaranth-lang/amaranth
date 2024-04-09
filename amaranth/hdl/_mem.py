@@ -9,21 +9,50 @@ from ..utils import ceil_log2
 from .._utils import deprecated, final
 
 
-__all__ = ["MemoryData", "Memory", "ReadPort", "WritePort", "DummyPort"]
+__all__ = ["FrozenMemory", "MemoryData", "Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
 @final
-class FrozenError(Exception):
-    """This exception is raised when ports are added to a :class:`Memory` or its
-    :attr:`~Memory.init` attribute is changed after it has been elaborated once.
-    """
+class FrozenMemory(Exception):
+    """This exception is raised when a memory array is being modified after elaboration."""
 
 
 @final
 class MemoryData:
+    """Abstract description of a memory array.
+
+    A :class:`MemoryData` object describes the geometry (shape and depth) and the initial contents
+    of a memory array, without specifying the way in which it is accessed. It is conceptually
+    similar to an array of :class:`Signal`\\ s.
+
+    The :py:`init` parameter and assignment to the :py:`init` attribute have the same effect, with
+    :class:`MemoryData.Init` converting elements of the iterable to match :py:`shape` and using
+    a default value for rows that are not explicitly initialized.
+
+    Changing the initial contents of a :class:`MemoryData` is only possible until it is used to
+    elaborate a memory; afterwards, attempting to do so will raise :exc:`FrozenMemory`.
+
+    .. warning::
+
+        Uninitialized memories (including ASIC memories and some FPGA memories) are
+        `not yet supported <https://github.com/amaranth-lang/amaranth/issues/270>`_, and
+        the :py:`init` parameter must be always provided, if only as :py:`init=[]`.
+
+    Parameters
+    ----------
+    shape : :ref:`shape-like <lang-shapelike>` object
+        Shape of each memory row.
+    depth : :class:`int`
+        Number of memory rows.
+    init : iterable of initial values
+        Initial values for memory rows.
+    """
+
     @final
     class Init(MutableSequence):
-        """Memory initialization data.
+        """Init(...)
+
+        Memory initialization data.
 
         This is a special container used only for initial contents of memories. It is similar
         to :class:`list`, but does not support inserting or deleting elements; its length is always
@@ -72,7 +101,7 @@ class MemoryData:
 
         def __setitem__(self, index, value):
             if self._frozen:
-                raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
+                raise FrozenMemory("Cannot set 'init' on a memory that has already been elaborated")
 
             if isinstance(index, slice):
                 indices = range(*index.indices(len(self._elems)))
@@ -117,7 +146,7 @@ class MemoryData:
         def _lhs_signals(self):
             # This value cannot ever appear in a design.
             raise NotImplementedError # :nocov:
-        
+
         _rhs_signals = _lhs_signals
 
         def __repr__(self):
@@ -152,13 +181,28 @@ class MemoryData:
     @init.setter
     def init(self, init):
         if self._frozen:
-            raise FrozenError("Cannot set 'init' on a memory that has already been elaborated")
+            raise FrozenMemory("Cannot set 'init' on a memory that has already been elaborated")
         self._init = MemoryData.Init(init, shape=self._shape, depth=self._depth)
 
     def __repr__(self):
         return f"(memory-data {self.name})"
 
     def __getitem__(self, index):
+        """Retrieve a memory row for simulation.
+
+        A :class:`MemoryData` object can be indexed with an :class:`int` to construct a special
+        value that can be used to read and write the selected memory row in a simulation testbench,
+        without having to create a memory port.
+
+        .. important::
+
+            Even in a simulation, the value returned by this function cannot be used in a module;
+            it can only be used with :py:`sim.get()` and :py:`sim.set()`.
+
+        Returns
+        -------
+        :class:`~amaranth.hdl.Value`, :ref:`assignable <lang-assignable>`
+        """
         index = operator.index(index)
         if index not in range(self.depth):
             raise IndexError(f"Index {index} is out of bounds (memory has {self.depth} rows)")
