@@ -134,7 +134,7 @@ class DDRBuffer(io.DDRBuffer):
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
-                m.submodules.i_ddr = Instance("IDDR",
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDR",
                     i_CLK=ClockSignal(self.i_domain),
                     i_D=buf.i[bit],
                     o_Q0=i0_inv[bit],
@@ -147,7 +147,7 @@ class DDRBuffer(io.DDRBuffer):
             o0_inv = self.o[0] ^ inv_mask
             o1_inv = self.o[1] ^ inv_mask
             for bit in range(len(self.port)):
-                m.submodules.o_ddr = Instance("ODDR",
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDR",
                     p_TXCLK_POL=0, # default -> Q1 changes on posedge of CLK
                     i_CLK=ClockSignal(self.o_domain),
                     i_D0=o0_inv[bit],

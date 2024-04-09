@@ -21,7 +21,7 @@ class DDRBuffer(io.DDRBuffer):
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
-                m.submodules.i_ddr = Instance("IDDRXE",
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDRXE",
                     i_SCLK=ClockSignal(self.i_domain),
                     i_RST=Const(0),
                     i_D=buf.i[bit],
@@ -39,7 +39,7 @@ class DDRBuffer(io.DDRBuffer):
                 o1_inv.eq(self.o[1] ^ inv_mask),
             ]
             for bit in range(len(self.port)):
-                m.submodules.o_ddr = Instance("ODDRXE",
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDRXE",
                     i_SCLK=ClockSignal(self.o_domain),
                     i_RST=Const(0),
                     i_D0=o0_inv[bit],
