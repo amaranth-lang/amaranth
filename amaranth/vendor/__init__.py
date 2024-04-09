@@ -12,6 +12,7 @@ __all__ = [
     "LatticeMachXO2Platform",
     "LatticeMachXO3LPlatform",
     "QuicklogicPlatform",
+    "SiliconBluePlatform",
     "XilinxPlatform",
 ]
 
@@ -30,15 +31,15 @@ def __getattr__(name):
     if name == "LatticeECP5Platform":
         from ._lattice_ecp5 import LatticeECP5Platform
         return LatticeECP5Platform
-    if name == "LatticeICE40Platform":
-        from ._lattice_ice40 import LatticeICE40Platform
-        return LatticeICE40Platform
     if name in ("LatticeMachXO2Platform", "LatticeMachXO3LPlatform"):
         from ._lattice_machxo_2_3l import LatticeMachXO2Or3LPlatform
         return LatticeMachXO2Or3LPlatform
     if name == "QuicklogicPlatform":
         from ._quicklogic import QuicklogicPlatform
         return QuicklogicPlatform
+    if name in ("SiliconBluePlatform", "LatticeICE40Platform"):
+        from ._siliconblue import SiliconBluePlatform
+        return SiliconBluePlatform
     if name == "XilinxPlatform":
         from ._xilinx import XilinxPlatform
         return XilinxPlatform
