@@ -99,7 +99,7 @@ class FFBuffer(io.FFBuffer):
             i_inv = Signal.like(self.i)
             for bit in range(len(self.port)):
                 m.submodules[f"i_ff{bit}"] = Instance("IFS1P3DX",
-                    i_SCLK=ClockSignal(self.o_domain),
+                    i_SCLK=ClockSignal(self.i_domain),
                     i_SP=Const(1),
                     i_CD=Const(0),
                     i_D=buf.i[bit],
