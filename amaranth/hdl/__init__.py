@@ -8,7 +8,7 @@ from ._dsl import Module
 from ._cd import DomainError, ClockDomain
 from ._ir import UnusedElaboratable, Elaboratable, DriverConflict, Fragment
 from ._ir import Instance, IOBufferInstance
-from ._mem import MemoryData, MemoryInstance, Memory, ReadPort, WritePort, DummyPort
+from ._mem import FrozenMemory, MemoryData, MemoryInstance, Memory, ReadPort, WritePort, DummyPort
 from ._rec import Record
 from ._xfrm import DomainRenamer, ResetInserter, EnableInserter
 
@@ -29,7 +29,7 @@ __all__ = [
     "UnusedElaboratable", "Elaboratable", "DriverConflict", "Fragment",
     "Instance", "IOBufferInstance",
     # _mem
-    "MemoryData", "MemoryInstance", "Memory", "ReadPort", "WritePort", "DummyPort",
+    "FrozenMemory", "MemoryData", "MemoryInstance", "Memory", "ReadPort", "WritePort", "DummyPort",
     # _rec
     "Record",
     # _xfrm

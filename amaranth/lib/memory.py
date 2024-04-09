@@ -3,52 +3,45 @@ from collections import OrderedDict
 from collections.abc import MutableSequence
 
 from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const
-from ..hdl._mem import FrozenError
+from ..hdl._mem import FrozenMemory
 from ..utils import ceil_log2
 from .._utils import final
 from .. import tracer
 from . import wiring, data
 
 
-__all__ = ["Memory", "ReadPort", "WritePort"]
+__all__ = ["FrozenMemory", "Memory", "ReadPort", "WritePort"]
 
 
 class Memory(wiring.Component):
     """Addressable array of rows.
 
     This :ref:`component <wiring>` is used to construct a memory array by first specifying its
-    dimensions and initial contents using the :py:`shape`, :py:`depth`, and :py:`init` parameters,
-    and then adding memory ports using the :meth:`read_port` and :meth:`write_port` methods.
-    Because it is mutable, it should be created and used locally within
-    the :ref:`elaborate <lang-elaboration>` method. It is an error to add ports to or change
-    initial contents of a memory after it has been elaborated.
+    dimensions and initial contents using the :class:`~amaranth.hdl.MemoryData` object and
+    the :py:`data` parameter (or by providing :py:`shape`, :py:`depth`, and :py:`init` parameters
+    directly instead) and then adding memory ports using the :meth:`read_port` and
+    :meth:`write_port` methods. Because it is mutable, it should be created and used locally within
+    the :ref:`elaborate <lang-elaboration>` method.
 
-    The :py:`init` parameter and assignment to the :py:`init` attribute have the same effect, with
-    :class:`Memory.Init` converting elements of the iterable to match :py:`shape` and using
-    a default value for rows that are not explicitly initialized.
+    Adding ports or changing initial contents of a :class:`Memory` is only possible until it is
+    elaborated; afterwards, attempting to do so will raise :class:`~amaranth.hdl.FrozenMemory`.
 
-    .. warning::
-
-        Uninitialized memories (including ASIC memories and some FPGA memories) are
-        `not yet supported <https://github.com/amaranth-lang/amaranth/issues/270>`_, and
-        the :py:`init` parameter must be always provided, if only as :py:`init=[]`.
+    Platform overrides
+    ------------------
+    Define the :py:`get_memory()` platform method to override the implementation of
+    :class:`Memory`, e.g. to instantiate library cells directly.
 
     Parameters
     ----------
+    data : :class:`~amaranth.hdl.MemoryData`
+        Representation of memory geometry and contents.
     shape : :ref:`shape-like <lang-shapelike>` object
         Shape of each memory row.
     depth : :class:`int`
         Number of memory rows.
     init : iterable of initial values
         Initial values for memory rows.
-
-    Platform overrides
-    ------------------
-    Define the :py:`get_memory()` platform method to override the implementation of
-    :class:`Memory`, e.g. to instantiate library cells directly.
     """
-
-    Init = MemoryData.Init
 
     def __init__(self, data=None, *, shape=None, depth=None, init=None, attrs=None, src_loc_at=0):
         if data is None:
@@ -128,7 +121,7 @@ class Memory(wiring.Component):
         :class:`ReadPort`
         """
         if self._frozen:
-            raise FrozenError("Cannot add a memory port to a memory that has already been elaborated")
+            raise FrozenMemory("Cannot add a memory port to a memory that has already been elaborated")
         signature = ReadPort.Signature(shape=self.shape, addr_width=ceil_log2(self.depth))
         return ReadPort(signature, memory=self, domain=domain, transparent_for=transparent_for,
                         src_loc_at=1 + src_loc_at)
@@ -153,7 +146,7 @@ class Memory(wiring.Component):
         :class:`WritePort`
         """
         if self._frozen:
-            raise FrozenError("Cannot add a memory port to a memory that has already been elaborated")
+            raise FrozenMemory("Cannot add a memory port to a memory that has already been elaborated")
         signature = WritePort.Signature(
             shape=self.shape, addr_width=ceil_log2(self.depth), granularity=granularity)
         return WritePort(signature, memory=self, domain=domain,
@@ -195,6 +188,7 @@ class Memory(wiring.Component):
         return instance
 
 
+@final
 class ReadPort:
     """A read memory port.
 
@@ -318,6 +312,7 @@ class ReadPort:
         return self._transparent_for
 
 
+@final
 class WritePort:
     """A write memory port.
 
