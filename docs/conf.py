@@ -37,6 +37,7 @@ autodoc_default_options = {
     "members": True
 }
 autodoc_preserve_defaults = True
+autodoc_inherit_docstrings = False
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -71,3 +72,9 @@ linkcheck_anchors_ignore_for_url = [
     # React page with README content included as a JSON payload.
     r"^https://github\.com/[^/]+/[^/]+/$",
 ]
+
+
+# Silence the warnings globally; otherwise they may fire on object destruction and crash completely
+# unrelated tests.
+import amaranth._unused
+amaranth._unused.MustUse._MustUse__silence = True
