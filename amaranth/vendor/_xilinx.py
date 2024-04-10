@@ -3,10 +3,423 @@ from abc import abstractmethod
 
 from ..hdl import *
 from ..lib.cdc import ResetSynchronizer
+from ..lib import io, wiring
 from ..build import *
 
 
 __all__ = ["XilinxPlatform"]
+
+
+class InnerBuffer(wiring.Component):
+    """A private component used to implement ``lib.io`` buffers.
+
+    Works like ``lib.io.Buffer``, with the following differences:
+
+    - ``port.invert`` is ignored (handling the inversion is the outer buffer's responsibility)
+    - ``t`` is per-pin inverted output enable
+    """
+    def __init__(self, direction, port):
+        self.direction = direction
+        self.port = port
+        members = {}
+        if direction is not io.Direction.Output:
+            members["i"] = wiring.In(len(port))
+        if direction is not io.Direction.Input:
+            members["o"] = wiring.Out(len(port))
+            members["t"] = wiring.Out(len(port))
+        super().__init__(wiring.Signature(members).flip())
+
+    def elaborate(self, platform):
+        m = Module()
+
+        for bit in range(len(self.port)):
+            name = f"buf{bit}"
+            if isinstance(self.port, io.SingleEndedPort):
+                if self.direction is io.Direction.Input:
+                    m.submodules[name] = Instance("IBUF",
+                        i_I=self.port.io[bit],
+                        o_O=self.i[bit],
+                    )
+                elif self.direction is io.Direction.Output:
+                    m.submodules[name] = Instance("OBUFT",
+                        i_T=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.port.io[bit],
+                    )
+                elif self.direction is io.Direction.Bidir:
+                    m.submodules[name] = Instance("IOBUF",
+                        i_T=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.i[bit],
+                        io_IO=self.port.io[bit],
+                    )
+                else:
+                    assert False # :nocov:
+            elif isinstance(self.port, io.DifferentialPort):
+                if self.direction is io.Direction.Input:
+                    m.submodules[name] = Instance("IBUFDS",
+                        i_I=self.port.p[bit],
+                        i_IB=self.port.n[bit],
+                        o_O=self.i[bit],
+                    )
+                elif self.direction is io.Direction.Output:
+                    m.submodules[name] = Instance("OBUFTDS",
+                        i_T=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.port.p[bit],
+                        o_OB=self.port.n[bit],
+                    )
+                elif self.direction is io.Direction.Bidir:
+                    m.submodules[name] = Instance("IOBUFDS",
+                        i_T=self.t[bit],
+                        i_I=self.o[bit],
+                        o_O=self.i[bit],
+                        io_IO=self.port.p[bit],
+                        io_IOB=self.port.n[bit],
+                    )
+                else:
+                    assert False # :nocov:
+            else:
+                raise TypeError(f"Unknown port type {self.port!r}")
+
+        return m
+
+
+class IOBuffer(io.Buffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            m.d.comb += self.i.eq(buf.i ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            m.d.comb += buf.o.eq(self.o ^ inv_mask)
+            m.d.comb += buf.t.eq(~self.oe.replicate(len(self.port)))
+
+        return m
+
+
+def _make_dff(m, prefix, domain, d, q, *, iob=False, inv_clk=False):
+    for bit in range(len(q)):
+        kwargs = {}
+        if iob:
+            kwargs["a_IOB"] = "TRUE"
+        m.submodules[f"{prefix}_ff{bit}"] = Instance("FDCE",
+            i_C=~ClockSignal(domain) if inv_clk else ClockSignal(domain),
+            i_CE=Const(1),
+            i_CLR=Const(0),
+            i_D=d[bit],
+            o_Q=q[bit],
+            **kwargs,
+        )
+
+
+class FFBuffer(io.FFBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i_inv = Signal.like(self.i)
+            _make_dff(m, "i", self.i_domain, buf.i, i_inv, iob=True)
+            m.d.comb += self.i.eq(i_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o_inv = Signal.like(self.o)
+            m.d.comb += o_inv.eq(self.o ^ inv_mask)
+            _make_dff(m, "o", self.o_domain, o_inv, buf.o, iob=True)
+            _make_dff(m, "oe", self.o_domain, ~self.oe.replicate(len(self.port)), buf.t, iob=True)
+
+        return m
+
+
+class DDRBufferVirtex2(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            # First-generation input DDR register: basically just two FFs with opposite
+            # clocks. Add a register on both outputs, so that they enter fabric on
+            # the same clock edge, adding one cycle of latency.
+            i0_ff = Signal(len(self.port))
+            i1_ff = Signal(len(self.port))
+            _make_dff(m, "i0", self.i_domain, buf.i, i0_ff, iob=True)
+            _make_dff(m, "i1", self.i_domain, buf.i, i1_ff, iob=True, inv_clk=True)
+            _make_dff(m, "i0_p", self.i_domain, i0_ff, i0_inv)
+            _make_dff(m, "i1_p", self.i_domain, i1_ff, i0_inv)
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            o1_ff = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            _make_dff(m, "o1_p", self.o_domain, o1_inv, o1_ff)
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ddr{bit}"] = Instance("FDDRCPE",
+                    i_C0=ClockSignal(self.o_domain),
+                    i_C1=~ClockSignal(self.o_domain),
+                    i_CE=Const(1),
+                    i_PRE=Const(0),
+                    i_CLR=Const(0),
+                    i_D0=o0_inv[bit],
+                    i_D1=o1_ff[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_dff(m, "oe", self.o_domain, ~self.oe.replicate(len(self.port)), buf.t, iob=True)
+
+        return m
+
+
+class DDRBufferSpartan3E(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        # On Spartan 3E/3A, the situation with DDR registers is messy: while the hardware
+        # supports same-edge alignment, it does so by borrowing the resources of the other
+        # pin in the differential pair (if any).  Since we cannot be sure if the other pin
+        # is actually unused (or if the pin is even part of a differential pair in the first
+        # place), we only use the hardware alignment feature in two cases:
+        #
+        # - differential inputs (since the other pin's input registers will be unused)
+        # - true differential outputs (since they use only one pin's output registers,
+        #   as opposed to pseudo-differential outputs that use both)
+        TRUE_DIFF_S3EA = {
+            "LVDS_33", "LVDS_25",
+            "MINI_LVDS_33", "MINI_LVDS_25",
+            "RSDS_33", "RSDS_25",
+            "PPDS_33", "PPDS_25",
+            "TMDS_33",
+        }
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            if platform.family == "spartan6" or isinstance(self.port, io.DifferentialPort):
+                # Second-generation input DDR register: hw realigns i1 to positive clock edge,
+                # but also misaligns it with i0 input.  Re-register first input before it
+                # enters fabric. This allows both inputs to enter fabric on the same clock
+                # edge, and adds one cycle of latency.
+                i0_ff = Signal(len(self.port))
+                for bit in range(len(self.port)):
+                    m.submodules[f"i_ddr{bit}"] = Instance("IDDR2",
+                        p_DDR_ALIGNMENT="C0",
+                        p_SRTYPE="ASYNC",
+                        p_INIT_Q0=Const(0),
+                        p_INIT_Q1=Const(0),
+                        i_C0=ClockSignal(self.i_domain),
+                        i_C1=~ClockSignal(self.i_domain),
+                        i_CE=Const(1),
+                        i_S=Const(0), i_R=Const(0),
+                        i_D=buf.i[bit],
+                        o_Q0=i0_ff[bit],
+                        o_Q1=i1_inv[bit]
+                    )
+                _make_dff(m, "i0_p", self.i_domain, i0_ff, i0_inv)
+            else:
+                # No extra register available for hw alignment, use CLB registers.
+                i0_ff = Signal(len(self.port))
+                i1_ff = Signal(len(self.port))
+                for bit in range(len(self.port)):
+                    m.submodules[f"i_ddr{bit}"] = Instance("IDDR2",
+                        p_DDR_ALIGNMENT="NONE",
+                        p_SRTYPE="ASYNC",
+                        p_INIT_Q0=Const(0),
+                        p_INIT_Q1=Const(0),
+                        i_C0=ClockSignal(self.i_domain),
+                        i_C1=~ClockSignal(self.i_domain),
+                        i_CE=Const(1),
+                        i_S=Const(0), i_R=Const(0),
+                        i_D=buf.i[bit],
+                        o_Q0=i0_ff[bit],
+                        o_Q1=i1_ff[bit]
+                    )
+                _make_dff(m, "i0_p", self.i_domain, i0_ff, i0_inv)
+                _make_dff(m, "i1_p", self.i_domain, i1_ff, i0_inv)
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            for bit in range(len(self.port)):
+                if platform.family == "spartan3e":
+                    merge_ff = False
+                elif platform.family.startswith("spartan3a"):
+                    if isinstance(self.port, io.DifferentialPort):
+                        iostd = self.port.p.metadata[bit].attrs.get("IOSTANDARD", "LVDS_25")
+                        merge_ff = iostd in TRUE_DIFF_S3EA
+                    else:
+                        merge_ff = False
+                else:
+                    merge_ff = True
+                if merge_ff:
+                    m.submodules[f"o_ddr{bit}"] = Instance("ODDR2",
+                        p_DDR_ALIGNMENT="C0",
+                        p_SRTYPE="ASYNC",
+                        p_INIT=Const(0),
+                        i_C0=ClockSignal(self.o_domain),
+                        i_C1=~ClockSignal(self.o_domain),
+                        i_CE=Const(1),
+                        i_S=Const(0),
+                        i_R=Const(0),
+                        i_D0=o0_inv[bit],
+                        i_D1=o1_inv[bit],
+                        o_Q=buf.o[bit],
+                    )
+                else:
+                    o1_ff = Signal()
+                    _make_dff(m, f"o1_p{bit}_", self.o_domain, o1_inv[bit], o1_ff)
+                    m.submodules[f"o_ddr{bit}"] = Instance("ODDR2",
+                        p_DDR_ALIGNMENT="NONE",
+                        p_SRTYPE="ASYNC",
+                        p_INIT=Const(0),
+                        i_C0=ClockSignal(self.o_domain),
+                        i_C1=~ClockSignal(self.o_domain),
+                        i_CE=Const(1),
+                        i_S=Const(0),
+                        i_R=Const(0),
+                        i_D0=o0_inv[bit],
+                        i_D1=o1_ff,
+                        o_Q=buf.o[bit],
+                    )
+            if platform.family == "spartan6":
+                for bit in range(len(self.port)):
+                    m.submodules[f"oe_ddr{bit}"] = Instance("ODDR2",
+                        p_DDR_ALIGNMENT="C0",
+                        p_SRTYPE="ASYNC",
+                        p_INIT=Const(0),
+                        i_C0=ClockSignal(self.o_domain),
+                        i_C1=~ClockSignal(self.o_domain),
+                        i_CE=Const(1),
+                        i_S=Const(0),
+                        i_R=Const(0),
+                        i_D0=~self.oe,
+                        i_D1=~self.oe,
+                        o_Q=buf.t[bit],
+                    )
+            else:
+                _make_dff(m, "oe", self.o_domain, ~self.oe.replicate(len(self.port)), buf.t, iob=True)
+
+        return m
+
+
+class DDRBufferVirtex4(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            for bit in range(len(self.port)):
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDR",
+                    p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
+                    p_SRTYPE="ASYNC",
+                    p_INIT_Q1=Const(0),
+                    p_INIT_Q2=Const(0),
+                    i_C=ClockSignal(self.i_domain),
+                    i_CE=Const(1),
+                    i_S=Const(0), i_R=Const(0),
+                    i_D=buf.i[bit],
+                    o_Q1=i0_inv[bit],
+                    o_Q2=i1_inv[bit]
+                )
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDR",
+                    p_DDR_CLK_EDGE="SAME_EDGE",
+                    p_SRTYPE="ASYNC",
+                    p_INIT=Const(0),
+                    i_C=ClockSignal(self.o_domain),
+                    i_CE=Const(1),
+                    i_S=Const(0),
+                    i_R=Const(0),
+                    i_D1=o0_inv[bit],
+                    i_D2=o1_inv[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_dff(m, "oe", self.o_domain, ~self.oe.replicate(len(self.port)), buf.t, iob=True)
+
+        return m
+
+
+class DDRBufferUltrascale(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            for bit in range(len(self.port)):
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDRE1",
+                    p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
+                    p_IS_C_INVERTED=Const(0),
+                    p_IS_CB_INVERTED=Const(1),
+                    i_C=ClockSignal(self.i_domain),
+                    i_CB=ClockSignal(self.i_domain),
+                    i_R=Const(0),
+                    i_D=buf.i[bit],
+                    o_Q1=i0_inv[bit],
+                    o_Q2=i1_inv[bit]
+                )
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDRE1",
+                    p_SRVAL=Const(0),
+                    i_C=ClockSignal(self.o_domain),
+                    i_SR=Const(0),
+                    i_D1=o0_inv[bit],
+                    i_D2=o1_inv[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_dff(m, "oe", self.o_domain, ~self.oe.replicate(len(self.port)), buf.t, iob=True)
+
+        return m
 
 
 class XilinxPlatform(TemplatedPlatform):
@@ -751,413 +1164,30 @@ class XilinxPlatform(TemplatedPlatform):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "TRUE"
 
-    def _get_xdr_buffer(self, m, pin, iostd, *, i_invert=False, o_invert=False):
-        XFDDR_FAMILIES = {
-            "virtex2",
-            "virtex2p",
-            "spartan3",
-        }
-        XDDR2_FAMILIES = {
-            "spartan3e",
-            "spartan3a",
-            "spartan3adsp",
-            "spartan6",
-        }
-        XDDR_FAMILIES = {
-            "virtex4",
-            "virtex5",
-            "virtex6",
-            "series7",
-        }
-        XDDRE1_FAMILIES = {
-            "ultrascale",
-            "ultrascaleplus",
-        }
-
-        def get_iob_dff(clk, d, q):
-            # SDR I/O is performed by packing a flip-flop into the pad IOB.
-            for bit in range(len(q)):
-                m.submodules += Instance("FDCE",
-                    a_IOB="TRUE",
-                    i_C=clk,
-                    i_CE=Const(1),
-                    i_CLR=Const(0),
-                    i_D=d[bit],
-                    o_Q=q[bit]
-                )
-
-        def get_dff(clk, d, q):
-            for bit in range(len(q)):
-                m.submodules += Instance("FDCE",
-                    i_C=clk,
-                    i_CE=Const(1),
-                    i_CLR=Const(0),
-                    i_D=d[bit],
-                    o_Q=q[bit]
-                )
-
-        def get_ifddr(clk, io, q0, q1):
-            assert self.family in XFDDR_FAMILIES
-            for bit in range(len(q0)):
-                m.submodules += Instance("IFDDRCPE",
-                    i_C0=clk, i_C1=~clk,
-                    i_CE=Const(1),
-                    i_CLR=Const(0), i_PRE=Const(0),
-                    i_D=io[bit],
-                    o_Q0=q0[bit], o_Q1=q1[bit]
-                )
-
-        def get_iddr2(clk, d, q0, q1, alignment):
-            assert self.family in XDDR2_FAMILIES
-            for bit in range(len(q0)):
-                m.submodules += Instance("IDDR2",
-                    p_DDR_ALIGNMENT=alignment,
-                    p_SRTYPE="ASYNC",
-                    p_INIT_Q0=C(0, 1), p_INIT_Q1=C(0, 1),
-                    i_C0=clk, i_C1=~clk,
-                    i_CE=Const(1),
-                    i_S=Const(0), i_R=Const(0),
-                    i_D=d[bit],
-                    o_Q0=q0[bit], o_Q1=q1[bit]
-                )
-
-        def get_iddr(clk, d, q1, q2):
-            assert self.family in XDDR_FAMILIES or self.family in XDDRE1_FAMILIES
-            for bit in range(len(q1)):
-                if self.family in XDDR_FAMILIES:
-                    m.submodules += Instance("IDDR",
-                        p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
-                        p_SRTYPE="ASYNC",
-                        p_INIT_Q1=C(0, 1), p_INIT_Q2=C(0, 1),
-                        i_C=clk,
-                        i_CE=Const(1),
-                        i_S=Const(0), i_R=Const(0),
-                        i_D=d[bit],
-                        o_Q1=q1[bit], o_Q2=q2[bit]
-                    )
-                else:
-                    m.submodules += Instance("IDDRE1",
-                        p_DDR_CLK_EDGE="SAME_EDGE_PIPELINED",
-                        p_IS_C_INVERTED=C(0, 1), p_IS_CB_INVERTED=C(1, 1),
-                        i_C=clk, i_CB=clk,
-                        i_R=Const(0),
-                        i_D=d[bit],
-                        o_Q1=q1[bit], o_Q2=q2[bit]
-                    )
-
-        def get_fddr(clk, d0, d1, q):
-            for bit in range(len(q)):
-                if self.family in XFDDR_FAMILIES:
-                    m.submodules += Instance("FDDRCPE",
-                        i_C0=clk, i_C1=~clk,
-                        i_CE=Const(1),
-                        i_PRE=Const(0), i_CLR=Const(0),
-                        i_D0=d0[bit], i_D1=d1[bit],
-                        o_Q=q[bit]
-                    )
-                else:
-                    m.submodules += Instance("ODDR2",
-                        p_DDR_ALIGNMENT="NONE",
-                        p_SRTYPE="ASYNC",
-                        p_INIT=C(0, 1),
-                        i_C0=clk, i_C1=~clk,
-                        i_CE=Const(1),
-                        i_S=Const(0), i_R=Const(0),
-                        i_D0=d0[bit], i_D1=d1[bit],
-                        o_Q=q[bit]
-                    )
-
-        def get_oddr(clk, d1, d2, q):
-            for bit in range(len(q)):
-                if self.family in XDDR2_FAMILIES:
-                    m.submodules += Instance("ODDR2",
-                        p_DDR_ALIGNMENT="C0",
-                        p_SRTYPE="ASYNC",
-                        p_INIT=C(0, 1),
-                        i_C0=clk, i_C1=~clk,
-                        i_CE=Const(1),
-                        i_S=Const(0), i_R=Const(0),
-                        i_D0=d1[bit], i_D1=d2[bit],
-                        o_Q=q[bit]
-                    )
-                elif self.family in XDDR_FAMILIES:
-                    m.submodules += Instance("ODDR",
-                        p_DDR_CLK_EDGE="SAME_EDGE",
-                        p_SRTYPE="ASYNC",
-                        p_INIT=C(0, 1),
-                        i_C=clk,
-                        i_CE=Const(1),
-                        i_S=Const(0), i_R=Const(0),
-                        i_D1=d1[bit], i_D2=d2[bit],
-                        o_Q=q[bit]
-                    )
-                elif self.family in XDDRE1_FAMILIES:
-                    m.submodules += Instance("ODDRE1",
-                        p_SRVAL=C(0, 1),
-                        i_C=clk,
-                        i_SR=Const(0),
-                        i_D1=d1[bit], i_D2=d2[bit],
-                        o_Q=q[bit]
-                    )
-
-        def get_ineg(y, invert):
-            if invert:
-                a = Signal.like(y, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return a
+    def get_io_buffer(self, buffer):
+        if isinstance(buffer, io.Buffer):
+            result = IOBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.FFBuffer):
+            result = FFBuffer(buffer.direction, buffer.port)
+        elif isinstance(buffer, io.DDRBuffer):
+            if self.family in ("virtex2", "virtex2p", "spartan3"):
+                result = DDRBufferVirtex2(buffer.direction, buffer.port)
+            elif self.family in ("spartan3e", "spartan3a", "spartan3adsp", "spartan6"):
+                result = DDRBufferSpartan3E(buffer.direction, buffer.port)
+            elif self.family in ("virtex4", "virtex5", "virtex6", "series7"):
+                result = DDRBufferVirtex4(buffer.direction, buffer.port)
+            elif self.family in ("ultrascale", "ultrascaleplus"):
+                result = DDRBufferUltrascale(buffer.direction, buffer.port)
             else:
-                return y
-
-        def get_oneg(a, invert):
-            if invert:
-                y = Signal.like(a, name_suffix="_n")
-                m.d.comb += y.eq(~a)
-                return y
-            else:
-                return a
-
-        if "i" in pin.dir:
-            if pin.xdr < 2:
-                pin_i  = get_ineg(pin.i,  i_invert)
-            elif pin.xdr == 2:
-                pin_i0 = get_ineg(pin.i0, i_invert)
-                pin_i1 = get_ineg(pin.i1, i_invert)
-        if "o" in pin.dir:
-            if pin.xdr < 2:
-                pin_o  = get_oneg(pin.o,  o_invert)
-            elif pin.xdr == 2:
-                pin_o0 = get_oneg(pin.o0, o_invert)
-                pin_o1 = get_oneg(pin.o1, o_invert)
-
-        i = o = t = None
-        if "i" in pin.dir:
-            i = Signal(pin.width, name=f"{pin.name}_xdr_i")
-        if "o" in pin.dir:
-            o = Signal(pin.width, name=f"{pin.name}_xdr_o")
-        if pin.dir in ("oe", "io"):
-            t = Signal(1,         name=f"{pin.name}_xdr_t")
-
-        if pin.xdr == 0:
-            if "i" in pin.dir:
-                i = pin_i
-            if "o" in pin.dir:
-                o = pin_o
-            if pin.dir in ("oe", "io"):
-                t = ~pin.oe
-        elif pin.xdr == 1:
-            if "i" in pin.dir:
-                get_iob_dff(pin.i_clk, i, pin_i)
-            if "o" in pin.dir:
-                get_iob_dff(pin.o_clk, pin_o, o)
-            if pin.dir in ("oe", "io"):
-                get_iob_dff(pin.o_clk, ~pin.oe, t)
-        elif pin.xdr == 2:
-            # On Spartan 3E/3A, the situation with DDR registers is messy: while the hardware
-            # supports same-edge alignment, it does so by borrowing the resources of the other
-            # pin in the differential pair (if any).  Since we cannot be sure if the other pin
-            # is actually unused (or if the pin is even part of a differential pair in the first
-            # place), we only use the hardware alignment feature in two cases:
-            #
-            # - differential inputs (since the other pin's input registers will be unused)
-            # - true differential outputs (since they use only one pin's output registers,
-            #   as opposed to pseudo-differential outputs that use both)
-            TRUE_DIFF_S3EA = {
-                "LVDS_33", "LVDS_25",
-                "MINI_LVDS_33", "MINI_LVDS_25",
-                "RSDS_33", "RSDS_25",
-                "PPDS_33", "PPDS_25",
-                "TMDS_33",
-            }
-            DIFF_S3EA = TRUE_DIFF_S3EA | {
-                "DIFF_HSTL_I",
-                "DIFF_HSTL_III",
-                "DIFF_HSTL_I_18",
-                "DIFF_HSTL_II_18",
-                "DIFF_HSTL_III_18",
-                "DIFF_SSTL3_I",
-                "DIFF_SSTL3_II",
-                "DIFF_SSTL2_I",
-                "DIFF_SSTL2_II",
-                "DIFF_SSTL18_I",
-                "DIFF_SSTL18_II",
-                "BLVDS_25",
-            }
-            if "i" in pin.dir:
-                if self.family in XFDDR_FAMILIES:
-                    # First-generation input DDR register: basically just two FFs with opposite
-                    # clocks. Add a register on both outputs, so that they enter fabric on
-                    # the same clock edge, adding one cycle of latency.
-                    i0_ff = Signal.like(pin_i0, name_suffix="_ff")
-                    i1_ff = Signal.like(pin_i1, name_suffix="_ff")
-                    get_dff(pin.i_clk, i0_ff, pin_i0)
-                    get_dff(pin.i_clk, i1_ff, pin_i1)
-                    get_iob_dff(pin.i_clk, i, i0_ff)
-                    get_iob_dff(~pin.i_clk, i, i1_ff)
-                elif self.family in XDDR2_FAMILIES:
-                    if self.family == 'spartan6' or iostd in DIFF_S3EA:
-                        # Second-generation input DDR register: hw realigns i1 to positive clock edge,
-                        # but also misaligns it with i0 input.  Re-register first input before it
-                        # enters fabric. This allows both inputs to enter fabric on the same clock
-                        # edge, and adds one cycle of latency.
-                        i0_ff = Signal.like(pin_i0, name_suffix="_ff")
-                        get_dff(pin.i_clk, i0_ff, pin_i0)
-                        get_iddr2(pin.i_clk, i, i0_ff, pin_i1, "C0")
-                    else:
-                        # No extra register available for hw alignment, use extra registers.
-                        i0_ff = Signal.like(pin_i0, name_suffix="_ff")
-                        i1_ff = Signal.like(pin_i1, name_suffix="_ff")
-                        get_dff(pin.i_clk, i0_ff, pin_i0)
-                        get_dff(pin.i_clk, i1_ff, pin_i1)
-                        get_iddr2(pin.i_clk, i, i0_ff, i1_ff, "NONE")
-                else:
-                    # Third-generation input DDR register: does all of the above on its own.
-                    get_iddr(pin.i_clk, i, pin_i0, pin_i1)
-            if "o" in pin.dir:
-                if self.family in XFDDR_FAMILIES or self.family == "spartan3e" or (self.family.startswith("spartan3a") and iostd not in TRUE_DIFF_S3EA):
-                    # For this generation, we need to realign o1 input ourselves.
-                    o1_ff = Signal.like(pin_o1, name_suffix="_ff")
-                    get_dff(pin.o_clk, pin_o1, o1_ff)
-                    get_fddr(pin.o_clk, pin_o0, o1_ff, o)
-                else:
-                    get_oddr(pin.o_clk, pin_o0, pin_o1, o)
-            if pin.dir in ("oe", "io"):
-                if self.family == "spartan6":
-                    get_oddr(pin.o_clk, ~pin.oe, ~pin.oe, t)
-                else:
-                    get_iob_dff(pin.o_clk, ~pin.oe, t)
+                raise TypeError(f"Family {self.family} doesn't implement DDR buffers")
         else:
-            assert False
-
-        return (i, o, t)
-
-    def _get_valid_xdrs(self):
-        if self.family in {"virtex", "virtexe"}:
-            return (0, 1)
-        else:
-            return (0, 1, 2)
-
-    def get_input(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUF",
-                i_I=port.io[bit],
-                o_O=i[bit]
-            )
-        return m
-
-    def get_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended output", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), o_invert=invert)
-        if self.vendor_toolchain:
-            for bit in range(pin.width):
-                m.submodules[f"{pin.name}_{bit}"] = Instance("OBUF",
-                    i_I=o[bit],
-                    o_O=port.io[bit]
-                )
-        else:
-            m.d.comb += port.eq(self._invert_if(invert, o))
-        return m
-
-    def get_tristate(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_tristate(pin, port, attrs, invert)
-
-        self._check_feature("single-ended tristate", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFT",
-                i_T=t,
-                i_I=o[bit],
-                o_O=port.io[bit]
-            )
-        return m
-
-    def get_input_output(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_input_output(pin, port, attrs, invert)
-
-        self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD"), i_invert=invert, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUF",
-                i_T=t,
-                i_I=o[bit],
-                o_O=i[bit],
-                io_IO=port.io[bit]
-            )
-        return m
-
-    def get_diff_input(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_diff_input(pin, port, attrs, invert)
-
-        self._check_feature("differential input", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IBUFDS",
-                i_I=port.p[bit], i_IB=port.n[bit],
-                o_O=i[bit]
-            )
-        return m
-
-    def get_diff_output(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_diff_output(pin, port, attrs, invert)
-
-        self._check_feature("differential output", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFDS",
-                i_I=o[bit],
-                o_O=port.p[bit], o_OB=port.n[bit]
-            )
-        return m
-
-    def get_diff_tristate(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_diff_tristate(pin, port, attrs, invert)
-
-        self._check_feature("differential tristate", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("OBUFTDS",
-                i_T=t,
-                i_I=o[bit],
-                o_O=port.p[bit], o_OB=port.n[bit]
-            )
-        return m
-
-    def get_diff_input_output(self, pin, port, attrs, invert):
-        if not self.vendor_toolchain:
-            return super().get_diff_input_output(pin, port, attrs, invert)
-
-        self._check_feature("differential input/output", pin, attrs,
-                            valid_xdrs=self._get_valid_xdrs(), valid_attrs=True)
-        m = Module()
-        i, o, t = self._get_xdr_buffer(m, pin, attrs.get("IOSTANDARD", "LVDS_25"), i_invert=invert, o_invert=invert)
-        for bit in range(pin.width):
-            m.submodules[f"{pin.name}_{bit}"] = Instance("IOBUFDS",
-                i_T=t,
-                i_I=o[bit],
-                o_O=i[bit],
-                io_IO=port.p[bit], io_IOB=port.n[bit]
-            )
-        return m
+            raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
+        if buffer.direction is not io.Direction.Output:
+            result.i = buffer.i
+        if buffer.direction is not io.Direction.Input:
+            result.o = buffer.o
+            result.oe = buffer.oe
+        return result
 
     # The synchronizer implementations below apply two separate but related timing constraints.
     #
