@@ -165,7 +165,7 @@ class BuildPlan:
 
         ``connect_to`` is a dictionary that holds all input arguments to
         ``paramiko``'s ``SSHClient.connect``
-        (`documentation <http://docs.paramiko.org/en/stable/api/client.html#paramiko.client.SSHClient.connect>`_).
+        (`documentation <https://docs.paramiko.org/en/latest/api/client.html#paramiko.client.SSHClient.connect>`_).
         At a minimum, the ``hostname`` input argument must be supplied in this
         dictionary as the remote server.
 
