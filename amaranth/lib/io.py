@@ -17,24 +17,22 @@ __all__ = [
 
 
 class Direction(enum.Enum):
-    """Represents a direction of an I/O port, or of an I/O buffer."""
+    """Represents direction of a library I/O port, or of an I/O buffer component."""
 
-    #: Input direction (from world to Amaranth design)
+    #: Input direction (from outside world to Amaranth design).
     Input  = "i"
-    #: Output direction (from Amaranth design to world)
+    #: Output direction (from Amaranth design to outside world).
     Output = "o"
-    #: Bidirectional (can be switched between input and output)
+    #: Bidirectional (can be switched between input and output).
     Bidir  = "io"
 
-    def __or__(self, other):
-        if not isinstance(other, Direction):
-            return NotImplemented
-        if self == other:
-            return self
-        else:
-            return Direction.Bidir
-
     def __and__(self, other):
+        """Narrow the set of possible directions.
+
+        * :py:`self & self` returns :py:`self`.
+        * :py:`Bidir & other` returns :py:`other`.
+        * :py:`Input & Output` raises :exc:`ValueError`.
+        """
         if not isinstance(other, Direction):
             return NotImplemented
         if self == other:
@@ -48,66 +46,95 @@ class Direction(enum.Enum):
 
 
 class PortLike(metaclass=ABCMeta):
-    """Represents an abstract port that can be passed to a buffer.
+    """Represents an abstract library I/O port that can be passed to a buffer.
 
     The port types supported by most platforms are :class:`SingleEndedPort` and
-    :class:`DifferentialPort`. Platforms may define additional custom port types as appropriate.
+    :class:`DifferentialPort`. Platforms may define additional port types where appropriate.
+
+    .. note::
+
+        :class:`amaranth.hdl.IOPort` is not an instance of :class:`amaranth.lib.io.PortLike`.
     """
 
     @property
     @abstractmethod
     def direction(self):
-        """The direction of this port, as :class:`Direction`."""
+        """Direction of the port.
+
+        Returns
+        -------
+        :class:`Direction`
+        """
         raise NotImplementedError # :nocov:
 
     @abstractmethod
     def __len__(self):
-        """Returns the width of this port in bits."""
+        """Computes the width of the port.
+
+        Returns
+        -------
+        :class:`int`
+            The number of wires (for single-ended library I/O ports) or wire pairs (for differential
+            library I/O ports) this port consists of.
+        """
         raise NotImplementedError # :nocov:
 
     @abstractmethod
-    def __getitem__(self, index):
-        """Slices the port, returning another :class:`PortLike` with a subset
-        of its bits.
+    def __getitem__(self, key):
+        """Slices the port.
 
-        The index can be a :class:`slice` or :class:`int`. If the index is
-        an :class:`int`, the result is a single-bit :class:`PortLike`."""
+        Returns
+        -------
+        :class:`PortLike`
+            A new :class:`PortLike` instance of the same type as :py:`self`, containing a selection
+            of wires of this port according to :py:`key`. Its width is the same as the length of
+            the slice (if :py:`key` is a :class:`slice`); or 1 (if :py:`key` is an :class:`int`).
+        """
         raise NotImplementedError # :nocov:
 
     @abstractmethod
     def __invert__(self):
-        """Returns a new :class:`PortLike` object like this one, but with inverted polarity.
+        """Inverts polarity of the port.
 
-        The result should be such that using :class:`Buffer` on it is equivalent to using
-        :class:`Buffer` on the original, with added inverters on the :py:`i` and :py:`o` ports."""
+        Inverting polarity of a library I/O port has the same effect as adding inverters to
+        the :py:`i` and :py:`o` members of an I/O buffer component for that port.
+
+        Returns
+        -------
+        :class:`PortLike`
+            A new :class:`PortLike` instance of the same type as :py:`self`, containing the same
+            wires as this port, but with polarity inverted.
+        """
         raise NotImplementedError # :nocov:
 
 
 class SingleEndedPort(PortLike):
-    """Represents a single-ended I/O port with optional inversion.
+    """Represents a single-ended library I/O port.
+
+    Implements the :class:`PortLike` interface.
 
     Parameters
     ----------
     io : :class:`IOValue`
-        The raw I/O value being wrapped.
+        Underlying core I/O value.
     invert : :class:`bool` or iterable of :class:`bool`
-        If true, the electrical state of the physical pin will be opposite from the Amaranth value
-        (the ``*Buffer`` classes will insert inverters on :py:`o` and :py:`i` pins, as appropriate).
-
-        This can be used for various purposes:
-
-        - Normalizing active-low pins (such as ``CS_B``) to be active-high in Amaranth code
-        - Compensating for boards where an inverting level-shifter (or similar circuitry) was used
-          on the pin
-
-        If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
-        is an iterable of :class:`bool`, the iterable must have the same length as :py:`io`, and
-        the inversion is specified per-bit.
+        Polarity inversion. If the value is a simple :class:`bool`, it specifies inversion for
+        the entire port. If the value is an iterable of :class:`bool`, the iterable must have the
+        same length as the width of :py:`io`, and the inversion is specified for individual wires.
     direction : :class:`Direction` or :class:`str`
-        Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
-        :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
-        If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
-        If a string is passed, it is cast to :class:`Direction`.
+        Set of allowed buffer directions. A string is converted to a :class:`Direction` first.
+        If equal to :attr:`Direction.Input` or :attr:`Direction.Output`, this port can only be used
+        with buffers of matching direction. If equal to :attr:`Direction.Bidir`, this port can be
+        used with buffers of any direction.
+
+    Attributes
+    ----------
+    io : :class:`IOValue`
+        The :py:`io` parameter.
+    invert : :class:`tuple` of :class:`bool`
+        The :py:`invert` parameter, normalized to specify polarity inversion per-wire.
+    direction : :class:`Direction`
+        The :py:`direction` parameter, normalized to the :class:`Direction` enumeration.
     """
     def __init__(self, io, *, invert=False, direction=Direction.Bidir):
         self._io = IOValue.cast(io)
@@ -126,52 +153,53 @@ class SingleEndedPort(PortLike):
 
     @property
     def io(self):
-        """The :py:`io` argument passed to the constructor."""
         return self._io
 
     @property
     def invert(self):
-        """The :py:`invert` argument passed to the constructor, normalized to a :class:`tuple`
-        of :class:`bool`."""
         return self._invert
 
     @property
     def direction(self):
-        """The :py:`direction` argument passed to the constructor, normalized to :class:`Direction`."""
         return self._direction
 
     def __len__(self):
-        """Returns the width of this port in bits. Equal to :py:`len(self.io)`."""
         return len(self._io)
 
     def __invert__(self):
-        """Returns a new :class:`SingleEndedPort` with the opposite value of :py:`invert`."""
         return SingleEndedPort(self._io, invert=tuple(not inv for inv in self._invert),
                                direction=self._direction)
 
     def __getitem__(self, index):
-        """Slices the port, returning another :class:`SingleEndedPort` with a subset
-        of its bits.
-
-        The index can be a :class:`slice` or :class:`int`. If the index is
-        an :class:`int`, the result is a single-bit :class:`SingleEndedPort`."""
         return SingleEndedPort(self._io[index], invert=self._invert[index],
                                direction=self._direction)
 
     def __add__(self, other):
-        """Concatenates two :class:`SingleEndedPort` objects together, returning a new
-        :class:`SingleEndedPort` object.
+        """Concatenates two single-ended library I/O ports.
 
-        When the concatenated ports have different directions, the conflict is resolved as follows:
+        The direction of the resulting port is:
 
-        - If a bidirectional port is concatenated with an input port, the result is an input port.
-        - If a bidirectional port is concatenated with an output port, the result is an output port.
-        - If an input port is concatenated with an output port, :exc:`ValueError` is raised.
+        * The same as the direction of both, if the two ports have the same direction.
+        * :attr:`Direction.Input` if a bidirectional port is concatenated with an input port.
+        * :attr:`Direction.Output` if a bidirectional port is concatenated with an output port.
+
+        Returns
+        -------
+        :class:`SingleEndedPort`
+            A new :class:`SingleEndedPort` which contains wires from :py:`self` followed by wires
+            from :py:`other`, preserving their polarity inversion.
+
+        Raises
+        ------
+        :exc:`ValueError`
+            If an input port is concatenated with an output port.
+        :exc:`TypeError`
+            If :py:`self` and :py:`other` have incompatible types.
         """
         if not isinstance(other, SingleEndedPort):
             return NotImplemented
         return SingleEndedPort(Cat(self._io, other._io), invert=self._invert + other._invert,
-                               direction=self._direction | other._direction)
+                               direction=self._direction & other._direction)
 
     def __repr__(self):
         if all(self._invert):
@@ -184,32 +212,38 @@ class SingleEndedPort(PortLike):
 
 
 class DifferentialPort(PortLike):
-    """Represents a differential I/O port with optional inversion.
+    """Represents a differential library I/O port.
+
+    Implements the :class:`PortLike` interface.
 
     Parameters
     ----------
     p : :class:`IOValue`
-        The raw I/O value used as positive (true) half of the port.
+        Underlying core I/O value for the true (positive) half of the port.
     n : :class:`IOValue`
-        The raw I/O value used as negative (complemented) half of the port. Must have the same
-        length as :py:`p`.
-    invert : :class:`bool` or iterable of :class`bool`
-        If true, the electrical state of the physical pin will be opposite from the Amaranth value
-        (the ``*Buffer`` classes will insert inverters on :py:`o` and :py:`i` pins, as appropriate).
-
-        This can be used for various purposes:
-
-        - Normalizing active-low pins (such as ``CS_B``) to be active-high in Amaranth code
-        - Compensating for boards where the P and N pins are swapped (e.g. for easier routing)
-
-        If the value is a simple :class:`bool`, it is used for all bits of this port. If the value
-        is an iterable of :class:`bool`, the iterable must have the same length as :py:`io`, and
-        the inversion is specified per-bit.
+        Underlying core I/O value for the complement (negative) half of the port.
+        Must have the same width as :py:`p`.
+    invert : :class:`bool` or iterable of :class:`bool`
+        Polarity inversion. If the value is a simple :class:`bool`, it specifies inversion for
+        the entire port. If the value is an iterable of :class:`bool`, the iterable must have the
+        same length as the width of :py:`p` and :py:`n`, and the inversion is specified for
+        individual wires.
     direction : :class:`Direction` or :class:`str`
-        Represents the allowed directions of this port. If equal to :attr:`Direction.Input` or
-        :attr:`Direction.Output`, this port can only be used with buffers of matching direction.
-        If equal to :attr:`Direction.Bidir`, this port can be used with buffers of any direction.
-        If a string is passed, it is cast to :class:`Direction`.
+        Set of allowed buffer directions. A string is converted to a :class:`Direction` first.
+        If equal to :attr:`Direction.Input` or :attr:`Direction.Output`, this port can only be used
+        with buffers of matching direction. If equal to :attr:`Direction.Bidir`, this port can be
+        used with buffers of any direction.
+
+    Attributes
+    ----------
+    p : :class:`IOValue`
+        The :py:`p` parameter.
+    n : :class:`IOValue`
+        The :py:`n` parameter.
+    invert : :class:`tuple` of :class:`bool`
+        The :py:`invert` parameter, normalized to specify polarity inversion per-wire.
+    direction : :class:`Direction`
+        The :py:`direction` parameter, normalized to the :class:`Direction` enumeration.
     """
     def __init__(self, p, n, *, invert=False, direction=Direction.Bidir):
         self._p = IOValue.cast(p)
@@ -232,58 +266,58 @@ class DifferentialPort(PortLike):
 
     @property
     def p(self):
-        """The :py:`p` argument passed to the constructor."""
         return self._p
 
     @property
     def n(self):
-        """The :py:`n` argument passed to the constructor."""
         return self._n
 
     @property
     def invert(self):
-        """The :py:`invert` argument passed to the constructor, normalized to a :class:`tuple`
-        of :class:`bool`."""
         return self._invert
 
     @property
     def direction(self):
-        """The :py:`direction` argument passed to the constructor, normalized to :class:`Direction`."""
         return self._direction
 
     def __len__(self):
-        """Returns the width of this port in bits. Equal to :py:`len(self.p)` (and :py:`len(self.n)`)."""
         return len(self._p)
 
     def __invert__(self):
-        """Returns a new :class:`DifferentialPort` with the opposite value of :py:`invert`."""
         return DifferentialPort(self._p, self._n, invert=tuple(not inv for inv in self._invert),
-                               direction=self._direction)
+                                direction=self._direction)
 
     def __getitem__(self, index):
-        """Slices the port, returning another :class:`DifferentialPort` with a subset
-        of its bits.
-
-        The index can be a :class:`slice` or :class:`int`. If the index is
-        an :class:`int`, the result is a single-bit :class:`DifferentialPort`."""
         return DifferentialPort(self._p[index], self._n[index], invert=self._invert[index],
-                               direction=self._direction)
+                                direction=self._direction)
 
     def __add__(self, other):
-        """Concatenates two :class:`DifferentialPort` objects together, returning a new
-        :class:`DifferentialPort` object.
+        """Concatenates two differential library I/O ports.
 
-        When the concatenated ports have different directions, the conflict is resolved as follows:
+        The direction of the resulting port is:
 
-        - If a bidirectional port is concatenated with an input port, the result is an input port.
-        - If a bidirectional port is concatenated with an output port, the result is an output port.
-        - If an input port is concatenated with an output port, :exc:`ValueError` is raised.
+        * The same as the direction of both, if the two ports have the same direction.
+        * :attr:`Direction.Input` if a bidirectional port is concatenated with an input port.
+        * :attr:`Direction.Output` if a bidirectional port is concatenated with an output port.
+
+        Returns
+        -------
+        :class:`DifferentialPort`
+            A new :class:`DifferentialPort` which contains pairs of wires from :py:`self` followed
+            by pairs of wires from :py:`other`, preserving their polarity inversion.
+
+        Raises
+        ------
+        :exc:`ValueError`
+            If an input port is concatenated with an output port.
+        :exc:`TypeError`
+            If :py:`self` and :py:`other` have incompatible types.
         """
         if not isinstance(other, DifferentialPort):
             return NotImplemented
         return DifferentialPort(Cat(self._p, other._p), Cat(self._n, other._n),
-                               invert=self._invert + other._invert,
-                               direction=self._direction | other._direction)
+                                invert=self._invert + other._invert,
+                                direction=self._direction & other._direction)
 
     def __repr__(self):
         if not any(self._invert):
@@ -292,36 +326,74 @@ class DifferentialPort(PortLike):
             invert = True
         else:
             invert = self._invert
-        return f"DifferentialPort({self._p!r}, {self._n!r}, invert={invert!r}, direction={self._direction})"
+        return (f"DifferentialPort({self._p!r}, {self._n!r}, invert={invert!r}, "
+                f"direction={self._direction})")
 
 
 class Buffer(wiring.Component):
-    """A combinational I/O buffer.
+    """A combinational I/O buffer component.
+
+    This buffer can be used on any platform; if the platform does not specialize its implementation,
+    an :ref:`I/O buffer instance <lang-iobufferinstance>` is used.
+
+    The following diagram defines the timing relationship between the underlying core I/O value
+    (for differential ports, the core I/O value of the true half) and the :py:`i`, :py:`o`, and
+    :py:`oe` members:
+
+    .. wavedrom:: io/buffer
+
+        {
+            "signal": [
+                {"name": "clk",  "wave": "p....."},
+                {"name": "o",    "wave": "x345x.", "data": ["A", "B", "C"]},
+                {"name": "oe",   "wave": "01..0."},
+                {},
+                {"name": "port", "wave": "z345z.", "data": ["A", "B", "C"]},
+                {},
+                {"name": "i",    "wave": "x345x.", "data": ["A", "B", "C"]}
+            ],
+            "config": {
+                "hscale": 2
+            }
+        }
 
     Parameters
     ----------
     direction : :class:`Direction`
+        Direction of the buffer.
     port : :class:`PortLike`
+        Port driven by the buffer.
+
+    Raises
+    ------
+    :exc:`ValueError`
+        Unless :py:`port.direction in (direction, Bidir)`.
 
     Attributes
     ----------
     signature : :class:`Buffer.Signature`
-        Created based on constructor arguments.
+        :py:`Signature(direction, len(port)).flip()`.
     """
     class Signature(wiring.Signature):
-        """A signature of a combinational I/O buffer.
+        """Signature of a combinational I/O buffer.
 
         Parameters
         ----------
         direction : :class:`Direction`
+            Direction of the buffer.
         width : :class:`int`
+            Width of the buffer.
 
-        Attributes
-        ----------
-        i: :py:`unsigned(width)` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
-        o: :py:`unsigned(width)` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
-        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
-        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        Members
+        -------
+        i: :py:`In(width)`
+            Present if :py:`direction in (Input, Bidir)`.
+        o: :py:`Out(width)`
+            Present if :py:`direction in (Output, Bidir)`.
+        oe: :py:`Out(1, init=0)`
+            Present if :py:`direction is Bidir`.
+        oe: :py:`Out(1, init=1)`
+            Present if :py:`direction is Output`.
         """
         def __init__(self, direction, width):
             self._direction = Direction(direction)
@@ -343,7 +415,8 @@ class Buffer(wiring.Component):
             return self._width
 
         def __eq__(self, other):
-            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+            return (type(self) is type(other) and self.direction == other.direction and
+                    self.width == other.width)
 
         def __repr__(self):
             return f"Buffer.Signature({self.direction}, {self.width})"
@@ -403,47 +476,84 @@ class Buffer(wiring.Component):
                 m.submodules += IOBufferInstance(self._port.p, o=o_inv, oe=self.oe, i=i_inv)
                 m.submodules += IOBufferInstance(self._port.n, o=~o_inv, oe=self.oe)
         else:
-            raise TypeError("Cannot elaborate generic 'Buffer' with port {self._port!r}")
+            raise TypeError("Cannot elaborate generic 'Buffer' with port {self._port!r}") # :nocov:
 
         return m
 
 
 class FFBuffer(wiring.Component):
-    """A registered I/O buffer.
+    """A registered I/O buffer component.
 
-    Equivalent to a plain :class:`Buffer` combined with reset-less registers on :py:`i`, :py:`o`,
-    :py:`oe`.
+    This buffer can be used on any platform; if the platform does not specialize its implementation,
+    an :ref:`I/O buffer instance <lang-iobufferinstance>` is used, combined with reset-less
+    registers on :py:`i`, :py:`o`, and  :py:`oe` members.
+
+    The following diagram defines the timing relationship between the underlying core I/O value
+    (for differential ports, the core I/O value of the true half) and the :py:`i`, :py:`o`, and
+    :py:`oe` members:
+
+    .. wavedrom:: io/ff-buffer
+
+        {
+            "signal": [
+                {"name": "clk",  "wave": "p......"},
+                {"name": "o",    "wave": "x345x..", "data": ["A", "B", "C"]},
+                {"name": "oe",   "wave": "01..0.."},
+                {},
+                {"name": "port", "wave": "z.345z.", "data": ["A", "B", "C"]},
+                {},
+                {"name": "i",    "wave": "x..345x", "data": ["A", "B", "C"]}
+            ],
+            "config": {
+                "hscale": 2
+            }
+        }
+
+    .. warning::
+
+        On some platforms, this buffer can only be used with rising edge clock domains, and will
+        raise an exception during conversion of the design to a netlist otherwise.
+
+        This limitation will be lifted in the future.
 
     Parameters
     ----------
     direction : :class:`Direction`
+        Direction of the buffer.
     port : :class:`PortLike`
+        Port driven by the buffer.
     i_domain : :class:`str`
-        Domain for input register. Only used when :py:`direction in (Direction.Input, Direction.Bidir)`.
-        Defaults to :py:`"sync"`
+        Name of the input register's clock domain. Used when :py:`direction in (Input, Bidir)`.
+        Defaults to :py:`"sync"`.
     o_domain : :class:`str`
-        Domain for output and output enable registers. Only used when
-        :py:`direction in (Direction.Output, Direction.Bidir)`. Defaults to :py:`"sync"`
+        Name of the output and output enable registers' clock domain. Used when
+        :py:`direction in (Output, Bidir)`. Defaults to :py:`"sync"`.
 
     Attributes
     ----------
-    signature : FFBuffer.Signature
-        Created based on constructor arguments.
+    signature : :class:`FFBuffer.Signature`
+        :py:`Signature(direction, len(port)).flip()`.
     """
     class Signature(wiring.Signature):
-        """A signature of a registered I/O buffer.
+        """Signature of a registered I/O buffer.
 
         Parameters
         ----------
         direction : :class:`Direction`
+            Direction of the buffer.
         width : :class:`int`
+            Width of the buffer.
 
-        Attributes
-        ----------
-        i: :py:`unsigned(width)` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
-        o: :py:`unsigned(width)` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
-        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
-        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        Members
+        -------
+        i: :py:`In(width)`
+            Present if :py:`direction in (Input, Bidir)`.
+        o: :py:`Out(width)`
+            Present if :py:`direction in (Output, Bidir)`.
+        oe: :py:`Out(1, init=0)`
+            Present if :py:`direction is Bidir`.
+        oe: :py:`Out(1, init=1)`
+            Present if :py:`direction is Output`.
         """
         def __init__(self, direction, width):
             self._direction = Direction(direction)
@@ -465,7 +575,8 @@ class FFBuffer(wiring.Component):
             return self._width
 
         def __eq__(self, other):
-            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+            return (type(self) is type(other) and self.direction == other.direction and
+                    self.width == other.width)
 
         def __repr__(self):
             return f"FFBuffer.Signature({self.direction}, {self.width})"
@@ -533,48 +644,117 @@ class FFBuffer(wiring.Component):
 
 
 class DDRBuffer(wiring.Component):
-    """A double data rate registered I/O buffer.
+    """A double data rate I/O buffer component.
 
-    In the input direction, the port is sampled at both edges of the input clock domain.
-    The data sampled on the active clock edge of the domain appears on :py:`i[0]` with a delay
-    of 1 clock cycle. The data sampled on the opposite clock edge appears on :py:`i[1]` with a delay
-    of 0.5 clock cycle. Both :py:`i[0]` and :py:`i[1]` thus change on the active clock edge of the domain.
+    This buffer is only available on platforms that support double data rate I/O.
 
-    In the output direction, both :py:`o[0]` and :py:`o[1]` are sampled on the active clock edge
-    of the domain.  The value of :py:`o[0]` immediately appears on the output port.  The value
-    of :py:`o[1]` then appears on the output port on the opposite edge, with a delay of 0.5 clock cycle.
+    The following diagram defines the timing relationship between the underlying core I/O value
+    (for differential ports, the core I/O value of the true half) and the :py:`i`, :py:`o`, and
+    :py:`oe` members:
 
-    Support for this compoment is platform-specific, and may be missing on some platforms.
+    ..
+        This diagram should have `port` phase shifted, but it hits wavedrom/wavedrom#416.
+        It is also affected by wavedrom/wavedrom#417.
+
+    .. wavedrom:: io/ddr-buffer
+
+        {
+            "head": {
+                "tick": 0
+            },
+            "signal": [
+                {"name": "clk",  "wave": "p......."},
+                {"name": "o[0]", "wave": "x357x...", "node": ".a",
+                 "data": ["A", "C", "E"]},
+                {"name": "o[1]", "wave": "x468x...", "node": ".b",
+                 "data": ["B", "D", "F"]},
+                {"name": "oe",   "wave": "01..0..."},
+                {                                            "node": "........R.S",
+                 "period": 0.5},
+                {"name": "port", "wave": "z...345678z.....", "node": "....123456",
+                 "data": ["A", "B", "C", "D", "E", "F"],
+                 "period": 0.5},
+                {                                            "node": "..P.Q",
+                 "period": 0.5},
+                {"name": "i[0]", "wave": "x...468x", "node": ".....d",
+                 "data": ["B", "D", "F"]},
+                {"name": "i[1]", "wave": "x..357x.", "node": ".....e",
+                 "data": ["A", "C", "E"]}
+            ],
+            "edge": [
+                "a~1", "b-~2", "P+Q t1",
+                "5~-d", "6~e", "R+S t2"
+            ],
+            "config": {
+                "hscale": 2
+            }
+        }
+
+    The output data (labelled *a*, *b*) is input from :py:`o` into internal registers at
+    the beginning of clock cycle 2, and transmitted at points labelled *1*, *2* during the same
+    clock cycle. The output latency *t1* is defined as the amount of cycles between the time of
+    capture of :py:`o` and the time of transmission of rising edge data plus one cycle, and is 1
+    for this diagram.
+
+    The received data is captured into internal registers during the clock cycle 4 at points
+    labelled *5*, *6*, and output to :py:`i` during the next clock cycle (labelled *d*, *e*).
+    The input latency *t2* is defined as the amount of cycles between the time of reception of
+    rising edge data and the time of update of :py:`i`, and is 1 for this diagram.
+
+    The output enable signal is input from :py:`oe` once per cycle and affects the entire cycle it
+    applies to. Its latency is defined in the same way as the output latency, and is equal to *t1*.
+
+    .. warning::
+
+        Some platforms include additional pipeline registers that may cause latencies *t1* and *t2*
+        to be higher than one cycle. At the moment there is no way to query these latencies.
+
+        This limitation will be lifted in the future.
+
+    .. warning::
+
+        On all supported platforms, this buffer can only be used with rising edge clock domains,
+        and will raise an exception during conversion of the design to a netlist otherwise.
+
+        This limitation may be lifted in the future.
 
     Parameters
     ----------
     direction : :class:`Direction`
+        Direction of the buffer.
     port : :class:`PortLike`
+        Port driven by the buffer.
     i_domain : :class:`str`
-        Domain for input register. Only used when :py:`direction in (Direction.Input, Direction.Bidir)`.
+        Name of the input registers' clock domain. Only used when :py:`direction in (Input, Bidir)`.
     o_domain : :class:`str`
-        Domain for output and output enable registers. Only used when
-        :py:`direction in (Direction.Output, Direction.Bidir)`.
+        Name of the output and output enable registers' clock domain. Only used when
+        :py:`direction in (Output, Bidir)`.
 
     Attributes
     ----------
-    signature : DDRBuffer.Signature
-        Created based on constructor arguments.
+    signature : :class:`DDRBuffer.Signature`
+        :py:`Signature(direction, len(port)).flip()`.
     """
     class Signature(wiring.Signature):
-        """A signature of a double data rate registered I/O buffer.
+        """Signature of a double data rate I/O buffer.
 
         Parameters
         ----------
         direction : :class:`Direction`
+            Direction of the buffer.
         width : :class:`int`
+            Width of the buffer.
 
-        Attributes
-        ----------
-        i: :py:`unsigned(ArrayLayout(width, 2))` (if :py:`direction in (Direction.Input, Direction.Bidir)`)
-        o: :py:`unsigned(ArrayLayout(width, 2))` (if :py:`direction in (Direction.Output, Direction.Bidir)`)
-        oe: :py:`unsigned(1, init=0)` (if :py:`direction is Direction.Bidir`)
-        oe: :py:`unsigned(1, init=1)` (if :py:`direction is Direction.Output`)
+        Members
+        -------
+        i: :py:`In(ArrayLayout(width, 2))`
+            Present if :py:`direction in (Input, Bidir)`.
+        o: :py:`Out(ArrayLayout(width, 2))`
+            Present if :py:`direction in (Output, Bidir)`.
+        oe: :py:`Out(1, init=0)`
+            Present if :py:`direction is Bidir`.
+        oe: :py:`Out(1, init=1)`
+            Present if :py:`direction is Output`.
         """
         def __init__(self, direction, width):
             self._direction = Direction(direction)
@@ -596,7 +776,8 @@ class DDRBuffer(wiring.Component):
             return self._width
 
         def __eq__(self, other):
-            return type(self) is type(other) and self.direction == other.direction and self.width == other.width
+            return (type(self) is type(other) and self.direction == other.direction and
+                    self.width == other.width)
 
         def __repr__(self):
             return f"DDRBuffer.Signature({self.direction}, {self.width})"
@@ -643,7 +824,7 @@ class DDRBuffer(wiring.Component):
         if hasattr(platform, "get_io_buffer"):
             return platform.get_io_buffer(self)
 
-        raise NotImplementedError("DDR buffers cannot be elaborated without a supported platform")
+        raise NotImplementedError(f"DDR buffers are not supported on {platform!r}") # :nocov:
 
 
 class Pin(wiring.PureInterface):

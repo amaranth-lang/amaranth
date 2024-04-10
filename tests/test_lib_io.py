@@ -11,19 +11,6 @@ from .utils import *
 
 
 class DirectionTestCase(FHDLTestCase):
-    def test_or(self):
-        self.assertIs(Direction.Input | Direction.Input, Direction.Input)
-        self.assertIs(Direction.Input | Direction.Output, Direction.Bidir)
-        self.assertIs(Direction.Input | Direction.Bidir, Direction.Bidir)
-        self.assertIs(Direction.Output | Direction.Input, Direction.Bidir)
-        self.assertIs(Direction.Output | Direction.Output, Direction.Output)
-        self.assertIs(Direction.Output | Direction.Bidir, Direction.Bidir)
-        self.assertIs(Direction.Bidir | Direction.Input, Direction.Bidir)
-        self.assertIs(Direction.Bidir | Direction.Output, Direction.Bidir)
-        self.assertIs(Direction.Bidir | Direction.Bidir, Direction.Bidir)
-        with self.assertRaises(TypeError):
-            Direction.Bidir | 3
-
     def test_and(self):
         self.assertIs(Direction.Input & Direction.Input, Direction.Input)
         self.assertIs(Direction.Input & Direction.Bidir, Direction.Input)

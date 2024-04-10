@@ -1673,9 +1673,9 @@ Amaranth provides support for memories in the standard library module :mod:`amar
 I/O values
 ==========
 
-To interoperate with external circuitry, Amaranth provides *I/O values*, which represent bundles of wires carrying uninterpreted signals. Unlike regular :ref:`values <lang-values>`, which represent binary numbers and can be :ref:`assigned <lang-assigns>` to create a unidirectional connection or used in computations, I/O values represent electrical signals that may be digital or analog and have no :ref:`shape <lang-shapes>`, cannot be assigned, used in computations, or simulated.
+To interoperate with external circuitry, Amaranth provides *core I/O values*, which represent bundles of wires carrying uninterpreted signals. Unlike regular :ref:`values <lang-values>`, which represent binary numbers and can be :ref:`assigned <lang-assigns>` to create a unidirectional connection or used in computations, core I/O values represent electrical signals that may be digital or analog and have no :ref:`shape <lang-shapes>`, cannot be assigned, used in computations, or simulated.
 
-I/O values are only used to define connections between non-Amaranth building blocks that traverse an Amaranth design, including :ref:`instances <lang-instance>` and :ref:`I/O buffer instances <lang-iobufferinstance>`.
+Core I/O values are only used to define connections between non-Amaranth building blocks that traverse an Amaranth design, including :ref:`instances <lang-instance>` and :ref:`I/O buffer instances <lang-iobufferinstance>`.
 
 
 .. _lang-ioports:
@@ -1683,7 +1683,7 @@ I/O values are only used to define connections between non-Amaranth building blo
 I/O ports
 ---------
 
-An *I/O port* is an I/O value representing a connection to a port of the topmost module in the :ref:`design hierarchy <lang-submodules>`. It can be created with an explicitly specified width.
+A *core I/O port* is a core I/O value representing a connection to a port of the topmost module in the :ref:`design hierarchy <lang-submodules>`. It can be created with an explicitly specified width.
 
 .. testcode::
 
@@ -1695,7 +1695,7 @@ An *I/O port* is an I/O value representing a connection to a port of the topmost
     >>> port.width
     4
 
-I/O ports can be named in the same way as :ref:`signals <lang-signalname>`:
+Core I/O ports can be named in the same way as :ref:`signals <lang-signalname>`:
 
 .. doctest::
 
@@ -1703,7 +1703,7 @@ I/O ports can be named in the same way as :ref:`signals <lang-signalname>`:
     >>> clk_port.name
     'clk'
 
-If two I/O ports with the same name exist in a design, one of them will be renamed to remove the ambiguity. Because the name of an I/O port is significant, they should be named unambiguously.
+If two core I/O ports with the same name exist in a design, one of them will be renamed to remove the ambiguity. Because the name of a core I/O port is significant, they should be named unambiguously.
 
 
 .. _lang-ioops:
@@ -1711,7 +1711,7 @@ If two I/O ports with the same name exist in a design, one of them will be renam
 I/O operators
 -------------
 
-I/O values support only a limited set of :ref:`sequence <python:typesseq>` operators, all of which return another I/O value. The following table lists the I/O operators provided by Amaranth:
+Core I/O values support only a limited set of :ref:`sequence <python:typesseq>` operators, all of which return another core I/O value. The following table lists the operators provided by Amaranth for core I/O values:
 
 =============== ============================== ===================
 Operation       Description                    Notes
@@ -1747,9 +1747,9 @@ An instance can be added as a submodule using the :py:`m.submodules.name = Insta
 
 * An attribute is specified using the :py:`a_ANAME=attr` or :py:`("a", "ANAME", attr)` syntaxes. The :py:`attr` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
 * A parameter is specified using the :py:`p_PNAME=param` or :py:`("p", "PNAME", param)` syntaxes. The :py:`param` must be an :class:`int`, a :class:`str`, or a :class:`Const`.
-* An input is specified using the :py:`i_INAME=in_val` or :py:`("i", "INAME", in_val)` syntaxes. The :py:`in_val` must be an :ref:`I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object.
-* An output is specified using the :py:`o_ONAME=out_val` or :py:`("o", "ONAME", out_val)` syntaxes. The :py:`out_val` must be an :ref:`I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object that casts to a :ref:`signal <lang-signals>`, a concatenation of signals, or a slice of a signal.
-* An inout is specified using the :py:`io_IONAME=inout_val` or :py:`("io", "IONAME", inout_val)` syntaxes. The :py:`inout_val` must be an :ref:`I/O value <lang-iovalues>`.
+* An input is specified using the :py:`i_INAME=in_val` or :py:`("i", "INAME", in_val)` syntaxes. The :py:`in_val` must be a :ref:`core I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object.
+* An output is specified using the :py:`o_ONAME=out_val` or :py:`("o", "ONAME", out_val)` syntaxes. The :py:`out_val` must be a :ref:`core I/O value <lang-iovalues>` or a :ref:`value-like <lang-valuelike>` object that casts to a :ref:`signal <lang-signals>`, a concatenation of signals, or a slice of a signal.
+* An inout is specified using the :py:`io_IONAME=inout_val` or :py:`("io", "IONAME", inout_val)` syntaxes. The :py:`inout_val` must be a :ref:`core I/O value <lang-iovalues>`.
 
 The two following examples use both syntaxes to add the same instance of type ``external`` as a submodule named ``processor``:
 
@@ -1833,7 +1833,11 @@ Although an :class:`Instance` is not an elaboratable, as a special case, it can 
 I/O buffer instances
 ====================
 
-An *I/O buffer instance* is a submodule that allows connecting :ref:`I/O values <lang-iovalues>` and regular :ref:`values <lang-values>` without the use of an external, toolchain- and technology-dependent :ref:`instance <lang-instance>`. It can be created in four configurations: input, output, tristatable output, and bidirectional (input/output).
+.. note::
+
+    I/O buffer instances are a low-level primitive which is documented to ensure that the standard library does not rely on private interfaces in the core language. Most designers should use the :mod:`amaranth.lib.io` module instead.
+
+An *I/O buffer instance* is a submodule that allows connecting :ref:`core I/O values <lang-iovalues>` and regular :ref:`values <lang-values>` without the use of an external, toolchain- and technology-dependent :ref:`instance <lang-instance>`. It can be created in four configurations: input, output, tristatable output, and bidirectional (input/output).
 
 .. testcode::
 
@@ -1841,7 +1845,7 @@ An *I/O buffer instance* is a submodule that allows connecting :ref:`I/O values 
 
     m = Module()
 
-In the input configuration, the buffer combinationally drives a signal :py:`i` by the port:
+In the input configuration, the buffer instance combinationally drives a signal :py:`i` by the port:
 
 .. testcode::
 
@@ -1849,7 +1853,7 @@ In the input configuration, the buffer combinationally drives a signal :py:`i` b
     port_i = Signal(4)
     m.submodules += IOBufferInstance(port, i=port_i)
 
-In the output configuration, the buffer combinationally drives the port by a value :py:`o`:
+In the output configuration, the buffer instance combinationally drives the port by a value :py:`o`:
 
 .. testcode::
 
@@ -1857,7 +1861,7 @@ In the output configuration, the buffer combinationally drives the port by a val
     port_o = Signal(4)
     m.submodules += IOBufferInstance(port, o=port_o)
 
-In the tristatable output configuration, the buffer combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+In the tristatable output configuration, the buffer instance combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
 .. testcode::
 
@@ -1866,7 +1870,7 @@ In the tristatable output configuration, the buffer combinationally drives the p
     port_oe = Signal()
     m.submodules += IOBufferInstance(port, o=port_o, oe=port_oe)
 
-In the bidirectional (input/output) configuration, the buffer combinationally drives a signal :py:`i` by the port, combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+In the bidirectional (input/output) configuration, the buffer instance combinationally drives a signal :py:`i` by the port, combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
 .. testcode::
 
