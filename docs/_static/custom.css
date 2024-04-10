@@ -11,7 +11,7 @@ a { text-decoration: underline; }
 /* Some of our section titles are looong */
 @media screen and (min-width:769px) {
   .wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
-  .wy-side-nav-search { width: 325px; }
+  .wy-side-nav-search { width: 340px; margin-bottom: .0em; }
   .wy-nav-content-wrap { margin-left: 340px; }
 }
 
