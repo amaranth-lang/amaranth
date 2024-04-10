@@ -142,34 +142,15 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         def missing_domain_error(name):
             raise RuntimeError("Missing domain in pin fragment")
 
-        def add_pin_fragment(pin, pin_fragment):
-            pin_fragment = Fragment.get(pin_fragment, self)
-            pin_fragment._propagate_domains(missing_domain_error)
-            pin_fragment = DomainLowerer()(pin_fragment)
-            fragment.add_subfragment(pin_fragment, name=f"pin_{pin.name}")
+        for pin, port, buffer in self.iter_pins():
+            buffer = Fragment.get(buffer, self)
+            buffer._propagate_domains(missing_domain_error)
+            buffer = DomainLowerer()(buffer)
+            fragment.add_subfragment(buffer, name=f"pin_{pin.name}")
 
-        for pin, port, attrs, invert in self.iter_single_ended_pins():
-            if pin.dir == "i":
-                add_pin_fragment(pin, self.get_input(pin, port, attrs, invert))
-            if pin.dir == "o":
-                add_pin_fragment(pin, self.get_output(pin, port, attrs, invert))
-            if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_tristate(pin, port, attrs, invert))
-            if pin.dir == "io":
-                add_pin_fragment(pin, self.get_input_output(pin, port, attrs, invert))
-
-        for pin, port, attrs, invert in self.iter_differential_pins():
-            if pin.dir == "i":
-                add_pin_fragment(pin, self.get_diff_input(pin, port, attrs, invert))
-            if pin.dir == "o":
-                add_pin_fragment(pin, self.get_diff_output(pin, port, attrs, invert))
-            if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_diff_tristate(pin, port, attrs, invert))
-            if pin.dir == "io":
-                add_pin_fragment(pin, self.get_diff_input_output(pin, port, attrs, invert))
-
-        fragment = Design(fragment, [], hierarchy=(name,))
-        return self.toolchain_prepare(fragment, name, **kwargs)
+        ports = [(port.name, port, None) for port in self.iter_ports()]
+        design = Design(fragment, ports, hierarchy=(name,))
+        return self.toolchain_prepare(design, name, **kwargs)
 
     @abstractmethod
     def toolchain_prepare(self, fragment, name, **kwargs):
@@ -185,108 +166,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         """
         raise NotImplementedError("Platform '{}' does not support programming"
                                   .format(type(self).__name__))
-
-    def _check_feature(self, feature, pin, attrs, valid_xdrs, valid_attrs):
-        if len(valid_xdrs) == 0:
-            raise NotImplementedError("Platform '{}' does not support {}"
-                                      .format(type(self).__name__, feature))
-        elif pin.xdr not in valid_xdrs:
-            raise NotImplementedError("Platform '{}' does not support {} for XDR {}"
-                                      .format(type(self).__name__, feature, pin.xdr))
-
-        if not valid_attrs and attrs:
-            raise NotImplementedError("Platform '{}' does not support attributes for {}"
-                                      .format(type(self).__name__, feature))
-
-    @staticmethod
-    def _invert_if(invert, value):
-        if invert:
-            return ~value
-        else:
-            return value
-
-    def get_input(self, pin, port, attrs, invert):
-        self._check_feature("input", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-
-        m = Module()
-        if pin.xdr == 0:
-            m.submodules.buf = buf = io.Buffer(io.Direction.Input, port)
-            m.d.comb += pin.i.eq(buf.i)
-        elif pin.xdr == 1:
-            m.domains.input = cd_input = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.FFBuffer(io.Direction.Input, port, i_domain="input")
-            m.d.comb += pin.i.eq(buf.i)
-            m.d.comb += cd_input.clk.eq(pin.i_clk)
-        elif pin.xdr == 2:
-            m.domains.input = cd_input = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.DDRBuffer(io.Direction.Input, port, i_domain="input")
-            m.d.comb += pin.i0.eq(buf.i[0])
-            m.d.comb += pin.i1.eq(buf.i[1])
-            m.d.comb += cd_input.clk.eq(pin.i_clk)
-        return m
-
-    def get_output(self, pin, port, attrs, invert):
-        self._check_feature("output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-
-        m = Module()
-        if pin.xdr == 0:
-            m.submodules.buf = buf = io.Buffer(io.Direction.Output, port)
-            m.d.comb += buf.o.eq(pin.o)
-        elif pin.xdr == 1:
-            m.domains.output = cd_output = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.FFBuffer(io.Direction.Output, port, o_domain="output")
-            m.d.comb += buf.o.eq(pin.o)
-            m.d.comb += cd_output.clk.eq(pin.o_clk)
-        elif pin.xdr == 2:
-            m.domains.output = cd_output = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.DDRBuffer(io.Direction.Output, port, o_domain="output")
-            m.d.comb += buf.o[0].eq(pin.o0)
-            m.d.comb += buf.o[1].eq(pin.o1)
-            m.d.comb += cd_output.clk.eq(pin.o_clk)
-        if pin.dir == "oe":
-            m.d.comb += buf.oe.eq(pin.oe)
-        return m
-
-    get_tristate = get_output
-
-    def get_input_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=(0, 1, 2), valid_attrs=True)
-
-        m = Module()
-        if pin.xdr == 0:
-            m.submodules.buf = buf = io.Buffer(io.Direction.Bidir, port)
-            m.d.comb += pin.i.eq(buf.i)
-            m.d.comb += buf.o.eq(pin.o)
-            m.d.comb += buf.oe.eq(pin.oe)
-        elif pin.xdr == 1:
-            m.domains.input = cd_input = ClockDomain(reset_less=True)
-            m.domains.output = cd_output = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.FFBuffer(io.Direction.Bidir, port, i_domain="input", o_domain="output")
-            m.d.comb += pin.i.eq(buf.i)
-            m.d.comb += buf.o.eq(pin.o)
-            m.d.comb += buf.oe.eq(pin.oe)
-            m.d.comb += cd_input.clk.eq(pin.i_clk)
-            m.d.comb += cd_output.clk.eq(pin.o_clk)
-        elif pin.xdr == 2:
-            m.domains.input = cd_input = ClockDomain(reset_less=True)
-            m.domains.output = cd_output = ClockDomain(reset_less=True)
-            m.submodules.buf = buf = io.DDRBuffer(io.Direction.Bidir, port, i_domain="input", o_domain="output")
-            m.d.comb += pin.i0.eq(buf.i[0])
-            m.d.comb += pin.i1.eq(buf.i[1])
-            m.d.comb += buf.o[0].eq(pin.o0)
-            m.d.comb += buf.o[1].eq(pin.o1)
-            m.d.comb += buf.oe.eq(pin.oe)
-            m.d.comb += cd_input.clk.eq(pin.i_clk)
-            m.d.comb += cd_output.clk.eq(pin.o_clk)
-        return m
-
-    get_diff_input = get_input
-    get_diff_output = get_output
-    get_diff_tristate = get_tristate
-    get_diff_input_output = get_input_output
 
 
 class TemplatedPlatform(Platform):
