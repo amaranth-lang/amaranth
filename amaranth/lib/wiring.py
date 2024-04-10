@@ -689,7 +689,7 @@ class Signature(metaclass=SignatureMeta):
     :class:`Signature` can be used as a base class to define :ref:`customized <wiring-customizing>`
     signatures and interface objects.
 
-    .. important::
+    .. warning::
 
         :class:`Signature` objects are immutable. Classes inheriting from :class:`Signature` must
         ensure this remains the case when additional functionality is added.
@@ -1143,7 +1143,7 @@ class PureInterface:
     :meth:`Signature.create`, but it can also be used in any other context where an interface
     object needs to be created without the overhead of defining a class for it.
 
-    .. important::
+    .. tip::
 
         Any object can be an interface object; it only needs a :py:`signature` property containing
         a compliant signature. It is **not** necessary to use :class:`PureInterface` in order to
@@ -1678,7 +1678,7 @@ class Component(Elaboratable):
     def signature(self):
         """The signature of the component.
 
-        .. important::
+        .. warning::
 
             Do not override this property. Once a component is constructed, its :attr:`signature`
             property must always return the same :class:`Signature` instance. The constructor

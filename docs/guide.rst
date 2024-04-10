@@ -811,9 +811,9 @@ Crucially, this means that any Python object can be added to an array; the only 
 
     An array becomes immutable after it is indexed for the first time. The elements of the array do not themselves become immutable, but it is not recommended to mutate them as the behavior can become unpredictable.
 
-.. important::
+.. warning::
 
-    Each time an array proxy object with ``n`` elements is used in an expression, it generates a multiplexer with ``n`` branches. However, using ``k`` of such array proxy objects in an expression generates a multiplexer with ``n**k`` branches. This can generate extremely large circuits that may quickly exhaust the resources of the synthesis target or even the available RAM.
+    Each time an array proxy object with :py:`n` elements is used in an expression, it generates a multiplexer with :py:`n` branches. However, using :py:`k` of such array proxy objects in an expression generates a multiplexer with :py:`n**k` branches. This can generate extremely large circuits that may quickly exhaust the resources of the synthesis target or even the available RAM.
 
 
 .. _lang-data:
@@ -1499,7 +1499,7 @@ The :meth:`~Elaboratable.elaborate` method must either return an instance of :cl
 
 The :py:`platform` argument received by the :meth:`~Elaboratable.elaborate` method can be :py:`None`, an instance of :ref:`a built-in platform <platform>`, or a custom object. It is used for `dependency injection <https://en.wikipedia.org/wiki/Dependency_injection>`_ and to contain the state of a design while it is being elaborated.
 
-.. important::
+.. warning::
 
     The :meth:`~Elaboratable.elaborate` method should not modify the ``self`` object it receives other than for debugging and experimentation. Elaborating the same design twice with two identical platform objects should produce two identical netlists. If the design needs to be modified after construction, this should happen before elaboration.
 
@@ -1665,7 +1665,7 @@ The renaming of the ``sync`` clock domain in it causes the behavior of the final
     m.d.video += count.eq(count + 1)
     m.d.comb += zero.eq(count == 0)
 
-.. tip::
+.. warning::
 
     A combinatorial signal can change synchronously to a clock domain, as in the example above, in which case it may only be sampled from the same clock domain unless explicitly synchronized. Renaming a clock domain must be assumed to potentially affect any output of an elaboratable.
 
