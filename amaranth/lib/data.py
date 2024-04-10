@@ -208,6 +208,11 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             an all-zero value and had every field assigned to the corresponding value in the order
             in which they appear in :py:`init`.
         """
+        if isinstance(init, Const):
+            if Layout.cast(init.shape()) != self:
+                raise ValueError(f"Const layout {init.shape()!r} differs from shape layout "
+                                 f"{self!r}")
+            return init
         if init is None:
             iterator = iter(())
         elif isinstance(init, Mapping):
@@ -1139,6 +1144,11 @@ class _AggregateMeta(ShapeCastable, type):
         return super().__call__(cls, target)
 
     def const(cls, init):
+        if isinstance(init, Const):
+            if Layout.cast(init.shape()) != Layout.cast(cls.__layout):
+                raise ValueError(f"Const layout {init.shape()!r} differs from shape layout "
+                                 f"{cls.__layout!r}")
+            return init
         if cls.__layout_cls is UnionLayout:
             if init is not None and len(init) > 1:
                 raise ValueError("Initializer for at most one field can be provided for "
