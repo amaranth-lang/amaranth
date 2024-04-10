@@ -875,7 +875,7 @@ class Value(metaclass=ABCMeta):
 
         The shape of the result is the same as the shape of :py:`self`, even for unsigned values.
 
-        .. important::
+        .. warning::
 
             In Python, :py:`~0` equals :py:`-1`. In Amaranth, :py:`~C(0)` equals :py:`C(1)`.
             This is the only case where an Amaranth operator deviates from the Python operator

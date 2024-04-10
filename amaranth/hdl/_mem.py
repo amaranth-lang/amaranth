@@ -14,7 +14,7 @@ __all__ = ["FrozenMemory", "MemoryData", "Memory", "ReadPort", "WritePort", "Dum
 
 @final
 class FrozenMemory(Exception):
-    """This exception is raised when a memory array is being modified after elaboration."""
+    """Exception raised when a memory array is being modified after elaboration."""
 
 
 @final
@@ -194,7 +194,7 @@ class MemoryData:
         value that can be used to read and write the selected memory row in a simulation testbench,
         without having to create a memory port.
 
-        .. important::
+        .. tip::
 
             Even in a simulation, the value returned by this function cannot be used in a module;
             it can only be used with :py:`sim.get()` and :py:`sim.set()`.
