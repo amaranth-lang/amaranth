@@ -1,17 +1,10 @@
 """
-This module contains a catalog of predefined CRC algorithms.
+This module contains a catalog of predefined CRC algorithms, retrieved from the `reveng catalogue`_
+on 2023-05-25.
 
-All entries are from `reveng`_, accessed on 2023-05-25.
+.. _reveng catalogue: https://reveng.sourceforge.io/crc-catalogue/all.htm
 
-    .. _reveng: https://reveng.sourceforge.io/crc-catalogue/all.htm
-
-To use an entry, call it with an optional ``data_width`` which defaults
-to 8. For example:
-
-.. code-block::
-
-    crc8 = m.submodules.crc8 = crc.catalog.CRC8_AUTOSAR().create()
-
+See the documentation for the :mod:`~amaranth.lib.crc` module for examples.
 """
 
 from . import Algorithm
