@@ -2177,13 +2177,14 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         Parameters
         ----------
-        other : Value
+        other : ValueLike
             Object to base this Signal on.
         """
+        cast_other = Value.cast(other)
         if name is not None:
             new_name = str(name)
         elif name_suffix is not None:
-            new_name = other.name + str(name_suffix)
+            new_name = cast_other.name + str(name_suffix)
         else:
             new_name = tracer.get_var_name(depth=2 + src_loc_at, default="$like")
         # TODO(amaranth-0.7): remove
@@ -2196,11 +2197,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         if isinstance(other, ValueCastable):
             shape = other.shape()
         else:
-            shape = Value.cast(other).shape()
+            shape = cast_other.shape()
         kw = dict(shape=shape, name=new_name)
-        if isinstance(other, Signal):
-            kw.update(init=other.init, reset_less=other.reset_less,
-                      attrs=other.attrs, decoder=other.decoder)
+        if isinstance(cast_other, Signal):
+            if isinstance(shape, ShapeCastable):
+                other_init = shape.from_bits(cast_other.init)
+            else:
+                other_init = cast_other.init
+            kw.update(init=other_init, reset_less=cast_other.reset_less,
+                      attrs=cast_other.attrs, decoder=cast_other.decoder)
         kw.update(kwargs)
         if init is not None:
             kw["init"] = init
