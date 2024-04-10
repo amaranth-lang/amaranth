@@ -1,4 +1,4 @@
-Predefined CRC Algorithms
-#########################
+Algorithm catalog
+#################
 
 .. automodule:: amaranth.lib.crc.catalog
