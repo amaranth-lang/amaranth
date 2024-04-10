@@ -39,7 +39,21 @@ The fundamental Amaranth type is a :class:`Value`: a sequence of bits that can a
 
 For example, consider a module that processes pixels, converting them from RGB to grayscale. The color pixel format is RGB565:
 
-.. image:: _images/data/rgb565_layout.svg
+.. wavedrom:: data/rgb565_layout
+
+    {
+        "reg": [
+            {"name": ".red",   "bits": 5, "type": 2},
+            {"name": ".green", "bits": 6, "type": 3},
+            {"name": ".blue",  "bits": 5, "type": 4}
+        ],
+        "config": {
+            "lanes": 1,
+            "compact": true,
+            "vflip": true,
+            "hspace": 650
+        }
+    }
 
 This module could be implemented (using a fast but *very* approximate method) as follows:
 
