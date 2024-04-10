@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
-from ..hdl._ast import *
-from ..lib.io import *
-from ..lib import wiring
+from ..hdl import *
+from ..hdl._ast import SignalDict
+from ..lib import wiring, io
 
 from .dsl import *
 
@@ -24,6 +24,78 @@ class PortMetadata:
         self.attrs = attrs
 
 
+class PinBuffer(Elaboratable):
+    def __init__(self, pin, port):
+        if pin.xdr not in (0, 1, 2):
+            raise ValueError(f"Unsupported 'xdr' value {pin.xdr}")
+        self.pin = pin
+        self.port = port
+
+    def elaborate(self, platform):
+        m = Module()
+
+        if self.pin.dir == "i":
+            if self.pin.xdr == 0:
+                m.submodules.buf = buf = io.Buffer(io.Direction.Input, self.port)
+                m.d.comb += self.pin.i.eq(buf.i)
+            elif self.pin.xdr == 1:
+                m.domains.input = cd_input = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.FFBuffer(io.Direction.Input, self.port, i_domain="input")
+                m.d.comb += self.pin.i.eq(buf.i)
+                m.d.comb += cd_input.clk.eq(self.pin.i_clk)
+            elif self.pin.xdr == 2:
+                m.domains.input = cd_input = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.DDRBuffer(io.Direction.Input, self.port, i_domain="input")
+                m.d.comb += self.pin.i0.eq(buf.i[0])
+                m.d.comb += self.pin.i1.eq(buf.i[1])
+                m.d.comb += cd_input.clk.eq(self.pin.i_clk)
+        if self.pin.dir in ("o", "oe"):
+            if self.pin.xdr == 0:
+                m.submodules.buf = buf = io.Buffer(io.Direction.Output, self.port)
+                m.d.comb += buf.o.eq(self.pin.o)
+            elif self.pin.xdr == 1:
+                m.domains.output = cd_output = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.FFBuffer(io.Direction.Output, self.port, o_domain="output")
+                m.d.comb += buf.o.eq(self.pin.o)
+                m.d.comb += cd_output.clk.eq(self.pin.o_clk)
+            elif self.pin.xdr == 2:
+                m.domains.output = cd_output = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.DDRBuffer(io.Direction.Output, self.port, o_domain="output")
+                m.d.comb += buf.o[0].eq(self.pin.o0)
+                m.d.comb += buf.o[1].eq(self.pin.o1)
+                m.d.comb += cd_output.clk.eq(self.pin.o_clk)
+            if self.pin.dir == "oe":
+                m.d.comb += buf.oe.eq(self.pin.oe)
+        if self.pin.dir == "io":
+            if self.pin.xdr == 0:
+                m.submodules.buf = buf = io.Buffer(io.Direction.Bidir, self.port)
+                m.d.comb += self.pin.i.eq(buf.i)
+                m.d.comb += buf.o.eq(self.pin.o)
+                m.d.comb += buf.oe.eq(self.pin.oe)
+            elif self.pin.xdr == 1:
+                m.domains.input = cd_input = ClockDomain(reset_less=True)
+                m.domains.output = cd_output = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.FFBuffer(io.Direction.Bidir, self.port, i_domain="input", o_domain="output")
+                m.d.comb += self.pin.i.eq(buf.i)
+                m.d.comb += buf.o.eq(self.pin.o)
+                m.d.comb += buf.oe.eq(self.pin.oe)
+                m.d.comb += cd_input.clk.eq(self.pin.i_clk)
+                m.d.comb += cd_output.clk.eq(self.pin.o_clk)
+            elif self.pin.xdr == 2:
+                m.domains.input = cd_input = ClockDomain(reset_less=True)
+                m.domains.output = cd_output = ClockDomain(reset_less=True)
+                m.submodules.buf = buf = io.DDRBuffer(io.Direction.Bidir, self.port, i_domain="input", o_domain="output")
+                m.d.comb += self.pin.i0.eq(buf.i[0])
+                m.d.comb += self.pin.i1.eq(buf.i[1])
+                m.d.comb += buf.o[0].eq(self.pin.o0)
+                m.d.comb += buf.o[1].eq(self.pin.o1)
+                m.d.comb += buf.oe.eq(self.pin.oe)
+                m.d.comb += cd_input.clk.eq(self.pin.i_clk)
+                m.d.comb += cd_output.clk.eq(self.pin.o_clk)
+
+        return m
+
+
 class ResourceManager:
     def __init__(self, resources, connectors):
         self.resources  = OrderedDict()
@@ -33,8 +105,11 @@ class ResourceManager:
         self.connectors = OrderedDict()
         self._conn_pins = OrderedDict()
 
-        # Constraint lists
+        # List of all IOPort instances created
         self._ports     = []
+        # List of (pin, port, buffer) pairs for non-dir="-" requests.
+        self._pins      = []
+        # Constraint list
         self._clocks    = SignalDict()
 
         self.add_resources(resources)
@@ -139,11 +214,12 @@ class ResourceManager:
                     direction = phys.dir
                 if isinstance(phys, Pins):
                     phys_names = phys.map_names(self._conn_pins, resource)
-                    io = IOPort(len(phys), name="__".join(path) + "__io", metadata=[
+                    iop = IOPort(len(phys), name="__".join(path) + "__io", metadata=[
                         PortMetadata(name, attrs)
                         for name in phys_names
                     ])
-                    port = SingleEndedPort(io, invert=phys.invert, direction=direction)
+                    self._ports.append(iop)
+                    port = io.SingleEndedPort(iop, invert=phys.invert, direction=direction)
                 if isinstance(phys, DiffPairs):
                     phys_names_p = phys.p.map_names(self._conn_pins, resource)
                     phys_names_n = phys.n.map_names(self._conn_pins, resource)
@@ -156,11 +232,8 @@ class ResourceManager:
                         PortMetadata(name, attrs)
                         for name in phys_names_n
                     ])
-                    port = DifferentialPort(p, n, invert=phys.invert, direction=direction)
-                if dir == "-":
-                    pin = None
-                else:
-                    pin = wiring.flipped(Pin(len(phys), dir, xdr=xdr, path=path))
+                    self._ports += [p, n]
+                    port = io.DifferentialPort(p, n, invert=phys.invert, direction=direction)
 
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
@@ -171,12 +244,16 @@ class ResourceManager:
                                                     ".".join(self._phys_reqd[phys_name])))
                     self._phys_reqd[phys_name] = path
 
-                self._ports.append((resource, pin, port, attrs))
+                if dir == "-":
+                    return port
+                else:
+                    pin = wiring.flipped(io.Pin(len(phys), dir, xdr=xdr, path=path))
+                    buffer = PinBuffer(pin, port)
+                    self._pins.append((pin, port, buffer))
 
-                if pin is not None and resource.clock is not None:
-                    self.add_clock_constraint(pin.i, resource.clock.frequency)
-
-                return pin if pin is not None else port
+                    if resource.clock is not None:
+                        self.add_clock_constraint(pin.i, resource.clock.frequency)
+                    return pin
 
             else:
                 assert False # :nocov:
@@ -188,56 +265,19 @@ class ResourceManager:
         self._requested[resource.name, resource.number] = value
         return value
 
-    def iter_single_ended_pins(self):
-        for res, pin, port, attrs in self._ports:
-            if pin is None:
-                continue
-            if isinstance(res.ios[0], Pins):
-                yield pin, port, attrs, res.ios[0].invert
-
-    def iter_differential_pins(self):
-        for res, pin, port, attrs in self._ports:
-            if pin is None:
-                continue
-            if isinstance(res.ios[0], DiffPairs):
-                yield pin, port, attrs, res.ios[0].invert
-
-    def should_skip_port_component(self, port, attrs, component):
-        return False
+    def iter_pins(self):
+        yield from self._pins
 
     def iter_ports(self):
-        for res, pin, port, attrs in self._ports:
-            if isinstance(res.ios[0], Pins):
-                if not self.should_skip_port_component(port, attrs, "io"):
-                    yield port.io
-            elif isinstance(res.ios[0], DiffPairs):
-                if not self.should_skip_port_component(port, attrs, "p"):
-                    yield port.p
-                if not self.should_skip_port_component(port, attrs, "n"):
-                    yield port.n
-            else:
-                assert False
-
-    def iter_port_constraints(self):
-        for res, pin, port, attrs in self._ports:
-            if isinstance(res.ios[0], Pins):
-                if not self.should_skip_port_component(port, attrs, "io"):
-                    yield port.io.name, res.ios[0].map_names(self._conn_pins, res), attrs
-            elif isinstance(res.ios[0], DiffPairs):
-                if not self.should_skip_port_component(port, attrs, "p"):
-                    yield port.p.name, res.ios[0].p.map_names(self._conn_pins, res), attrs
-                if not self.should_skip_port_component(port, attrs, "n"):
-                    yield port.n.name, res.ios[0].n.map_names(self._conn_pins, res), attrs
-            else:
-                assert False
+        yield from self._ports
 
     def iter_port_constraints_bits(self):
-        for port_name, pin_names, attrs in self.iter_port_constraints():
-            if len(pin_names) == 1:
-                yield port_name, pin_names[0], attrs
+        for port in self._ports:
+            if len(port) == 1:
+                yield port.name, port.metadata[0].name, port.metadata[0].attrs
             else:
-                for bit, pin_name in enumerate(pin_names):
-                    yield f"{port_name}[{bit}]", pin_name, attrs
+                for bit, meta in enumerate(port.metadata):
+                    yield f"{port.name}[{bit}]", meta.name, meta.attrs
 
     def add_clock_constraint(self, clock, frequency):
         if isinstance(clock, ClockSignal):
@@ -267,11 +307,11 @@ class ResourceManager:
         # Constraints on nets with no corresponding input pin (e.g. PLL or SERDES outputs) are not
         # affected.
         pin_i_to_port = SignalDict()
-        for res, pin, port, attrs in self._ports:
+        for pin, port, _fragment in self._pins:
             if hasattr(pin, "i"):
-                if isinstance(res.ios[0], Pins):
+                if isinstance(port, io.SingleEndedPort):
                     pin_i_to_port[pin.i] = port.io
-                elif isinstance(res.ios[0], DiffPairs):
+                elif isinstance(port, io.DifferentialPort):
                     pin_i_to_port[pin.i] = port.p
                 else:
                     assert False
