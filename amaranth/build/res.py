@@ -138,26 +138,24 @@ class ResourceManager:
                 else:
                     direction = phys.dir
                 if isinstance(phys, Pins):
-                    phys_names = phys.names
+                    phys_names = phys.map_names(self._conn_pins, resource)
                     io = IOPort(len(phys), name="__".join(path) + "__io", metadata=[
                         PortMetadata(name, attrs)
-                        for name in phys.names
+                        for name in phys_names
                     ])
                     port = SingleEndedPort(io, invert=phys.invert, direction=direction)
                 if isinstance(phys, DiffPairs):
-                    phys_names = []
+                    phys_names_p = phys.p.map_names(self._conn_pins, resource)
+                    phys_names_n = phys.n.map_names(self._conn_pins, resource)
+                    phys_names = phys_names_p + phys_names_n
                     p = IOPort(len(phys), name="__".join(path) + "__p", metadata=[
                         PortMetadata(name, attrs)
-                        for name in phys.p.names
+                        for name in phys_names_p
                     ])
                     n = IOPort(len(phys), name="__".join(path) + "__n", metadata=[
                         PortMetadata(name, attrs)
-                        for name in phys.n.names
+                        for name in phys_names_n
                     ])
-                    if not self.should_skip_port_component(None, attrs, "p"):
-                        phys_names += phys.p.names
-                    if not self.should_skip_port_component(None, attrs, "n"):
-                        phys_names += phys.n.names
                     port = DifferentialPort(p, n, invert=phys.invert, direction=direction)
                 if dir == "-":
                     pin = None
