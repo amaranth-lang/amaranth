@@ -267,7 +267,21 @@ class StructLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/struct_layout.svg
+    .. wavedrom:: data/struct_layout
+
+        {
+            "reg": [
+                {"name": ".first",  "bits": 3},
+                {"name": ".second", "bits": 7},
+                {"name": ".third",  "bits": 6}
+            ],
+            "config": {
+                "lanes": 1,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 
@@ -344,7 +358,23 @@ class UnionLayout(Layout):
 
     For example, the following layout of a 7-bit value:
 
-    .. image:: _images/data/union_layout.svg
+    .. wavedrom:: data/union_layout
+
+        {
+            "reg": [
+                {"name": ".third",  "bits": 6},
+                {"name": "",        "bits": 1, "type": 1},
+                {"name": ".second", "bits": 7},
+                {"name": ".first",  "bits": 3},
+                {"name": "",        "bits": 4, "type": 1}
+            ],
+            "config": {
+                "lanes": 3,
+                "compact": true,
+                "vflip": true,
+                "hspace": 289.4375
+            }
+        }
 
     can be described with:
 
@@ -419,7 +449,22 @@ class ArrayLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/array_layout.svg
+    .. wavedrom:: data/array_layout
+
+        {
+            "reg": [
+                {"name": "[0]",  "bits": 4},
+                {"name": "[1]",  "bits": 4},
+                {"name": "[2]",  "bits": 4},
+                {"name": "[3]",  "bits": 4}
+            ],
+            "config": {
+                "lanes": 1,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 
@@ -502,7 +547,28 @@ class FlexibleLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/flexible_layout.svg
+    .. wavedrom:: data/flexible_layout
+
+        {
+            "reg": [
+                {"name": "",        "bits": 14, "type": 1},
+                {"name": "[0]",     "bits":  1},
+                {"name": "",        "bits":  1, "type": 1},
+                {"name": "",        "bits": 10, "type": 1},
+                {"name": ".third",  "bits":  6},
+                {"name": ".second", "bits":  7},
+                {"name": "",        "bits":  9, "type": 1},
+                {"name": "",        "bits":  1, "type": 1},
+                {"name": ".first",  "bits":  3},
+                {"name": "",        "bits": 12, "type": 1}
+            ],
+            "config": {
+                "lanes": 4,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 

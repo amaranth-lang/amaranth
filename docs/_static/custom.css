@@ -23,3 +23,9 @@ a { text-decoration: underline; }
 
 /* Work around https://github.com/readthedocs/sphinx_rtd_theme/issues/1301 */
 .py.property { display: block !important; }
+
+/* Work around images in docstrings being glued to the paragraph underneath */
+.rst-content section dd>img { margin-bottom: 24px; }
+
+/* No switchable color schemes */
+img { color-scheme: light; }
