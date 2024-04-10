@@ -641,6 +641,15 @@ class ViewTestCase(FHDLTestCase):
         s1 = Signal(data.StructLayout({"a": unsigned(1)}))
         s2 = Signal.like(s1)
         self.assertEqual(s2.shape(), data.StructLayout({"a": unsigned(1)}))
+        s3 = Signal.like(s1, name_suffix="a")
+        self.assertEqual(s3.as_value().name, "s1a")
+
+        s4 = Signal(data.StructLayout({"a": unsigned(2), "b": unsigned(3)}), init={"a": 1}, reset_less=True, attrs={"x": "y"})
+        s5 = Signal.like(s4)
+        self.assertEqual(s5.as_value().init, 0b00001)
+        self.assertEqual(s5.as_value().reset_less, True)
+        self.assertEqual(s5.as_value().attrs, {"x": "y"})
+
 
     def test_bug_837_array_layout_getitem_str(self):
         with self.assertRaisesRegex(TypeError,
