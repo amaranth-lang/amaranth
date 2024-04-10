@@ -41,6 +41,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
 * Ensure all elaboratables are subclasses of :class:`Elaboratable`
 * Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
+* Remove uses of ``amaranth.lib.coding.*`` by inlining or copying the implementation of the modules.
 
 
 Implemented RFCs
@@ -59,6 +60,7 @@ Implemented RFCs
 .. _RFC 58: https://amaranth-lang.org/rfcs/0058-valuecastable-format.html
 .. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
 .. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
+.. _RFC 63: https://amaranth-lang.org/rfcs/0063-remove-lib-coding.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -71,7 +73,8 @@ Implemented RFCs
 * `RFC 53`_: Low-level I/O primitives
 * `RFC 58`_: Core support for ``ValueCastable`` formatting
 * `RFC 59`_: Get rid of upwards propagation of clock domains
-* `RFC 62`_: The `MemoryData`` class
+* `RFC 62`_: The ``MemoryData`` class
+* `RFC 63`_: Remove ``amaranth.lib.coding``
 
 
 Language changes
@@ -115,6 +118,7 @@ Standard library changes
 * Changed: :meth:`amaranth.lib.wiring.Signature.is_compliant` no longer rejects reset-less signals.
 * Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
 * Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
+* Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
