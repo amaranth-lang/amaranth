@@ -4,12 +4,24 @@ from .. import *
 from ..hdl import Assume
 from ..asserts import Initial
 from ..utils import ceil_log2
-from .coding import GrayEncoder, GrayDecoder
 from .cdc import FFSynchronizer, AsyncFFSynchronizer
 from .memory import Memory
 
 
 __all__ = ["FIFOInterface", "SyncFIFO", "SyncFIFOBuffered", "AsyncFIFO", "AsyncFIFOBuffered"]
+
+
+def _gray_encode(val):
+    return val ^ val[1:]
+
+
+def _gray_decode(val):
+    rhs = Const(0)
+    out = [None] * len(val)
+    for i in reversed(range(len(val))):
+        rhs = rhs ^ val[i]
+        out[i] = rhs
+    return Cat(*out)
 
 
 class FIFOInterface:
@@ -398,33 +410,21 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
 
         produce_w_gry = Signal(self._ctr_bits)
         produce_r_gry = Signal(self._ctr_bits)
-        produce_enc = m.submodules.produce_enc = \
-            GrayEncoder(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
             FFSynchronizer(produce_w_gry, produce_r_gry, o_domain=self._r_domain)
-        m.d.comb += produce_enc.i.eq(produce_w_nxt),
-        m.d[self._w_domain] += produce_w_gry.eq(produce_enc.o)
+        m.d[self._w_domain] += produce_w_gry.eq(_gray_encode(produce_w_nxt))
 
         consume_r_gry = Signal(self._ctr_bits, reset_less=True)
         consume_w_gry = Signal(self._ctr_bits)
-        consume_enc = m.submodules.consume_enc = \
-            GrayEncoder(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
             FFSynchronizer(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
-        m.d.comb += consume_enc.i.eq(consume_r_nxt)
-        m.d[self._r_domain] += consume_r_gry.eq(consume_enc.o)
+        m.d[self._r_domain] += consume_r_gry.eq(_gray_encode(consume_r_nxt))
 
         consume_w_bin = Signal(self._ctr_bits)
-        consume_dec = m.submodules.consume_dec = \
-            GrayDecoder(self._ctr_bits)
-        m.d.comb += consume_dec.i.eq(consume_w_gry),
-        m.d[self._w_domain] += consume_w_bin.eq(consume_dec.o)
+        m.d[self._w_domain] += consume_w_bin.eq(_gray_decode(consume_w_gry))
 
         produce_r_bin = Signal(self._ctr_bits)
-        produce_dec = m.submodules.produce_dec = \
-            GrayDecoder(self._ctr_bits)
-        m.d.comb += produce_dec.i.eq(produce_r_gry),
-        m.d.comb += produce_r_bin.eq(produce_dec.o)
+        m.d.comb += produce_r_bin.eq(_gray_decode(produce_r_gry))
 
         w_full  = Signal()
         r_empty = Signal()
@@ -474,13 +474,10 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
 
         # Decode Gray code counter synchronized from write domain to overwrite binary
         # counter in read domain.
-        rst_dec = m.submodules.rst_dec = \
-            GrayDecoder(self._ctr_bits)
-        m.d.comb += rst_dec.i.eq(produce_r_gry)
         with m.If(r_rst):
             m.d.comb += r_empty.eq(1)
             m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry)
-            m.d[self._r_domain] += consume_r_bin.eq(rst_dec.o)
+            m.d[self._r_domain] += consume_r_bin.eq(_gray_decode(produce_r_gry))
             m.d[self._r_domain] += self.r_rst.eq(1)
         with m.Else():
             m.d[self._r_domain] += self.r_rst.eq(0)
