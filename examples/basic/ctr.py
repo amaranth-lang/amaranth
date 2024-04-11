@@ -4,7 +4,7 @@ from amaranth.cli import main
 
 class Counter(Elaboratable):
     def __init__(self, width):
-        self.v = Signal(width, reset=2**width-1)
+        self.v = Signal(width, init=2**width-1)
         self.o = Signal()
 
     def elaborate(self, platform):

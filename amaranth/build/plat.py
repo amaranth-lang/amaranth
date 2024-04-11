@@ -9,8 +9,10 @@ import jinja2
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
+from ..hdl._ir import IOBufferInstance, Design
 from ..hdl._xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
+from ..lib import io
 from ..back import rtlil, verilog
 from .res import *
 from .run import *
@@ -73,14 +75,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     def _toolchain_env_var(self):
         return f"AMARANTH_ENV_{tool_env_var(self.toolchain)}"
 
-    # TODO(amaranth-0.5): remove
-    @property
-    def _all_toolchain_env_vars(self):
-        return (
-            f"AMARANTH_ENV_{self.toolchain.replace('-', '_').replace('+', 'X')}",
-            self._toolchain_env_var,
-        )
-
     def build(self, elaboratable, name="top",
               build_dir="build", do_build=True,
               program_opts=None, do_program=False,
@@ -97,8 +91,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         #     may fail.
         # This is OK because even if `require_tool` succeeds, the toolchain might be broken anyway.
         # The check only serves to catch common errors earlier.
-        got_env_var = any(v in os.environ for v in self._all_toolchain_env_vars)
-        if do_build and not got_env_var:
+        if do_build and self._toolchain_env_var not in os.environ:
             for tool in self.required_tools:
                 require_tool(tool)
 
@@ -113,7 +106,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self.toolchain_program(products, name, **(program_opts or {}))
 
     def has_required_tools(self):
-        if any(v in os.environ for v in self._all_toolchain_env_vars):
+        if self._toolchain_env_var in os.environ:
             return True
         return all(has_tool(name) for name in self.required_tools)
 
@@ -146,34 +139,18 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         fragment._propagate_domains(self.create_missing_domain, platform=self)
         fragment = DomainLowerer()(fragment)
 
-        def add_pin_fragment(pin, pin_fragment):
-            pin_fragment = Fragment.get(pin_fragment, self)
-            if not isinstance(pin_fragment, Instance):
-                pin_fragment.flatten = True
-            fragment.add_subfragment(pin_fragment, name=f"pin_{pin.name}")
+        def missing_domain_error(name):
+            raise RuntimeError("Missing domain in pin fragment")
 
-        for pin, port, attrs, invert in self.iter_single_ended_pins():
-            if pin.dir == "i":
-                add_pin_fragment(pin, self.get_input(pin, port, attrs, invert))
-            if pin.dir == "o":
-                add_pin_fragment(pin, self.get_output(pin, port, attrs, invert))
-            if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_tristate(pin, port, attrs, invert))
-            if pin.dir == "io":
-                add_pin_fragment(pin, self.get_input_output(pin, port, attrs, invert))
+        for pin, port, buffer in self.iter_pins():
+            buffer = Fragment.get(buffer, self)
+            buffer._propagate_domains(missing_domain_error)
+            buffer = DomainLowerer()(buffer)
+            fragment.add_subfragment(buffer, name=f"pin_{pin.name}")
 
-        for pin, port, attrs, invert in self.iter_differential_pins():
-            if pin.dir == "i":
-                add_pin_fragment(pin, self.get_diff_input(pin, port, attrs, invert))
-            if pin.dir == "o":
-                add_pin_fragment(pin, self.get_diff_output(pin, port, attrs, invert))
-            if pin.dir == "oe":
-                add_pin_fragment(pin, self.get_diff_tristate(pin, port, attrs, invert))
-            if pin.dir == "io":
-                add_pin_fragment(pin, self.get_diff_input_output(pin, port, attrs, invert))
-
-        fragment._propagate_ports(ports=self.iter_ports(), all_undef_as_ports=False)
-        return self.toolchain_prepare(fragment, name, **kwargs)
+        ports = [(port.name, port, None) for port in self.iter_ports()]
+        design = Design(fragment, ports, hierarchy=(name,))
+        return self.toolchain_prepare(design, name, **kwargs)
 
     @abstractmethod
     def toolchain_prepare(self, fragment, name, **kwargs):
@@ -190,84 +167,6 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         raise NotImplementedError("Platform '{}' does not support programming"
                                   .format(type(self).__name__))
 
-    def _check_feature(self, feature, pin, attrs, valid_xdrs, valid_attrs):
-        if len(valid_xdrs) == 0:
-            raise NotImplementedError("Platform '{}' does not support {}"
-                                      .format(type(self).__name__, feature))
-        elif pin.xdr not in valid_xdrs:
-            raise NotImplementedError("Platform '{}' does not support {} for XDR {}"
-                                      .format(type(self).__name__, feature, pin.xdr))
-
-        if not valid_attrs and attrs:
-            raise NotImplementedError("Platform '{}' does not support attributes for {}"
-                                      .format(type(self).__name__, feature))
-
-    @staticmethod
-    def _invert_if(invert, value):
-        if invert:
-            return ~value
-        else:
-            return value
-
-    def get_input(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input", pin, attrs,
-                            valid_xdrs=(0,), valid_attrs=None)
-
-        m = Module()
-        m.d.comb += pin.i.eq(self._invert_if(invert, port))
-        return m
-
-    def get_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended output", pin, attrs,
-                            valid_xdrs=(0,), valid_attrs=None)
-
-        m = Module()
-        m.d.comb += port.eq(self._invert_if(invert, pin.o))
-        return m
-
-    def get_tristate(self, pin, port, attrs, invert):
-        self._check_feature("single-ended tristate", pin, attrs,
-                            valid_xdrs=(0,), valid_attrs=None)
-
-        m = Module()
-        m.submodules += Instance("$tribuf",
-            p_WIDTH=pin.width,
-            i_EN=pin.oe,
-            i_A=self._invert_if(invert, pin.o),
-            o_Y=port,
-        )
-        return m
-
-    def get_input_output(self, pin, port, attrs, invert):
-        self._check_feature("single-ended input/output", pin, attrs,
-                            valid_xdrs=(0,), valid_attrs=None)
-
-        m = Module()
-        m.submodules += Instance("$tribuf",
-            p_WIDTH=pin.width,
-            i_EN=pin.oe,
-            i_A=self._invert_if(invert, pin.o),
-            o_Y=port,
-        )
-        m.d.comb += pin.i.eq(self._invert_if(invert, port))
-        return m
-
-    def get_diff_input(self, pin, port, attrs, invert):
-        self._check_feature("differential input", pin, attrs,
-                            valid_xdrs=(), valid_attrs=None)
-
-    def get_diff_output(self, pin, port, attrs, invert):
-        self._check_feature("differential output", pin, attrs,
-                            valid_xdrs=(), valid_attrs=None)
-
-    def get_diff_tristate(self, pin, port, attrs, invert):
-        self._check_feature("differential tristate", pin, attrs,
-                            valid_xdrs=(), valid_attrs=None)
-
-    def get_diff_input_output(self, pin, port, attrs, invert):
-        self._check_feature("differential input/output", pin, attrs,
-                            valid_xdrs=(), valid_attrs=None)
-
 
 class TemplatedPlatform(Platform):
     toolchain         = property(abstractmethod(lambda: None))
@@ -279,17 +178,13 @@ class TemplatedPlatform(Platform):
             #!/bin/sh
             # {{autogenerated}}
             set -e{{verbose("x")}}
-            {% for var in platform._all_toolchain_env_vars %}
-            [ -n "${{var}}" ] && . "${{var}}"
-            {% endfor %}
+            [ -n "${{platform._toolchain_env_var}}" ] && . "${{platform._toolchain_env_var}}"
             {{emit_commands("sh")}}
         """,
         "build_{{name}}.bat": """
             @rem {{autogenerated}}
             {{quiet("@echo off")}}
-            {% for var in platform._all_toolchain_env_vars %}
-            if defined {{var}} call %{{var}}%
-            {% endfor %}
+            if defined {{platform._toolchain_env_var}} call %{{platform._toolchain_env_var}}%
             {{emit_commands("bat")}}
         """,
     }
@@ -319,7 +214,8 @@ class TemplatedPlatform(Platform):
         # and to incorporate the Amaranth version into generated code.
         autogenerated = f"Automatically generated by Amaranth {__version__}. Do not edit."
 
-        rtlil_text, self._name_map = rtlil.convert_fragment(fragment, name=name, emit_src=emit_src)
+        rtlil_text, self._name_map = rtlil.convert_fragment(fragment, name=name,
+                                                            emit_src=emit_src, propagate_domains=False)
 
         # Retrieve an override specified in either the environment or as a kwarg.
         # expected_type parameter is used to assert the type of kwargs, passing `None` will disable
@@ -433,9 +329,6 @@ class TemplatedPlatform(Platform):
                     return f"_{ord(match.group(1)[0]):02x}_"
             return "".join(escape_one(m) for m in re.finditer(r"([^A-Za-z0-9_])|(.)", string))
 
-        def tcl_escape(string):
-            return "{" + re.sub(r"([{}\\])", r"\\\1", string) + "}"
-
         def tcl_quote(string):
             return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
 
@@ -459,7 +352,6 @@ class TemplatedPlatform(Platform):
                 compiled.environment.filters["options"] = options
                 compiled.environment.filters["hierarchy"] = hierarchy
                 compiled.environment.filters["ascii_escape"] = ascii_escape
-                compiled.environment.filters["tcl_escape"] = tcl_escape
                 compiled.environment.filters["tcl_quote"] = tcl_quote
             except jinja2.TemplateSyntaxError as e:
                 e.args = (f"{e.message} (at {origin}:{e.lineno})",)

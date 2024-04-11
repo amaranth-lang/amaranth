@@ -1,3 +1,5 @@
+# amaranth: UnusedPrint=no, UnusedProperty=no
+
 import warnings
 from enum import Enum, EnumMeta
 
@@ -115,7 +117,7 @@ class ShapeTestCase(FHDLTestCase):
         self.assertEqual(s3.width, 4)
         self.assertEqual(s3.signed, True)
         s4 = Shape.cast(range(0, 1))
-        self.assertEqual(s4.width, 1)
+        self.assertEqual(s4.width, 0)
         self.assertEqual(s4.signed, False)
         s5 = Shape.cast(range(-1, 0))
         self.assertEqual(s5.width, 1)
@@ -129,6 +131,9 @@ class ShapeTestCase(FHDLTestCase):
         s8 = Shape.cast(range(0, 10, 3))
         self.assertEqual(s8.width, 4)
         self.assertEqual(s8.signed, False)
+        s9 = Shape.cast(range(0, 3, 3))
+        self.assertEqual(s9.width, 0)
+        self.assertEqual(s9.signed, False)
 
     def test_cast_enum(self):
         s1 = Shape.cast(UnsignedEnum)
@@ -149,6 +154,16 @@ class ShapeTestCase(FHDLTestCase):
                 r"^Object 'foo' cannot be converted to an Amaranth shape$"):
             Shape.cast("foo")
 
+    def test_hashable(self):
+        d = {
+            signed(2): "a",
+            unsigned(3): "b",
+            unsigned(2): "c",
+        }
+        self.assertEqual(d[signed(2)], "a")
+        self.assertEqual(d[unsigned(3)], "b")
+        self.assertEqual(d[unsigned(2)], "c")
+
 
 class MockShapeCastable(ShapeCastable):
     def __init__(self, dest):
@@ -163,12 +178,15 @@ class MockShapeCastable(ShapeCastable):
     def const(self, init):
         return Const(init, self.dest)
 
+    def from_bits(self, bits):
+        return bits
+
 
 class ShapeCastableTestCase(FHDLTestCase):
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockShapeCastableNoOverride' deriving from `ShapeCastable` must "
-                r"override the `as_shape` method$"):
+                r"^Class 'MockShapeCastableNoOverride' deriving from 'ShapeCastable' must "
+                r"override the 'as_shape' method$"):
             class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
                     pass
@@ -187,6 +205,30 @@ class ShapeCastableTestCase(FHDLTestCase):
     def test_recurse(self):
         sc = MockShapeCastable(MockShapeCastable(unsigned(1)))
         self.assertEqual(Shape.cast(sc), unsigned(1))
+
+    def test_abstract(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Can't instantiate abstract class ShapeCastable$"):
+            ShapeCastable()
+
+    def test_no_from_bits(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Class 'MockShapeCastableNoFromBits' deriving from 'ShapeCastable' does "
+                r"not override the 'from_bits' method, which will be required in Amaranth 0.6$"):
+            class MockShapeCastableNoFromBits(ShapeCastable):
+                def __init__(self, dest):
+                    self.dest = dest
+
+                def as_shape(self):
+                    return self.dest
+
+                def __call__(self, value):
+                    return value
+
+                def const(self, init):
+                    return Const(init, self.dest)
+
+        self.assertEqual(MockShapeCastableNoFromBits(unsigned(2)).from_bits(123), 123)
 
 
 class ShapeLikeTestCase(FHDLTestCase):
@@ -288,7 +330,7 @@ class ValueTestCase(FHDLTestCase):
         self.assertEqual(s2.start, 1)
         self.assertEqual(s2.stop, 2)
         s3 = Const(31)[::2]
-        self.assertIsInstance(s3, Cat)
+        self.assertIsInstance(s3, Concat)
         self.assertIsInstance(s3.parts[0], Slice)
         self.assertEqual(s3.parts[0].start, 0)
         self.assertEqual(s3.parts[0].stop, 1)
@@ -310,8 +352,6 @@ class ValueTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Cannot slice value with a value; use Value.bit_select\(\) or Value.word_select\(\) instead$"):
             Const(31)[s:s+3]
-
-
 
     def test_shift_left(self):
         self.assertRepr(Const(256, unsigned(9)).shift_left(0),
@@ -335,7 +375,7 @@ class ValueTestCase(FHDLTestCase):
         self.assertRepr(Const(256, signed(9)).shift_left(-5),
                         "(s (slice (const 9'sd-256) 5:9))")
         self.assertRepr(Const(256, signed(9)).shift_left(-15),
-                        "(s (slice (const 9'sd-256) 9:9))")
+                        "(s (slice (const 9'sd-256) 8:9))")
 
     def test_shift_left_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -359,12 +399,20 @@ class ValueTestCase(FHDLTestCase):
                         "(slice (const 9'd256) 1:9)")
         self.assertRepr(Const(256, unsigned(9)).shift_right(5),
                         "(slice (const 9'd256) 5:9)")
+        self.assertRepr(Const(256, unsigned(9)).shift_right(15),
+                        "(slice (const 9'd256) 9:9)")
         self.assertRepr(Const(256, signed(9)).shift_right(1),
                         "(s (slice (const 9'sd-256) 1:9))")
         self.assertRepr(Const(256, signed(9)).shift_right(5),
                         "(s (slice (const 9'sd-256) 5:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(7),
+                        "(s (slice (const 9'sd-256) 7:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(8),
+                        "(s (slice (const 9'sd-256) 8:9))")
+        self.assertRepr(Const(256, signed(9)).shift_right(9),
+                        "(s (slice (const 9'sd-256) 8:9))")
         self.assertRepr(Const(256, signed(9)).shift_right(15),
-                        "(s (slice (const 9'sd-256) 9:9))")
+                        "(s (slice (const 9'sd-256) 8:9))")
 
     def test_shift_right_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -426,6 +474,12 @@ class ValueTestCase(FHDLTestCase):
         s = Const(10).replicate(3)
         self.assertEqual(repr(s), "(cat (const 4'd10) (const 4'd10) (const 4'd10))")
 
+    def test_format_wrong(self):
+        sig = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Value \(sig sig\) cannot be converted to string."):
+            f"{sig}"
+
 
 class ConstTestCase(FHDLTestCase):
     def test_shape(self):
@@ -467,6 +521,34 @@ class ConstTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             hash(Const(0))
 
+    def test_shape_castable(self):
+        class MockConstValue(ValueCastable):
+            def __init__(self, value):
+                self.value = value
+
+            def shape(self):
+                return MockConstShape()
+            
+            def as_value(self):
+                return Const(self.value, 8)
+
+        class MockConstShape(ShapeCastable):
+            def as_shape(self):
+                return unsigned(8)
+
+            def __call__(self, value):
+                return value
+
+            def const(self, init):
+                return MockConstValue(init)
+
+            def from_bits(self, bits):
+                return bits
+
+        s = Const(10, MockConstShape())
+        self.assertIsInstance(s, MockConstValue)
+        self.assertEqual(s.value, 10)
+
 
 class OperatorTestCase(FHDLTestCase):
     def test_bool(self):
@@ -488,6 +570,11 @@ class OperatorTestCase(FHDLTestCase):
         v = Const(1, unsigned(4)).as_signed()
         self.assertEqual(repr(v), "(s (const 4'd1))")
         self.assertEqual(v.shape(), signed(4))
+
+    def test_as_signed_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot create a 0-width signed value$"):
+            Const(0, 0).as_signed()
 
     def test_pos(self):
         self.assertRepr(+Const(10), "(const 4'd10)")
@@ -659,7 +746,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux(self):
         s  = Const(0)
         v1 = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
-        self.assertEqual(repr(v1), "(m (const 1'd0) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v1), "(switch-value (const 1'd0) (case 0 (const 6'd0)) (default (const 4'd0)))")
         self.assertEqual(v1.shape(), unsigned(6))
         v2 = Mux(s, Const(0, signed(4)), Const(0, signed(6)))
         self.assertEqual(v2.shape(), signed(6))
@@ -671,11 +758,11 @@ class OperatorTestCase(FHDLTestCase):
     def test_mux_wide(self):
         s = Const(0b100)
         v = Mux(s, Const(0, unsigned(4)), Const(0, unsigned(6)))
-        self.assertEqual(repr(v), "(m (const 3'd4) (const 4'd0) (const 6'd0))")
+        self.assertEqual(repr(v), "(switch-value (const 3'd4) (case 000 (const 6'd0)) (default (const 4'd0)))")
 
     def test_mux_bool(self):
         v = Mux(True, Const(0), Const(0))
-        self.assertEqual(repr(v), "(m (const 1'd1) (const 1'd0) (const 1'd0))")
+        self.assertEqual(repr(v), "(switch-value (const 1'd1) (case 0 (const 1'd0)) (default (const 1'd0)))")
 
     def test_any(self):
         v = Const(0b101).any()
@@ -708,7 +795,7 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_enum(self):
         s = Signal(SignedEnum)
         self.assertRepr(s.matches(SignedEnum.FOO), """
-        (== (sig s) (const 2'sd-1))
+        (== (sig s) (const 1'sd-1))
         """)
 
     def test_matches_const_castable(self):
@@ -720,28 +807,28 @@ class OperatorTestCase(FHDLTestCase):
     def test_matches_width_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern '--' must have the same width as match value \(which is 4\)$"):
+                r"^Pattern '--' must have the same width as match value \(which is 4\)$"):
             s.matches("--")
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Match pattern '22' \(5'10110\) is wider than match value \(which has "
-                r"width 4\); comparison will never be true$"):
+                r"^Pattern '22' \(5'10110\) is not representable in match value shape "
+                r"\(unsigned\(4\)\); comparison will never be true$"):
             s.matches(0b10110)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Match pattern '\(cat \(const 1'd0\) \(const 4'd11\)\)' \(5'10110\) is wider "
-                r"than match value \(which has width 4\); comparison will never be true$"):
+                r"^Pattern '\(cat \(const 1'd0\) \(const 4'd11\)\)' \(5'10110\) is not "
+                r"representable in match value shape \(unsigned\(4\)\); comparison will never be true$"):
             s.matches(Cat(0, C(0b1011, 4)))
 
     def test_matches_bits_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
+                r"^Pattern 'abc' must consist of 0, 1, and - \(don't care\) bits, "
                 r"and may include whitespace$"):
             s.matches("abc")
 
     def test_matches_pattern_wrong(self):
         s = Signal(4)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Match pattern must be a string or a constant-castable expression, not 1\.0$"):
+                r"^Pattern must be a string or a constant-castable expression, not 1\.0$"):
             s.matches(1.0)
 
     def test_hash(self):
@@ -755,7 +842,7 @@ class OperatorTestCase(FHDLTestCase):
         """)
         s = Signal(signed(4))
         self.assertRepr(abs(s), """
-        (slice (m (>= (sig s) (const 1'd0)) (sig s) (- (sig s))) 0:4)
+        (slice (switch-value (>= (sig s) (const 1'd0)) (case 0 (- (sig s))) (default (sig s))) 0:4)
         """)
         self.assertEqual(abs(s).shape(), unsigned(4))
 
@@ -816,18 +903,16 @@ class SliceTestCase(FHDLTestCase):
     def test_const(self):
         a = Const.cast(Const(0x1234, 16)[4:12])
         self.assertEqual(a.value, 0x23)
-        self.assertEqual(a.width, 8)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(8))
         a = Const.cast(Const(-4, signed(8))[1:6])
         self.assertEqual(a.value, 0x1e)
-        self.assertEqual(a.width, 5)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(5))
 
 
 class BitSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal(range(self.c.width))
+        self.s = Signal(range(len(self.c)))
 
     def test_shape(self):
         s1 = self.c.bit_select(self.s, 2)
@@ -865,7 +950,7 @@ class BitSelectTestCase(FHDLTestCase):
 class WordSelectTestCase(FHDLTestCase):
     def setUp(self):
         self.c = Const(0, 8)
-        self.s = Signal(range(self.c.width))
+        self.s = Signal(range(len(self.c)))
 
     def test_shape(self):
         s1 = self.c.word_select(self.s, 2)
@@ -962,33 +1047,10 @@ class CatTestCase(FHDLTestCase):
     def test_const(self):
         a = Const.cast(Cat(Const(1, 1), Const(0, 1), Const(3, 2), Const(2, 2)))
         self.assertEqual(a.value, 0x2d)
-        self.assertEqual(a.width, 6)
-        self.assertEqual(a.signed, False)
+        self.assertEqual(a.shape(), unsigned(6))
         a = Const.cast(Cat(Const(-4, 8), Const(-3, 8)))
         self.assertEqual(a.value, 0xfdfc)
-        self.assertEqual(a.width, 16)
-        self.assertEqual(a.signed, False)
-
-
-class ReplTestCase(FHDLTestCase):
-    @_ignore_deprecated
-    def test_cast(self):
-        r = Repl(0, 3)
-        self.assertEqual(repr(r), "(cat (const 1'd0) (const 1'd0) (const 1'd0))")
-
-    @_ignore_deprecated
-    def test_int_01(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action="error", category=SyntaxWarning)
-            Repl(0, 3)
-            Repl(1, 3)
-
-    @_ignore_deprecated
-    def test_int_wrong(self):
-        with self.assertWarnsRegex(SyntaxWarning,
-                r"^Value argument of Repl\(\) is a bare integer 2 used in bit vector context; "
-                r"consider specifying explicit width using C\(2, 2\) instead$"):
-            Repl(2, 3)
+        self.assertEqual(a.shape(), unsigned(16))
 
 
 class ArrayTestCase(FHDLTestCase):
@@ -1021,7 +1083,6 @@ class ArrayTestCase(FHDLTestCase):
 
     def test_index_value_castable(self):
         class MyValue(ValueCastable):
-            @ValueCastable.lowermethod
             def as_value(self):
                 return Signal()
 
@@ -1083,6 +1144,7 @@ class ArrayProxyTestCase(FHDLTestCase):
         s = Signal(range(3))
         v = a[s]
         self.assertEqual(repr(v), "(proxy (array [1, 2, 3]) (sig s))")
+        self.assertEqual(repr(v.as_value()), "(switch-value (sig s) (case 00 (const 1'd1)) (case 01 (const 2'd2)) (case 10 (const 2'd3)))")
 
 
 class SignalTestCase(FHDLTestCase):
@@ -1109,7 +1171,7 @@ class SignalTestCase(FHDLTestCase):
         s10 = Signal(range(0))
         self.assertEqual(s10.shape(), unsigned(0))
         s11 = Signal(range(1))
-        self.assertEqual(s11.shape(), unsigned(1))
+        self.assertEqual(s11.shape(), unsigned(0))
 
     def test_shape_wrong(self):
         with self.assertRaisesRegex(TypeError,
@@ -1121,25 +1183,29 @@ class SignalTestCase(FHDLTestCase):
         self.assertEqual(s1.name, "s1")
         s2 = Signal(name="sig")
         self.assertEqual(s2.name, "sig")
+        s3 = Signal(name="")
+        self.assertEqual(s3.name, "")
 
-    def test_reset(self):
-        s1 = Signal(4, reset=0b111, reset_less=True)
-        self.assertEqual(s1.reset, 0b111)
+    def test_init(self):
+        s1 = Signal(4, init=0b111, reset_less=True)
+        self.assertEqual(s1.init, 0b111)
         self.assertEqual(s1.reset_less, True)
+        s2 = Signal.like(s1, init=0b011)
+        self.assertEqual(s2.init, 0b011)
 
-    def test_reset_enum(self):
-        s1 = Signal(2, reset=UnsignedEnum.BAR)
-        self.assertEqual(s1.reset, 2)
+    def test_init_enum(self):
+        s1 = Signal(2, init=UnsignedEnum.BAR)
+        self.assertEqual(s1.init, 2)
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value must be a constant-castable expression, "
+                r"^Initial value must be a constant-castable expression, "
                 r"not <StringEnum\.FOO: 'a'>$"):
-            Signal(1, reset=StringEnum.FOO)
+            Signal(1, init=StringEnum.FOO)
 
-    def test_reset_const_castable(self):
-        s1 = Signal(4, reset=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
-        self.assertEqual(s1.reset, 2)
+    def test_init_const_castable(self):
+        s1 = Signal(4, init=Cat(Const(0, 1), Const(1, 1), Const(0, 2)))
+        self.assertEqual(s1.init, 2)
 
-    def test_reset_shape_castable_const(self):
+    def test_init_shape_castable_const(self):
         class CastableFromHex(ShapeCastable):
             def as_shape(self):
                 return unsigned(8)
@@ -1150,54 +1216,79 @@ class SignalTestCase(FHDLTestCase):
             def const(self, init):
                 return int(init, 16)
 
-        s1 = Signal(CastableFromHex(), reset="aa")
-        self.assertEqual(s1.reset, 0xaa)
+            def from_bits(self, bits):
+                return bits
+
+        s1 = Signal(CastableFromHex(), init="aa")
+        self.assertEqual(s1.init, 0xaa)
 
         with self.assertRaisesRegex(ValueError,
                 r"^Constant returned by <.+?CastableFromHex.+?>\.const\(\) must have the shape "
                 r"that it casts to, unsigned\(8\), and not unsigned\(1\)$"):
-            Signal(CastableFromHex(), reset="01")
+            Signal(CastableFromHex(), init="01")
 
-    def test_reset_shape_castable_enum_wrong(self):
+    def test_init_shape_castable_enum_wrong(self):
         class EnumA(AmaranthEnum, shape=1):
             X = 1
         with self.assertRaisesRegex(TypeError,
-                r"^Reset value must be a constant initializer of <enum 'EnumA'>$"):
-            Signal(EnumA) # implied reset=0
+                r"^Initial value must be a constant initializer of <enum 'EnumA'>$"):
+            Signal(EnumA) # implied init=0
 
-    def test_reset_signed_mismatch(self):
+    def test_init_signed_mismatch(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -2 is signed, but the signal shape is unsigned\(2\)$"):
-            Signal(unsigned(2), reset=-2)
+                r"^Initial value -2 is signed, but the signal shape is unsigned\(2\)$"):
+            Signal(unsigned(2), init=-2)
 
-    def test_reset_wrong_too_wide(self):
+    def test_init_wrong_too_wide(self):
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 2 will be truncated to the signal shape unsigned\(1\)$"):
-            Signal(unsigned(1), reset=2)
+                r"^Initial value 2 will be truncated to the signal shape unsigned\(1\)$"):
+            Signal(unsigned(1), init=2)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value 1 will be truncated to the signal shape signed\(1\)$"):
-            Signal(signed(1), reset=1)
+                r"^Initial value 1 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), init=1)
         with self.assertWarnsRegex(SyntaxWarning,
-                r"^Reset value -2 will be truncated to the signal shape signed\(1\)$"):
-            Signal(signed(1), reset=-2)
+                r"^Initial value -2 will be truncated to the signal shape signed\(1\)$"):
+            Signal(signed(1), init=-2)
 
-    def test_reset_wrong_fencepost(self):
+    def test_init_wrong_fencepost(self):
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 10 equals the non-inclusive end of the signal shape "
+                r"^Initial value 10 equals the non-inclusive end of the signal shape "
                 r"range\(0, 10\); this is likely an off-by-one error$"):
-            Signal(range(0, 10), reset=10)
+            Signal(range(0, 10), init=10)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 0 equals the non-inclusive end of the signal shape "
+                r"^Initial value 0 equals the non-inclusive end of the signal shape "
                 r"range\(0, 0\); this is likely an off-by-one error$"):
-            Signal(range(0), reset=0)
+            Signal(range(0), init=0)
 
-    def test_reset_wrong_range(self):
+    def test_init_wrong_range(self):
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 11 is not within the signal shape range\(0, 10\)$"):
-            Signal(range(0, 10), reset=11)
+                r"^Initial value 11 is not within the signal shape range\(0, 10\)$"):
+            Signal(range(0, 10), init=11)
         with self.assertRaisesRegex(SyntaxError,
-                r"^Reset value 0 is not within the signal shape range\(1, 10\)$"):
-            Signal(range(1, 10), reset=0)
+                r"^Initial value 0 is not within the signal shape range\(1, 10\)$"):
+            Signal(range(1, 10), init=0)
+
+    def test_reset(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            s1 = Signal(4, reset=0b111)
+        self.assertEqual(s1.init, 0b111)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`Signal.reset` is deprecated, use `Signal.init` instead$"):
+            self.assertEqual(s1.reset, 0b111)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            s2 = Signal.like(s1, reset=3)
+        self.assertEqual(s2.init, 3)
+
+    def test_reset_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Signal(4, reset=1, init=1)
+        s1 = Signal(4)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Signal.like(s1, reset=1, init=1)
 
     def test_attrs(self):
         s1 = Signal()
@@ -1208,14 +1299,16 @@ class SignalTestCase(FHDLTestCase):
     def test_repr(self):
         s1 = Signal()
         self.assertEqual(repr(s1), "(sig s1)")
+        s2 = Signal(name="")
+        self.assertEqual(repr(s2), "(sig)")
 
     def test_like(self):
         s1 = Signal.like(Signal(4))
         self.assertEqual(s1.shape(), unsigned(4))
         s2 = Signal.like(Signal(range(-15, 1)))
         self.assertEqual(s2.shape(), signed(5))
-        s3 = Signal.like(Signal(4, reset=0b111, reset_less=True))
-        self.assertEqual(s3.reset, 0b111)
+        s3 = Signal.like(Signal(4, init=0b111, reset_less=True))
+        self.assertEqual(s3.init, 0b111)
         self.assertEqual(s3.reset_less, True)
         s4 = Signal.like(Signal(attrs={"no_retiming": True}))
         self.assertEqual(s4.attrs, {"no_retiming": True})
@@ -1235,6 +1328,7 @@ class SignalTestCase(FHDLTestCase):
         s = Signal(decoder=Color)
         self.assertEqual(s.decoder(1), "RED/1")
         self.assertEqual(s.decoder(3), "3")
+        self.assertRepr(s._value_repr, "(Repr(FormatEnum(Color), (sig s), ()),)")
 
     def test_enum(self):
         s1 = Signal(UnsignedEnum)
@@ -1242,12 +1336,17 @@ class SignalTestCase(FHDLTestCase):
         s2 = Signal(SignedEnum)
         self.assertEqual(s2.shape(), signed(2))
         self.assertEqual(s2.decoder(SignedEnum.FOO), "FOO/-1")
+        self.assertRepr(s2._value_repr, "(Repr(FormatEnum(SignedEnum), (sig s2), ()),)")
 
     def test_const_wrong(self):
         s1 = Signal()
         with self.assertRaisesRegex(TypeError,
                 r"^Value \(sig s1\) cannot be converted to an Amaranth constant$"):
             Const.cast(s1)
+
+    def test_value_repr(self):
+        s = Signal()
+        self.assertRepr(s._value_repr, "(Repr(FormatInt(), (sig s), ()),)")
 
 
 class ClockSignalTestCase(FHDLTestCase):
@@ -1309,7 +1408,79 @@ class MockValueCastable(ValueCastable):
     def shape(self):
         return Value.cast(self.dest).shape()
 
-    @ValueCastable.lowermethod
+    def as_value(self):
+        return self.dest
+
+
+class MockShapeCastableFormat(ShapeCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def as_shape(self):
+        return self.dest
+
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.dest)
+
+    def from_bits(self, bits):
+        return bits
+
+    def format(self, value, format_desc):
+        return Format("_{}_{}_", Value.cast(value), format_desc)
+
+
+class MockValueCastableFormat(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastableFormat(Value.cast(self.dest).shape())
+
+    def as_value(self):
+        return self.dest
+
+
+class MockValueCastableNoFormat(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastable(Value.cast(self.dest).shape())
+
+    def as_value(self):
+        return self.dest
+
+
+class MockShapeCastableFormatWrong(ShapeCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def as_shape(self):
+        return self.dest
+
+    def __call__(self, value):
+        return value
+
+    def const(self, init):
+        return Const(init, self.dest)
+
+    def from_bits(self, bits):
+        return bits
+
+    def format(self, value, format_desc):
+        return Value.cast(value)
+
+
+class MockValueCastableFormatWrong(ValueCastable):
+    def __init__(self, dest):
+        self.dest = dest
+
+    def shape(self):
+        return MockShapeCastableFormatWrong(Value.cast(self.dest).shape())
+
     def as_value(self):
         return self.dest
 
@@ -1321,9 +1492,10 @@ class MockValueCastableChanges(ValueCastable):
     def shape(self):
         return unsigned(self.width)
 
-    @ValueCastable.lowermethod
-    def as_value(self):
-        return Signal(self.width)
+    with _ignore_deprecated():
+        @ValueCastable.lowermethod
+        def as_value(self):
+            return Signal(self.width)
 
 
 class MockValueCastableCustomGetattr(ValueCastable):
@@ -1333,40 +1505,27 @@ class MockValueCastableCustomGetattr(ValueCastable):
     def shape(self):
         assert False
 
-    @ValueCastable.lowermethod
-    def as_value(self):
-        return Const(0)
+    with _ignore_deprecated():
+        @ValueCastable.lowermethod
+        def as_value(self):
+            return Const(0)
 
     def __getattr__(self, attr):
         assert False
 
 
 class ValueCastableTestCase(FHDLTestCase):
-    def test_not_decorated(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNotDecorated' deriving from `ValueCastable` must "
-                r"decorate the `as_value` method with the `ValueCastable.lowermethod` decorator$"):
-            class MockValueCastableNotDecorated(ValueCastable):
-                def __init__(self):
-                    pass
-
-                def shape(self):
-                    pass
-
-                def as_value(self):
-                    return Signal()
-
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from `ValueCastable` must "
-                r"override the `as_value` method$"):
+                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from 'ValueCastable' must "
+                r"override the 'as_value' method$"):
             class MockValueCastableNoOverrideAsValue(ValueCastable):
                 def __init__(self):
                     pass
 
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideShapec' deriving from `ValueCastable` must "
-                r"override the `shape` method$"):
+                r"^Class 'MockValueCastableNoOverrideShapec' deriving from 'ValueCastable' must "
+                r"override the 'shape' method$"):
             class MockValueCastableNoOverrideShapec(ValueCastable):
                 def __init__(self):
                     pass
@@ -1398,6 +1557,11 @@ class ValueCastableTestCase(FHDLTestCase):
     def test_recurse(self):
         vc = MockValueCastable(MockValueCastable(Signal()))
         self.assertIsInstance(Value.cast(vc), Signal)
+
+    def test_abstract(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Can't instantiate abstract class ValueCastable$"):
+            ValueCastable()
 
 
 class ValueLikeTestCase(FHDLTestCase):
@@ -1450,27 +1614,389 @@ class InitialTestCase(FHDLTestCase):
         self.assertEqual(i.shape(), unsigned(1))
 
 
+class FormatTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        self.assertRepr(Format("abc"), "(format 'abc')")
+        fmt = Format("{{abc}}")
+        self.assertRepr(fmt, "(format '{{abc}}')")
+        self.assertEqual(fmt._chunks, ("{abc}",))
+        fmt = Format("{abc}", abc="{def}")
+        self.assertRepr(fmt, "(format '{{def}}')")
+        self.assertEqual(fmt._chunks, ("{def}",))
+        fmt = Format("a: {a:0{b}}, b: {b}", a=13, b=4)
+        self.assertRepr(fmt, "(format 'a: 0013, b: 4')")
+        fmt = Format("a: {a:0{b}x}, b: {b}", a=a, b=4)
+        self.assertRepr(fmt, "(format 'a: {:04x}, b: 4' (sig a))")
+        fmt = Format("a: {a}, b: {b}, a: {a}", a=a, b=b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}, a: {}' (sig a) (sig b) (sig a))")
+        fmt = Format("a: {0}, b: {1}, a: {0}", a, b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}, a: {}' (sig a) (sig b) (sig a))")
+        fmt = Format("a: {}, b: {}", a, b)
+        self.assertRepr(fmt, "(format 'a: {}, b: {}' (sig a) (sig b))")
+        subfmt = Format("a: {:2x}, b: {:3x}", a, b)
+        fmt = Format("sub: {}, c: {:4x}", subfmt, c)
+        self.assertRepr(fmt, "(format 'sub: a: {:2x}, b: {:3x}, c: {:4x}' (sig a) (sig b) (sig c))")
+
+    def test_construct_valuecastable(self):
+        a = Signal()
+        b = MockValueCastable(a)
+        fmt = Format("{:x}", b)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+        c = MockValueCastableFormat(a)
+        fmt = Format("{:meow}", c)
+        self.assertRepr(fmt, "(format '_{}_meow_' (sig a))")
+        d = MockValueCastableNoFormat(a)
+        fmt = Format("{:x}", d)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+        e = MockValueCastableFormat(a)
+        fmt = Format("{!v:x}", e)
+        self.assertRepr(fmt, "(format '{:x}' (sig a))")
+
+    def test_construct_wrong(self):
+        a = Signal()
+        b = Signal(signed(16))
+        with self.assertRaisesRegex(ValueError,
+                r"^cannot switch from manual field specification to automatic field numbering$"):
+            Format("{0}, {}", a, b)
+        with self.assertRaisesRegex(ValueError,
+                r"^cannot switch from automatic field numbering to manual field specification$"):
+            Format("{}, {1}", a, b)
+        with self.assertRaisesRegex(ValueError,
+                r"^Format specifiers \('s'\) cannot be used for 'Format' objects$"):
+            Format("{:s}", Format(""))
+        with self.assertRaisesRegex(ValueError,
+                r"^format positional argument 1 was not used$"):
+            Format("{}", a, b)
+        with self.assertRaisesRegex(ValueError,
+                r"^format keyword argument 'b' was not used$"):
+            Format("{a}", a=a, b=b)
+        with self.assertRaisesRegex(ValueError,
+                r"^Invalid format specifier 'meow'$"):
+            Format("{a:meow}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alignment '\^' is not supported$"):
+            Format("{a:^13}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Grouping option ',' is not supported$"):
+            Format("{a:,}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Presentation type 'n' is not supported$"):
+            Format("{a:n}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot print signed value with format specifier 'c'$"):
+            Format("{b:c}", b=b)
+        with self.assertRaisesRegex(ValueError,
+                r"^Value width must be divisible by 8 with format specifier 's'$"):
+            Format("{a:s}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alignment '=' is not allowed with format specifier 'c'$"):
+            Format("{a:=13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Sign is not allowed with format specifier 'c'$"):
+            Format("{a:+13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Zero fill is not allowed with format specifier 'c'$"):
+            Format("{a:013c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Alternate form is not allowed with format specifier 'c'$"):
+            Format("{a:#13c}", a=a)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify '_' with format specifier 'c'$"):
+            Format("{a:_c}", a=a)
+
+    def test_construct_valuecastable_wrong(self):
+        a = Signal()
+        b = MockValueCastableFormatWrong(a)
+        with self.assertRaisesRegex(TypeError,
+                r"^`ShapeCastable.format` must return a 'Format' instance, "
+                r"not \(sig a\)$"):
+            fmt = Format("{:x}", b)
+
+    def test_plus(self):
+        a = Signal()
+        b = Signal()
+        fmt_a = Format("a = {};", a)
+        fmt_b = Format("b = {};", b)
+        fmt = fmt_a + fmt_b
+        self.assertRepr(fmt, "(format 'a = {};b = {};' (sig a) (sig b))")
+        self.assertEqual(fmt._chunks[2], ";b = ")
+
+    def test_plus_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^unsupported operand type\(s\) for \+: 'Format' and 'str'$"):
+            Format("") + ""
+
+    def test_format_wrong(self):
+        fmt = Format("")
+        with self.assertRaisesRegex(TypeError,
+                r"^Format object .* cannot be converted to string."):
+            f"{fmt}"
+
+
+class FormatEnumTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal(3)
+        fmt = Format.Enum(a, {1: "A", 2: "B", 3: "C"})
+        self.assertRepr(fmt, "(format-enum (sig a) (1 'A') (2 'B') (3 'C'))")
+        self.assertRepr(Format("{}", fmt), """
+            (format '{:s}' (switch-value (sig a)
+                (case 001 (const 8'd65))
+                (case 010 (const 8'd66))
+                (case 011 (const 8'd67))
+                (default (const 72'd1723507152241428428123))
+            ))
+        """)
+
+        class MyEnum(Enum):
+            A = 0
+            B = 3
+            C = 4
+
+        fmt = Format.Enum(a, MyEnum)
+        self.assertRepr(fmt, "(format-enum (sig a) (0 'A') (3 'B') (4 'C'))")
+        self.assertRepr(Format("{}", fmt), """
+            (format '{:s}' (switch-value (sig a)
+                (case 000 (const 8'd65))
+                (case 011 (const 8'd66))
+                (case 100 (const 8'd67))
+                (default (const 72'd1723507152241428428123))
+            ))
+        """)
+
+    def test_construct_wrong(self):
+        a = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Variant values must be integers, not 'a'$"):
+            Format.Enum(a, {"a": "B"})
+        with self.assertRaisesRegex(TypeError,
+                r"^Variant names must be strings, not 123$"):
+            Format.Enum(a, {1: 123})
+
+
+class FormatStructTestCase(FHDLTestCase):
+    def test_construct(self):
+        sig = Signal(3)
+        fmt = Format.Struct(sig, {"a": Format("{}", sig[0]), "b": Format("{}", sig[1:3])})
+        self.assertRepr(fmt, """
+        (format-struct (sig sig)
+            ('a' (format '{}' (slice (sig sig) 0:1)))
+            ('b' (format '{}' (slice (sig sig) 1:3)))
+        )
+        """)
+        self.assertRepr(Format("{}", fmt), """
+            (format '{{a={}, b={}}}'
+                (slice (sig sig) 0:1)
+                (slice (sig sig) 1:3)
+            )
+        """)
+
+    def test_construct_wrong(self):
+        sig = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Field names must be strings, not 1$"):
+            Format.Struct(sig, {1: Format("{}", sig[1:3])})
+        with self.assertRaisesRegex(TypeError,
+                r"^Field format must be a 'Format', not \(slice \(sig sig\) 1:3\)$"):
+            Format.Struct(sig, {"a": sig[1:3]})
+
+
+class FormatArrayTestCase(FHDLTestCase):
+    def test_construct(self):
+        sig = Signal(4)
+        fmt = Format.Array(sig, [Format("{}", sig[0:2]), Format("{}", sig[2:4])])
+        self.assertRepr(fmt, """
+        (format-array (sig sig)
+            (format '{}' (slice (sig sig) 0:2))
+            (format '{}' (slice (sig sig) 2:4))
+        )
+        """)
+        self.assertRepr(Format("{}", fmt), """
+            (format '[{}, {}]'
+                (slice (sig sig) 0:2)
+                (slice (sig sig) 2:4)
+            )
+        """)
+
+    def test_construct_wrong(self):
+        sig = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Field format must be a 'Format', not \(slice \(sig sig\) 1:3\)$"):
+            Format.Array(sig, [sig[1:3]])
+
+
+class PrintTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        p = Print("abc")
+        self.assertRepr(p, "(print (format 'abc\\n'))")
+        p = Print("abc", "def")
+        self.assertRepr(p, "(print (format 'abc def\\n'))")
+        p = Print("abc", b)
+        self.assertRepr(p, "(print (format 'abc {}\\n' (sig b)))")
+        p = Print(a, b, end="", sep=", ")
+        self.assertRepr(p, "(print (format '{}, {}' (sig a) (sig b)))")
+        p = Print(Format("a: {a:04x}", a=a))
+        self.assertRepr(p, "(print (format 'a: {:04x}\\n' (sig a)))")
+
+    def test_construct_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^'sep' must be a string, not 13$"):
+            Print("", sep=13)
+        with self.assertRaisesRegex(TypeError,
+                r"^'end' must be a string, not 13$"):
+            Print("", end=13)
+
+
+class AssertTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal()
+        b = Signal()
+        p = Assert(a)
+        self.assertRepr(p, "(assert (sig a))")
+        p = Assert(a, "abc")
+        self.assertRepr(p, "(assert (sig a) (format 'abc'))")
+        p = Assert(a, Format("a = {}, b = {}", a, b))
+        self.assertRepr(p, "(assert (sig a) (format 'a = {}, b = {}' (sig a) (sig b)))")
+
+    def test_construct_wrong(self):
+        a = Signal()
+        b = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Property message must be None, str, or Format, not \(sig b\)$"):
+            Assert(a, b)
+
+
 class SwitchTestCase(FHDLTestCase):
     def test_default_case(self):
-        s = Switch(Const(0), {None: []})
-        self.assertEqual(s.cases, {(): []})
+        s = Switch(Const(0), [(None, [], None)])
+        self.assertEqual(s.cases, ((None, [], None),))
 
     def test_int_case(self):
-        s = Switch(Const(0, 8), {10: []})
-        self.assertEqual(s.cases, {("00001010",): []})
+        s = Switch(Const(0, 8), [(10, [], None)])
+        self.assertEqual(s.cases, ((("00001010",), [], None),))
 
     def test_int_neg_case(self):
-        s = Switch(Const(0, 8), {-10: []})
-        self.assertEqual(s.cases, {("11110110",): []})
+        s = Switch(Const(0, signed(8)), [(-10, [], None)])
+        self.assertEqual(s.cases, ((("11110110",), [], None),))
+
+    def test_int_zero_width(self):
+        s = Switch(Const(0, 0), [(0, [], None)])
+        self.assertEqual(s.cases, ((("",), [], None),))
+
+    def test_int_zero_width_enum(self):
+        class ZeroEnum(Enum):
+            A = 0
+        s = Switch(Const(0, 0), [(ZeroEnum.A, [], None)])
+        self.assertEqual(s.cases, ((("",), [], None),))
 
     def test_enum_case(self):
-        s = Switch(Const(0, UnsignedEnum), {UnsignedEnum.FOO: []})
-        self.assertEqual(s.cases, {("01",): []})
+        s = Switch(Const(0, UnsignedEnum), [(UnsignedEnum.FOO, [], None)])
+        self.assertEqual(s.cases, ((("01",), [], None),))
 
     def test_str_case(self):
-        s = Switch(Const(0, 8), {"0000 11\t01": []})
-        self.assertEqual(s.cases, {("00001101",): []})
+        s = Switch(Const(0, 8), [("0000 11\t01", [], None)])
+        self.assertEqual(s.cases, ((("00001101",), [], None),))
 
     def test_two_cases(self):
-        s = Switch(Const(0, 8), {("00001111", 123): []})
-        self.assertEqual(s.cases, {("00001111", "01111011"): []})
+        s = Switch(Const(0, 8), [(("00001111", 123), [], None)])
+        self.assertEqual(s.cases, ((("00001111", "01111011"), [], None),))
+
+
+class IOValueTestCase(FHDLTestCase):
+    def test_ioport(self):
+        a = IOPort(4)
+        self.assertEqual(len(a), 4)
+        self.assertEqual(a.attrs, {})
+        self.assertEqual(a.metadata, (None, None, None, None))
+        self.assertRepr(a, "(io-port a)")
+        b = IOPort(3, name="b", attrs={"a": "b"}, metadata=["x", "y", "z"])
+        self.assertEqual(len(b), 3)
+        self.assertEqual(b.attrs, {"a": "b"})
+        self.assertEqual(b.metadata, ("x", "y", "z"))
+        self.assertRepr(b, "(io-port b)")
+
+    def test_ioport_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Name must be a string, not 3$"):
+            a = IOPort(2, name=3)
+        with self.assertRaises(TypeError):
+            a = IOPort("a")
+        with self.assertRaises(TypeError):
+            a = IOPort(8, attrs=3)
+        with self.assertRaises(TypeError):
+            a = IOPort(8, metadata=3)
+        with self.assertRaisesRegex(ValueError,
+                r"^Metadata length \(3\) doesn't match port width \(2\)$"):
+            a = IOPort(2, metadata=["a", "b", "c"])
+
+    def test_ioslice(self):
+        a = IOPort(8, metadata=["a", "b", "c", "d", "e", "f", "g", "h"])
+        s = a[2:5]
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("c", "d", "e"))
+        self.assertRepr(s, "(io-slice (io-port a) 2:5)")
+        s = a[-5:-2]
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("d", "e", "f"))
+        self.assertRepr(s, "(io-slice (io-port a) 3:6)")
+        s = IOSlice(a, -5, -2)
+        self.assertEqual(len(s), 3)
+        self.assertEqual(s.metadata, ("d", "e", "f"))
+        self.assertRepr(s, "(io-slice (io-port a) 3:6)")
+        s = a[5]
+        self.assertEqual(len(s), 1)
+        self.assertEqual(s.metadata, ("f",))
+        self.assertRepr(s, "(io-slice (io-port a) 5:6)")
+        s = a[-1]
+        self.assertEqual(len(s), 1)
+        self.assertEqual(s.metadata, ("h",))
+        self.assertRepr(s, "(io-slice (io-port a) 7:8)")
+        s = a[::2]
+        self.assertEqual(len(s), 4)
+        self.assertEqual(s.metadata, ("a", "c", "e", "g"))
+        self.assertRepr(s, "(io-cat (io-slice (io-port a) 0:1) (io-slice (io-port a) 2:3) (io-slice (io-port a) 4:5) (io-slice (io-port a) 6:7))")
+
+    def test_ioslice_wrong(self):
+        a = IOPort(8)
+        with self.assertRaises(IndexError):
+            a[8]
+        with self.assertRaises(IndexError):
+            a[-9]
+        with self.assertRaises(TypeError):
+            a["a"]
+        with self.assertRaises(IndexError):
+            IOSlice(a, 0, 9)
+        with self.assertRaises(IndexError):
+            IOSlice(a, -10, 8)
+        with self.assertRaises(TypeError):
+            IOSlice(a, 0, "a")
+        with self.assertRaises(TypeError):
+            IOSlice(a, "a", 8)
+        with self.assertRaises(IndexError):
+            a[5:3]
+
+    def test_iocat(self):
+        a = IOPort(3, name="a", metadata=["a", "b", "c"])
+        b = IOPort(2, name="b", metadata=["x", "y"])
+        c = Cat(a, b)
+        self.assertEqual(len(c), 5)
+        self.assertEqual(c.metadata, ("a", "b", "c", "x", "y"))
+        self.assertRepr(c, "(io-cat (io-port a) (io-port b))")
+        c = Cat(a, Cat())
+        self.assertEqual(len(c), 3)
+        self.assertEqual(c.metadata, ("a", "b", "c"))
+        self.assertRepr(c, "(io-cat (io-port a) (io-cat ))")
+        c = Cat(a, Cat()[:])
+        self.assertEqual(len(c), 3)
+        self.assertRepr(c, "(io-cat (io-port a) (io-cat ))")
+
+    def test_iocat_wrong(self):
+        a = IOPort(3, name="a")
+        b = Signal()
+        with self.assertRaisesRegex(TypeError,
+                r"^Object \(sig b\) cannot be converted to an IO value$"):
+            Cat(a, b)

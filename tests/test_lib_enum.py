@@ -1,9 +1,11 @@
 import enum as py_enum
 import operator
 import sys
+import unittest
 
 from amaranth import *
-from amaranth.lib.enum import Enum, EnumMeta, Flag, IntEnum, EnumView, FlagView
+from amaranth.hdl import *
+from amaranth.lib.enum import Enum, EnumType, Flag, IntEnum, EnumView, FlagView
 
 from .utils import *
 
@@ -98,7 +100,7 @@ class EnumTestCase(FHDLTestCase):
             Z = 0
             A = 10
             B = 20
-        self.assertNotIsInstance(EnumA, EnumMeta)
+        self.assertNotIsInstance(EnumA, EnumType)
         self.assertIsInstance(EnumA, py_enum.EnumMeta)
 
     def test_const_shape(self):
@@ -108,6 +110,15 @@ class EnumTestCase(FHDLTestCase):
         self.assertRepr(EnumA.const(None), "EnumView(EnumA, (const 8'd0))")
         self.assertRepr(EnumA.const(10), "EnumView(EnumA, (const 8'd10))")
         self.assertRepr(EnumA.const(EnumA.A), "EnumView(EnumA, (const 8'd10))")
+
+    def test_from_bits(self):
+        class EnumA(Enum, shape=2):
+            A = 0
+            B = 1
+            C = 2
+        self.assertIs(EnumA.from_bits(2), EnumA.C)
+        with self.assertRaises(ValueError):
+            EnumA.from_bits(3)
 
     def test_shape_implicit_wrong_in_concat(self):
         class EnumA(Enum):
@@ -127,6 +138,7 @@ class EnumTestCase(FHDLTestCase):
             B = -3
         a = Signal(EnumA)
         self.assertRepr(a, "(sig a)")
+        self.assertRepr(a._value_repr, "(Repr(FormatEnum(EnumA), (sig a), ()),)")
 
     def test_enum_view(self):
         class EnumA(Enum, shape=signed(4)):
@@ -288,3 +300,23 @@ class EnumTestCase(FHDLTestCase):
             B = 1
         a = Signal(EnumA)
         assert isinstance(a, CustomView)
+
+    @unittest.skipUnless(hasattr(py_enum, "nonmember"), "Python<3.11 lacks nonmember")
+    def test_enum_member_nonmember(self):
+        with self.assertRaisesRegex(
+            TypeError, r"^Value \{\} of enumeration member 'x' must.*$"
+        ):
+            class EnumA(IntEnum, shape=4):
+                A = 1
+                x = {}
+
+        empty = {}
+        class EnumA(IntEnum, shape=4):
+            A = 1
+            x = py_enum.nonmember(empty)
+        self.assertIs(empty, EnumA.x)
+
+        class EnumB(IntEnum, shape=4):
+            A = 1
+            B = py_enum.member(2)
+        self.assertIs(2, EnumB.B.value)

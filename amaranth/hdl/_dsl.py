@@ -9,20 +9,92 @@ from .._utils import flatten
 from ..utils import bits_for
 from .. import tracer
 from ._ast import *
+from ._ast import _StatementList, _LateBoundStatement, _normalize_patterns
 from ._ir import *
 from ._cd import *
 from ._xfrm import *
+from ._mem import MemoryData
 
 
 __all__ = ["SyntaxError", "SyntaxWarning", "Module"]
 
 
-class SyntaxError(Exception):
-    pass
+class _Visitor:
+    def __init__(self):
+        self.driven_signals = SignalSet()
 
+    def visit_stmt(self, stmt):
+        if isinstance(stmt, _StatementList):
+            for s in stmt:
+                self.visit_stmt(s)
+        elif isinstance(stmt, Assign):
+            self.visit_lhs(stmt.lhs)
+            self.visit_rhs(stmt.rhs)
+        elif isinstance(stmt, Print):
+            for chunk in stmt.message._chunks:
+                if not isinstance(chunk, str):
+                    obj, format_spec = chunk
+                    self.visit_rhs(obj)
+        elif isinstance(stmt, Property):
+            self.visit_rhs(stmt.test)
+            if stmt.message is not None:
+                for chunk in stmt.message._chunks:
+                    if not isinstance(chunk, str):
+                        obj, format_spec = chunk
+                        self.visit_rhs(obj)
+        elif isinstance(stmt, Switch):
+            self.visit_rhs(stmt.test)
+            for _patterns, stmts, _src_loc in stmt.cases:
+                self.visit_stmt(stmts)
+        elif isinstance(stmt, _LateBoundStatement):
+            pass
+        else:
+            assert False # :nocov:
 
-class SyntaxWarning(Warning):
-    pass
+    def visit_lhs(self, value):
+        if isinstance(value, Operator) and value.operator in ("u", "s"):
+            self.visit_lhs(value.operands[0])
+        elif isinstance(value, (Signal, ClockSignal, ResetSignal)):
+            self.driven_signals.add(value)
+        elif isinstance(value, Slice):
+            self.visit_lhs(value.value)
+        elif isinstance(value, Part):
+            self.visit_lhs(value.value)
+            self.visit_rhs(value.offset)
+        elif isinstance(value, Concat):
+            for part in value.parts:
+                self.visit_lhs(part)
+        elif isinstance(value, SwitchValue):
+            self.visit_rhs(value.test)
+            for _patterns, elem in value.cases:
+                self.visit_lhs(elem)
+        elif isinstance(value, MemoryData._Row):
+            raise ValueError(f"Value {value!r} can only be used in simulator processes")
+        else:
+            raise ValueError(f"Value {value!r} cannot be assigned to")
+
+    def visit_rhs(self, value):
+        if isinstance(value, (Const, Signal, ClockSignal, ResetSignal, Initial, AnyValue)):
+            pass
+        elif isinstance(value, Operator):
+            for op in value.operands:
+                self.visit_rhs(op)
+        elif isinstance(value, Slice):
+            self.visit_rhs(value.value)
+        elif isinstance(value, Part):
+            self.visit_rhs(value.value)
+            self.visit_rhs(value.offset)
+        elif isinstance(value, Concat):
+            for part in value.parts:
+                self.visit_rhs(part)
+        elif isinstance(value, SwitchValue):
+            self.visit_rhs(value.test)
+            for _patterns, elem in value.cases:
+                self.visit_rhs(elem)
+        elif isinstance(value, MemoryData._Row):
+            raise ValueError(f"Value {value!r} can only be used in simulator processes")
+        else:
+            assert False # :nocov:
 
 
 class _ModuleBuilderProxy:
@@ -48,11 +120,7 @@ class _ModuleBuilderDomains(_ModuleBuilderProxy):
                           "did you mean <module>.{} instead?"
                           .format(name, name, name),
                           SyntaxWarning, stacklevel=2)
-        if name == "comb":
-            domain = None
-        else:
-            domain = name
-        return _ModuleBuilderDomain(self._builder, self._depth, domain)
+        return _ModuleBuilderDomain(self._builder, self._depth, name)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -86,15 +154,18 @@ class _ModuleBuilderSubmodules:
         object.__setattr__(self, "_builder", builder)
 
     def __iadd__(self, modules):
+        src_loc = tracer.get_src_loc()
         for module in flatten([modules]):
-            self._builder._add_submodule(module)
+            self._builder._add_submodule(module, src_loc=src_loc)
         return self
 
     def __setattr__(self, name, submodule):
-        self._builder._add_submodule(submodule, name)
+        src_loc = tracer.get_src_loc()
+        self._builder._add_submodule(submodule, name, src_loc=src_loc)
 
-    def __setitem__(self, name, value):
-        return self.__setattr__(name, value)
+    def __setitem__(self, name, submodule):
+        src_loc = tracer.get_src_loc()
+        self._builder._add_submodule(submodule, name, src_loc=src_loc)
 
     def __getattr__(self, name):
         return self._builder._get_submodule(name)
@@ -147,16 +218,50 @@ def _guardedcontextmanager(keyword):
     return decorator
 
 
+class FSMNextStatement(_LateBoundStatement):
+    def __init__(self, ctrl_data, state, *, src_loc_at=0):
+        self.ctrl_data = ctrl_data
+        self.state = state
+        super().__init__(src_loc_at=1 + src_loc_at)
+
+    def resolve(self):
+        return self.ctrl_data["signal"].eq(self.ctrl_data["encoding"][self.state])
+
+
 class FSM:
-    def __init__(self, state, encoding, decoding):
-        self.state    = state
-        self.encoding = encoding
-        self.decoding = decoding
+    def __init__(self, data):
+        self._data    = data
+        self.encoding = data["encoding"]
+        self.decoding = data["decoding"]
 
     def ongoing(self, name):
         if name not in self.encoding:
             self.encoding[name] = len(self.encoding)
-        return Operator("==", [self.state, self.encoding[name]], src_loc_at=0)
+            fsm_name = self._data["name"]
+            self._data["ongoing"][name] = Signal(name="")
+        return self._data["ongoing"][name]
+
+
+def resolve_statement(stmt):
+    if isinstance(stmt, _LateBoundStatement):
+        return resolve_statement(stmt.resolve())
+    elif isinstance(stmt, Switch):
+        return Switch(
+            test=stmt.test,
+            cases=[
+                (patterns, resolve_statements(stmts), src_loc)
+                for patterns, stmts, src_loc in stmt.cases
+            ],
+            src_loc=stmt.src_loc,
+        )
+    elif isinstance(stmt, (Assign, Property, Print)):
+        return stmt
+    else:
+        assert False # :nocov:
+
+
+def resolve_statements(stmts):
+    return _StatementList(resolve_statement(stmt) for stmt in stmts)
 
 
 class Module(_ModuleBuilderRoot, Elaboratable):
@@ -170,15 +275,17 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self.submodules    = _ModuleBuilderSubmodules(self)
         self.domains       = _ModuleBuilderDomainSet(self)
 
-        self._statements   = Statement.cast([])
+        self._statements   = {}
         self._ctrl_context = None
         self._ctrl_stack   = []
+        self._top_comb_statements = _StatementList()
 
         self._driving      = SignalDict()
         self._named_submodules = {}
         self._anon_submodules  = []
         self._domains      = {}
         self._generated    = {}
+        self._src_loc      = tracer.get_src_loc()
 
     def _check_context(self, construct, context):
         if self._ctrl_context != context:
@@ -234,7 +341,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             "src_locs": [],
         })
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -254,7 +361,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if if_data is None or if_data["depth"] != self.domain._depth:
             raise SyntaxError("Elif without preceding If")
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -273,7 +380,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if if_data is None or if_data["depth"] != self.domain._depth:
             raise SyntaxError("Else without preceding If/Elif")
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self.domain._depth += 1
             yield
             self._flush_ctrl()
@@ -289,9 +396,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Switch", context=None)
         switch_data = self._set_ctrl("Switch", {
             "test":    Value.cast(test),
-            "cases":   OrderedDict(),
+            "cases":   [],
             "src_loc": tracer.get_src_loc(src_loc_at=1),
-            "case_src_locs": {},
+            "got_default": False,
         })
         try:
             self._ctrl_context = "Switch"
@@ -307,50 +414,16 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Case", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        new_patterns = ()
-        if () in switch_data["cases"]:
+        if switch_data["got_default"]:
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
-        # This code should accept exactly the same patterns as `v.matches(...)`.
-        for pattern in patterns:
-            if isinstance(pattern, str) and any(bit not in "01- \t" for bit in pattern):
-                raise SyntaxError("Case pattern '{}' must consist of 0, 1, and - (don't care) "
-                                  "bits, and may include whitespace"
-                                  .format(pattern))
-            if (isinstance(pattern, str) and
-                    len("".join(pattern.split())) != len(switch_data["test"])):
-                raise SyntaxError("Case pattern '{}' must have the same width as switch value "
-                                  "(which is {})"
-                                  .format(pattern, len(switch_data["test"])))
-            if isinstance(pattern, str):
-                new_patterns = (*new_patterns, pattern)
-            else:
-                try:
-                    orig_pattern, pattern = pattern, Const.cast(pattern)
-                except TypeError as e:
-                    raise SyntaxError("Case pattern must be a string or a constant-castable "
-                                      "expression, not {!r}"
-                                      .format(pattern)) from e
-                pattern_len = bits_for(pattern.value)
-                if pattern_len > len(switch_data["test"]):
-                    warnings.warn("Case pattern '{!r}' ({}'{:b}) is wider than switch value "
-                                  "(which has width {}); comparison will never be true"
-                                  .format(orig_pattern, pattern_len, pattern.value,
-                                          len(switch_data["test"])),
-                                  SyntaxWarning, stacklevel=3)
-                    continue
-                new_patterns = (*new_patterns, pattern.value)
+        new_patterns = _normalize_patterns(patterns, switch_data["test"].shape())
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            # If none of the provided cases can possibly be true, omit this branch completely.
-            # Likewise, omit this branch if another branch with this exact set of patterns already
-            # exists (since otherwise we'd overwrite the previous branch's slot in the dict).
-            if new_patterns and new_patterns not in switch_data["cases"]:
-                switch_data["cases"][new_patterns] = self._statements
-                switch_data["case_src_locs"][new_patterns] = src_loc
+            switch_data["cases"].append((new_patterns, self._statements, src_loc))
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
@@ -360,39 +433,44 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._check_context("Default", context="Switch")
         src_loc = tracer.get_src_loc(src_loc_at=1)
         switch_data = self._get_ctrl("Switch")
-        if () in switch_data["cases"]:
+        if switch_data["got_default"]:
             warnings.warn("A case defined after the default case will never be active",
                           SyntaxWarning, stacklevel=3)
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
-            if () not in switch_data["cases"]:
-                switch_data["cases"][()] = self._statements
-                switch_data["case_src_locs"][()] = src_loc
+            switch_data["cases"].append((None, self._statements, src_loc))
+            switch_data["got_default"] = True
         finally:
             self._ctrl_context = "Switch"
             self._statements = _outer_case
 
     @contextmanager
-    def FSM(self, reset=None, domain="sync", name="fsm"):
+    def FSM(self, init=None, domain="sync", name="fsm", *, reset=None):
         self._check_context("FSM", context=None)
         if domain == "comb":
             raise ValueError(f"FSM may not be driven by the '{domain}' domain")
+        # TODO(amaranth-0.7): remove
+        if reset is not None:
+            if init is not None:
+                raise ValueError("Cannot specify both `reset` and `init`")
+            warnings.warn("`reset=` is deprecated, use `init=` instead",
+                          DeprecationWarning, stacklevel=2)
+            init = reset
         fsm_data = self._set_ctrl("FSM", {
             "name":     name,
-            "signal":   Signal(name=f"{name}_state", src_loc_at=2),
-            "reset":    reset,
+            "init":     init,
             "domain":   domain,
             "encoding": OrderedDict(),
             "decoding": OrderedDict(),
+            "ongoing":  {},
             "states":   OrderedDict(),
             "src_loc":  tracer.get_src_loc(src_loc_at=1),
             "state_src_locs": {},
         })
-        self._generated[name] = fsm = \
-            FSM(fsm_data["signal"], fsm_data["encoding"], fsm_data["decoding"])
+        self._generated[name] = fsm = FSM(fsm_data)
         try:
             self._ctrl_context = "FSM"
             self.domain._depth += 1
@@ -405,6 +483,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             self.domain._depth -= 1
             self._ctrl_context = None
         self._pop_ctrl()
+        fsm.state = fsm_data["signal"]
 
     @contextmanager
     def State(self, name):
@@ -414,9 +493,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if name in fsm_data["states"]:
             raise NameError(f"FSM state '{name}' is already defined")
         if name not in fsm_data["encoding"]:
+            fsm_name = fsm_data["name"]
             fsm_data["encoding"][name] = len(fsm_data["encoding"])
+            fsm_data["ongoing"][name] = Signal(name="")
         try:
-            _outer_case, self._statements = self._statements, []
+            _outer_case, self._statements = self._statements, {}
             self._ctrl_context = None
             yield
             self._flush_ctrl()
@@ -436,9 +517,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             for level, (ctrl_name, ctrl_data) in enumerate(reversed(self._ctrl_stack)):
                 if ctrl_name == "FSM":
                     if name not in ctrl_data["encoding"]:
+                        fsm_name = ctrl_data["name"]
                         ctrl_data["encoding"][name] = len(ctrl_data["encoding"])
+                        ctrl_data["ongoing"][name] = Signal(name="")
                     self._add_statement(
-                        assigns=[ctrl_data["signal"].eq(ctrl_data["encoding"][name])],
+                        assigns=[FSMNextStatement(ctrl_data, name)],
                         domain=ctrl_data["domain"],
                         depth=len(self._ctrl_stack))
                     return
@@ -453,92 +536,122 @@ class Module(_ModuleBuilderRoot, Elaboratable):
             if_tests, if_bodies = data["tests"], data["bodies"]
             if_src_locs = data["src_locs"]
 
-            tests, cases = [], OrderedDict()
-            for if_test, if_case in zip(if_tests + [None], if_bodies):
-                if if_test is not None:
-                    if len(if_test) != 1:
-                        if_test = if_test.bool()
-                    tests.append(if_test)
+            # Use dict to ensure deterministic iteration.
+            domains = {}
+            for if_case in if_bodies:
+                for domain in if_case:
+                    domains[domain] = None
 
-                if if_test is not None:
-                    match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
-                else:
-                    match = None
-                cases[match] = if_case
+            for domain in domains:
+                tests, cases = [], []
+                for if_test, if_case, if_src_loc in zip(if_tests + [None], if_bodies, if_src_locs):
+                    if if_test is not None:
+                        if len(if_test) != 1:
+                            if_test = if_test.bool()
+                        tests.append(if_test)
 
-            self._statements.append(Switch(Cat(tests), cases,
-                src_loc=src_loc, case_src_locs=dict(zip(cases, if_src_locs))))
+                    if if_test is not None:
+                        match = ("1" + "-" * (len(tests) - 1)).rjust(len(if_tests), "-")
+                    else:
+                        match = None
+                    cases.append((match, if_case.get(domain, []), if_src_loc))
+
+                self._statements.setdefault(domain, []).append(Switch(Cat(tests), cases,
+                    src_loc=src_loc))
 
         if name == "Switch":
             switch_test, switch_cases = data["test"], data["cases"]
-            switch_case_src_locs = data["case_src_locs"]
 
-            self._statements.append(Switch(switch_test, switch_cases,
-                src_loc=src_loc, case_src_locs=switch_case_src_locs))
+            domains = {}
+            for _patterns, stmts, _src_loc in switch_cases:
+                for domain in stmts:
+                    domains[domain] = None
+
+            for domain in domains:
+                domain_cases = []
+                for patterns, stmts, case_src_loc in switch_cases:
+                    domain_cases.append((patterns, stmts.get(domain, []), case_src_loc))
+
+                self._statements.setdefault(domain, []).append(Switch(switch_test, domain_cases,
+                    src_loc=src_loc))
 
         if name == "FSM":
-            fsm_signal, fsm_reset, fsm_encoding, fsm_decoding, fsm_states = \
-                data["signal"], data["reset"], data["encoding"], data["decoding"], data["states"]
+            fsm_name, fsm_init, fsm_encoding, fsm_decoding, fsm_states, fsm_ongoing = \
+                data["name"], data["init"], data["encoding"], data["decoding"], data["states"], data["ongoing"]
             fsm_state_src_locs = data["state_src_locs"]
             if not fsm_states:
+                data["signal"] = Signal(0, name=f"{fsm_name}_state", src_loc_at=2)
                 return
-            fsm_signal.width = bits_for(len(fsm_encoding) - 1)
-            if fsm_reset is None:
-                fsm_signal.reset = fsm_encoding[next(iter(fsm_states))]
+            if fsm_init is None:
+                init = fsm_encoding[next(iter(fsm_states))]
             else:
-                fsm_signal.reset = fsm_encoding[fsm_reset]
-            # The FSM is encoded such that the state with encoding 0 is always the reset state.
+                init = fsm_encoding[fsm_init]
+            # The FSM is encoded such that the state with encoding 0 is always the init state.
             fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
-            fsm_signal.decoder = lambda n: f"{fsm_decoding[n]}/{n}"
-            self._statements.append(Switch(fsm_signal,
-                OrderedDict((fsm_encoding[name], stmts) for name, stmts in fsm_states.items()),
-                src_loc=src_loc, case_src_locs={fsm_encoding[name]: fsm_state_src_locs[name]
-                                                for name in fsm_states}))
+            data["signal"] = fsm_signal = Signal(range(len(fsm_encoding)), init=init,
+                                                 name=f"{fsm_name}_state", src_loc_at=2,
+                                                 decoder=lambda n: f"{fsm_decoding[n]}/{n}")
+
+            for name, sig in fsm_ongoing.items():
+                self._top_comb_statements.append(
+                    sig.eq(Operator("==", [fsm_signal, fsm_encoding[name]], src_loc_at=0)))
+
+            domains = {}
+            for stmts in fsm_states.values():
+                for domain in stmts:
+                    domains[domain] = None
+
+            for domain in domains:
+                domain_states = OrderedDict()
+                for state, stmts in fsm_states.items():
+                    domain_states[state] = stmts.get(domain, [])
+
+                self._statements.setdefault(domain, []).append(Switch(fsm_signal,
+                    [
+                        (fsm_encoding[name], stmts, fsm_state_src_locs[name])
+                        for name, stmts in domain_states.items()
+                    ],
+                    src_loc=src_loc))
 
     def _add_statement(self, assigns, domain, depth):
-        def domain_name(domain):
-            if domain is None:
-                return "comb"
-            else:
-                return domain
-
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
 
         for stmt in Statement.cast(assigns):
-            if not isinstance(stmt, (Assign, Assert, Assume, Cover)):
+            if not isinstance(stmt, (Assign, Property, Print, _LateBoundStatement)):
                 raise SyntaxError(
-                    "Only assignments and property checks may be appended to d.{}"
-                    .format(domain_name(domain)))
+                    f"Only assignments, prints, and property checks may be appended to d.{domain}")
 
             stmt._MustUse__used = True
 
-            for signal in stmt._lhs_signals():
+            visitor = _Visitor()
+            visitor.visit_stmt(stmt)
+            for signal in visitor.driven_signals:
                 if signal not in self._driving:
                     self._driving[signal] = domain
                 elif self._driving[signal] != domain:
                     cd_curr = self._driving[signal]
                     raise SyntaxError(
-                        "Driver-driver conflict: trying to drive {!r} from d.{}, but it is "
-                        "already driven from d.{}"
-                        .format(signal, domain_name(domain), domain_name(cd_curr)))
+                        f"Driver-driver conflict: trying to drive {signal!r} from d.{domain}, but it is "
+                        f"already driven from d.{cd_curr}")
 
-            self._statements.append(stmt)
+            self._statements.setdefault(domain, []).append(stmt)
 
-    def _add_submodule(self, submodule, name=None):
+    def _add_submodule(self, submodule, name=None, src_loc=None):
         if not hasattr(submodule, "elaborate"):
             raise TypeError("Trying to add {!r}, which does not implement .elaborate(), as "
                             "a submodule".format(submodule))
         if name == None:
-            self._anon_submodules.append(submodule)
+            self._anon_submodules.append((submodule, src_loc))
         else:
             if name in self._named_submodules:
                 raise NameError(f"Submodule named '{name}' already exists")
-            self._named_submodules[name] = submodule
+            self._named_submodules[name] = (submodule, src_loc)
 
     def _get_submodule(self, name):
         if name in self._named_submodules:
-            return self._named_submodules[name]
+            submodule, _src_loc = self._named_submodules[name]
+            return submodule
         else:
             raise AttributeError(f"No submodule named '{name}' exists")
 
@@ -554,14 +667,15 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     def elaborate(self, platform):
         self._flush()
 
-        fragment = Fragment()
-        for name in self._named_submodules:
-            fragment.add_subfragment(Fragment.get(self._named_submodules[name], platform), name)
-        for submodule in self._anon_submodules:
-            fragment.add_subfragment(Fragment.get(submodule, platform), None)
-        fragment.add_statements(self._statements)
-        for signal, domain in self._driving.items():
-            fragment.add_driver(signal, domain)
+        fragment = Fragment(src_loc=self._src_loc)
+        for name, (submodule, src_loc) in self._named_submodules.items():
+            fragment.add_subfragment(Fragment.get(submodule, platform), name, src_loc=src_loc)
+        for submodule, src_loc in self._anon_submodules:
+            fragment.add_subfragment(Fragment.get(submodule, platform), None, src_loc=src_loc)
+        for domain, statements in self._statements.items():
+            statements = resolve_statements(statements)
+            fragment.add_statements(domain, statements)
+        fragment.add_statements("comb", self._top_comb_statements)
         fragment.add_domains(self._domains.values())
         fragment.generated.update(self._generated)
         return fragment

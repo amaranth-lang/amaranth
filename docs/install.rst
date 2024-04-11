@@ -1,27 +1,46 @@
 Installation
 ############
 
+.. _install-playground:
+
+In-browser playground
+=====================
+
+You can try Amaranth out without installing anything by visiting the `Amaranth Playground`_. The playground webpage contains a `fully functional Python interpreter <Pyodide_>`_ and an Amaranth toolchain that can simulate a design, display waveforms, and generate Verilog code. It works on all modern browsers that support WebAssembly_, including Firefox, Chrome, and Edge.
+
+.. _Amaranth Playground: https://amaranth-lang.org/play/
+.. _Pyodide: https://pyodide.org/en/stable/
+.. _WebAssembly: https://webassembly.org/
+
+
+.. _install-sysreqs:
+
 System requirements
 ===================
 
-.. |yosys-version| replace:: 0.35 (or newer)
+..
+   This version requirement needs to be synchronized with the one in pyproject.toml!
+
+.. |yosys-version| replace:: 0.40 (or newer)
 
 Amaranth HDL requires Python 3.8; it works on CPython_ 3.8 (or newer), and works faster on PyPy3.8_ 7.3.7 (or newer). Installation requires pip_ 23.0 (or newer).
 
-For most workflows, Amaranth requires Yosys_ |yosys-version|. A compatible version of Yosys is distributed via PyPI_ for most popular platforms.
+For most workflows, Amaranth requires Yosys_ |yosys-version|. A `compatible version of Yosys <amaranth-yosys_>`_ is distributed via PyPI_ for most popular platforms, so it is usually not necessary to install Yosys separately.
 
-Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging.
+Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging. As an alternative to GTKWave, the `Amaranth Playground`_ can be used to display waveforms for simple designs.
 
-Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain.
+Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain. The open source iCE40, ECP5, MachXO2/3, Nexus, and Gowin toolchains are distributed via PyPI_ for most popular platforms by the YoWASP_ project.
 
 .. TODO: Link to FPGA family docs here
 
 .. _CPython: https://www.python.org/
 .. _PyPy3.8: https://www.pypy.org/
-.. _pip: https://pip.pypa.io/
+.. _pip: https://pip.pypa.io/en/stable/
 .. _Yosys: https://yosyshq.net/yosys/
+.. _amaranth-yosys: https://pypi.org/project/amaranth-yosys/
 .. _PyPI: https://pypi.org/
-.. _GTKWave: http://gtkwave.sourceforge.net/
+.. _GTKWave: https://gtkwave.sourceforge.net/
+.. _YoWASP: https://yowasp.org/
 
 
 .. _install-deps:
@@ -109,13 +128,14 @@ Installing prerequisites
 
       If Yosys |yosys-version| is not available, `build Yosys from source`_.
 
-      .. _build Yosys from source: https://github.com/YosysHQ/yosys/#setup
+      .. _build Yosys from source: https://github.com/YosysHQ/yosys/#building-from-source
 
       |upgrade-pip|
 
       .. code-block:: console
 
          $ pip3 install --user --upgrade pip
+
 
 .. _install:
 

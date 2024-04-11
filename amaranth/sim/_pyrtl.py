@@ -4,8 +4,9 @@ from contextlib import contextmanager
 import sys
 
 from ..hdl import *
-from ..hdl._ast import SignalSet
-from ..hdl._xfrm import ValueVisitor, StatementVisitor, LHSGroupFilter
+from ..hdl._ast import SignalSet, _StatementList, Property
+from ..hdl._xfrm import ValueVisitor, StatementVisitor
+from ..hdl._mem import MemoryInstance
 from ._base import BaseProcess
 
 
@@ -66,6 +67,53 @@ class _Compiler:
         self.state = state
         self.emitter = emitter
 
+    def _emit_switch(self, test, cases, case_handler):
+        if not cases:
+            return
+        use_match = _USE_PATTERN_MATCHING
+        for patterns, *_ in cases:
+            if patterns is None:
+                continue
+            for pattern in patterns:
+                if "-" in pattern:
+                    use_match = False
+        if use_match:
+            self.emitter.append(f"match {test}:")
+            with self.emitter.indent():
+                for case in cases:
+                    patterns = case[0]
+                    if patterns is None:
+                        self.emitter.append(f"case _:")
+                    elif not patterns:
+                        self.emitter.append(f"case _ if False:")
+                    else:
+                        self.emitter.append(f"case {' | '.join(f'0b0{pattern}' for pattern in patterns)}:")
+                    with self.emitter.indent():
+                        case_handler(*case)
+        else:
+            for index, case in enumerate(cases):
+                patterns = case[0]
+                gen_checks = []
+                if patterns is None:
+                    gen_checks.append(f"True")
+                elif not patterns:
+                    gen_checks.append(f"False")
+                else:
+                    for pattern in patterns:
+                        if "-" in pattern:
+                            mask  = int("".join("0" if b == "-" else "1" for b in pattern), 2)
+                            value = int("".join("0" if b == "-" else  b  for b in pattern), 2)
+                            gen_checks.append(f"{value} == ({mask} & {test})")
+                        else:
+                            value = int(pattern or "0", 2)
+                            gen_checks.append(f"{value} == {test}")
+                if index == 0:
+                    self.emitter.append(f"if {' or '.join(gen_checks)}:")
+                else:
+                    self.emitter.append(f"elif {' or '.join(gen_checks)}:")
+                with self.emitter.indent():
+                    case_handler(*case)
+
 
 class _ValueCompiler(ValueVisitor, _Compiler):
     helpers = {
@@ -97,10 +145,7 @@ class _ValueCompiler(ValueVisitor, _Compiler):
     def on_ResetSignal(self, value):
         raise NotImplementedError # :nocov:
 
-    def on_AnyConst(self, value):
-        raise NotImplementedError # :nocov:
-
-    def on_AnySeq(self, value):
+    def on_AnyValue(self, value):
         raise NotImplementedError # :nocov:
 
     def on_Initial(self, value):
@@ -108,12 +153,25 @@ class _ValueCompiler(ValueVisitor, _Compiler):
 
 
 class _RHSValueCompiler(_ValueCompiler):
-    def __init__(self, state, emitter, *, mode, inputs=None):
+    def __init__(self, state, emitter, *, mode, inputs=None, rrhs=None):
         super().__init__(state, emitter)
         assert mode in ("curr", "next")
         self.mode = mode
         # If not None, `inputs` gets populated with RHS signals.
         self.inputs = inputs
+        # When this compiler is used to grab the "next" value from within _LHSValueCompiler,
+        # we still need to use "curr" mode for reading part offsets etc. Allow setting a separate
+        # _RhsValueCompiler for these contexts.
+        self.rrhs = rrhs or self
+
+    def sign(self, value):
+        value_mask = (1 << len(value)) - 1
+        masked = f"({value_mask:#x} & {self(value)})"
+
+        if value.shape().signed:
+            return f"sign({masked}, {-1 << (len(value) - 1):#x})"
+        else: # unsigned
+            return masked
 
     def on_Const(self, value):
         return f"{value.value}"
@@ -190,10 +248,6 @@ class _RHSValueCompiler(_ValueCompiler):
                 return f"({sign(lhs)} > {sign(rhs)})"
             if value.operator == ">=":
                 return f"({sign(lhs)} >= {sign(rhs)})"
-        elif len(value.operands) == 3:
-            if value.operator == "m":
-                sel, val1, val0 = value.operands
-                return f"({sign(val1)} if {mask(sel)} else {sign(val0)})"
         raise NotImplementedError(f"Operator '{value.operator}' not implemented") # :nocov:
 
     def on_Slice(self, value):
@@ -201,11 +255,11 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Part(self, value):
         offset_mask = (1 << len(value.offset)) - 1
-        offset = f"({value.stride} * ({offset_mask:#x} & {self(value.offset)}))"
+        offset = f"({value.stride} * ({offset_mask:#x} & {self.rrhs(value.offset)}))"
         return f"({(1 << value.width) - 1} & " \
                f"{self(value.value)} >> {offset})"
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         gen_parts = []
         offset = 0
         for part in value.parts:
@@ -216,36 +270,13 @@ class _RHSValueCompiler(_ValueCompiler):
             return f"({' | '.join(gen_parts)})"
         return f"0"
 
-    def on_ArrayProxy(self, value):
-        index_mask = (1 << len(value.index)) - 1
-        gen_index = self.emitter.def_var("rhs_index", f"{index_mask:#x} & {self(value.index)}")
-        gen_value = self.emitter.gen_var("rhs_proxy")
-        if value.elems:
-            if _USE_PATTERN_MATCHING:
-                self.emitter.append(f"match {gen_index}:")
-                with self.emitter.indent():
-                    for index, elem in enumerate(value.elems):
-                        self.emitter.append(f"case {index}:")
-                        with self.emitter.indent():
-                            self.emitter.append(f"{gen_value} = {self(elem)}")
-                    self.emitter.append("case _:")
-                    with self.emitter.indent():
-                            self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
-            else:
-                for index, elem in enumerate(value.elems):
-                    if index == 0:
-                        self.emitter.append(f"if {index} == {gen_index}:")
-                    else:
-                        self.emitter.append(f"elif {index} == {gen_index}:")
-                    with self.emitter.indent():
-                        self.emitter.append(f"{gen_value} = {self(elem)}")
-                self.emitter.append(f"else:")
-                with self.emitter.indent():
-                    self.emitter.append(f"{gen_value} = {self(value.elems[-1])}")
-
-            return gen_value
-        else:
-            return f"0"
+    def on_SwitchValue(self, value):
+        gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self.rrhs(value.test)}")
+        gen_value = self.emitter.def_var("rhs_switch", "0")
+        def case_handler(patterns, elem):
+            self.emitter.append(f"{gen_value} = {self.sign(elem)}")
+        self._emit_switch(gen_test, value.cases, case_handler)
+        return gen_value
 
     @classmethod
     def compile(cls, state, value, *, mode):
@@ -263,7 +294,7 @@ class _LHSValueCompiler(_ValueCompiler):
         self.rrhs = rhs
         # `lrhs` is used to translate the read part of a read-modify-write cycle during partial
         # update of an lvalue.
-        self.lrhs = _RHSValueCompiler(state, emitter, mode="next", inputs=None)
+        self.lrhs = _RHSValueCompiler(state, emitter, mode="next", inputs=None, rrhs=rhs)
         # If not None, `outputs` gets populated with signals on LHS.
         self.outputs = outputs
 
@@ -306,7 +337,7 @@ class _LHSValueCompiler(_ValueCompiler):
                 f"(({width_mask:#x} & {arg}) << {offset}))")
         return gen
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         def gen(arg):
             gen_arg = self.emitter.def_var("cat", arg)
             offset = 0
@@ -316,38 +347,40 @@ class _LHSValueCompiler(_ValueCompiler):
                 offset += len(part)
         return gen
 
-    def on_ArrayProxy(self, value):
+    def on_SwitchValue(self, value):
         def gen(arg):
-            index_mask = (1 << len(value.index)) - 1
-            gen_index = self.emitter.def_var("index", f"{self.rrhs(value.index)} & {index_mask:#x}")
-            if value.elems:
-                if _USE_PATTERN_MATCHING:
-                    self.emitter.append(f"match {gen_index}:")
-                    with self.emitter.indent():
-                        for index, elem in enumerate(value.elems):
-                            self.emitter.append(f"case {index}:")
-                            with self.emitter.indent():
-                                self(elem)(arg)
-                        self.emitter.append("case _:")
-                        with self.emitter.indent():
-                            self(value.elems[-1])(arg)
-                else:
-                    for index, elem in enumerate(value.elems):
-                        if index == 0:
-                            self.emitter.append(f"if {index} == {gen_index}:")
-                        else:
-                            self.emitter.append(f"elif {index} == {gen_index}:")
-                        with self.emitter.indent():
-                            self(elem)(arg)
-                    self.emitter.append(f"else:")
-                    with self.emitter.indent():
-                        self(value.elems[-1])(arg)
-            else:
-                self.emitter.append(f"pass")
+            gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self.rrhs(value.test)}")
+            def case_handler(patterns, elem):
+                self(elem)(arg)
+            self._emit_switch(gen_test, value.cases, case_handler)
         return gen
 
 
+def value_to_string(value):
+    """Unpack a Verilog-like (but LSB-first) string of unknown width from an integer."""
+    msg = bytearray()
+    while value:
+        byte = value & 0xff
+        value >>= 8
+        if byte:
+            msg.append(byte)
+    return msg.decode()
+
+
+def pin_blame(src_loc, exc):
+    if src_loc is None:
+        raise exc
+    filename, line = src_loc
+    code = compile("\n" * (line - 1) + "raise exc", filename, "exec")
+    exec(code, {"exc": exc})
+
+
 class _StatementCompiler(StatementVisitor, _Compiler):
+    helpers = {
+        "value_to_string": value_to_string,
+        "pin_blame": pin_blame,
+    }
+
     def __init__(self, state, emitter, *, inputs=None, outputs=None):
         super().__init__(state, emitter)
         self.rhs = _RHSValueCompiler(state, emitter, mode="curr", inputs=inputs)
@@ -360,43 +393,56 @@ class _StatementCompiler(StatementVisitor, _Compiler):
             self.emitter.append("pass")
 
     def on_Assign(self, stmt):
-        gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
-        gen_rhs = f"({(1 << len(stmt.rhs)) - 1:#x} & {gen_rhs_value})"
-        if stmt.rhs.shape().signed:
-            gen_rhs = f"sign({gen_rhs}, {-1 << (len(stmt.rhs) - 1):#x})"
-        return self.lhs(stmt.lhs)(gen_rhs)
+        return self.lhs(stmt.lhs)(self.rhs.sign(stmt.rhs))
 
     def on_Switch(self, stmt):
         gen_test_value = self.rhs(stmt.test) # check for oversized value before generating mask
         gen_test = self.emitter.def_var("test", f"{(1 << len(stmt.test)) - 1:#x} & {gen_test_value}")
-        for index, (patterns, stmts) in enumerate(stmt.cases.items()):
-            gen_checks = []
-            if not patterns:
-                gen_checks.append(f"True")
+        def case_handler(pattern, stmt, src_loc):
+            self(stmt)
+        self._emit_switch(gen_test, stmt.cases, case_handler)
+
+    def emit_format(self, format):
+        format_string = []
+        args = []
+        for chunk in format._chunks:
+            if isinstance(chunk, str):
+                format_string.append(chunk.replace("{", "{{").replace("}", "}}"))
             else:
-                for pattern in patterns:
-                    if "-" in pattern:
-                        mask  = int("".join("0" if b == "-" else "1" for b in pattern), 2)
-                        value = int("".join("0" if b == "-" else  b  for b in pattern), 2)
-                        gen_checks.append(f"{value} == ({mask} & {gen_test})")
-                    else:
-                        value = int(pattern, 2)
-                        gen_checks.append(f"{value} == {gen_test}")
-            if index == 0:
-                self.emitter.append(f"if {' or '.join(gen_checks)}:")
-            else:
-                self.emitter.append(f"elif {' or '.join(gen_checks)}:")
+                value, format_desc = chunk
+                value = self.rhs.sign(value)
+                if format_desc.endswith("s"):
+                    format_desc = format_desc[:-1]
+                    value = f"value_to_string({value})"
+                format_string.append(f"{{:{format_desc}}}")
+                args.append(value)
+        format_string = "".join(format_string)
+        args = ", ".join(args)
+        return f"{format_string!r}.format({args})"
+
+    def on_Print(self, stmt):
+        self.emitter.append(f"print({self.emit_format(stmt.message)}, end='')")
+
+    def on_Property(self, stmt):
+        if stmt.kind == Property.Kind.Cover:
+            if stmt.message is not None:
+                self.emitter.append(f"if {self.rhs.sign(stmt.test)}:")
+                with self.emitter.indent():
+                    filename, line = stmt.src_loc
+                    self.emitter.append(f"print(\"Coverage hit at \" {filename!r} \":{line}:\", {self.emit_format(stmt.message)})")
+        else:
+            self.emitter.append(f"if not {self.rhs.sign(stmt.test)}:")
             with self.emitter.indent():
-                self(stmts)
-
-    def on_Assert(self, stmt):
-        raise NotImplementedError # :nocov:
-
-    def on_Assume(self, stmt):
-        raise NotImplementedError # :nocov:
-
-    def on_Cover(self, stmt):
-        raise NotImplementedError # :nocov:
+                if stmt.kind == Property.Kind.Assert:
+                    kind = "Assertion"
+                elif stmt.kind == Property.Kind.Assume:
+                    kind = "Assumption"
+                else:
+                    assert False # :nocov:
+                if stmt.message is not None:
+                    self.emitter.append(f"pin_blame({stmt.src_loc!r}, AssertionError(\"{kind} violated: \" + {self.emit_format(stmt.message)}))")
+                else:
+                    self.emitter.append(f"pin_blame({stmt.src_loc!r}, AssertionError(\"{kind} violated\"))")
 
     @classmethod
     def compile(cls, state, stmt):
@@ -418,21 +464,50 @@ class _FragmentCompiler:
     def __call__(self, fragment):
         processes = set()
 
-        for domain_name, domain_signals in fragment.drivers.items():
-            domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
-            domain_process = PyRTLProcess(is_comb=domain_name is None)
+        domains = set(fragment.statements)
+
+        if isinstance(fragment, MemoryInstance):
+            for port in fragment._read_ports:
+                domains.add(port._domain)
+            for port in fragment._write_ports:
+                domains.add(port._domain)
+
+        for domain_name in domains:
+            domain_stmts = fragment.statements.get(domain_name, _StatementList())
+            domain_process = PyRTLProcess(is_comb=domain_name == "comb")
+            domain_signals = domain_stmts._lhs_signals()
+
+            if isinstance(fragment, MemoryInstance):
+                for port in fragment._read_ports:
+                    if port._domain == domain_name:
+                        domain_signals.update(port._data._lhs_signals())
 
             emitter = _PythonEmitter()
             emitter.append(f"def run():")
             emitter._level += 1
 
-            if domain_name is None:
+            if domain_name == "comb":
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)
-                    emitter.append(f"next_{signal_index} = {signal.reset}")
+                    emitter.append(f"next_{signal_index} = {signal.init}")
 
                 inputs = SignalSet()
                 _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)
+
+                if isinstance(fragment, MemoryInstance):
+                    self.state.add_memory_trigger(domain_process, fragment._data)
+                    memory_index = self.state.get_memory(fragment._data)
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr", inputs=inputs)
+                    lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
+
+                    for port in fragment._read_ports:
+                        if port._domain != "comb":
+                            continue
+
+                        addr = rhs(port._addr)
+                        addr = f"({(1 << len(port._addr)) - 1:#x} & {addr})"
+                        data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
+                        lhs(port._data)(data)
 
                 for input in inputs:
                     self.state.add_trigger(domain_process, input)
@@ -451,6 +526,59 @@ class _FragmentCompiler:
 
                 _StatementCompiler(self.state, emitter)(domain_stmts)
 
+                if domain.rst is not None:
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
+                    rst = rhs(domain.rst)
+                    rst = f"(1 & {rst})"
+                    emitter.append(f"if {rst}:")
+                    with emitter.indent():
+                        emitter.append("pass")
+                        for signal in domain_signals:
+                            if not signal.reset_less:
+                                signal_index = self.state.get_signal(signal)
+                                emitter.append(f"next_{signal_index} = {signal.init}")
+
+                if isinstance(fragment, MemoryInstance):
+                    memory_index = self.state.get_memory(fragment._data)
+                    rhs = _RHSValueCompiler(self.state, emitter, mode="curr")
+                    lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
+
+                    write_vals = {}
+
+                    for idx, port in enumerate(fragment._write_ports):
+                        if port._domain != domain_name:
+                            continue
+
+                        addr = rhs(port._addr)
+                        addr = emitter.def_var("write_addr", f"({(1 << len(port._addr)) - 1:#x} & {addr})")
+                        data = rhs(port._data)
+                        data = emitter.def_var("write_data", f"({(1 << len(port._data)) - 1:#x} & {data})")
+                        en = rhs(Cat(bit.replicate(port._granularity) for bit in port._en))
+                        en = emitter.def_var("write_en", f"({(1 << len(port._data)) - 1:#x} & {en})")
+                        emitter.append(f"slots[{memory_index}].write({addr}, {data}, {en})")
+                        write_vals[idx] = addr, data, en
+
+                    for port in fragment._read_ports:
+                        if port._domain != domain_name:
+                            continue
+
+                        en = rhs(port._en)
+                        en = f"(1 & {en})"
+                        emitter.append(f"if {en}:")
+                        with emitter.indent():
+                            addr = rhs(port._addr)
+                            addr = emitter.def_var("read_addr", f"({(1 << len(port._addr)) - 1:#x} & {addr})")
+                            data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
+
+                            for idx in port._transparent_for:
+                                waddr, wdata, wen = write_vals[idx]
+                                emitter.append(f"if {addr} == {waddr}:")
+                                with emitter.indent():
+                                    emitter.append(f"{data} &= ~{wen}")
+                                    emitter.append(f"{data} |= {wdata} & {wen}")
+
+                            lhs(port._data)(data)
+
             for signal in domain_signals:
                 signal_index = self.state.get_signal(signal)
                 emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
@@ -466,13 +594,17 @@ class _FragmentCompiler:
             else:
                 filename = "<string>"
 
-            exec_locals = {"slots": self.state.slots, **_ValueCompiler.helpers}
+            exec_locals = {
+                "slots": self.state.slots,
+                **_ValueCompiler.helpers,
+                **_StatementCompiler.helpers,
+            }
             exec(compile(code, filename, "exec"), exec_locals)
             domain_process.run = exec_locals["run"]
 
             processes.add(domain_process)
 
-        for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
+        for subfragment_index, (subfragment, subfragment_name, _src_loc) in enumerate(fragment.subfragments):
             if subfragment_name is None:
                 subfragment_name = f"U${subfragment_index}"
             processes.update(self(subfragment))

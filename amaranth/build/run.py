@@ -9,6 +9,7 @@ import warnings
 import zipfile
 import hashlib
 import pathlib
+import random
 
 
 __all__ = ["BuildPlan", "BuildProducts", "LocalBuildProducts", "RemoteSSHBuildProducts"]
@@ -116,7 +117,7 @@ class BuildPlan:
             else:
                 subprocess.check_call(["sh", f"{self.script}.sh"],
                                       cwd=build_dir, env=os.environ if env is None else env)
-        # TODO(amaranth-0.5): remove
+        # TODO(amaranth-0.6): remove
         if run_script is not None:
             warnings.warn("The `run_script` argument is deprecated. If you only want to "
                             "extract the files from the BuildPlan, use the .extract() method",
@@ -135,14 +136,22 @@ class BuildPlan:
         Returns :class:`LocalBuildProducts`.
         """
         build_dir = self.extract(root)
-        subprocess.check_call([
-            "docker", "run", *docker_args,
-            "--rm", # remove the container after running
-            "--mount", f"type=bind,source={build_dir},target=/build",
-            "--workdir", "/build",
-            image,
-            "sh", f"{self.script}.sh",
-        ])
+        container_name = f"amaranth_build_{random.randbytes(8).hex()}"
+        try:
+            subprocess.check_call([
+                "docker", "run", *docker_args,
+                "--rm", # remove the container after running
+                "--init", # run an init process as PID 1. Helps exit faster
+                "--name", container_name,
+                "--mount", f"type=bind,source={build_dir},target=/build",
+                "--workdir", "/build",
+                image,
+                "sh", f"{self.script}.sh",
+            ])
+        except KeyboardInterrupt:
+            subprocess.check_call([
+                "docker", "stop", container_name
+            ], stdout=subprocess.DEVNULL)
         return LocalBuildProducts(build_dir)
 
 
@@ -156,7 +165,7 @@ class BuildPlan:
 
         ``connect_to`` is a dictionary that holds all input arguments to
         ``paramiko``'s ``SSHClient.connect``
-        (`documentation <http://docs.paramiko.org/en/stable/api/client.html#paramiko.client.SSHClient.connect>`_).
+        (`documentation <https://docs.paramiko.org/en/latest/api/client.html#paramiko.client.SSHClient.connect>`_).
         At a minimum, the ``hostname`` input argument must be supplied in this
         dictionary as the remote server.
 

@@ -1,3 +1,5 @@
+.. _wiring:
+
 Interfaces and connections
 ##########################
 
@@ -22,7 +24,7 @@ This module provides four related facilities:
 
 1. Description and construction of interface objects via :class:`Flow` (:data:`In` and :data:`Out`), :class:`Member`, and :class:`Signature`, as well as the associated container class :class:`SignatureMembers`. These classes provide the syntax used in defining components, and are also useful for introspection.
 2. Flipping of signatures and interface objects via :class:`FlippedSignature` and :class:`FlippedInterface`, as well as the associated container class :class:`FlippedSignatureMembers`. This facility reduces boilerplate by adapting existing signatures and interface objects: the flip operation changes the :data:`In` data flow of a member to :data:`Out` and vice versa.
-3. Connecting interface objects together via :func:`connect`. The :func:`connect` function ensures that the provided interface objects can be connected to each other, and adds the necessary :pc:`.eq()` statements to a :class:`Module`.
+3. Connecting interface objects together via :func:`connect`. The :func:`connect` function ensures that the provided interface objects can be connected to each other, and adds the necessary :py:`.eq()` statements to a :class:`Module`.
 4. Defining reusable, self-contained components via :class:`Component`. Components are :class:`Elaboratable` objects that interact with the rest of the design through an interface specified by their signature.
 
 To use this module, add the following imports to the beginning of the file:
@@ -66,7 +68,7 @@ Consider a reusable counter with an enable input, configurable limit, and an ove
 
             return m
 
-Nothing in this implementation indicates the directions of its ports (:pc:`en`, :pc:`count`, :pc:`limit`, and :pc:`overflow`) in relation to other parts of the design. To understand whether the value of a port is expected to be provided externally or generated internally, it is first necessary to read the body of the :pc:`elaborate` method. If the port is not used within that method in a particular elaboratable, it is not possible to determine its direction, or whether it is even meant to be connected.
+Nothing in this implementation indicates the directions of its ports (:py:`en`, :py:`count`, :py:`limit`, and :py:`overflow`) in relation to other parts of the design. To understand whether the value of a port is expected to be provided externally or generated internally, it is first necessary to read the body of the :py:`elaborate` method. If the port is not used within that method in a particular elaboratable, it is not possible to determine its direction, or whether it is even meant to be connected.
 
 The :mod:`amaranth.lib.wiring` module provides a solution for this problem: *components*. A component is an elaboratable that declares the shapes and directions of its ports in its *signature*. The example above can be rewritten to use the :class:`Component` base class (which itself inherits from :class:`Elaboratable`) to be:
 
@@ -93,21 +95,21 @@ The :mod:`amaranth.lib.wiring` module provides a solution for this problem: *com
 
             return m
 
-The code in the constructor *creating* the signals of the counter's interface one by one is now gone, replaced with the :term:`variable annotations <python:variable annotation>` *declaring* the counter's interface. The inherited constructor, :meth:`Component.__init__`, creates the same attributes with the same values as before, and the :pc:`elaborate` method is unchanged.
+The code in the constructor *creating* the signals of the counter's interface one by one is now gone, replaced with the :term:`variable annotations <python:variable annotation>` *declaring* the counter's interface. The inherited constructor, :meth:`Component.__init__`, creates the same attributes with the same values as before, and the :py:`elaborate` method is unchanged.
 
-The major difference between the two examples is that the :pc:`ComponentCounter` provides unambiguous answers to two questions that previously required examining the :pc:`elaborate` method:
+The major difference between the two examples is that the :py:`ComponentCounter` provides unambiguous answers to two questions that previously required examining the :py:`elaborate` method:
 
 1. Which of the Python object's attributes are ports that are intended to be connected to the rest of the design.
 2. What is the direction of the flow of information through the port.
 
-This information, aside from being clear from the source code, can now be retrieved from the :pc:`.signature` attribute, which contains an instance of the :class:`Signature` class:
+This information, aside from being clear from the source code, can now be retrieved from the :py:`.signature` attribute, which contains an instance of the :class:`Signature` class:
 
 .. doctest::
 
     >>> ComponentCounter().signature
     Signature({'en': In(1), 'count': Out(8), 'limit': In(8), 'overflow': Out(1)})
 
-The :ref:`shapes <lang-shapes>` of the ports need not be static. The :pc:`ComponentCounter` can be made generic, with its range specified when it is constructed, by creating the signature explicitly in its constructor:
+The :ref:`shapes <lang-shapes>` of the ports need not be static. The :py:`ComponentCounter` can be made generic, with its range specified when it is constructed, by creating the signature explicitly in its constructor:
 
 .. testcode::
 
@@ -130,7 +132,7 @@ The :ref:`shapes <lang-shapes>` of the ports need not be static. The :pc:`Compon
     >>> GenericCounter(16).signature
     Signature({'en': In(1), 'count': Out(16), 'limit': In(16), 'overflow': Out(1)})
 
-Instances of the :class:`ComponentCounter` and :class:`GenericCounter` class are two examples of *interface objects*. An interface object is a Python object of any type whose a :pc:`signature` attribute contains a :class:`Signature` with which the interface object is compliant (as determined by the :meth:`is_compliant <Signature.is_compliant>` method of the signature).
+Instances of the :class:`ComponentCounter` and :class:`GenericCounter` class are two examples of *interface objects*. An interface object is a Python object of any type whose a :py:`signature` attribute contains a :class:`Signature` with which the interface object is compliant (as determined by the :meth:`is_compliant <Signature.is_compliant>` method of the signature).
 
 The next section introduces the concepts of directionality and connection, and discusses interface objects in more detail.
 
@@ -140,7 +142,7 @@ The next section introduces the concepts of directionality and connection, and d
 Reusable interfaces
 +++++++++++++++++++
 
-Consider a more complex example where two components are communicating with a *stream* that is using *ready/valid signaling*, where the :pc:`valid` signal indicates that the value of :pc:`data` provided by the source is meaningful, and the :pc:`ready` signal indicates that the sink has consumed the data word:
+Consider a more complex example where two components are communicating with a *stream* that is using *ready/valid signaling*, where the :py:`valid` signal indicates that the value of :py:`data` provided by the source is meaningful, and the :py:`ready` signal indicates that the sink has consumed the data word:
 
 .. testcode::
 
@@ -239,7 +241,7 @@ The producer and the consumer reuse the same signature, relying on flipping to m
     >>> consumer.sink.signature.members['data']
     In(8)
 
-In the :pc:`StreamConsumer` definition above, the :pc:`sink` member has its direction flipped explicitly because the sink is a stream input; this is the case for every interface due to how port directions are defined. Since this operation is so ubiquitous, it is also performed when :pc:`In(...)` is used with a signature rather than a shape. The :pc:`StreamConsumer` definition above should normally be written as:
+In the :py:`StreamConsumer` definition above, the :py:`sink` member has its direction flipped explicitly because the sink is a stream input; this is the case for every interface due to how port directions are defined. Since this operation is so ubiquitous, it is also performed when :py:`In(...)` is used with a signature rather than a shape. The :py:`StreamConsumer` definition above should normally be written as:
 
 .. testcode::
 
@@ -255,7 +257,7 @@ The data flow directions of the ports are identical between the two definitions:
     >>> consumer.sink.signature.members == StreamConsumerUsingIn().sink.signature.members
     True
 
-If signatures are nested within each other multiple levels deep, the final port direction is determined by how many nested :pc:`In(...)` members there are. For each :pc:`In(...)` signature wrapping a port, the data flow direction of the port is flipped once:
+If signatures are nested within each other multiple levels deep, the final port direction is determined by how many nested :py:`In(...)` members there are. For each :py:`In(...)` signature wrapping a port, the data flow direction of the port is flipped once:
 
 .. doctest::
 
@@ -269,13 +271,13 @@ If signatures are nested within each other multiple levels deep, the final port 
     >>> in2.members["sig"].signature.members["sig"].signature.members["port"]
     Out(1)
 
-Going back to the stream example, the producer and the consumer now communicate with one another using the same set of ports with identical shapes and complementary directions (the auxiliary :pc:`en` port being outside of the stream signature), and can be *connected* using the :func:`connect` function:
+Going back to the stream example, the producer and the consumer now communicate with one another using the same set of ports with identical shapes and complementary directions (the auxiliary :py:`en` port being outside of the stream signature), and can be *connected* using the :func:`connect` function:
 
 .. testcode::
 
     wiring.connect(m, producer.source, consumer.sink)
 
-This function examines the signatures of the two provided interface objects, ensuring that they are exactly complementary, and then adds combinatorial :pc:`.eq()` statements to the module for each of the port pairs to form the connection. Aside from the *connectability* check, the single line above is equivalent to:
+This function examines the signatures of the two provided interface objects, ensuring that they are exactly complementary, and then adds combinatorial :py:`.eq()` statements to the module for each of the port pairs to form the connection. Aside from the *connectability* check, the single line above is equivalent to:
 
 .. testcode::
 
@@ -295,7 +297,7 @@ This explanation concludes the essential knowledge necessary for using this modu
 Forwarding interior interfaces
 ++++++++++++++++++++++++++++++
 
-Consider a case where a component includes another component as a part of its implementation, and where it is necessary to *forward* the ports of the inner component, that is, expose them within the outer component's signature. To use the :pc:`SimpleStreamSignature` definition above in an example:
+Consider a case where a component includes another component as a part of its implementation, and where it is necessary to *forward* the ports of the inner component, that is, expose them within the outer component's signature. To use the :py:`SimpleStreamSignature` definition above in an example:
 
 .. testcode::
 
@@ -318,7 +320,7 @@ Consider a case where a component includes another component as a part of its im
             ]
             return m
 
-Because forwarding the ports requires assigning an output to an output and an input to an input, the :func:`connect` function, which connects outputs to inputs and vice versa, cannot be used---at least not directly. The :func:`connect` function is designed to cover the usual case of connecting the interfaces of modules *from outside* those modules. In order to connect an interface *from inside* a module, it is necessary to flip that interface first using the :func:`flipped` function. The :pc:`DataProcessorWrapper` should instead be implemented as:
+Because forwarding the ports requires assigning an output to an output and an input to an input, the :func:`connect` function, which connects outputs to inputs and vice versa, cannot be used---at least not directly. The :func:`connect` function is designed to cover the usual case of connecting the interfaces of modules *from outside* those modules. In order to connect an interface *from inside* a module, it is necessary to flip that interface first using the :func:`flipped` function. The :py:`DataProcessorWrapper` should instead be implemented as:
 
 .. testcode::
 
@@ -346,7 +348,7 @@ In some cases, *both* of the two interfaces provided to :func:`connect` must be 
 
 .. warning::
 
-    It is important to wrap an interface with the :func:`flipped` function whenever it is being connected from inside the module. If the :pc:`elaborate` function above had made a connection using :pc:`wiring.connect(m, self.sink, self.source)`, it would not work correctly. No diagnostic is emitted in this case.
+    It is important to wrap an interface with the :func:`flipped` function whenever it is being connected from inside the module. If the :py:`elaborate` function above had made a connection using :py:`wiring.connect(m, self.sink, self.source)`, it would not work correctly. No diagnostic is emitted in this case.
 
 
 .. _wiring-constant-inputs:
@@ -443,7 +445,7 @@ When creating an adapted interface, use the :meth:`create <Signature.create>` me
 Customizing signatures and interfaces
 +++++++++++++++++++++++++++++++++++++
 
-The :mod:`amaranth.lib.wiring` module encourages creation of reusable building blocks. In the examples above, a custom signature, :pc:`SimpleStreamSignature`, was introduced to illustrate the essential concepts necessary to use this module. While sufficient for that goal, it does not demonstrate the full capabilities provided by the module.
+The :mod:`amaranth.lib.wiring` module encourages creation of reusable building blocks. In the examples above, a custom signature, :py:`SimpleStreamSignature`, was introduced to illustrate the essential concepts necessary to use this module. While sufficient for that goal, it does not demonstrate the full capabilities provided by the module.
 
 Consider a simple System-on-Chip memory bus with a configurable address width. In an application like that, additional properties and methods could be usefully defined both on the signature (for example, properties to retrieve the parameters of the interface) and on the created interface object (for example, methods to examine the control and status signals). These can be defined as follows:
 
@@ -492,9 +494,9 @@ Consider a simple System-on-Chip memory bus with a configurable address width. I
 This example demonstrates several important principles of use:
 
 * Defining additional properties for a custom signature. The :class:`Signature` objects are mutable in a restricted way, and can be frozen with the :meth:`freeze <Signature.freeze>` method. In almost all cases, the newly defined properties must be immutable, as shown above.
-* Defining a signature-specific :pc:`__eq__` method. While anonymous (created from a dictionary of members) instances of :class:`Signature` compare structurally, instances of :class:`Signature`-derived classes compare by identity unless the equality operator is overridden. In almost all cases, the equality operator should compare the parameters of the signatures rather than their structures.
-* Defining a signature-specific :pc:`__repr__` method. Similarly to :pc:`__eq__`, the default implementation for :class:`Signature`-derived classes uses the signature's identity. In almost all cases, the representation conversion operator should return an expression that constructs an equivalent signature.
-* Defining a signature-specific :pc:`create` method. The default implementation used in anonymous signatures, :meth:`Signature.create`, returns a new instance of :class:`PureInterface`. Whenever the custom signature has a corresponding custom interface object class, this method should return a new instance of that class. It should not have any required arguments beyond the ones that :meth:`Signature.create` has (required parameters should be provided when creating the signature and not the interface), but may take additional optional arguments, forwarding them to the interface object constructor.
+* Defining a signature-specific :py:`__eq__` method. While anonymous (created from a dictionary of members) instances of :class:`Signature` compare structurally, instances of :class:`Signature`-derived classes compare by identity unless the equality operator is overridden. In almost all cases, the equality operator should compare the parameters of the signatures rather than their structures.
+* Defining a signature-specific :py:`__repr__` method. Similarly to :py:`__eq__`, the default implementation for :class:`Signature`-derived classes uses the signature's identity. In almost all cases, the representation conversion operator should return an expression that constructs an equivalent signature.
+* Defining a signature-specific :py:`create` method. The default implementation used in anonymous signatures, :meth:`Signature.create`, returns a new instance of :class:`PureInterface`. Whenever the custom signature has a corresponding custom interface object class, this method should return a new instance of that class. It should not have any required arguments beyond the ones that :meth:`Signature.create` has (required parameters should be provided when creating the signature and not the interface), but may take additional optional arguments, forwarding them to the interface object constructor.
 
 .. doctest::
 
@@ -522,11 +524,11 @@ The custom properties defined for both the signature and the interface object ca
 
 .. note::
 
-    Unusually for Python, when the implementation of a property or method is invoked through a flipped object, the :pc:`self` argument receives the flipped object that has the type :class:`FlippedSignature` or :class:`FlippedInterface`. This wrapper object proxies all attribute accesses and method calls to the original signature or interface, the only change being that of the data flow directions. See the documentation for these classes for a more detailed explanation.
+    Unusually for Python, when the implementation of a property or method is invoked through a flipped object, the :py:`self` argument receives the flipped object that has the type :class:`FlippedSignature` or :class:`FlippedInterface`. This wrapper object proxies all attribute accesses and method calls to the original signature or interface, the only change being that of the data flow directions. See the documentation for these classes for a more detailed explanation.
 
 .. warning::
 
-    While the wrapper object forwards attribute accesses and method calls, it does not currently proxy special methods such as :pc:`__getitem__` or :pc:`__add__` that are rarely, if ever, used with interface objects. This limitation may be lifted in the future.
+    While the wrapper object forwards attribute accesses and method calls, it does not currently proxy special methods such as :py:`__getitem__` or :py:`__add__` that are rarely, if ever, used with interface objects. This limitation may be lifted in the future.
 
 
 .. _wiring-path:
@@ -534,7 +536,7 @@ The custom properties defined for both the signature and the interface object ca
 Paths
 +++++
 
-Whenever an operation in this module needs to refer to the interior of an object, it accepts or produces a *path*: a tuple of strings and integers denoting the attribute names and indexes through which an interior value can be extracted. For example, the path :pc:`("buses", 0, "cyc")` into the object :pc:`obj` corresponds to the Python expression :pc:`obj.buses[0].cyc`.
+Whenever an operation in this module needs to refer to the interior of an object, it accepts or produces a *path*: a tuple of strings and integers denoting the attribute names and indexes through which an interior value can be extracted. For example, the path :py:`("buses", 0, "cyc")` into the object :py:`obj` corresponds to the Python expression :py:`obj.buses[0].cyc`.
 
 When they appear in diagnostics, paths are printed as the corresponding Python expression.
 
@@ -555,7 +557,7 @@ Signatures
 .. autodata:: Out
 .. autodata:: In
 
-.. autoclass:: Member(flow, description, *, reset=None)
+.. autoclass:: Member(flow, description, *, init=None)
 
 .. autoexception:: SignatureError
 

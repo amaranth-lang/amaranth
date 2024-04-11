@@ -11,7 +11,7 @@ a { text-decoration: underline; }
 /* Some of our section titles are looong */
 @media screen and (min-width:769px) {
   .wy-nav-side, .wy-side-scroll, .wy-menu-vertical { width: 340px; }
-  .wy-side-nav-search { width: 325px; }
+  .wy-side-nav-search { width: 340px; margin-bottom: .0em; }
   .wy-nav-content-wrap { margin-left: 340px; }
 }
 
@@ -20,3 +20,17 @@ a { text-decoration: underline; }
 
 /* Many of our diagnostics are even longer */
 .rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre { white-space: pre-wrap; }
+
+/* Work around https://github.com/readthedocs/sphinx_rtd_theme/issues/1301 */
+.py.property { display: block !important; }
+
+/* Avoid excessively tiny font in the sidebar */
+.wy-menu-vertical li.toctree-l2, .wy-menu-vertical li.toctree-l3, .wy-menu-vertical li.toctree-l4 { font-size: 0.97em; }
+/* For some cursed reason the RTD theme was decreasing the font size twice! */
+.wy-menu-vertical a { font-size: 100%; }
+
+/* Work around images in docstrings being glued to the paragraph underneath */
+.rst-content section dd>img { margin-bottom: 24px; }
+
+/* No switchable color schemes */
+img { color-scheme: light; }

@@ -25,7 +25,7 @@ def get_var_name(depth=2, default=_raise_exception):
         else:
             break
     if call_opc not in ("CALL_FUNCTION", "CALL_FUNCTION_KW", "CALL_FUNCTION_EX",
-                        "CALL_METHOD", "CALL", "CALL_KW"):
+                        "CALL_METHOD", "CALL_METHOD_KW", "CALL", "CALL_KW"):
         if default is _raise_exception:
             raise NameNotFound
         else:

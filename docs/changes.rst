@@ -9,6 +9,10 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.4.5 <https://amaranth-lang.org/docs/amaranth/v0.4.5/>`_
+* `Amaranth 0.4.4 <https://amaranth-lang.org/docs/amaranth/v0.4.4/>`_
+* `Amaranth 0.4.3 <https://amaranth-lang.org/docs/amaranth/v0.4.3/>`_
+* `Amaranth 0.4.2 <https://amaranth-lang.org/docs/amaranth/v0.4.2/>`_
 * `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
 * `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
@@ -29,16 +33,48 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
 * Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
 * Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
+* Update uses of ``reset=`` keyword argument to ``init=``
+* Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
+* Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
+* Replace uses of ``amaranth.hdl.Memory`` with ``amaranth.lib.memory.Memory``
+* Replace imports of ``amaranth.asserts.{Assert, Assume, Cover}`` with imports from ``amaranth.hdl``
+* Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
+* Ensure all elaboratables are subclasses of :class:`Elaboratable`
+* Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
+* Remove uses of ``amaranth.lib.coding.*`` by inlining or copying the implementation of the modules.
 
 
 Implemented RFCs
 ----------------
 
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
+.. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
+.. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
+.. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
+.. _RFC 46: https://amaranth-lang.org/rfcs/0046-shape-range-1.html
+.. _RFC 50: https://amaranth-lang.org/rfcs/0050-print.html
+.. _RFC 51: https://amaranth-lang.org/rfcs/0051-const-from-bits.html
+.. _RFC 53: https://amaranth-lang.org/rfcs/0053-ioport.html
+.. _RFC 55: https://amaranth-lang.org/rfcs/0055-lib-io.html
+.. _RFC 58: https://amaranth-lang.org/rfcs/0058-valuecastable-format.html
+.. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
+.. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
+.. _RFC 63: https://amaranth-lang.org/rfcs/0063-remove-lib-coding.html
 
 * `RFC 17`_: Remove ``log2_int``
+* `RFC 27`_: Testbench processes for the simulator
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
+* `RFC 43`_: Rename ``reset=`` to ``init=``
+* `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
+* `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
+* `RFC 50`_: ``Print`` statement and string formatting
+* `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
+* `RFC 53`_: Low-level I/O primitives
+* `RFC 58`_: Core support for ``ValueCastable`` formatting
+* `RFC 59`_: Get rid of upwards propagation of clock domains
+* `RFC 62`_: The ``MemoryData`` class
+* `RFC 63`_: Remove ``amaranth.lib.coding``
 
 
 Language changes
@@ -46,15 +82,29 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
-* Added: :class:`ast.Slice` objects have been made const-castable.
+* Added: :class:`Slice` objects have been made const-castable.
 * Added: :func:`amaranth.utils.ceil_log2`, :func:`amaranth.utils.exact_log2`. (`RFC 17`_)
+* Added: :class:`Format` objects, :class:`Print` statements, messages in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
+* Added: :meth:`ShapeCastable.from_bits` method. (`RFC 51`_)
+* Added: IO values, :class:`IOPort` objects, :class:`IOBufferInstance` objects. (`RFC 53`_)
+* Added: :class:`MemoryData` objects. (`RFC 62`_)
 * Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
 * Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
-* Changed: ``Signal(range(stop), reset=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
+* Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
 * Changed: ``Signal(range(0))`` is now valid without a warning.
+* Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
+* Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
+* Changed: :class:`Shape` has been made immutable and hashable.
+* Changed: :class:`Assert`, :class:`Assume`, :class:`Cover` have been moved to :mod:`amaranth.hdl` from :mod:`amaranth.asserts`. (`RFC 50`_)
+* Changed: :class:`Instance` IO ports now accept only IO values, not plain values. (`RFC 53`_)
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
+* Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
+* Deprecated: upwards propagation of clock domains. (`RFC 59`_)
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
+* Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
+* Removed: assertion names in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
+* Removed: accepting non-subclasses of :class:`Elaboratable` as elaboratables.
 
 
 Standard library changes
@@ -62,9 +112,26 @@ Standard library changes
 
 .. currentmodule:: amaranth.lib
 
+* Added: :mod:`amaranth.lib.memory`. (`RFC 45`_)
+* Added: :class:`amaranth.lib.data.Const` class. (`RFC 51`_)
+* Changed: :meth:`amaranth.lib.data.Layout.const` returns a :class:`amaranth.lib.data.Const`, not a view (`RFC 51`_)
+* Changed: :meth:`amaranth.lib.wiring.Signature.is_compliant` no longer rejects reset-less signals.
+* Added: :class:`amaranth.lib.io.SingleEndedPort`, :class:`amaranth.lib.io.DifferentialPort`. (`RFC 55`_)
+* Added: :class:`amaranth.lib.io.Buffer`, :class:`amaranth.lib.io.FFBuffer`, :class:`amaranth.lib.io.DDRBuffer`. (`RFC 55`_)
+* Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
 * Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
+
+
+Toolchain changes
+-----------------
+
+* Added: ``Simulator.add_testbench``. (`RFC 27`_)
+* Added: support for :class:`amaranth.hdl.Assert` in simulation. (`RFC 50`_)
+* Deprecated: ``Settle`` simulation command. (`RFC 27`_)
+* Deprecated: ``Simulator.add_sync_process``. (`RFC 27`_)
+* Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
 Platform integration changes
@@ -75,6 +142,7 @@ Platform integration changes
 * Added: :meth:`BuildPlan.execute_local_docker`.
 * Added: :meth:`BuildPlan.extract`.
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
+* Changed: ``IntelPlatform`` renamed to ``AlteraPlatform``.
 * Deprecated: argument ``run_script=`` in :meth:`BuildPlan.execute_local`.
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
@@ -180,7 +248,7 @@ Language changes
 * Changed: :meth:`Value.cast` casts :class:`ValueCastable` objects recursively.
 * Changed: :meth:`Value.cast` treats instances of classes derived from both :class:`enum.Enum` and :class:`int` (including :class:`enum.IntEnum`) as enumerations rather than integers.
 * Changed: :meth:`Value.matches` with an empty list of patterns returns ``Const(1)`` rather than ``Const(0)``, to match the behavior of ``with m.Case():``.
-* Changed: :class:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
+* Changed: :func:`Cat` warns if an enumeration without an explicitly specified shape is used. (`RFC 3`_)
 * Changed: ``signed(0)`` is no longer constructible. (The semantics of this shape were never defined.)
 * Changed: :meth:`Value.__abs__` returns an unsigned value.
 * Deprecated: :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`. (Predating the RFC process.)

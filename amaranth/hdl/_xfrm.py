@@ -1,12 +1,12 @@
+import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
-from copy import copy
 
-from .._utils import flatten, _ignore_deprecated
+from .._utils import flatten
 from .. import tracer
 from ._ast import *
-from ._ast import _StatementList
+from ._ast import _StatementList, AnyValue
 from ._cd import *
 from ._ir import *
 from ._mem import MemoryInstance
@@ -17,21 +17,12 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
-           "SwitchCleaner", "LHSGroupAnalyzer", "LHSGroupFilter",
            "ResetInserter", "EnableInserter"]
 
 
 class ValueVisitor(metaclass=ABCMeta):
     @abstractmethod
     def on_Const(self, value):
-        pass # :nocov:
-
-    @abstractmethod
-    def on_AnyConst(self, value):
-        pass # :nocov:
-
-    @abstractmethod
-    def on_AnySeq(self, value):
         pass # :nocov:
 
     @abstractmethod
@@ -47,6 +38,10 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
+    def on_AnyValue(self, value):
+        pass # :nocov:
+
+    @abstractmethod
     def on_Operator(self, value):
         pass # :nocov:
 
@@ -59,11 +54,11 @@ class ValueVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         pass # :nocov:
 
     @abstractmethod
-    def on_ArrayProxy(self, value):
+    def on_SwitchValue(self, value):
         pass # :nocov:
 
     @abstractmethod
@@ -79,26 +74,24 @@ class ValueVisitor(metaclass=ABCMeta):
     def on_value(self, value):
         if type(value) is Const:
             new_value = self.on_Const(value)
-        elif type(value) is AnyConst:
-            new_value = self.on_AnyConst(value)
-        elif type(value) is AnySeq:
-            new_value = self.on_AnySeq(value)
         elif type(value) is Signal:
             new_value = self.on_Signal(value)
         elif type(value) is ClockSignal:
             new_value = self.on_ClockSignal(value)
         elif type(value) is ResetSignal:
             new_value = self.on_ResetSignal(value)
+        elif type(value) is AnyValue:
+            new_value = self.on_AnyValue(value)
         elif type(value) is Operator:
             new_value = self.on_Operator(value)
         elif type(value) is Slice:
             new_value = self.on_Slice(value)
         elif type(value) is Part:
             new_value = self.on_Part(value)
-        elif type(value) is Cat:
-            new_value = self.on_Cat(value)
-        elif type(value) is ArrayProxy:
-            new_value = self.on_ArrayProxy(value)
+        elif type(value) is Concat:
+            new_value = self.on_Concat(value)
+        elif type(value) is SwitchValue:
+            new_value = self.on_SwitchValue(value)
         elif type(value) is Initial:
             new_value = self.on_Initial(value)
         else:
@@ -115,12 +108,6 @@ class ValueTransformer(ValueVisitor):
     def on_Const(self, value):
         return value
 
-    def on_AnyConst(self, value):
-        return value
-
-    def on_AnySeq(self, value):
-        return value
-
     def on_Signal(self, value):
         return value
 
@@ -128,6 +115,9 @@ class ValueTransformer(ValueVisitor):
         return value
 
     def on_ResetSignal(self, value):
+        return value
+
+    def on_AnyValue(self, value):
         return value
 
     def on_Operator(self, value):
@@ -140,12 +130,11 @@ class ValueTransformer(ValueVisitor):
         return Part(self.on_value(value.value), self.on_value(value.offset),
                     value.width, value.stride)
 
-    def on_Cat(self, value):
-        return Cat(self.on_value(o) for o in value.parts)
+    def on_Concat(self, value):
+        return Concat(self.on_value(o) for o in value.parts)
 
-    def on_ArrayProxy(self, value):
-        return ArrayProxy([self.on_value(elem) for elem in value._iter_as_values()],
-                          self.on_value(value.index))
+    def on_SwitchValue(self, value):
+        return SwitchValue(self.on_value(value.test), [(patterns, self.on_value(val)) for patterns, val in value.cases])
 
     def on_Initial(self, value):
         return value
@@ -157,15 +146,11 @@ class StatementVisitor(metaclass=ABCMeta):
         pass # :nocov:
 
     @abstractmethod
-    def on_Assert(self, stmt):
+    def on_Print(self, stmt):
         pass # :nocov:
 
     @abstractmethod
-    def on_Assume(self, stmt):
-        pass # :nocov:
-
-    @abstractmethod
-    def on_Cover(self, stmt):
+    def on_Property(self, stmt):
         pass # :nocov:
 
     @abstractmethod
@@ -185,12 +170,10 @@ class StatementVisitor(metaclass=ABCMeta):
     def on_statement(self, stmt):
         if type(stmt) is Assign:
             new_stmt = self.on_Assign(stmt)
-        elif type(stmt) is Assert:
-            new_stmt = self.on_Assert(stmt)
-        elif type(stmt) is Assume:
-            new_stmt = self.on_Assume(stmt)
-        elif type(stmt) is Cover:
-            new_stmt = self.on_Cover(stmt)
+        elif type(stmt) is Print:
+            new_stmt = self.on_Print(stmt)
+        elif type(stmt) is Property:
+            new_stmt = self.on_Property(stmt)
         elif type(stmt) is Switch:
             new_stmt = self.on_Switch(stmt)
         elif isinstance(stmt, Iterable):
@@ -199,9 +182,7 @@ class StatementVisitor(metaclass=ABCMeta):
             new_stmt = self.on_unknown_statement(stmt)
         if isinstance(new_stmt, Statement) and self.replace_statement_src_loc(stmt, new_stmt):
             new_stmt.src_loc = stmt.src_loc
-            if isinstance(new_stmt, Switch) and isinstance(stmt, Switch):
-                new_stmt.case_src_locs = stmt.case_src_locs
-        if isinstance(new_stmt, Property):
+        if isinstance(new_stmt, (Print, Property)):
             new_stmt._MustUse__used = True
         return new_stmt
 
@@ -213,20 +194,31 @@ class StatementTransformer(StatementVisitor):
     def on_value(self, value):
         return value
 
+    def on_Format(self, format):
+        chunks = []
+        for chunk in format._chunks:
+            if isinstance(chunk, str):
+                chunks.append(chunk)
+            else:
+                value, format_spec = chunk
+                chunks.append((self.on_value(value), format_spec))
+        return Format._from_chunks(chunks)
+
     def on_Assign(self, stmt):
         return Assign(self.on_value(stmt.lhs), self.on_value(stmt.rhs))
 
-    def on_Assert(self, stmt):
-        return Assert(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
+    def on_Print(self, stmt):
+        return Print(self.on_Format(stmt.message), end="")
 
-    def on_Assume(self, stmt):
-        return Assume(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
-
-    def on_Cover(self, stmt):
-        return Cover(self.on_value(stmt.test), _check=stmt._check, _en=stmt._en, name=stmt.name)
+    def on_Property(self, stmt):
+        if stmt.message is None:
+            message = None
+        else:
+            message = self.on_Format(stmt.message)
+        return Property(stmt.kind, self.on_value(stmt.test), message)
 
     def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
+        cases = [(k, self.on_statement(s), l) for k, s, l in stmt.cases]
         return Switch(self.on_value(stmt.test), cases)
 
     def on_statements(self, stmts):
@@ -235,19 +227,18 @@ class StatementTransformer(StatementVisitor):
 
 class FragmentTransformer:
     def map_subfragments(self, fragment, new_fragment):
-        for subfragment, name in fragment.subfragments:
-            new_fragment.add_subfragment(self(subfragment), name)
+        for subfragment, name, src_loc in fragment.subfragments:
+            new_fragment.add_subfragment(self(subfragment), name, src_loc=src_loc)
 
     def map_ports(self, fragment, new_fragment):
-        for port, dir in fragment.ports.items():
-            new_fragment.add_ports(port, dir=dir)
-
-    def map_named_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
-            for name, (value, dir) in fragment.named_ports.items():
-                new_fragment.named_ports[name] = self.on_value(value), dir
+            for name, (value, dir) in fragment.ports.items():
+                if isinstance(value, Value):
+                    new_fragment.ports[name] = self.on_value(value), dir
+                else:
+                    new_fragment.ports[name] = value, dir
         else:
-            new_fragment.named_ports = OrderedDict(fragment.named_ports.items())
+            new_fragment.ports = OrderedDict(fragment.ports.items())
 
     def map_domains(self, fragment, new_fragment):
         for domain in fragment.iter_domains():
@@ -255,50 +246,78 @@ class FragmentTransformer:
 
     def map_statements(self, fragment, new_fragment):
         if hasattr(self, "on_statement"):
-            new_fragment.add_statements(map(self.on_statement, fragment.statements))
+            for domain, statements in fragment.statements.items():
+                new_fragment.add_statements(domain, map(self.on_statement, statements))
         else:
-            new_fragment.add_statements(fragment.statements)
-
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signal in fragment.iter_drivers():
-            new_fragment.add_driver(signal, domain)
+            for domain, statements in fragment.statements.items():
+                new_fragment.add_statements(domain, statements)
 
     def map_memory_ports(self, fragment, new_fragment):
-        new_fragment.read_ports = [
-            copy(port)
-            for port in fragment.read_ports
-        ]
-        new_fragment.write_ports = [
-            copy(port)
-            for port in fragment.write_ports
-        ]
         if hasattr(self, "on_value"):
-            for port in new_fragment.read_ports:
-                port.en = self.on_value(port.en)
-                port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
-            for port in new_fragment.write_ports:
-                port.en = self.on_value(port.en)
-                port.addr = self.on_value(port.addr)
-                port.data = self.on_value(port.data)
+            for port in new_fragment._read_ports:
+                port._en = self.on_value(port._en)
+                port._addr = self.on_value(port._addr)
+                port._data = self.on_value(port._data)
+            for port in new_fragment._write_ports:
+                port._en = self.on_value(port._en)
+                port._addr = self.on_value(port._addr)
+                port._data = self.on_value(port._data)
 
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
-            new_fragment = MemoryInstance(fragment.memory, [], [])
+            new_fragment = MemoryInstance(
+                data=fragment._data,
+                attrs=fragment._attrs,
+                src_loc=fragment.src_loc
+            )
+            new_fragment._read_ports = [
+                MemoryInstance._ReadPort(
+                    domain=port._domain,
+                    addr=port._addr,
+                    data=port._data,
+                    en=port._en,
+                    transparent_for=port._transparent_for,
+                )
+                for port in fragment._read_ports
+            ]
+            new_fragment._write_ports = [
+                MemoryInstance._WritePort(
+                    domain=port._domain,
+                    addr=port._addr,
+                    data=port._data,
+                    en=port._en,
+                )
+                for port in fragment._write_ports
+            ]
             self.map_memory_ports(fragment, new_fragment)
         elif isinstance(fragment, Instance):
             new_fragment = Instance(fragment.type, src_loc=fragment.src_loc)
             new_fragment.parameters = OrderedDict(fragment.parameters)
-            self.map_named_ports(fragment, new_fragment)
+            self.map_ports(fragment, new_fragment)
+        elif isinstance(fragment, IOBufferInstance):
+            if hasattr(self, "on_value"):
+                new_fragment = IOBufferInstance(
+                    port=fragment.port,
+                    i=self.on_value(fragment.i) if fragment.i is not None else None,
+                    o=self.on_value(fragment.o) if fragment.o is not None else None,
+                    oe=self.on_value(fragment.oe) if fragment.o is not None else None,
+                    src_loc=fragment.src_loc,
+                )
+            else:
+                new_fragment = IOBufferInstance(
+                    port=fragment.port,
+                    i=fragment.i,
+                    o=fragment.o,
+                    oe=fragment.oe,
+                    src_loc=fragment.src_loc,
+                )
         else:
-            new_fragment = Fragment()
-            new_fragment.flatten = fragment.flatten
+            new_fragment = Fragment(src_loc=fragment.src_loc)
         new_fragment.attrs = OrderedDict(fragment.attrs)
-        self.map_ports(fragment, new_fragment)
+        new_fragment.origins = fragment.origins
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
-        self.map_drivers(fragment, new_fragment)
         return new_fragment
 
     def __call__(self, value, *, src_loc_at=0):
@@ -341,7 +360,7 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         self._local_domains = set()
 
     def _add_used_domain(self, domain_name):
-        if domain_name is None:
+        if domain_name == "comb":
             return
         if domain_name in self._local_domains:
             return
@@ -351,9 +370,8 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         pass
 
     on_Const = on_ignore
-    on_AnyConst = on_ignore
-    on_AnySeq = on_ignore
     on_Signal = on_ignore
+    on_AnyValue = on_ignore
 
     def on_ClockSignal(self, value):
         self._add_used_domain(value.domain)
@@ -372,32 +390,39 @@ class DomainCollector(ValueVisitor, StatementVisitor):
         self.on_value(value.value)
         self.on_value(value.offset)
 
-    def on_Cat(self, value):
+    def on_Concat(self, value):
         for o in value.parts:
             self.on_value(o)
 
-    def on_ArrayProxy(self, value):
-        for elem in value._iter_as_values():
-            self.on_value(elem)
-        self.on_value(value.index)
+    def on_SwitchValue(self, value):
+        self.on_value(value.test)
+        for patterns, val in value.cases:
+            self.on_value(val)
 
     def on_Initial(self, value):
         pass
+
+    def on_Format(self, format):
+        for chunk in format._chunks:
+            if not isinstance(chunk, str):
+                value, _format_spec = chunk
+                self.on_value(value)
 
     def on_Assign(self, stmt):
         self.on_value(stmt.lhs)
         self.on_value(stmt.rhs)
 
-    def on_property(self, stmt):
-        self.on_value(stmt.test)
+    def on_Print(self, stmt):
+        self.on_Format(stmt.message)
 
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
+    def on_Property(self, stmt):
+        self.on_value(stmt.test)
+        if stmt.message is not None:
+            self.on_Format(stmt.message)
 
     def on_Switch(self, stmt):
         self.on_value(stmt.test)
-        for stmts in stmt.cases.values():
+        for _patterns, stmts, _src_loc in stmt.cases:
             self.on_statement(stmts)
 
     def on_statements(self, stmts):
@@ -406,21 +431,28 @@ class DomainCollector(ValueVisitor, StatementVisitor):
 
     def on_fragment(self, fragment):
         if isinstance(fragment, MemoryInstance):
-            for port in fragment.read_ports:
-                self.on_value(port.addr)
-                self.on_value(port.data)
-                self.on_value(port.en)
-                if port.domain != "comb":
-                    self._add_used_domain(port.domain)
-            for port in fragment.write_ports:
-                self.on_value(port.addr)
-                self.on_value(port.data)
-                self.on_value(port.en)
-                self._add_used_domain(port.domain)
+            for port in fragment._read_ports:
+                self.on_value(port._addr)
+                self.on_value(port._data)
+                self.on_value(port._en)
+                self._add_used_domain(port._domain)
+            for port in fragment._write_ports:
+                self.on_value(port._addr)
+                self.on_value(port._data)
+                self.on_value(port._en)
+                self._add_used_domain(port._domain)
 
         if isinstance(fragment, Instance):
-            for name, (value, dir) in fragment.named_ports.items():
-                self.on_value(value)
+            for name, (value, dir) in fragment.ports.items():
+                if not isinstance(value, IOValue):
+                    self.on_value(value)
+
+        if isinstance(fragment, IOBufferInstance):
+            if fragment.o is not None:
+                self.on_value(fragment.o)
+                self.on_value(fragment.oe)
+            if fragment.i is not None:
+                self.on_value(fragment.i)
 
         old_local_domains, self._local_domains = self._local_domains, set(self._local_domains)
         for domain_name, domain in fragment.domains.items():
@@ -429,10 +461,10 @@ class DomainCollector(ValueVisitor, StatementVisitor):
             else:
                 self.defined_domains.add(domain_name)
 
-        self.on_statements(fragment.statements)
-        for domain_name in fragment.drivers:
+        for domain_name, statements in fragment.statements.items():
             self._add_used_domain(domain_name)
-        for subfragment, name in fragment.subfragments:
+            self.on_statements(statements)
+        for subfragment, name, src_loc in fragment.subfragments:
             self.on_fragment(subfragment)
 
         self._local_domains = old_local_domains
@@ -474,36 +506,47 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                     assert cd.name == self.domain_map[domain]
             new_fragment.add_domains(cd)
 
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signals in fragment.drivers.items():
-            if domain in self.domain_map:
-                domain = self.domain_map[domain]
-            for signal in signals:
-                new_fragment.add_driver(self.on_value(signal), domain)
+    def map_statements(self, fragment, new_fragment):
+        for domain, statements in fragment.statements.items():
+            new_fragment.add_statements(
+                self.domain_map.get(domain, domain),
+                map(self.on_statement, statements)
+            )
 
     def map_memory_ports(self, fragment, new_fragment):
         super().map_memory_ports(fragment, new_fragment)
-        for port in new_fragment.read_ports:
-            if port.domain in self.domain_map:
-                port.domain = self.domain_map[port.domain]
-        for port in new_fragment.write_ports:
-            if port.domain in self.domain_map:
-                port.domain = self.domain_map[port.domain]
+        for port in new_fragment._read_ports:
+            if port._domain in self.domain_map:
+                port._domain = self.domain_map[port._domain]
+        for port in new_fragment._write_ports:
+            if port._domain in self.domain_map:
+                port._domain = self.domain_map[port._domain]
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):
     def __init__(self, domains=None):
         self.domains = domains
+        self.domains_propagated_up = {}
+
+    def _warn_on_propagation_up(self, domain, src_loc):
+        if domain in self.domains_propagated_up:
+            used_in, defined_in = self.domains_propagated_up[domain]
+            common_prefix = []
+            for u, d in zip(used_in, defined_in):
+                if u == d:
+                    common_prefix.append(u)
+            warnings.warn_explicit(f"Domain '{domain}' is used in '{'.'.join(used_in)}', but "
+                                   f"defined in '{'.'.join(defined_in)}', which will not be "
+                                   f"supported in Amaranth 0.6; define the domain in "
+                                   f"'{'.'.join(common_prefix)}' or one of its parents",
+                                   DeprecationWarning, filename=src_loc[0], lineno=src_loc[1])
 
     def _resolve(self, domain, context):
         if domain not in self.domains:
             raise DomainError("Signal {!r} refers to nonexistent domain '{}'"
                               .format(context, domain))
+        self._warn_on_propagation_up(domain, context.src_loc)
         return self.domains[domain]
-
-    def map_drivers(self, fragment, new_fragment):
-        for domain, signal in fragment.iter_drivers():
-            new_fragment.add_driver(self.on_value(signal), domain)
 
     def replace_value_src_loc(self, value, new_value):
         return not isinstance(value, (ClockSignal, ResetSignal))
@@ -522,122 +565,17 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
                                   .format(value, value.domain))
         return domain.rst
 
-    def _insert_resets(self, fragment):
-        for domain_name, signals in fragment.drivers.items():
-            if domain_name is None:
-                continue
-            domain = fragment.domains[domain_name]
-            if domain.rst is None:
-                continue
-            stmts = [signal.eq(Const(signal.reset, signal.width))
-                     for signal in signals if not signal.reset_less]
-            fragment.add_statements(Switch(domain.rst, {1: stmts}))
-
     def on_fragment(self, fragment):
         self.domains = fragment.domains
-        new_fragment = super().on_fragment(fragment)
-        self._insert_resets(new_fragment)
-        return new_fragment
-
-
-class SwitchCleaner(StatementVisitor):
-    def on_ignore(self, stmt):
-        return stmt
-
-    on_Assign = on_ignore
-    on_Assert = on_ignore
-    on_Assume = on_ignore
-    on_Cover  = on_ignore
-
-    def on_Switch(self, stmt):
-        cases = OrderedDict((k, self.on_statement(s)) for k, s in stmt.cases.items())
-        if any(len(s) for s in cases.values()):
-            return Switch(stmt.test, cases)
-
-    def on_statements(self, stmts):
-        stmts = flatten(self.on_statement(stmt) for stmt in stmts)
-        return _StatementList(stmt for stmt in stmts if stmt is not None)
-
-
-class LHSGroupAnalyzer(StatementVisitor):
-    def __init__(self):
-        self.signals = SignalDict()
-        self.unions  = OrderedDict()
-
-    def find(self, signal):
-        if signal not in self.signals:
-            self.signals[signal] = len(self.signals)
-        group = self.signals[signal]
-        while group in self.unions:
-            group = self.unions[group]
-        self.signals[signal] = group
-        return group
-
-    def unify(self, root, *leaves):
-        root_group = self.find(root)
-        for leaf in leaves:
-            leaf_group = self.find(leaf)
-            if root_group == leaf_group:
-                continue
-            self.unions[leaf_group] = root_group
-
-    def groups(self):
-        groups = OrderedDict()
-        for signal in self.signals:
-            group = self.find(signal)
-            if group not in groups:
-                groups[group] = SignalSet()
-            groups[group].add(signal)
-        return groups
-
-    def on_Assign(self, stmt):
-        lhs_signals = stmt._lhs_signals()
-        if lhs_signals:
-            self.unify(*stmt._lhs_signals())
-
-    def on_property(self, stmt):
-        lhs_signals = stmt._lhs_signals()
-        if lhs_signals:
-            self.unify(*stmt._lhs_signals())
-
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
-
-    def on_Switch(self, stmt):
-        for case_stmts in stmt.cases.values():
-            self.on_statements(case_stmts)
-
-    def on_statements(self, stmts):
-        for stmt in stmts:
-            self.on_statement(stmt)
-
-    def __call__(self, stmts):
-        self.on_statements(stmts)
-        return self.groups()
-
-
-class LHSGroupFilter(SwitchCleaner):
-    def __init__(self, signals):
-        self.signals = signals
-
-    def on_Assign(self, stmt):
-        # The invariant provided by LHSGroupAnalyzer is that all signals that ever appear together
-        # on LHS are a part of the same group, so it is sufficient to check any of them.
-        lhs_signals = stmt.lhs._lhs_signals()
-        if lhs_signals:
-            any_lhs_signal = next(iter(lhs_signals))
-            if any_lhs_signal in self.signals:
-                return stmt
-
-    def on_property(self, stmt):
-        any_lhs_signal = next(iter(stmt._lhs_signals()))
-        if any_lhs_signal in self.signals:
-            return stmt
-
-    on_Assert = on_property
-    on_Assume = on_property
-    on_Cover  = on_property
+        self.domains_propagated_up = fragment.domains_propagated_up
+        for domain, statements in fragment.statements.items():
+            self._warn_on_propagation_up(domain, statements[0].src_loc)
+        if isinstance(fragment, MemoryInstance):
+            for port in fragment._read_ports:
+                self._warn_on_propagation_up(port._domain, fragment.src_loc)
+            for port in fragment._write_ports:
+                self._warn_on_propagation_up(port._domain, fragment.src_loc)
+        return super().on_fragment(fragment)
 
 
 class _ControlInserter(FragmentTransformer):
@@ -645,13 +583,18 @@ class _ControlInserter(FragmentTransformer):
         self.src_loc = None
         if isinstance(controls, Value):
             controls = {"sync": controls}
+        if "comb" in controls:
+            raise ValueError("Cannot add controls on the 'comb' domain")
         self.controls = OrderedDict(controls)
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
-        for domain, signals in fragment.drivers.items():
-            if domain is None or domain not in self.controls:
+        for domain, statements in fragment.statements.items():
+            if domain == "comb" or domain not in self.controls:
                 continue
+            signals = SignalSet()
+            for stmt in statements:
+                signals |= stmt._lhs_signals()
             self._insert_control(new_fragment, domain, signals)
         return new_fragment
 
@@ -665,22 +608,26 @@ class _ControlInserter(FragmentTransformer):
 
 class ResetInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(Const(s.reset, s.width)) for s in signals if not s.reset_less]
-        fragment.add_statements(Switch(self.controls[domain], {1: stmts}, src_loc=self.src_loc))
+        stmts = [s.eq(Const(s.init, s.shape())) for s in signals if not s.reset_less]
+        fragment.add_statements(domain, Switch(self.controls[domain], [(1, stmts, None)], src_loc=self.src_loc))
 
 
 class EnableInserter(_ControlInserter):
     def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(s) for s in signals]
-        fragment.add_statements(Switch(self.controls[domain], {0: stmts}, src_loc=self.src_loc))
+        if domain in fragment.statements:
+            fragment.statements[domain] = _StatementList([Switch(
+                self.controls[domain],
+                [(1, fragment.statements[domain], None)],
+                src_loc=self.src_loc,
+            )])
 
     def on_fragment(self, fragment):
         new_fragment = super().on_fragment(fragment)
         if isinstance(new_fragment, MemoryInstance):
-            for port in new_fragment.read_ports:
-                if port.domain in self.controls:
-                    port.en = port.en & self.controls[port.domain]
-            for port in new_fragment.write_ports:
-                if port.domain in self.controls:
-                    port.en = Mux(self.controls[port.domain], port.en, Const(0, len(port.en)))
+            for port in new_fragment._read_ports:
+                if port._domain in self.controls:
+                    port._en = port._en & self.controls[port._domain]
+            for port in new_fragment._write_ports:
+                if port._domain in self.controls:
+                    port._en = Mux(self.controls[port._domain], port._en, Const(0, len(port._en)))
         return new_fragment

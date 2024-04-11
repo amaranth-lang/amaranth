@@ -17,6 +17,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
     "sphinxcontrib.platformpicker",
+    "sphinxcontrib.yowasp_wavedrom",
 ]
 
 with open(".gitignore") as f:
@@ -39,7 +40,11 @@ napoleon_numpy_docstring = True
 napoleon_use_ivar = True
 napoleon_include_init_with_doc = True
 napoleon_include_special_with_doc = True
-napoleon_custom_sections = ["Platform overrides"]
+napoleon_custom_sections = [
+    ("Attributes", "params_style"), # by default displays as "Variables", which is confusing
+    ("Members", "params_style"), # `lib.wiring` signature members
+    "Platform overrides"
+]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
@@ -47,6 +52,17 @@ html_css_files = ["custom.css"]
 html_logo = "_static/logo.png"
 
 rst_prolog = """
-.. role:: pc(code)
+.. role:: py(code)
    :language: python
 """
+
+linkcheck_ignore = [
+    r"^http://127\.0\.0\.1:8000$"
+]
+
+linkcheck_anchors_ignore_for_url = [
+    r"^https://matrix\.to/",
+    r"^https://web\.libera\.chat/",
+    # React page with README content included as a JSON payload.
+    r"^https://github\.com/[^/]+/[^/]+/$",
+]

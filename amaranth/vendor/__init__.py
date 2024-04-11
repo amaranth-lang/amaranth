@@ -4,6 +4,7 @@
 
 # Keep this list sorted alphabetically.
 __all__ = [
+    "AlteraPlatform",
     "GowinPlatform",
     "IntelPlatform",
     "LatticeECP5Platform",
@@ -12,6 +13,7 @@ __all__ = [
     "LatticeMachXO3LPlatform",
     "LatticeNexusPlatform",
     "QuicklogicPlatform",
+    "SiliconBluePlatform",
     "XilinxPlatform",
 ]
 
@@ -21,18 +23,15 @@ def __dir__():
 
 
 def __getattr__(name):
+    if name in ("AlteraPlatform", "IntelPlatform"):
+        from ._altera import AlteraPlatform
+        return AlteraPlatform
     if name == "GowinPlatform":
         from ._gowin import GowinPlatform
         return GowinPlatform
-    if name == "IntelPlatform":
-        from ._intel import IntelPlatform
-        return IntelPlatform
     if name == "LatticeECP5Platform":
         from ._lattice_ecp5 import LatticeECP5Platform
         return LatticeECP5Platform
-    if name == "LatticeICE40Platform":
-        from ._lattice_ice40 import LatticeICE40Platform
-        return LatticeICE40Platform
     if name in ("LatticeMachXO2Platform", "LatticeMachXO3LPlatform"):
         from ._lattice_machxo_2_3l import LatticeMachXO2Or3LPlatform
         return LatticeMachXO2Or3LPlatform
@@ -42,6 +41,9 @@ def __getattr__(name):
     if name == "QuicklogicPlatform":
         from ._quicklogic import QuicklogicPlatform
         return QuicklogicPlatform
+    if name in ("SiliconBluePlatform", "LatticeICE40Platform"):
+        from ._siliconblue import SiliconBluePlatform
+        return SiliconBluePlatform
     if name == "XilinxPlatform":
         from ._xilinx import XilinxPlatform
         return XilinxPlatform

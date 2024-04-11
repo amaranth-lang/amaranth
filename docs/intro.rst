@@ -16,7 +16,7 @@ The Amaranth toolchain consists of the :ref:`Amaranth language <intro-lang>`, th
 The Amaranth language
 =====================
 
-The :doc:`Amaranth hardware description language <lang>` is a Python library for register transfer level modeling of synchronous logic. Ordinary Python code is used to construct a netlist of a digital circuit, which can be simulated, directly synthesized via Yosys_, or converted to human-readable Verilog code for use with industry-standard toolchains.
+The :doc:`Amaranth hardware description language <guide>` is a Python library for register transfer level modeling of synchronous logic. Ordinary Python code is used to construct a netlist of a digital circuit, which can be simulated, directly synthesized via Yosys_, or converted to human-readable Verilog code for use with industry-standard toolchains.
 
 By relying on the flexibility, rich functionality and widespread adoption of the Python language, the Amaranth language is focused on a single task: modeling digital logic well. It has first-class support for building blocks like clock domains and finite state machines, and uses simple rules for arithmetic operations that closely match the Python semantics. Python classes, functions, loops and conditionals can be used to build organized and flexible designs; Python libraries can be seamlessly used with Amaranth during design or verification; and Python development tools can process Amaranth code.
 
@@ -57,8 +57,8 @@ The Amaranth simulator is event-driven and can simulate designs with multiple cl
 
 Although Amaranth does not support native code simulation or co-simulation at the moment, such support will be added in near future.
 
-.. _Icarus Verilog: http://iverilog.icarus.com/
-.. _Verilator: https://www.veripool.org/wiki/verilator
+.. _Icarus Verilog: https://steveicarus.github.io/iverilog/
+.. _Verilator: https://www.veripool.org/verilator/
 .. _GTKWave: http://gtkwave.sourceforge.net/
 .. _PyPy: https://www.pypy.org/
 

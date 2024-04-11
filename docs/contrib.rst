@@ -9,9 +9,9 @@ Filing problem reports
 
 We would like Amaranth to be a best-in-class design tool, and hearing about issues people encounter while using it is crucial for improving it. While we do care a lot about correctness of the results, we care about the experience of using the tool just as much. Amaranth is meant to be a tool that is comfortable to use: with fewer sharp edges (no matter how much technological appeal they might have) and more signs and guardrails.
 
-Please `report <issues>`_ any problems you encounter using Amaranth. To go beyond that: **If, while you are using Amaranth, you see an error message that is hard to understand or is misleading, please report it as a bug. Even (especially!) if you think you did something wrong.**
+Please `report <issues_>`_ any problems you encounter using Amaranth. To go beyond that: **If, while you are using Amaranth, you see an error message that is hard to understand or is misleading, please report it as a bug. Even (especially!) if you think you did something wrong.**
 
-.. _issues: https://github.com/amaranth-lang/amaranth
+.. _issues: https://github.com/amaranth-lang/amaranth/issues
 
 When filing problem reports, please include the following information:
 
@@ -34,7 +34,7 @@ Proposing new features
 
 Amaranth is a programming language and a toolchain, which is different from many other kinds of open source projects in that just about every part of it is, unavoidably, tightly coupled to every other one, the result being that seemingly obvious and apparently minor decisions can have dramatic consequences years later.
 
-To make sure that new features undergo the scrutiny necessary for commitment to many years of support, and to make sure that everyone in the community who will be impacted by the changes has a chance to make their voice heard, **all substantial changes, including feature proposals, must go through a formal Request for Comments process**. The process, as well as the accepted proposals, are described `here <rfcs>`_. Typically, substantial changes are accepted after one to several rounds of community review achieve near-unanimous consensus.
+To make sure that new features undergo the scrutiny necessary for commitment to many years of support, and to make sure that everyone in the community who will be impacted by the changes has a chance to make their voice heard, **all substantial changes, including feature proposals, must go through a formal Request for Comments process**. The process, as well as the accepted proposals, are described `here <rfcs_>`_. Typically, substantial changes are accepted after one to several rounds of community review achieve near-unanimous consensus.
 
 .. _rfcs: https://amaranth-lang.org/rfcs/
 
@@ -48,8 +48,8 @@ Preparing the environment
 
 The Amaranth codebase uses the PDM_ package and dependency manager to structure the development workflow. Please `install PDM`_ first and make sure you have downloaded the latest changes to the source files. Once you have done so, run:
 
-.. _PDM: https://pdm.fming.dev/
-.. _install PDM: https://pdm.fming.dev/latest/#recommended-installation-method
+.. _PDM: https://pdm-project.org/
+.. _install PDM: https://pdm-project.org/latest/#recommended-installation-method
 
 .. code-block:: console
 

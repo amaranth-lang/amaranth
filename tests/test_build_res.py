@@ -1,11 +1,6 @@
 # amaranth: UnusedElaboratable=no
 
-import warnings
-
-from amaranth import *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from amaranth.hdl.rec import *
+from amaranth.hdl import *
 from amaranth.lib.wiring import *
 from amaranth.lib.io import *
 from amaranth.build.dsl import *
@@ -64,45 +59,36 @@ class ResourceManagerTestCase(FHDLTestCase):
         user_led = self.cm.request("user_led", 0)
 
         self.assertIsInstance(flipped(user_led), Pin)
-        self.assertEqual(user_led.name, "user_led_0")
+        self.assertEqual(user_led.o.name, "user_led_0__o")
         self.assertEqual(user_led.width, 1)
         self.assertEqual(user_led.dir, "o")
 
-        ports = list(self.cm.iter_ports())
-        self.assertEqual(len(ports), 1)
+        pins = list(self.cm.iter_pins())
+        (pin, port, buffer), = pins
 
-        self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("user_led_0__io", ["A0"], {})
-        ])
+        self.assertIs(pin, user_led)
+        self.assertEqual(port.io.name, "user_led_0__io")
+        self.assertEqual(port.io.metadata[0].name, "A0")
+        self.assertEqual(port.io.metadata[0].attrs, {})
+        self.assertEqual(port.direction, Direction.Output)
+        self.assertEqual(port.invert, (False,))
 
     def test_request_with_dir(self):
         i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
-        self.assertIsInstance(i2c, Record)
-        self.assertIsInstance(i2c.sda, Pin)
+        self.assertIsInstance(flipped(i2c.sda), Pin)
         self.assertEqual(i2c.sda.dir, "o")
 
     def test_request_tristate(self):
         i2c = self.cm.request("i2c", 0)
         self.assertEqual(i2c.sda.dir, "io")
 
-        ports = list(self.cm.iter_ports())
-        self.assertEqual(len(ports), 2)
-        scl, sda = ports
-        self.assertEqual(ports[1].name, "i2c_0__sda__io")
-        self.assertEqual(ports[1].width, 1)
-
-        scl_info, sda_info = self.cm.iter_single_ended_pins()
-        self.assertIs(flipped(scl_info[0]), i2c.scl)
-        self.assertIs(scl_info[1].io, scl)
-        self.assertEqual(scl_info[2], {})
-        self.assertEqual(scl_info[3], False)
-        self.assertIs(flipped(sda_info[0]), i2c.sda)
-        self.assertIs(sda_info[1].io, sda)
-
-        self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("i2c_0__scl__io", ["N10"], {}),
-            ("i2c_0__sda__io", ["N11"], {})
-        ])
+        ((scl_pin, scl_port, _), (sda_pin, sda_port, _)) = self.cm.iter_pins()
+        self.assertIs(scl_pin, i2c.scl)
+        self.assertIs(sda_pin, i2c.sda)
+        self.assertEqual(scl_port.io.name, "i2c_0__scl__io")
+        self.assertEqual(scl_port.io.metadata[0].name, "N10")
+        self.assertEqual(sda_port.io.name, "i2c_0__sda__io")
+        self.assertEqual(sda_port.io.metadata[0].name, "N11")
 
     def test_request_diffpairs(self):
         clk100 = self.cm.request("clk100", 0)
@@ -110,25 +96,14 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(clk100.dir, "i")
         self.assertEqual(clk100.width, 1)
 
-        ports = list(self.cm.iter_ports())
-        self.assertEqual(len(ports), 2)
-        p, n = ports
-        self.assertEqual(p.name, "clk100_0__p")
-        self.assertEqual(p.width, clk100.width)
-        self.assertEqual(n.name, "clk100_0__n")
-        self.assertEqual(n.width, clk100.width)
-
-        clk100_info, = self.cm.iter_differential_pins()
-        self.assertIs(clk100_info[0], clk100)
-        self.assertIs(clk100_info[1].p, p)
-        self.assertIs(clk100_info[1].n, n)
-        self.assertEqual(clk100_info[2], {})
-        self.assertEqual(clk100_info[3], False)
-
-        self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("clk100_0__p", ["H1"], {}),
-            ("clk100_0__n", ["H2"], {}),
-        ])
+        (clk100_pin, clk100_port, _), = self.cm.iter_pins()
+        self.assertIs(clk100_pin, clk100)
+        self.assertEqual(clk100_port.p.name, "clk100_0__p")
+        self.assertEqual(clk100_port.p.width, clk100.width)
+        self.assertEqual(clk100_port.n.name, "clk100_0__n")
+        self.assertEqual(clk100_port.n.width, clk100.width)
+        self.assertEqual(clk100_port.p.metadata[0].name, "H1")
+        self.assertEqual(clk100_port.n.metadata[0].name, "H2")
 
     def test_request_inverted(self):
         new_resources = [
@@ -139,38 +114,26 @@ class ResourceManagerTestCase(FHDLTestCase):
 
         cs = self.cm.request("cs")
         clk = self.cm.request("clk")
-        cs_io, clk_p, clk_n = self.cm.iter_ports()
+        (
+            (cs_pin, cs_port, _),
+            (clk_pin, clk_port, _),
+        ) = self.cm.iter_pins()
 
-        cs_info, = self.cm.iter_single_ended_pins()
-        self.assertIs(cs_info[0], cs)
-        self.assertIs(cs_info[1].io, cs_io)
-        self.assertEqual(cs_info[2], {})
-        self.assertEqual(cs_info[3], True)
-
-        clk_info, = self.cm.iter_differential_pins()
-        self.assertIs(clk_info[0], clk)
-        self.assertIs(clk_info[1].p, clk_p)
-        self.assertIs(clk_info[1].n, clk_n)
-        self.assertEqual(clk_info[2], {})
-        self.assertEqual(clk_info[3], True)
+        self.assertIs(cs_pin, cs)
+        self.assertEqual(cs_port.invert, (True,))
+        self.assertIs(clk_pin, clk)
+        self.assertEqual(clk_port.invert, (True,))
 
     def test_request_raw(self):
         clk50 = self.cm.request("clk50", 0, dir="-")
-        self.assertIsInstance(clk50.io, Signal)
-
-        ports = list(self.cm.iter_ports())
-        self.assertEqual(len(ports), 1)
-        self.assertIs(ports[0], clk50.io)
+        self.assertIsInstance(clk50, SingleEndedPort)
+        self.assertIsInstance(clk50.io, IOPort)
 
     def test_request_raw_diffpairs(self):
         clk100 = self.cm.request("clk100", 0, dir="-")
-        self.assertIsInstance(clk100.p, Signal)
-        self.assertIsInstance(clk100.n, Signal)
-
-        ports = list(self.cm.iter_ports())
-        self.assertEqual(len(ports), 2)
-        self.assertIs(ports[0], clk100.p)
-        self.assertIs(ports[1], clk100.n)
+        self.assertIsInstance(clk100, DifferentialPort)
+        self.assertIsInstance(clk100.p, IOPort)
+        self.assertIsInstance(clk100.n, IOPort)
 
     def test_request_via_connector(self):
         self.cm.add_resources([
@@ -182,12 +145,20 @@ class ResourceManagerTestCase(FHDLTestCase):
             )
         ])
         spi0 = self.cm.request("spi", 0)
-        self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("spi_0__ss__io",   ["B0"], {}),
-            ("spi_0__clk__io",  ["B1"], {}),
-            ("spi_0__miso__io", ["B2"], {}),
-            ("spi_0__mosi__io", ["B3"], {}),
-        ])
+        (
+            (ss_pin, ss_port, _),
+            (clk_pin, clk_port, _),
+            (miso_pin, miso_port, _),
+            (mosi_pin, mosi_port, _),
+        ) = self.cm.iter_pins()
+        self.assertIs(ss_pin, spi0.ss)
+        self.assertIs(clk_pin, spi0.clk)
+        self.assertIs(miso_pin, spi0.miso)
+        self.assertIs(mosi_pin, spi0.mosi)
+        self.assertEqual(ss_port.io.metadata[0].name, "B0")
+        self.assertEqual(clk_port.io.metadata[0].name, "B1")
+        self.assertEqual(miso_port.io.metadata[0].name, "B2")
+        self.assertEqual(mosi_port.io.metadata[0].name, "B3")
 
     def test_request_via_nested_connector(self):
         new_connectors = [
@@ -203,20 +174,31 @@ class ResourceManagerTestCase(FHDLTestCase):
             )
         ])
         spi0 = self.cm.request("spi", 0)
-        self.assertEqual(list(self.cm.iter_port_constraints()), [
-            ("spi_0__ss__io",   ["B0"], {}),
-            ("spi_0__clk__io",  ["B1"], {}),
-            ("spi_0__miso__io", ["B2"], {}),
-            ("spi_0__mosi__io", ["B3"], {}),
-        ])
+        (
+            (ss_pin, ss_port, _),
+            (clk_pin, clk_port, _),
+            (miso_pin, miso_port, _),
+            (mosi_pin, mosi_port, _),
+        ) = self.cm.iter_pins()
+        self.assertIs(ss_pin, spi0.ss)
+        self.assertIs(clk_pin, spi0.clk)
+        self.assertIs(miso_pin, spi0.miso)
+        self.assertIs(mosi_pin, spi0.mosi)
+        self.assertEqual(ss_port.io.metadata[0].name, "B0")
+        self.assertEqual(clk_port.io.metadata[0].name, "B1")
+        self.assertEqual(miso_port.io.metadata[0].name, "B2")
+        self.assertEqual(mosi_port.io.metadata[0].name, "B3")
 
     def test_request_clock(self):
         clk100 = self.cm.request("clk100", 0)
         clk50 = self.cm.request("clk50", 0, dir="i")
-        clk100_port_p, clk100_port_n, clk50_port = self.cm.iter_ports()
+        (
+            (clk100_pin, clk100_port, _),
+            (clk50_pin, clk50_port, _),
+        ) = self.cm.iter_pins()
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (clk100.i, clk100_port_p, 100e6),
-            (clk50.i, clk50_port, 50e6)
+            (clk100.i, clk100_port.p, 100e6),
+            (clk50.i, clk50_port.io, 50e6)
         ])
 
     def test_add_clock(self):
@@ -315,12 +297,3 @@ class ResourceManagerTestCase(FHDLTestCase):
                 (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
             self.cm.add_clock_constraint(clk100.i, 1e6)
-
-    def test_eq_deprecation(self):
-        user_led = self.cm.request("user_led", 0)
-        m = Module()
-        with self.assertWarns(DeprecationWarning):
-            m.d.sync += user_led.eq(1)
-        p = Pin(4, "o")
-        with self.assertWarns(DeprecationWarning):
-            m.d.sync += p.eq(1)

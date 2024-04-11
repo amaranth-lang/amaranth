@@ -1,21 +1,24 @@
 import inspect
 
 from ..hdl import *
-from ..hdl._ast import Statement, SignalSet, ValueCastable
+from ..hdl._ast import Statement, Assign, SignalSet, ValueCastable
 from .core import Tick, Settle, Delay, Passive, Active
-from ._base import BaseProcess
-from ._pyrtl import _ValueCompiler, _RHSValueCompiler, _StatementCompiler
+from ._base import BaseProcess, BaseMemoryState
+from ._pyeval import eval_value, eval_assign
 
 
 __all__ = ["PyCoroProcess"]
 
 
 class PyCoroProcess(BaseProcess):
-    def __init__(self, state, domains, constructor, *, default_cmd=None):
+    def __init__(self, state, domains, constructor, *, default_cmd=None, testbench=False,
+                 on_command=None):
         self.state = state
         self.domains = domains
         self.constructor = constructor
         self.default_cmd = default_cmd
+        self.testbench = testbench
+        self.on_command = on_command
 
         self.reset()
 
@@ -24,11 +27,6 @@ class PyCoroProcess(BaseProcess):
         self.passive = False
 
         self.coroutine = self.constructor()
-        self.exec_locals = {
-            "slots": self.state.slots,
-            "result": None,
-            **_ValueCompiler.helpers
-        }
         self.waits_on = SignalSet()
 
     def src_loc(self):
@@ -59,23 +57,36 @@ class PyCoroProcess(BaseProcess):
         self.clear_triggers()
 
         response = None
+        exception = None
         while True:
             try:
-                command = self.coroutine.send(response)
+                if exception is None:
+                    command = self.coroutine.send(response)
+                else:
+                    command = self.coroutine.throw(exception)
+            except StopIteration:
+                self.passive = True
+                self.coroutine = None
+                return False # no assignment
+
+            try:
                 if command is None:
                     command = self.default_cmd
                 response = None
+                exception = None
+
+                if self.on_command is not None:
+                    self.on_command(self, command)
 
                 if isinstance(command, ValueCastable):
                     command = Value.cast(command)
                 if isinstance(command, Value):
-                    exec(_RHSValueCompiler.compile(self.state, command, mode="curr"),
-                        self.exec_locals)
-                    response = Const(self.exec_locals["result"], command.shape()).value
+                    response = eval_value(self.state, command)
 
-                elif isinstance(command, Statement):
-                    exec(_StatementCompiler.compile(self.state, command),
-                        self.exec_locals)
+                elif isinstance(command, Assign):
+                    eval_assign(self.state, command.lhs, eval_value(self.state, command.rhs))
+                    if self.testbench:
+                        return True # assignment; run a delta cycle
 
                 elif type(command) is Tick:
                     domain = command.domain
@@ -90,17 +101,20 @@ class PyCoroProcess(BaseProcess):
                     self.add_trigger(domain.clk, trigger=1 if domain.clk_edge == "pos" else 0)
                     if domain.rst is not None and domain.async_reset:
                         self.add_trigger(domain.rst, trigger=1)
-                    return
+                    return False # no assignments
+
+                elif self.testbench and (command is None or isinstance(command, Settle)):
+                    raise TypeError(f"Command {command!r} is not allowed in testbenches")
 
                 elif type(command) is Settle:
                     self.state.wait_interval(self, None)
-                    return
+                    return False # no assignments
 
                 elif type(command) is Delay:
-                    # Internal timeline is in 1ps integeral units, intervals are public API and in floating point
-                    interval = int(command.interval * 1e12) if command.interval is not None else None
+                    # Internal timeline is in 1 fs integeral units, intervals are public API and in floating point
+                    interval = int(command.interval * 1e15) if command.interval is not None else None
                     self.state.wait_interval(self, interval)
-                    return
+                    return False # no assignments
 
                 elif type(command) is Passive:
                     self.passive = True
@@ -110,18 +124,13 @@ class PyCoroProcess(BaseProcess):
 
                 elif command is None: # only possible if self.default_cmd is None
                     raise TypeError("Received default command from process {!r} that was added "
-                                    "with add_process(); did you mean to add this process with "
-                                    "add_sync_process() instead?"
+                                    "with add_process(); did you mean to use Tick() instead?"
                                     .format(self.src_loc()))
 
                 else:
                     raise TypeError("Received unsupported command {!r} from process {!r}"
                                     .format(command, self.src_loc()))
 
-            except StopIteration:
-                self.passive = True
-                self.coroutine = None
-                return
-
             except Exception as exn:
-                self.coroutine.throw(exn)
+                response = None
+                exception = exn

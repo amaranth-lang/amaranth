@@ -2,7 +2,7 @@ import enum as py_enum
 import warnings
 import operator
 
-from ..hdl._ast import Value, ValueCastable, Shape, ShapeCastable, Const
+from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning
 from ..hdl._repr import *
 
 
@@ -14,14 +14,14 @@ for _member in py_enum.__all__:
 del _member
 
 
-class EnumMeta(ShapeCastable, py_enum.EnumMeta):
-    """Subclass of the standard :class:`enum.EnumMeta` that implements the :class:`ShapeCastable`
+class EnumType(ShapeCastable, py_enum.EnumMeta):
+    """Subclass of the standard :class:`enum.EnumType` that implements the :class:`ShapeCastable`
     protocol.
 
     This metaclass provides the :meth:`as_shape` method, making its instances
     :ref:`shape-like <lang-shapelike>`, and accepts a ``shape=`` keyword argument
     to specify a shape explicitly. Other than this, it acts the same as the standard
-    :class:`enum.EnumMeta` class; if the ``shape=`` argument is not specified and
+    :class:`enum.EnumType` class; if the ``shape=`` argument is not specified and
     :meth:`as_shape` is never called, it places no restrictions on the enumeration class
     or the values of its members.
 
@@ -41,9 +41,9 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
         # Prepare enumeration members for instantiation. This logic is unfortunately very
         # convoluted because it supports two very different code paths that need to share
         # the emitted warnings.
-        for member_name, member_value in namespace.items():
-            if py_enum._is_sunder(member_name) or py_enum._is_dunder(member_name):
-                continue
+        # TODO(py3.13): can use `namespace.member_names` property.
+        for member_name in namespace._member_names:
+            member_value = namespace[member_name]
             # If a shape is specified ("Amaranth mode" of amaranth.lib.enum.Enum), then every
             # member value must be a constant-castable expression. Otherwise ("Python mode" of
             # amaranth.lib.enum.Enum) any value goes, since all enumerations accepted by
@@ -165,44 +165,52 @@ class EnumMeta(ShapeCastable, py_enum.EnumMeta):
     def const(cls, init):
         # Same considerations apply as above.
         if init is None:
-            # Signal with unspecified reset value passes ``None`` to :meth:`const`.
-            # Before RFC 9 was implemented, the unspecified reset value was 0, so this keeps
+            # Signal with unspecified initial value passes ``None`` to :meth:`const`.
+            # Before RFC 9 was implemented, the unspecified initial value was 0, so this keeps
             # the old behavior intact.
             member = cls(0)
         else:
             member = cls(init)
         return cls(Const(member.value, cls.as_shape()))
 
+    def from_bits(cls, bits):
+        return cls(bits)
+
     def _value_repr(cls, value):
         yield Repr(FormatEnum(cls), value)
 
 
+# In 3.11, Python renamed EnumMeta to EnumType. Like Python itself, we support both for
+# compatibility.
+EnumMeta = EnumType
+
+
 class Enum(py_enum.Enum):
-    """Subclass of the standard :class:`enum.Enum` that has :class:`EnumMeta` as
+    """Subclass of the standard :class:`enum.Enum` that has :class:`EnumType` as
     its metaclass and :class:`EnumView` as its view class."""
 
 
 class IntEnum(py_enum.IntEnum):
-    """Subclass of the standard :class:`enum.IntEnum` that has :class:`EnumMeta` as
+    """Subclass of the standard :class:`enum.IntEnum` that has :class:`EnumType` as
     its metaclass."""
 
 
 class Flag(py_enum.Flag):
-    """Subclass of the standard :class:`enum.Flag` that has :class:`EnumMeta` as
+    """Subclass of the standard :class:`enum.Flag` that has :class:`EnumType` as
     its metaclass and :class:`FlagView` as its view class."""
 
 
 class IntFlag(py_enum.IntFlag):
-    """Subclass of the standard :class:`enum.IntFlag` that has :class:`EnumMeta` as
+    """Subclass of the standard :class:`enum.IntFlag` that has :class:`EnumType` as
     its metaclass."""
 
 
 # Fix up the metaclass after the fact: the metaclass __new__ requires these classes
 # to already be present, and also would not install itself on them due to lack of shape.
-Enum.__class__ = EnumMeta
-IntEnum.__class__ = EnumMeta
-Flag.__class__ = EnumMeta
-IntFlag.__class__ = EnumMeta
+Enum.__class__ = EnumType
+IntEnum.__class__ = EnumType
+Flag.__class__ = EnumType
+IntFlag.__class__ = EnumType
 
 
 class EnumView(ValueCastable):
@@ -216,7 +224,7 @@ class EnumView(ValueCastable):
         """Constructs a view with the given enum type and target
         (a :ref:`value-like <lang-valuelike>`).
         """
-        if not isinstance(enum, EnumMeta) or not hasattr(enum, "_amaranth_shape_"):
+        if not isinstance(enum, EnumType) or not hasattr(enum, "_amaranth_shape_"):
             raise TypeError(f"EnumView type must be an enum with shape, not {enum!r}")
         try:
             cast_target = Value.cast(target)
@@ -232,7 +240,6 @@ class EnumView(ValueCastable):
         """Returns the underlying enum type."""
         return self.enum
 
-    @ValueCastable.lowermethod
     def as_value(self):
         """Returns the underlying value."""
         return self.target

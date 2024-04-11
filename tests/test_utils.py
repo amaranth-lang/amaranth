@@ -16,7 +16,7 @@ class Log2TestCase(unittest.TestCase):
         self.assertEqual(ceil_log2(9), 4)
         with self.assertRaises(TypeError):
             ceil_log2(1.5)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, r"^-1 is negative$"):
             ceil_log2(-1)
 
     def test_exact_log2(self):
@@ -25,7 +25,7 @@ class Log2TestCase(unittest.TestCase):
         self.assertEqual(exact_log2(4), 2)
         self.assertEqual(exact_log2(8), 3)
         for val in [-1, 0, 3, 5, 6, 7, 9]:
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, (f"^{val} is not a power of 2$")):
                 exact_log2(val)
         with self.assertRaises(TypeError):
             exact_log2(1.5)

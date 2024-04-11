@@ -4,7 +4,6 @@ import unittest
 from types import SimpleNamespace as NS
 
 from amaranth import *
-from amaranth.hdl._ast import ValueCastable
 from amaranth.lib import data, enum
 from amaranth.lib.wiring import Flow, In, Out, Member
 from amaranth.lib.wiring import SignatureError, SignatureMembers, FlippedSignatureMembers
@@ -37,7 +36,7 @@ class MemberTestCase(unittest.TestCase):
         self.assertEqual(member.flow, In)
         self.assertEqual(member.is_port, True)
         self.assertEqual(member.shape, unsigned(1))
-        self.assertEqual(member.reset, None)
+        self.assertEqual(member.init, None)
         self.assertEqual(member.is_signature, False)
         with self.assertRaisesRegex(AttributeError,
                 r"^A port member does not have a signature$"):
@@ -51,33 +50,58 @@ class MemberTestCase(unittest.TestCase):
                 r"not 'whatever'$"):
             Member(In, "whatever")
 
-    def test_port_member_reset(self):
-        member = Member(Out, unsigned(1), reset=1)
+    def test_port_member_init(self):
+        member = Member(Out, unsigned(1), init=1)
         self.assertEqual(member.flow, Out)
         self.assertEqual(member.shape, unsigned(1))
-        self.assertEqual(member.reset, 1)
-        self.assertEqual(repr(member._reset_as_const), repr(Const(1, 1)))
-        self.assertEqual(repr(member), "Out(unsigned(1), reset=1)")
+        self.assertEqual(member.init, 1)
+        self.assertEqual(repr(member._init_as_const), repr(Const(1, 1)))
+        self.assertEqual(repr(member), "Out(unsigned(1), init=1)")
 
-    def test_port_member_reset_wrong(self):
+    def test_port_member_init_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Port member reset value 'no' is not a valid constant initializer "
+                r"^Port member initial value 'no' is not a valid constant initializer "
                 r"for unsigned\(1\)$"):
-            Member(In, 1, reset="no")
+            Member(In, 1, init="no")
 
-    def test_port_member_reset_shape_castable(self):
+    def test_port_member_init_shape_castable(self):
         layout = data.StructLayout({"a": 32})
-        member = Member(In, layout, reset={"a": 1})
+        member = Member(In, layout, init={"a": 1})
         self.assertEqual(member.flow, In)
         self.assertEqual(member.shape, layout)
-        self.assertEqual(member.reset, {"a": 1})
-        self.assertEqual(repr(member), "In(StructLayout({'a': 32}), reset={'a': 1})")
+        self.assertEqual(member.init, {"a": 1})
+        self.assertEqual(repr(member), "In(StructLayout({'a': 32}), init={'a': 1})")
 
-    def test_port_member_reset_shape_castable_wrong(self):
+    def test_port_member_init_shape_castable_wrong(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Port member reset value 'no' is not a valid constant initializer "
+                r"^Port member initial value 'no' is not a valid constant initializer "
                 r"for StructLayout\({'a': 32}\)$"):
-            Member(In, data.StructLayout({"a": 32}), reset="no")
+            Member(In, data.StructLayout({"a": 32}), init="no")
+
+    def test_port_member_reset(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            member = Member(Out, unsigned(1), reset=1)
+        self.assertEqual(member.flow, Out)
+        self.assertEqual(member.shape, unsigned(1))
+        self.assertEqual(member.init, 1)
+        self.assertEqual(repr(member._init_as_const), repr(Const(1, 1)))
+        self.assertEqual(repr(member), "Out(unsigned(1), init=1)")
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`Member.reset` is deprecated, use `Member.init` instead$"):
+            self.assertEqual(member.reset, 1)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            member = Out(unsigned(1), reset=1)
+        self.assertEqual(member.init,1)
+
+    def test_port_member_reset_wrong(self):
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Member(Out, unsigned(1), reset=1, init=1)
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            Out(unsigned(1), reset=1, init=1)
 
     def test_signature_member_out(self):
         sig = Signature({"data": Out(unsigned(32))})
@@ -88,8 +112,8 @@ class MemberTestCase(unittest.TestCase):
                 r"^A signature member does not have a shape$"):
             member.shape
         with self.assertRaisesRegex(AttributeError,
-                r"^A signature member does not have a reset value$"):
-            member.reset
+                r"^A signature member does not have an initial value$"):
+            member.init
         self.assertEqual(member.is_signature, True)
         self.assertEqual(member.signature, sig)
         self.assertEqual(member.dimensions, ())
@@ -104,8 +128,8 @@ class MemberTestCase(unittest.TestCase):
                 r"^A signature member does not have a shape$"):
             member.shape
         with self.assertRaisesRegex(AttributeError,
-                r"^A signature member does not have a reset value$"):
-            member.reset
+                r"^A signature member does not have an initial value$"):
+            member.init
         self.assertEqual(member.is_signature, True)
         self.assertEqual(member.signature, sig.flip())
         self.assertEqual(member.dimensions, ())
@@ -113,8 +137,8 @@ class MemberTestCase(unittest.TestCase):
 
     def test_signature_member_wrong(self):
         with self.assertRaisesRegex(ValueError,
-                r"^A signature member cannot have a reset value$"):
-            Member(In, Signature({}), reset=1)
+                r"^A signature member cannot have an initial value$"):
+            Member(In, Signature({}), init=1)
 
     def test_array(self):
         array_2 = Member(In, unsigned(1)).array(2)
@@ -144,8 +168,8 @@ class MemberTestCase(unittest.TestCase):
     def test_equality(self):
         self.assertEqual(In(1), In(1))
         self.assertNotEqual(In(1), Out(1))
-        self.assertNotEqual(In(1), In(1, reset=1))
-        self.assertNotEqual(In(1), In(1, reset=0))
+        self.assertNotEqual(In(1), In(1, init=1))
+        self.assertNotEqual(In(1), In(1, init=0))
         self.assertEqual(In(1), In(1).array())
         self.assertNotEqual(In(1), In(1).array(1))
         sig = Signature({})
@@ -238,12 +262,12 @@ class SignatureMembersTestCase(unittest.TestCase):
         self.assertEqual(attrs["s"].b.shape(), unsigned(2))
         self.assertEqual(attrs["s"].b.name, "attrs__s__b")
 
-    def test_create_reset(self):
+    def test_create_init(self):
         members = SignatureMembers({
-            "a": In(1, reset=1),
+            "a": In(1, init=1),
         })
         attrs = members.create()
-        self.assertEqual(attrs["a"].reset, 1)
+        self.assertEqual(attrs["a"].init, 1)
 
     def test_create_tuple(self):
         sig = SignatureMembers({
@@ -349,8 +373,8 @@ class SignatureTestCase(unittest.TestCase):
         self.assertFlattenedSignature(sig.flatten(intf), [
             (("a", "p"), Out(1), intf.a.p),
             (("b", "q"), In (1), intf.b.q),
-            (("c", "r"), Out(1), intf.c.r),
-            (("d", "s"), In (1), intf.d.s),
+            (("c", "r"), In (1), intf.c.r),
+            (("d", "s"), Out(1), intf.d.s),
         ])
 
     def test_is_compliant_signature(self):
@@ -422,17 +446,17 @@ class SignatureTestCase(unittest.TestCase):
             sig=Signature({"a": In(unsigned(1))}),
             obj=NS(a=Signal(signed(1))))
         self.assertNotCompliant(
-            r"^'obj\.a' is expected to have the reset value None, but it has the reset value 1$",
+            r"^'obj\.a' is expected to have the initial value None, but it has the initial value 1$",
             sig=Signature({"a": In(1)}),
-            obj=NS(a=Signal(reset=1)))
+            obj=NS(a=Signal(init=1)))
         self.assertNotCompliant(
-            r"^'obj\.a' is expected to have the reset value 1, but it has the reset value 0$",
-            sig=Signature({"a": In(1, reset=1)}),
+            r"^'obj\.a' is expected to have the initial value 1, but it has the initial value 0$",
+            sig=Signature({"a": In(1, init=1)}),
             obj=NS(a=Signal(1)))
-        self.assertNotCompliant(
-            r"^'obj\.a' is expected to not be reset-less$",
-            sig=Signature({"a": In(1)}),
-            obj=NS(a=Signal(1, reset_less=True)))
+        self.assertTrue(
+            Signature({"a": In(1)}).is_compliant(
+                NS(signature=Signature({"a": In(1)}),
+                   a=Signal(1, reset_less=True))))
         self.assertNotCompliant(
             r"^'obj\.a' does not have an attribute 'b'$",
             sig=Signature({"a": Out(Signature({"b": In(1)}))}),
@@ -821,21 +845,21 @@ class ConnectTestCase(unittest.TestCase):
                     q=NS(signature=Signature({"a": In(Cycle)}),
                          a=Signal(Cycle)))
 
-    def test_reset_mismatch(self):
+    def test_init_mismatch(self):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,
-                r"^Cannot connect together the member 'q\.a' with reset value 1 and the member "
-                r"'p\.a' with reset value 0 because the reset values do not match$"):
+                r"^Cannot connect together the member 'q\.a' with initial value 1 and the member "
+                r"'p\.a' with initial value 0 because the initial values do not match$"):
             connect(m,
-                    p=NS(signature=Signature({"a": Out(1, reset=0)}),
+                    p=NS(signature=Signature({"a": Out(1, init=0)}),
                          a=Signal()),
-                    q=NS(signature=Signature({"a": In(1, reset=1)}),
-                         a=Signal(reset=1)))
+                    q=NS(signature=Signature({"a": In(1, init=1)}),
+                         a=Signal(init=1)))
 
-    def test_reset_none_match(self):
+    def test_init_none_match(self):
         m = Module()
         connect(m,
-                p=NS(signature=Signature({"a": Out(1, reset=0)}),
+                p=NS(signature=Signature({"a": Out(1, init=0)}),
                      a=Signal()),
                 q=NS(signature=Signature({"a": In(1)}),
                      a=Signal()))
@@ -889,7 +913,7 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, src=src, snk=snk)
-        self.assertEqual([repr(stmt) for stmt in m._statements], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig snk__addr) (sig src__addr))',
             '(eq (sig snk__cycle) (sig src__cycle))',
             '(eq (sig src__r_data) (sig snk__r_data))',
@@ -903,7 +927,7 @@ class ConnectTestCase(unittest.TestCase):
                      a=Const(1)),
                 q=NS(signature=Signature({"a": In(1)}),
                      a=Const(1)))
-        self.assertEqual(m._statements, [])
+        self.assertEqual(m._statements, {})
 
     def test_nested(self):
         m = Module()
@@ -912,7 +936,7 @@ class ConnectTestCase(unittest.TestCase):
                      a=NS(signature=Signature({"f": Out(1)}), f=Signal(name='p__a'))),
                 q=NS(signature=Signature({"a": In(Signature({"f": Out(1)}))}),
                      a=NS(signature=Signature({"f": Out(1)}).flip(), f=Signal(name='q__a'))))
-        self.assertEqual([repr(stmt) for stmt in m._statements], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a) (sig p__a))'
         ])
 
@@ -931,7 +955,7 @@ class ConnectTestCase(unittest.TestCase):
                           g=Signal(name="q__b__g"),
                           f=Signal(name="q__b__f")),
                      a=Signal(name="q__a")))
-        self.assertEqual([repr(stmt) for stmt in m._statements], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a) (sig p__a))',
             '(eq (sig q__b__f) (sig p__b__f))',
             '(eq (sig q__b__g) (sig p__b__g))',
@@ -942,7 +966,7 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, p=sig.create(path=('p',)), q=sig.flip().create(path=('q',)))
-        self.assertEqual([repr(stmt) for stmt in m._statements], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a__0) (sig p__a__0))',
             '(eq (sig q__a__1) (sig p__a__1))'
         ])
@@ -952,9 +976,68 @@ class ConnectTestCase(unittest.TestCase):
 
         m = Module()
         connect(m, p=sig.create(path=('p',)), q=sig.flip().create(path=('q',)))
-        self.assertEqual([repr(stmt) for stmt in m._statements], [
+        self.assertEqual([repr(stmt) for stmt in m._statements["comb"]], [
             '(eq (sig q__a__0__0) (sig p__a__0__0))',
         ])
+
+    def test_connect_none(self):
+        # Connecting zero or more empty signatures is permitted as (a) it's not
+        # something you can write mistakenly out by hand, and (b) it permits
+        # generic code to expand to nothing without errors around edges.
+        m = Module()
+        connect(m)
+
+    def test_connect_empty(self):
+        m = Module()
+        connect(m, p=NS(signature=Signature({})))
+
+    def test_connect_empty_multi(self):
+        m = Module()
+        connect(m, p=NS(signature=Signature({})),
+                   q=NS(signature=Signature({})))
+
+    def test_connect_one(self):
+        # Connecting just one signature should be allowed for the same reasons
+        # as above. (It's possible to forget an argument, but that stands out.)
+        m = Module()
+        connect(m, p=NS(signature=Signature({"a": Out(1), "b": In(1)}),
+                        a=Signal(),
+                        b=Signal()))
+
+    def test_connect_one_in_only(self):
+        # As above, even if there's only inputs.
+        m = Module()
+        connect(m, p=NS(signature=Signature({"a": In(1)}),
+                        a=Signal()))
+
+    def test_connect_multi_in_only_fails(self):
+        # If we're only attempting to connect multiple inputs, we're not
+        # actually doing anything and it's most likely a mistake.
+        m = Module()
+        with self.assertRaisesRegex(ConnectionError,
+                r"^Only input to input connections have been made between several interfaces; "
+                r"should one of them have been flipped\?$"):
+            connect(m,
+                    p=NS(signature=Signature({"a": In(1), "b": In(8)}),
+                         a=Signal(),
+                         b=Signal(8)),
+                    q=NS(signature=Signature({"a": In(1), "b": In(8)}),
+                         a=Signal(),
+                         b=Signal(8)))
+
+    def test_connect_multi_some_in_pairs(self):
+        # Connecting matching inputs is an allowed no-op if there are also
+        # actual input-output connections to be made. See
+        # https://github.com/amaranth-lang/amaranth/pull/1153#issuecomment-1962810678
+        # for more discussion.
+        m = Module()
+        connect(m,
+                p=NS(signature=Signature({"a": In(1), "b": In(1)}),
+                     a=Signal(),
+                     b=Signal()),
+                q=NS(signature=Signature({"a": Out(1), "b": In(1)}),
+                     a=Signal(),
+                     b=Signal()))
 
 
 class ComponentTestCase(unittest.TestCase):

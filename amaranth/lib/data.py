@@ -2,16 +2,17 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections.abc import Mapping, Sequence
 import warnings
+import operator
 
 from amaranth._utils import final
 from amaranth.hdl import *
 from amaranth.hdl._repr import *
-from amaranth.hdl._ast import ShapeCastable, ValueCastable
+from amaranth import hdl
 
 
 __all__ = [
     "Field", "Layout", "StructLayout", "UnionLayout", "ArrayLayout", "FlexibleLayout",
-    "View", "Struct", "Union",
+    "View", "Const", "Struct", "Union",
 ]
 
 
@@ -26,7 +27,7 @@ class Field:
 
     Attributes
     ----------
-    shape : :ref:`shape-like <lang-shapelike>`
+    shape : :class:`.ShapeLike`
         Shape of the field. When initialized or assigned, the object is stored as-is.
     offset : :class:`int`, >=0
         Index of the least significant bit of the field.
@@ -55,14 +56,14 @@ class Field:
     def width(self):
         """Width of the field.
 
-        This property should be used over ``self.shape.width`` because ``self.shape`` can be
+        This property should be used over :py:`self.shape.width` because :py:`self.shape` can be
         an arbitrary :ref:`shape-like <lang-shapelike>` object, which may not have
-        a ``width`` property.
+        a :py:`width` property.
 
         Returns
         -------
         :class:`int`
-            ``Shape.cast(self.shape).width``
+            :py:`Shape.cast(self.shape).width`
         """
         return Shape.cast(self.shape).width
 
@@ -98,15 +99,15 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
     def cast(obj):
         """Cast a :ref:`shape-like <lang-shapelike>` object to a layout.
 
-        This method performs a subset of the operations done by :meth:`Shape.cast`; it will
-        recursively call ``.as_shape()``, but only until a layout is returned.
+        This method performs a subset of the operations done by :meth:`.Shape.cast`; it will
+        recursively call :py:`.as_shape()`, but only until a layout is returned.
 
         Raises
         ------
         TypeError
-            If ``obj`` cannot be converted to a :class:`Layout` instance.
+            If :py:`obj` cannot be converted to a :class:`Layout` instance.
         RecursionError
-            If ``obj.as_shape()`` returns ``obj``.
+            If :py:`obj.as_shape()` returns :py:`obj`.
         """
         while isinstance(obj, ShapeCastable):
             if isinstance(obj, Layout):
@@ -138,12 +139,12 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         Returns
         -------
         :class:`Field`
-            The field associated with ``key``.
+            The field associated with :py:`key`.
 
         Raises
         ------
         KeyError
-            If there is no field associated with ``key``.
+            If there is no field associated with :py:`key`.
         """
 
     @property
@@ -162,8 +163,8 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
 
         Returns
         -------
-        :class:`Shape`
-            ``unsigned(self.size)``
+        :class:`.Shape`
+            :py:`unsigned(self.size)`
         """
         return unsigned(self.size)
 
@@ -191,22 +192,27 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         Returns
         -------
         :class:`View`
-            ``View(self, target)``
+            :py:`View(self, target)`
         """
         return View(self, target)
 
     def const(self, init):
         """Convert a constant initializer to a constant.
 
-        Converts ``init``, which may be a sequence or a mapping of field values, to a constant.
+        Converts :py:`init`, which may be a sequence or a mapping of field values, to a constant.
 
         Returns
         -------
         :class:`Const`
             A constant that has the same value as a view with this layout that was initialized with
             an all-zero value and had every field assigned to the corresponding value in the order
-            in which they appear in ``init``.
+            in which they appear in :py:`init`.
         """
+        if isinstance(init, Const):
+            if Layout.cast(init.shape()) != self:
+                raise ValueError(f"Const layout {init.shape()!r} differs from shape layout "
+                                 f"{self!r}")
+            return init
         if init is None:
             iterator = iter(())
         elif isinstance(init, Mapping):
@@ -222,18 +228,25 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             field = self[key]
             cast_field_shape = Shape.cast(field.shape)
             if isinstance(field.shape, ShapeCastable):
-                key_value = Const.cast(field.shape.const(key_value))
-                if key_value.shape() != cast_field_shape:
-                    raise ValueError("Constant returned by {!r}.const() must have the shape that "
-                                     "it casts to, {!r}, and not {!r}"
-                                     .format(field.shape, cast_field_shape,
-                                             key_value.shape()))
-            elif not isinstance(key_value, Const):
-                key_value = Const(key_value, cast_field_shape)
+                key_value = hdl.Const.cast(hdl.Const(key_value, field.shape))
+            elif not isinstance(key_value, hdl.Const):
+                key_value = hdl.Const(key_value, cast_field_shape)
             mask = ((1 << cast_field_shape.width) - 1) << field.offset
             int_value &= ~mask
             int_value |= (key_value.value << field.offset) & mask
-        return View(self, Const(int_value, self.as_shape()))
+        return Const(self, int_value)
+
+    def from_bits(self, raw):
+        """Convert a bit pattern to a constant.
+
+        Converts :py:`raw`, which is an :class:`int`, to a constant.
+
+        Returns
+        -------
+        :class:`Const`
+            :py:`Const(self, raw)`
+        """
+        return Const(self, raw)
 
     def _value_repr(self, value):
         yield Repr(FormatInt(), value)
@@ -259,7 +272,21 @@ class StructLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/struct_layout.svg
+    .. wavedrom:: data/struct_layout
+
+        {
+            "reg": [
+                {"name": ".first",  "bits": 3},
+                {"name": ".second", "bits": 7},
+                {"name": ".third",  "bits": 6}
+            ],
+            "config": {
+                "lanes": 1,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 
@@ -279,7 +306,7 @@ class StructLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
+    members : mapping of :class:`str` to :class:`.ShapeLike`
         Dictionary of structure members.
     """
 
@@ -336,7 +363,23 @@ class UnionLayout(Layout):
 
     For example, the following layout of a 7-bit value:
 
-    .. image:: _images/data/union_layout.svg
+    .. wavedrom:: data/union_layout
+
+        {
+            "reg": [
+                {"name": ".third",  "bits": 6},
+                {"name": "",        "bits": 1, "type": 1},
+                {"name": ".second", "bits": 7},
+                {"name": ".first",  "bits": 3},
+                {"name": "",        "bits": 4, "type": 1}
+            ],
+            "config": {
+                "lanes": 3,
+                "compact": true,
+                "vflip": true,
+                "hspace": 289.4375
+            }
+        }
 
     can be described with:
 
@@ -350,7 +393,7 @@ class UnionLayout(Layout):
 
     Attributes
     ----------
-    members : mapping of :class:`str` to :ref:`shape-like <lang-shapelike>`
+    members : mapping of :class:`str` to :class:`.ShapeLike`
         Dictionary of union members.
     """
     def __init__(self, members):
@@ -411,7 +454,22 @@ class ArrayLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/array_layout.svg
+    .. wavedrom:: data/array_layout
+
+        {
+            "reg": [
+                {"name": "[0]",  "bits": 4},
+                {"name": "[1]",  "bits": 4},
+                {"name": "[2]",  "bits": 4},
+                {"name": "[3]",  "bits": 4}
+            ],
+            "config": {
+                "lanes": 1,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 
@@ -425,7 +483,7 @@ class ArrayLayout(Layout):
 
     Attributes
     ----------
-    elem_shape : :ref:`shape-like <lang-shapelike>`
+    elem_shape : :class:`.ShapeLike`
         Shape of an individual element.
     length : :class:`int`
         Amount of elements.
@@ -494,7 +552,28 @@ class FlexibleLayout(Layout):
 
     For example, the following layout of a 16-bit value:
 
-    .. image:: _images/data/flexible_layout.svg
+    .. wavedrom:: data/flexible_layout
+
+        {
+            "reg": [
+                {"name": "",        "bits": 14, "type": 1},
+                {"name": "[0]",     "bits":  1},
+                {"name": "",        "bits":  1, "type": 1},
+                {"name": "",        "bits": 10, "type": 1},
+                {"name": ".third",  "bits":  6},
+                {"name": ".second", "bits":  7},
+                {"name": "",        "bits":  9, "type": 1},
+                {"name": "",        "bits":  1, "type": 1},
+                {"name": ".first",  "bits":  3},
+                {"name": "",        "bits": 12, "type": 1}
+            ],
+            "config": {
+                "lanes": 4,
+                "compact": true,
+                "vflip": true,
+                "hspace": 650
+            }
+        }
 
     can be described with:
 
@@ -573,7 +652,10 @@ class View(ValueCastable):
     Creating a view
     ###############
 
-    A view must be created using an explicitly provided layout and target. To create a new :class:`Signal` that is wrapped in a :class:`View` with a given ``layout``, use ``Signal(layout, ...)``, which for a :class:`Layout` is equivalent to ``View(layout, Signal(...))``.
+    A view must be created using an explicitly provided layout and target. To create a new
+    :class:`Signal` that is wrapped in a :class:`View` with a given :py:`layout`, use
+    :py:`Signal(layout, ...)`, which for a :class:`Layout` is equivalent to
+    :py:`View(layout, Signal(...))`.
 
     Accessing a view
     ################
@@ -582,46 +664,46 @@ class View(ValueCastable):
     corresponding to the field with that index or name, which is itself either a value or
     a value-castable object. If the shape of the field is a :class:`Layout`, it will be
     a :class:`View`; if it is a class deriving from :class:`Struct` or :class:`Union`, it
-    will be an instance of that data class; if it is another
-    :ref:`shape-like <lang-shapelike>` object implementing ``__call__``, it will be
-    the result of calling that method.
+    will be an instance of that data class; if it is another :ref:`shape-like <lang-shapelike>`
+    object implementing :meth:`~.ShapeCastable.__call__`, it will be the result of calling that
+    method.
 
     Slicing a view whose layout is an :class:`ArrayLayout` can be done with an index that is
-    an Amaranth value instead of a constant integer. The returned element is chosen dynamically
+    an Amaranth value rather than a constant integer. The returned element is chosen dynamically
     in that case.
 
-    A view can only be compared for equality with another view of the same layout,
-    returning a single-bit value. No other operators are supported on views. If required,
-    a view can be converted back to its underlying value via :meth:`as_value`.
+    A view can only be compared for equality with another view or constant with the same layout,
+    returning a single-bit :class:`.Value`. No other operators are supported. A view can be
+    lowered to a :class:`.Value` using :meth:`as_value`.
 
     Custom view classes
     ###################
 
     The :class:`View` class can be inherited from to define additional properties or methods on
-    a view. The only two names that are reserved on instances of :class:`View` are :meth:`as_value`
-    and :meth:`eq`, leaving the rest to the developer. The :class:`Struct` and :class:`Union`
-    classes provided in this module are subclasses of :class:`View` that also provide a concise way
-    to define a layout.
+    a view. The only three names that are reserved on instances of :class:`View` and :class:`Const`
+    are :meth:`as_value`, :meth:`Const.as_bits`, and :meth:`eq`, leaving the rest to the developer.
+    The :class:`Struct` and :class:`Union` classes provided in this module are subclasses of
+    :class:`View` that also provide a concise way to define a layout.
     """
     def __init__(self, layout, target):
         try:
             cast_layout = Layout.cast(layout)
         except TypeError as e:
-            raise TypeError("View layout must be a layout, not {!r}"
+            raise TypeError("Layout of a view must be a Layout, not {!r}"
                             .format(layout)) from e
         try:
             cast_target = Value.cast(target)
         except TypeError as e:
-            raise TypeError("View target must be a value-castable object, not {!r}"
+            raise TypeError("Target of a view must be a value-castable object, not {!r}"
                             .format(target)) from e
         if len(cast_target) != cast_layout.size:
-            raise ValueError("View target is {} bit(s) wide, which is not compatible with "
-                             "the {} bit(s) wide view layout"
+            raise ValueError("Target of a view is {} bit(s) wide, which is not compatible with "
+                             "its {} bit(s) wide layout"
                              .format(len(cast_target), cast_layout.size))
         for name, field in cast_layout:
             if isinstance(name, str) and name[0] != "_" and hasattr(type(self), name):
-                warnings.warn("View layout includes a field {!r} that will be shadowed by "
-                              "the view attribute '{}.{}.{}'"
+                warnings.warn("Layout of a view includes a field {!r} that will be shadowed by "
+                              "the attribute '{}.{}.{}'"
                               .format(name, type(self).__module__, type(self).__qualname__, name),
                               SyntaxWarning, stacklevel=2)
         self.__orig_layout = layout
@@ -634,18 +716,17 @@ class View(ValueCastable):
         Returns
         -------
         :class:`Layout`
-            The ``layout`` provided when constructing the view.
+            The :py:`layout` provided when constructing the view.
         """
         return self.__orig_layout
 
-    @ValueCastable.lowermethod
     def as_value(self):
         """Get underlying value.
 
         Returns
         -------
-        :class:`Value`
-            The ``target`` provided when constructing the view, or the :class:`Signal` that
+        :class:`.Value`
+            The :py:`target` provided when constructing the view, or the :class:`Signal` that
             was created.
         """
         return self.__target
@@ -655,52 +736,53 @@ class View(ValueCastable):
 
         Returns
         -------
-        :class:`Assign`
-            ``self.as_value().eq(other)``
+        :class:`.Assign`
+            :py:`self.as_value().eq(other)`
         """
         return self.as_value().eq(other)
 
     def __getitem__(self, key):
         """Slice the underlying value.
 
-        A field corresponding to ``key`` is looked up in the layout. If the field's shape is
-        a shape-castable object that has a ``__call__`` method, it is called and the result is
-        returned. Otherwise, ``as_shape`` is called repeatedly on the shape until either an object
-        with a ``__call__`` method is reached, or a ``Shape`` is returned. In the latter case,
-        returns an unspecified Amaranth expression with the right shape.
+        A field corresponding to :py:`key` is looked up in the layout. If the field's shape is
+        a shape-castable object that has a :meth:`~.ShapeCastable.__call__` method, it is called and
+        the result is returned. Otherwise, :meth:`~.ShapeCastable.as_shape` is called repeatedly on
+        the shape until either an object with a :meth:`~.ShapeCastable.__call__` method is reached,
+        or a :class:`.Shape` is returned. In the latter case, returns an unspecified Amaranth
+        expression with the right shape.
 
         Arguments
         ---------
-        key : :class:`str` or :class:`int` or :class:`ValueCastable`
+        key : :class:`str` or :class:`int` or :class:`.ValueCastable`
             Name or index of a field.
 
         Returns
         -------
-        :class:`Value` or :class:`ValueCastable`, inout
+        :class:`.Value` or :class:`.ValueCastable`, :ref:`assignable <lang-assignable>`
             A slice of the underlying value defined by the field.
 
         Raises
         ------
-        KeyError
-            If the layout does not define a field corresponding to ``key``.
-        TypeError
-            If ``key`` is a value-castable object, but the layout of the view is not
-            a :class:`ArrayLayout`.
-        TypeError
-            If ``ShapeCastable.__call__`` does not return a value or a value-castable object.
+        :exc:`KeyError`
+            If the layout does not define a field corresponding to :py:`key`.
+        :exc:`TypeError`
+            If :py:`key` is a value-castable object, but the layout of the view is not
+            an :class:`ArrayLayout`.
+        :exc:`TypeError`
+            If :meth:`.ShapeCastable.__call__` does not return a value or a value-castable object.
         """
         if isinstance(self.__layout, ArrayLayout):
             if not isinstance(key, (int, Value, ValueCastable)):
-                raise TypeError("Views with array layout may only be indexed with an integer "
-                                "or a value, not {!r}"
-                                .format(key))
+                raise TypeError(
+                    f"View with array layout may only be indexed with an integer or a value, "
+                    f"not {key!r}")
             shape = self.__layout.elem_shape
             value = self.__target.word_select(key, Shape.cast(self.__layout.elem_shape).width)
         else:
             if isinstance(key, (Value, ValueCastable)):
-                raise TypeError("Only views with array layout, not {!r}, may be indexed "
-                                "with a value"
-                                .format(self.__layout))
+                raise TypeError(
+                    f"Only views with array layout, not {self.__layout!r}, may be indexed with "
+                    f"a value")
             field = self.__layout[key]
             shape = field.shape
             value = self.__target[field.offset:field.offset + field.width]
@@ -709,9 +791,9 @@ class View(ValueCastable):
         if isinstance(shape, ShapeCastable):
             value = shape(value)
             if not isinstance(value, (Value, ValueCastable)):
-                raise TypeError("{!r}.__call__() must return a value or "
-                                "a value-castable object, not {!r}"
-                                .format(shape, value))
+                raise TypeError(
+                    f"{shape!r}.__call__() must return a value or a value-castable object, not "
+                    f"{value!r}")
             return value
         if Shape.cast(shape).signed:
             return value.as_signed()
@@ -721,40 +803,48 @@ class View(ValueCastable):
     def __getattr__(self, name):
         """Access a field of the underlying value.
 
-        Returns ``self[name]``.
+        Returns :py:`self[name]`.
 
         Raises
         ------
-        AttributeError
-            If the layout does not define a field called ``name``, or if ``name`` starts with
+        :exc:`AttributeError`
+            If the layout does not define a field called :py:`name`, or if :py:`name` starts with
             an underscore.
         """
         if isinstance(self.__layout, ArrayLayout):
-            raise AttributeError("View of {!r} with an array layout does not have fields"
-                                 .format(self.__target))
+            raise AttributeError(
+                f"View with an array layout does not have fields")
         try:
             item = self[name]
         except KeyError:
-            raise AttributeError("View of {!r} does not have a field {!r}; "
-                                 "did you mean one of: {}?"
-                                 .format(self.__target, name,
-                                         ", ".join(repr(name)
-                                                   for name, field in self.__layout)))
+            raise AttributeError(
+                f"View with layout {self.__layout!r} does not have a field {name!r}; did you mean "
+                f"one of: {', '.join(repr(name) for name, field in self.__layout)}?")
         if name.startswith("_"):
-            raise AttributeError("View of {!r} field {!r} has a reserved name and may only be "
-                                 "accessed by indexing"
-                                 .format(self.__target, name))
+            raise AttributeError(
+                f"Field {name!r} of view with layout {self.__layout!r} has a reserved name and "
+                f"may only be accessed by indexing")
         return item
 
     def __eq__(self, other):
-        if not isinstance(other, View) or self.__layout != other.__layout:
-            raise TypeError(f"View of {self.__layout!r} can only be compared to another view of the same layout, not {other!r}")
-        return self.__target == other.__target
+        if isinstance(other, View) and self.__layout == other.__layout:
+            return self.__target == other.__target
+        elif isinstance(other, Const) and self.__layout == other._Const__layout:
+            return self.__target == other.as_value()
+        else:
+            raise TypeError(
+                f"View with layout {self.__layout!r} can only be compared to another view or "
+                f"constant with the same layout, not {other!r}")
 
     def __ne__(self, other):
-        if not isinstance(other, View) or self.__layout != other.__layout:
-            raise TypeError(f"View of {self.__layout!r} can only be compared to another view of the same layout, not {other!r}")
-        return self.__target != other.__target
+        if isinstance(other, View) and self.__layout == other.__layout:
+            return self.__target != other.__target
+        elif isinstance(other, Const) and self.__layout == other._Const__layout:
+            return self.__target != other.as_value()
+        else:
+            raise TypeError(
+                f"View with layout {self.__layout!r} can only be compared to another view or "
+                f"constant with the same layout, not {other!r}")
 
     def __add__(self, other):
         raise TypeError("Cannot perform arithmetic operations on a View")
@@ -790,6 +880,223 @@ class View(ValueCastable):
         return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
 
 
+class Const(ValueCastable):
+    """A constant value viewed through the lens of a layout.
+
+    The :class:`Const` class is similar to the :class:`View` class, except that its target is
+    a specific bit pattern and operations on it return constants.
+
+    Creating a constant
+    ###################
+
+    A constant can be created from a :class:`dict` or :class:`list` of field values using
+    :meth:`Layout.const`, or from a bit pattern using :meth:`Layout.from_bits`.
+
+    Accessing a constant
+    ####################
+
+    Slicing a constant or accessing its attributes returns a part of the underlying value
+    corresponding to the field with that index or name. If the shape of the field is
+    a :class:`Layout`, the returned value is a :class:`Const`; if it is a different
+    :ref:`shape-like <lang-shapelike>` object implementing :meth:`~.ShapeCastable.from_bits`,
+    it will be the result of calling that method; otherwise, it is an :class:`int`.
+
+    Slicing a constant whose layout is an :class:`ArrayLayout` can be done with an index that is
+    an Amaranth value rather than a constant integer. The returned element is chosen dynamically
+    in that case, and the resulting value will be a :class:`View` instead of a :class:`Const`.
+
+    A :class:`Const` can only be compared for equality with another constant or view that has
+    the same layout. When compared with another constant, the result will be a :class:`bool`.
+    When compared with a view, the result will be a single-bit :class:`.Value`. No other operators
+    are supported. A constant can be lowered to a :class:`.Value` using :meth:`as_value`, or to
+    its underlying bit pattern using :meth:`as_bits`.
+    """
+    def __init__(self, layout, target):
+        try:
+            cast_layout = Layout.cast(layout)
+        except TypeError as e:
+            raise TypeError(f"Layout of a constant must be a Layout, not {layout!r}") from e
+        try:
+            target = operator.index(target)
+        except TypeError as e:
+            raise TypeError(f"Target of a constant must be an int, not {target!r}") from e
+        if target not in range(1 << cast_layout.size):
+            raise ValueError(f"Target of a constant does not fit in {cast_layout.size} bit(s)")
+        for name, field in cast_layout:
+            if isinstance(name, str) and name[0] != "_" and hasattr(type(self), name):
+                warnings.warn("Layout of a constant includes a field {!r} that will be shadowed by "
+                              "the attribute '{}.{}.{}'"
+                              .format(name, type(self).__module__, type(self).__qualname__, name),
+                              SyntaxWarning, stacklevel=2)
+        self.__orig_layout = layout
+        self.__layout = cast_layout
+        self.__target = target
+
+    def shape(self):
+        """Get layout of this constant.
+
+        Returns
+        -------
+        :class:`Layout`
+            The :py:`layout` provided when constructing the constant.
+        """
+        return self.__orig_layout
+
+    def as_bits(self):
+        """Get underlying bit pattern.
+
+        Returns
+        -------
+        :class:`int`
+            The :py:`target` provided when constructing the constant.
+        """
+        return self.__target
+
+    def as_value(self):
+        """Convert to a value.
+
+        Returns
+        -------
+        :class:`.Const`
+            The bit pattern of this constant, as a :class:`.Value`.
+        """
+        return hdl.Const(self.__target, self.__layout.size)
+
+    def __getitem__(self, key):
+        """Slice the underlying value.
+
+        A field corresponding to :py:`key` is looked up in the layout. If the field's shape is
+        a shape-castable object that has a :meth:`~.ShapeCastable.from_bits` method, returns
+        the result of calling that method. Otherwise, returns an :class:`int`.
+
+        Arguments
+        ---------
+        key : :class:`str` or :class:`int` or :class:`.ValueCastable`
+            Name or index of a field.
+
+        Returns
+        -------
+        unspecified type or :class:`int`
+            A slice of the underlying value defined by the field.
+
+        Raises
+        ------
+        :exc:`KeyError`
+            If the layout does not define a field corresponding to :py:`key`.
+        :exc:`TypeError`
+            If :py:`key` is a value-castable object, but the layout of the constant is not
+            an :class:`ArrayLayout`.
+        :exc:`Exception`
+            If the bit pattern of the field is not valid according to
+            :meth:`.ShapeCastable.from_bits`. Usually this will be a :exc:`ValueError`.
+        """
+        if isinstance(self.__layout, ArrayLayout):
+            if isinstance(key, (Value, ValueCastable)):
+                return View(self.__layout, self.as_value())[key]
+            if not isinstance(key, int):
+                raise TypeError(
+                    f"Constant with array layout may only be indexed with an integer or a value, "
+                    f"not {key!r}")
+            shape = self.__layout.elem_shape
+            elem_width = Shape.cast(self.__layout.elem_shape).width
+            value = (self.__target >> key * elem_width) & ((1 << elem_width) - 1)
+        else:
+            if isinstance(key, (Value, ValueCastable)):
+                raise TypeError(
+                    f"Only constants with array layout, not {self.__layout!r}, may be indexed with "
+                    f"a value")
+            field = self.__layout[key]
+            shape = field.shape
+            value = (self.__target >> field.offset) & ((1 << field.width) - 1)
+        # Field guarantees that the shape-castable object is well-formed, so there is no need
+        # to handle erroneous cases here.
+        if isinstance(shape, ShapeCastable):
+            return shape.from_bits(value)
+        return hdl.Const(value, Shape.cast(shape)).value
+
+    def __getattr__(self, name):
+        """Access a field of the underlying value.
+
+        Returns :py:`self[name]`.
+
+        Raises
+        ------
+        :exc:`AttributeError`
+            If the layout does not define a field called :py:`name`, or if :py:`name` starts with
+            an underscore.
+        :exc:`Exception`
+            If the bit pattern of the field is not valid according to
+            :meth:`.ShapeCastable.from_bits`. Usually this will be a :exc:`ValueError`.
+        """
+        if isinstance(self.__layout, ArrayLayout):
+            raise AttributeError(
+                f"Constant with an array layout does not have fields")
+        try:
+            item = self[name]
+        except KeyError:
+            raise AttributeError(
+                f"Constant with layout {self.__layout!r} does not have a field {name!r}; did you mean "
+                f"one of: {', '.join(repr(name) for name, field in self.__layout)}?")
+        if name.startswith("_"):
+            raise AttributeError(
+                f"Field {name!r} of constant with layout {self.__layout!r} has a reserved name and "
+                f"may only be accessed by indexing")
+        return item
+
+    def __eq__(self, other):
+        if isinstance(other, View) and self.__layout == other._View__layout:
+            return self.as_value() == other._View__target
+        elif isinstance(other, Const) and self.__layout == other.__layout:
+            return self.__target == other.__target
+        else:
+            raise TypeError(
+                f"Constant with layout {self.__layout!r} can only be compared to another view or "
+                f"constant with the same layout, not {other!r}")
+
+    def __ne__(self, other):
+        if isinstance(other, View) and self.__layout == other._View__layout:
+            return self.as_value() != other._View__target
+        elif isinstance(other, Const) and self.__layout == other.__layout:
+            return self.__target != other.__target
+        else:
+            raise TypeError(
+                f"Constant with layout {self.__layout!r} can only be compared to another view or "
+                f"constant with the same layout, not {other!r}")
+
+    def __add__(self, other):
+        raise TypeError("Cannot perform arithmetic operations on a lib.data.Const")
+
+    __radd__ = __add__
+    __sub__ = __add__
+    __rsub__ = __add__
+    __mul__ = __add__
+    __rmul__ = __add__
+    __floordiv__ = __add__
+    __rfloordiv__ = __add__
+    __mod__ = __add__
+    __rmod__ = __add__
+    __lshift__ = __add__
+    __rlshift__ = __add__
+    __rshift__ = __add__
+    __rrshift__ = __add__
+    __lt__ = __add__
+    __le__ = __add__
+    __gt__ = __add__
+    __ge__ = __add__
+
+    def __and__(self, other):
+        raise TypeError("Cannot perform bitwise operations on a lib.data.Const")
+
+    __rand__ = __and__
+    __or__ = __and__
+    __ror__ = __and__
+    __xor__ = __and__
+    __rxor__ = __and__
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
+
+
 class _AggregateMeta(ShapeCastable, type):
     def __new__(metacls, name, bases, namespace):
         if "__annotations__" not in namespace:
@@ -801,19 +1108,19 @@ class _AggregateMeta(ShapeCastable, type):
             # be instantiated. It can also be subclassed, and used to share layout and behavior.
             layout  = dict()
             default = dict()
-            for name in {**namespace["__annotations__"]}:
+            for field_name in {**namespace["__annotations__"]}:
                 try:
-                    Shape.cast(namespace["__annotations__"][name])
+                    Shape.cast(namespace["__annotations__"][field_name])
                 except TypeError:
                     # Not a shape-castable annotation; leave as-is.
                     continue
-                layout[name] = namespace["__annotations__"].pop(name)
-                if name in namespace:
-                    default[name] = namespace.pop(name)
+                layout[field_name] = namespace["__annotations__"].pop(field_name)
+                if field_name in namespace:
+                    default[field_name] = namespace.pop(field_name)
             cls = type.__new__(metacls, name, bases, namespace)
             if cls.__layout_cls is UnionLayout:
                 if len(default) > 1:
-                    raise ValueError("Reset value for at most one field can be provided for "
+                    raise ValueError("Initial value for at most one field can be provided for "
                                      "a union class (specified: {})"
                                      .format(", ".join(default.keys())))
             cls.__layout  = cls.__layout_cls(layout)
@@ -837,6 +1144,11 @@ class _AggregateMeta(ShapeCastable, type):
         return super().__call__(cls, target)
 
     def const(cls, init):
+        if isinstance(init, Const):
+            if Layout.cast(init.shape()) != Layout.cast(cls.__layout):
+                raise ValueError(f"Const layout {init.shape()!r} differs from shape layout "
+                                 f"{cls.__layout!r}")
+            return init
         if cls.__layout_cls is UnionLayout:
             if init is not None and len(init) > 1:
                 raise ValueError("Initializer for at most one field can be provided for "
@@ -848,6 +1160,9 @@ class _AggregateMeta(ShapeCastable, type):
             fields.update(init or {})
             return cls.as_shape().const(fields)
 
+    def from_bits(cls, bits):
+        return cls.as_shape().from_bits(bits)
+
     def _value_repr(cls, value):
         return cls.__layout._value_repr(value)
 
@@ -856,12 +1171,12 @@ class Struct(View, metaclass=_AggregateMeta):
     """Structures defined with annotations.
 
     The :class:`Struct` base class is a subclass of :class:`View` that provides a concise way
-    to describe the structure layout and reset values for the fields using Python
+    to describe the structure layout and initial values for the fields using Python
     :term:`variable annotations <python:variable annotation>`.
 
     Any annotations containing :ref:`shape-like <lang-shapelike>` objects are used,
     in the order in which they appear in the source code, to construct a :class:`StructLayout`.
-    The values assigned to such annotations are used to populate the reset value of the signal
+    The values assigned to such annotations are used to populate the initial value of the signal
     created by the view. Any other annotations are kept as-is.
 
     .. testsetup::
@@ -882,7 +1197,7 @@ class Struct(View, metaclass=_AggregateMeta):
             def is_subnormal(self):
                 return self.exponent == 0
 
-    The ``IEEE754Single`` class itself can be used where a :ref:`shape <lang-shapes>` is expected:
+    The :py:`IEEE754Single` class itself can be used where a :ref:`shape <lang-shapes>` is expected:
 
     .. doctest::
 
@@ -908,15 +1223,15 @@ class Struct(View, metaclass=_AggregateMeta):
         >>> flt.is_subnormal()
         (== (slice (sig flt) 23:31) (const 1'd0))
 
-    The reset values for individual fields can be overridden during instantiation:
+    The initial values for individual fields can be overridden during instantiation:
 
     .. doctest::
 
-        >>> hex(Signal(IEEE754Single).as_value().reset)
+        >>> hex(Signal(IEEE754Single).as_value().init)
         '0x3f800000'
-        >>> hex(Signal(IEEE754Single, reset={'sign': 1}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, init={'sign': 1}).as_value().init)
         '0xbf800000'
-        >>> hex(Signal(IEEE754Single, reset={'exponent': 0}).as_value().reset)
+        >>> hex(Signal(IEEE754Single, init={'exponent': 0}).as_value().init)
         '0x0'
 
     Classes inheriting from :class:`Struct` can be used as base classes. The only restrictions
@@ -965,8 +1280,8 @@ class Union(View, metaclass=_AggregateMeta):
     annotation>`. It is very similar to the :class:`Struct` class, except that its layout
     is a :class:`UnionLayout`.
 
-    A :class:`Union` can have only one field with a specified reset value. If a reset value is
-    explicitly provided during instantiation, it overrides the reset value specified with
+    A :class:`Union` can have only one field with a specified initial value. If an initial value is
+    explicitly provided during instantiation, it overrides the initial value specified with
     an annotation:
 
     .. testcode::
@@ -977,9 +1292,9 @@ class Union(View, metaclass=_AggregateMeta):
 
     .. doctest::
 
-        >>> Signal(VarInt).as_value().reset
+        >>> Signal(VarInt).as_value().init
         256
-        >>> Signal(VarInt, reset={'int8': 10}).as_value().reset
+        >>> Signal(VarInt, init={'int8': 10}).as_value().init
         10
     """
     _AggregateMeta__layout_cls = UnionLayout

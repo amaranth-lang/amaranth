@@ -39,7 +39,21 @@ The fundamental Amaranth type is a :class:`Value`: a sequence of bits that can a
 
 For example, consider a module that processes pixels, converting them from RGB to grayscale. The color pixel format is RGB565:
 
-.. image:: _images/data/rgb565_layout.svg
+.. wavedrom:: data/rgb565_layout
+
+    {
+        "reg": [
+            {"name": ".red",   "bits": 5, "type": 2},
+            {"name": ".green", "bits": 6, "type": 3},
+            {"name": ".blue",  "bits": 5, "type": 4}
+        ],
+        "config": {
+            "lanes": 1,
+            "compact": true,
+            "vflip": true,
+            "hspace": 650
+        }
+    }
 
 This module could be implemented (using a fast but *very* approximate method) as follows:
 
@@ -98,7 +112,7 @@ For example, consider a module that processes RGB pixels in groups of up to four
                       * i_stream.valid[n]
                       for n in range(len(i_stream.valid))))
 
-Note how the width of ``i_stream`` is never defined explicitly; it is instead inferred from the shapes of its fields.
+Note how the width of :py:`i_stream` is never defined explicitly; it is instead inferred from the shapes of its fields.
 
 In the previous section, the precise bitwise layout was important, since RGB565 is an interchange format. In this section however the exact bit positions do not matter, since the layout is only used internally to communicate between two modules in the same design. It is sufficient that both of them use the same layout.
 
@@ -141,7 +155,7 @@ In case the data has related operations or transformations, :class:`View` can be
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the ``RGBLayout`` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an ``RGBView``:
+Here, the :py:`RGBLayout` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an :py:`RGBView`:
 
 .. doctest::
 
@@ -189,7 +203,7 @@ For example, consider a module that can direct another module to perform one of 
             })
         })
 
-Here, the shape of the ``Command`` is inferred, being large enough to accommodate the biggest of all defined parameter structures, and it is not necessary to manage it manually.
+Here, the shape of the :py:`Command` is inferred, being large enough to accommodate the biggest of all defined parameter structures, and it is not necessary to manage it manually.
 
 One module could submit a command with:
 
@@ -221,7 +235,7 @@ Modeling structured data
 ========================
 
 .. autoclass:: Field
-.. autoclass:: Layout
+.. autoclass:: Layout()
 
 
 Common data layouts
@@ -237,6 +251,7 @@ Data views
 ==========
 
 .. autoclass:: View
+.. autoclass:: Const
 
 
 Data classes

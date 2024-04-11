@@ -35,10 +35,10 @@ class FFSynchronizerTestCase(FHDLTestCase):
         sim.add_process(process)
         sim.run()
 
-    def test_reset_value(self):
-        i = Signal(reset=1)
+    def test_init_value(self):
+        i = Signal(init=1)
         o = Signal()
-        frag = FFSynchronizer(i, o, reset=1)
+        frag = FFSynchronizer(i, o, init=1)
 
         sim = Simulator(frag)
         sim.add_clock(1e-6)
@@ -53,6 +53,34 @@ class FFSynchronizerTestCase(FHDLTestCase):
             self.assertEqual((yield o), 0)
         sim.add_process(process)
         sim.run()
+
+    def test_reset_value(self):
+        i = Signal(init=1)
+        o = Signal()
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`reset=` is deprecated, use `init=` instead$"):
+            frag = FFSynchronizer(i, o, reset=1)
+
+        sim = Simulator(frag)
+        sim.add_clock(1e-6)
+        def process():
+            self.assertEqual((yield o), 1)
+            yield i.eq(0)
+            yield Tick()
+            self.assertEqual((yield o), 1)
+            yield Tick()
+            self.assertEqual((yield o), 1)
+            yield Tick()
+            self.assertEqual((yield o), 0)
+        sim.add_process(process)
+        sim.run()
+
+    def test_reset_wrong(self):
+        i = Signal(init=1)
+        o = Signal()
+        with self.assertRaisesRegex(ValueError,
+                r"^Cannot specify both `reset` and `init`$"):
+            FFSynchronizer(i, o, reset=1, init=1)
 
 
 class AsyncFFSynchronizerTestCase(FHDLTestCase):
@@ -90,33 +118,32 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
             # initial reset
             self.assertEqual((yield i), 0)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield i.eq(1)
-            yield Delay(1e-8)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
             yield i.eq(0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
     def test_neg_edge(self):
-        i = Signal(reset=1)
+        i = Signal(init=1)
         o = Signal()
         m = Module()
         m.domains += ClockDomain("sync")
@@ -128,28 +155,27 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
             # initial reset
             self.assertEqual((yield i), 1)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield i.eq(0)
-            yield Delay(1e-8)
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
             yield i.eq(1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield o), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -168,7 +194,7 @@ class ResetSynchronizerTestCase(FHDLTestCase):
         m = Module()
         m.domains += ClockDomain("sync")
         m.submodules += ResetSynchronizer(arst)
-        s = Signal(reset=1)
+        s = Signal(init=1)
         m.d.sync += s.eq(0)
 
         sim = Simulator(m)
@@ -176,28 +202,28 @@ class ResetSynchronizerTestCase(FHDLTestCase):
         def process():
             # initial reset
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
 
             yield arst.eq(1)
             yield Delay(1e-8)
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
             yield arst.eq(0)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 1)
-            yield Tick(); yield Delay(1e-8)
+            yield Tick()
             self.assertEqual((yield s), 0)
-            yield Tick(); yield Delay(1e-8)
-        sim.add_process(process)
+            yield Tick()
+        sim.add_testbench(process)
         with sim.write_vcd("test.vcd"):
             sim.run()
 

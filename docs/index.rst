@@ -12,7 +12,8 @@ Language & toolchain
    install
    start
    tutorial
-   lang
+   guide
+   reference
    stdlib
    platform
    changes

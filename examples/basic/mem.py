@@ -1,4 +1,5 @@
 from amaranth import *
+from amaranth.lib.memory import Memory
 from amaranth.cli import main
 
 
@@ -8,12 +9,13 @@ class RegisterFile(Elaboratable):
         self.dat_r = Signal(8)
         self.dat_w = Signal(8)
         self.we    = Signal()
-        self.mem   = Memory(width=8, depth=16, init=[0xaa, 0x55])
+        self.mem   = Memory(shape=8, depth=16, init=[0xaa, 0x55])
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.rdport = rdport = self.mem.read_port()
-        m.submodules.wrport = wrport = self.mem.write_port()
+        m.submodules.mem = self.mem
+        rdport = self.mem.read_port()
+        wrport = self.mem.write_port()
         m.d.comb += [
             rdport.addr.eq(self.adr),
             self.dat_r.eq(rdport.data),
