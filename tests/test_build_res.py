@@ -5,6 +5,7 @@ from amaranth.lib.wiring import *
 from amaranth.lib.io import *
 from amaranth.build.dsl import *
 from amaranth.build.res import *
+from amaranth._utils import _ignore_deprecated
 
 from .utils import *
 
@@ -56,7 +57,8 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_request_basic(self):
         r = self.cm.lookup("user_led", 0)
-        user_led = self.cm.request("user_led", 0)
+        with _ignore_deprecated():
+            user_led = self.cm.request("user_led", 0)
 
         self.assertIsInstance(flipped(user_led), Pin)
         self.assertEqual(user_led.o.name, "user_led_0__o")
@@ -74,7 +76,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(port.invert, (False,))
 
     def test_request_with_dir(self):
-        i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
+        with _ignore_deprecated():
+            i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
         self.assertIsInstance(flipped(i2c.sda), Pin)
         self.assertEqual(i2c.sda.dir, "o")
         ((_, _, scl_buffer), (_, _, sda_buffer)) = self.cm.iter_pins()
@@ -82,7 +85,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         sda_buffer._MustUse__silence = True
 
     def test_request_tristate(self):
-        i2c = self.cm.request("i2c", 0)
+        with _ignore_deprecated():
+            i2c = self.cm.request("i2c", 0)
         self.assertEqual(i2c.sda.dir, "io")
 
         ((scl_pin, scl_port, scl_buffer), (sda_pin, sda_port, sda_buffer)) = self.cm.iter_pins()
@@ -97,7 +101,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(sda_port.io.metadata[0].name, "N11")
 
     def test_request_diffpairs(self):
-        clk100 = self.cm.request("clk100", 0)
+        with _ignore_deprecated():
+            clk100 = self.cm.request("clk100", 0)
         self.assertIsInstance(flipped(clk100), Pin)
         self.assertEqual(clk100.dir, "i")
         self.assertEqual(clk100.width, 1)
@@ -120,8 +125,10 @@ class ResourceManagerTestCase(FHDLTestCase):
         ]
         self.cm.add_resources(new_resources)
 
-        cs = self.cm.request("cs")
-        clk = self.cm.request("clk")
+        with _ignore_deprecated():
+            cs = self.cm.request("cs")
+            clk = self.cm.request("clk")
+
         (
             (cs_pin, cs_port, cs_buffer),
             (clk_pin, clk_port, clk_buffer),
@@ -154,7 +161,8 @@ class ResourceManagerTestCase(FHDLTestCase):
                 Subsignal("copi", Pins("4", conn=("pmod", 0))),
             )
         ])
-        spi0 = self.cm.request("spi", 0)
+        with _ignore_deprecated():
+            spi0 = self.cm.request("spi", 0)
         (
             (cs_pin, cs_port, cs_buffer),
             (clk_pin, clk_port, clk_buffer),
@@ -187,7 +195,8 @@ class ResourceManagerTestCase(FHDLTestCase):
                 Subsignal("copi", Pins("4", conn=("pmod_extension", 0))),
             )
         ])
-        spi0 = self.cm.request("spi", 0)
+        with _ignore_deprecated():
+            spi0 = self.cm.request("spi", 0)
         (
             (cs_pin, cs_port, cs_buffer),
             (clk_pin, clk_port, clk_buffer),
@@ -208,8 +217,9 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(copi_port.io.metadata[0].name, "B3")
 
     def test_request_clock(self):
-        clk100 = self.cm.request("clk100", 0)
-        clk50 = self.cm.request("clk50", 0, dir="i")
+        with _ignore_deprecated():
+            clk100 = self.cm.request("clk100", 0)
+            clk50 = self.cm.request("clk50", 0, dir="i")
         (
             (clk100_pin, clk100_port, clk100_buffer),
             (clk50_pin, clk50_port, clk50_buffer),
@@ -222,7 +232,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         ])
 
     def test_add_clock(self):
-        i2c = self.cm.request("i2c")
+        with _ignore_deprecated():
+            i2c = self.cm.request("i2c")
         self.cm.add_clock_constraint(i2c.scl.o, 100e3)
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
             (i2c.scl.o, None, 100e3)
@@ -267,24 +278,28 @@ class ResourceManagerTestCase(FHDLTestCase):
             self.cm.add_clock_constraint(Signal(), None)
 
     def test_wrong_request_duplicate(self):
-        self.cm.request("user_led", 0)
+        with _ignore_deprecated():
+            self.cm.request("user_led", 0)
         (pin, port, buffer), = self.cm.iter_pins()
         buffer._MustUse__silence = True
         with self.assertRaisesRegex(ResourceError,
                 r"^Resource user_led#0 has already been requested$"):
-            self.cm.request("user_led", 0)
+            with _ignore_deprecated():
+                self.cm.request("user_led", 0)
 
     def test_wrong_request_duplicate_physical(self):
         self.cm.add_resources([
             Resource("clk20", 0, Pins("H1", dir="i")),
         ])
-        self.cm.request("clk100", 0)
+        with _ignore_deprecated():
+            self.cm.request("clk100", 0)
         (pin, port, buffer), = self.cm.iter_pins()
         buffer._MustUse__silence = True
         with self.assertRaisesRegex(ResourceError,
                 (r"^Resource component clk20_0 uses physical pin H1, but it is already "
                     r"used by resource component clk100_0 that was requested earlier$")):
-            self.cm.request("clk20", 0)
+            with _ignore_deprecated():
+                self.cm.request("clk20", 0)
 
     def test_wrong_request_with_dir(self):
         with self.assertRaisesRegex(TypeError,
@@ -319,7 +334,8 @@ class ResourceManagerTestCase(FHDLTestCase):
             i2c = self.cm.request("i2c", 0, xdr=2)
 
     def test_wrong_clock_constraint_twice(self):
-        clk100 = self.cm.request("clk100")
+        with _ignore_deprecated():
+            clk100 = self.cm.request("clk100")
         (pin, port, buffer), = self.cm.iter_pins()
         buffer._MustUse__silence = True
         with self.assertRaisesRegex(ValueError,
