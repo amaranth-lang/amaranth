@@ -6,7 +6,7 @@ import operator
 
 from amaranth._utils import final
 from amaranth.hdl import *
-from amaranth.hdl._repr import *
+from amaranth.hdl._repr import Repr, FormatInt, FormatEnum
 from amaranth import hdl
 
 
@@ -247,6 +247,22 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             :py:`Const(self, raw)`
         """
         return Const(self, raw)
+
+    def format(self, value, format_spec):
+        if format_spec != "":
+            raise ValueError(f"Format specifier {format_spec!r} is not supported for layouts")
+        value = Value.cast(value)
+        fields = {}
+        for key, field in self:
+            shape = Shape.cast(field.shape)
+            field_value = value[field.offset:field.offset+shape.width]
+            if isinstance(field.shape, ShapeCastable):
+                fields[str(key)] = field.shape.format(field.shape(field_value), "")
+            else:
+                if shape.signed:
+                    field_value = field_value.as_signed()
+                fields[str(key)] = Format("{}", field_value)
+        return Format.Struct(value, fields)
 
     def _value_repr(self, value):
         yield Repr(FormatInt(), value)
@@ -538,6 +554,22 @@ class ArrayLayout(Layout):
 
     def __repr__(self):
         return f"ArrayLayout({self._elem_shape!r}, {self.length})"
+
+    def format(self, value, format_spec):
+        if format_spec != "":
+            raise ValueError(f"Format specifier {format_spec!r} is not supported for layouts")
+        value = Value.cast(value)
+        fields = []
+        shape = Shape.cast(self._elem_shape)
+        for index in range(self._length):
+            field_value = value[shape.width * index:shape.width * (index + 1)]
+            if isinstance(self._elem_shape, ShapeCastable):
+                fields.append(self._elem_shape.format(self._elem_shape(field_value), ""))
+            else:
+                if shape.signed:
+                    field_value = field_value.as_signed()
+                fields.append(Format("{}", field_value))
+        return Format.Array(value, fields)
 
 
 class FlexibleLayout(Layout):
@@ -1162,6 +1194,9 @@ class _AggregateMeta(ShapeCastable, type):
 
     def from_bits(cls, bits):
         return cls.as_shape().from_bits(bits)
+
+    def format(cls, value, format_spec):
+        return cls.__layout.format(value, format_spec)
 
     def _value_repr(cls, value):
         return cls.__layout._value_repr(value)
