@@ -1740,7 +1740,7 @@ class FormatEnumTestCase(FHDLTestCase):
     def test_construct(self):
         a = Signal(3)
         fmt = Format.Enum(a, {1: "A", 2: "B", 3: "C"})
-        self.assertRepr(fmt, "(format-enum (sig a) (1 'A') (2 'B') (3 'C'))")
+        self.assertRepr(fmt, "(format-enum (sig a) - (1 'A') (2 'B') (3 'C'))")
         self.assertRepr(Format("{}", fmt), """
             (format '{:s}' (switch-value (sig a)
                 (case 001 (const 8'd65))
@@ -1755,8 +1755,8 @@ class FormatEnumTestCase(FHDLTestCase):
             B = 3
             C = 4
 
-        fmt = Format.Enum(a, MyEnum)
-        self.assertRepr(fmt, "(format-enum (sig a) (0 'A') (3 'B') (4 'C'))")
+        fmt = Format.Enum(a, MyEnum, name="MyEnum")
+        self.assertRepr(fmt, "(format-enum (sig a) 'MyEnum' (0 'A') (3 'B') (4 'C'))")
         self.assertRepr(Format("{}", fmt), """
             (format '{:s}' (switch-value (sig a)
                 (case 000 (const 8'd65))
@@ -1774,6 +1774,9 @@ class FormatEnumTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Variant names must be strings, not 123$"):
             Format.Enum(a, {1: 123})
+        with self.assertRaisesRegex(TypeError,
+                r"^Enum name must be a string or None, not 123$"):
+            Format.Enum(a, {}, name=123)
 
 
 class FormatStructTestCase(FHDLTestCase):
