@@ -366,6 +366,16 @@ class SimulatorUnitTestCase(FHDLTestCase):
         self.assertStatement(stmt, [C(1), C(0b010)], C(0b001110101, 9))
         self.assertStatement(stmt, [C(2), C(0b100)], C(0b001001001, 9))
 
+    def test_array_lhs_heterogenous_slice(self):
+        l = Signal(1, init=1)
+        m = Signal(3, init=4)
+        n = Signal(5, init=7)
+        array = Array([l, m, n])
+        stmt = lambda y, a, b: [array[a].as_value()[2:].eq(b), y.eq(Cat(*array))]
+        self.assertStatement(stmt, [C(0), C(0b000)], C(0b001111001, 9))
+        self.assertStatement(stmt, [C(1), C(0b010)], C(0b001110001, 9))
+        self.assertStatement(stmt, [C(2), C(0b100)], C(0b100111001, 9))
+
     def test_array_lhs_oob(self):
         l = Signal(3)
         m = Signal(3)
