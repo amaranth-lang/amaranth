@@ -5,7 +5,7 @@ import unittest
 
 from amaranth import *
 from amaranth.hdl import *
-from amaranth.lib.enum import Enum, EnumMeta, Flag, IntEnum, EnumView, FlagView
+from amaranth.lib.enum import Enum, EnumType, Flag, IntEnum, EnumView, FlagView
 
 from .utils import *
 
@@ -100,7 +100,7 @@ class EnumTestCase(FHDLTestCase):
             Z = 0
             A = 10
             B = 20
-        self.assertNotIsInstance(EnumA, EnumMeta)
+        self.assertNotIsInstance(EnumA, EnumType)
         self.assertIsInstance(EnumA, py_enum.EnumMeta)
 
     def test_const_shape(self):

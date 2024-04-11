@@ -114,7 +114,7 @@ It is also possible to define a custom view class for a given enum:
 Metaclass
 =========
 
-.. autoclass:: EnumMeta()
+.. autoclass:: EnumType()
 
 
 Base classes
