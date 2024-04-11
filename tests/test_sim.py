@@ -15,6 +15,7 @@ from amaranth.hdl._ir import *
 from amaranth.sim import *
 from amaranth.lib.memory import Memory
 from amaranth.lib.data import View, StructLayout
+from amaranth.lib import enum
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -1165,7 +1166,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             Counter: 009
         """))
 
-    def test_print(self):
+    def test_print_str(self):
         def enc(s):
             return Cat(
                 Const(b, 8)
@@ -1195,6 +1196,38 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             Counter: non-zero
             Counter: non-zero
         """))
+
+    def test_print_enum(self):
+        class MyEnum(enum.Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+            CDE = 2
+
+        sig = Signal(MyEnum)
+        ctr = Signal(2)
+        m = Module()
+        m.d.comb += sig.eq(ctr)
+        m.d.sync += [
+            Print(sig),
+            ctr.eq(ctr + 1),
+        ]
+        output = StringIO()
+        with redirect_stdout(output):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                def process():
+                    yield Tick()
+                    yield Tick()
+                    yield Tick()
+                    yield Tick()
+                sim.add_testbench(process)
+        self.assertEqual(output.getvalue(), dedent("""\
+            A
+            B
+            CDE
+            [unknown]
+        """))
+
 
     def test_assert(self):
         m = Module()
