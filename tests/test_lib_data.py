@@ -75,7 +75,7 @@ class FieldTestCase(TestCase):
             data.Field(1, 0).offset = 1
 
 
-class StructLayoutTestCase(TestCase):
+class StructLayoutTestCase(FHDLTestCase):
     def test_construct(self):
         sl = data.StructLayout({
             "a": unsigned(1),
@@ -126,8 +126,21 @@ class StructLayoutTestCase(TestCase):
                 r"^Struct layout member shape must be a shape-castable object, not 1\.0$"):
             data.StructLayout({"a": 1.0})
 
+    def test_format(self):
+        sl = data.StructLayout({
+            "a": unsigned(1),
+            "b": signed(2),
+        })
+        sig = Signal(sl)
+        self.assertRepr(sl.format(sig, ""), """
+        (format-struct (sig sig)
+            ('a' (format '{}' (slice (sig sig) 0:1)))
+            ('b' (format '{}' (s (slice (sig sig) 1:3))))
+        )
+        """)
 
-class UnionLayoutTestCase(TestCase):
+
+class UnionLayoutTestCase(FHDLTestCase):
     def test_construct(self):
         ul = data.UnionLayout({
             "a": unsigned(1),
@@ -184,8 +197,21 @@ class UnionLayoutTestCase(TestCase):
                 r"\(specified: a, b\)$"):
             data.UnionLayout({"a": 1, "b": 2}).const(dict(a=1, b=2))
 
+    def test_format(self):
+        ul = data.UnionLayout({
+            "a": unsigned(1),
+            "b": 2
+        })
+        sig = Signal(ul)
+        self.assertRepr(ul.format(sig, ""), """
+        (format-struct (sig sig)
+            ('a' (format '{}' (slice (sig sig) 0:1)))
+            ('b' (format '{}' (slice (sig sig) 0:2)))
+        )
+        """)
 
-class ArrayLayoutTestCase(TestCase):
+
+class ArrayLayoutTestCase(FHDLTestCase):
     def test_construct(self):
         al = data.ArrayLayout(unsigned(2), 3)
         self.assertEqual(al.elem_shape, unsigned(2))
@@ -242,6 +268,48 @@ class ArrayLayoutTestCase(TestCase):
         with self.assertRaisesRegex(TypeError,
                 r"^Cannot index array layout with 'a'$"):
             al["a"]
+
+    def test_format(self):
+        al = data.ArrayLayout(unsigned(2), 3)
+        sig = Signal(al)
+        self.assertRepr(al.format(sig, ""), """
+        (format-array (sig sig)
+            (format '{}' (slice (sig sig) 0:2))
+            (format '{}' (slice (sig sig) 2:4))
+            (format '{}' (slice (sig sig) 4:6))
+        )
+        """)
+
+    def test_format_signed(self):
+        al = data.ArrayLayout(signed(2), 3)
+        sig = Signal(al)
+        self.assertRepr(al.format(sig, ""), """
+        (format-array (sig sig)
+            (format '{}' (s (slice (sig sig) 0:2)))
+            (format '{}' (s (slice (sig sig) 2:4)))
+            (format '{}' (s (slice (sig sig) 4:6)))
+        )
+        """)
+
+    def test_format_nested(self):
+        al = data.ArrayLayout(data.ArrayLayout(unsigned(2), 2), 3)
+        sig = Signal(al)
+        self.assertRepr(al.format(sig, ""), """
+        (format-array (sig sig)
+            (format-array (slice (sig sig) 0:4)
+                (format '{}' (slice (slice (sig sig) 0:4) 0:2))
+                (format '{}' (slice (slice (sig sig) 0:4) 2:4))
+            )
+            (format-array (slice (sig sig) 4:8)
+                (format '{}' (slice (slice (sig sig) 4:8) 0:2))
+                (format '{}' (slice (slice (sig sig) 4:8) 2:4))
+            )
+            (format-array (slice (sig sig) 8:12)
+                (format '{}' (slice (slice (sig sig) 8:12) 0:2))
+                (format '{}' (slice (slice (sig sig) 8:12) 2:4))
+            )
+        )
+        """)
 
 
 class FlexibleLayoutTestCase(TestCase):
@@ -1012,6 +1080,18 @@ class StructTestCase(FHDLTestCase):
         self.assertRepr(v.b.q.as_value(), "(slice (slice (sig v) 1:9) 4:8)")
         self.assertRepr(v.b.q.r, "(s (slice (slice (slice (sig v) 1:9) 4:8) 0:2))")
         self.assertRepr(v.b.q.s, "(s (slice (slice (slice (sig v) 1:9) 4:8) 2:4))")
+        self.assertRepr(S.format(v, ""), """
+        (format-struct (sig v)
+            ('a' (format '{}' (slice (sig v) 0:1)))
+            ('b' (format-struct (slice (sig v) 1:9)
+                ('p' (format '{}' (slice (slice (sig v) 1:9) 0:4)))
+                ('q' (format-struct (slice (slice (sig v) 1:9) 4:8)
+                    ('r' (format '{}' (s (slice (slice (slice (sig v) 1:9) 4:8) 0:2))))
+                    ('s' (format '{}' (s (slice (slice (slice (sig v) 1:9) 4:8) 2:4))))
+                ))
+            ))
+        )
+        """)
 
     def test_construct_init(self):
         class S(data.Struct):
