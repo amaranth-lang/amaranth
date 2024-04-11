@@ -289,6 +289,22 @@ class Format:
                 chunk.value = netlist.resolve_value(chunk.value)
 
 
+class SignalField:
+    """Describes a single field of a signal."""
+    def __init__(self, value, *, signed, enum_name=None, enum_variants=None):
+        self.value = Value(value)
+        self.signed = bool(signed)
+        self.enum_name = enum_name
+        self.enum_variants = enum_variants
+
+    def __eq__(self, other):
+        return (type(self) is type(other) and
+            self.value == other.value and
+            self.signed == other.signed and
+            self.enum_name == other.enum_name and
+            self.enum_variants == other.enum_variants)
+
+
 class Netlist:
     """A fine netlist. Consists of:
 
@@ -321,6 +337,7 @@ class Netlist:
     connections : dict of (negative) int to int
     io_ports : list of ``IOPort``
     signals : dict of Signal to ``Value``
+    signal_fields: dict of Signal to dict of tuple[str | int] to SignalField
     last_late_net: int
     """
     def __init__(self):
@@ -329,6 +346,7 @@ class Netlist:
         self.connections: dict[Net, Net] = {}
         self.io_ports: list[_ast.IOPort] = []
         self.signals = SignalDict()
+        self.signal_fields = SignalDict()
         self.last_late_net = 0
 
     def resolve_net(self, net: Net):
@@ -345,6 +363,9 @@ class Netlist:
             cell.resolve_nets(self)
         for sig in self.signals:
             self.signals[sig] = self.resolve_value(self.signals[sig])
+        for fields in self.signal_fields.values():
+            for field in fields.values():
+                field.value = self.resolve_value(field.value)
 
     def __repr__(self):
         result = ["("]

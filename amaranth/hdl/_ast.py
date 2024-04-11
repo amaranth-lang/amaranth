@@ -2095,6 +2095,11 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         self._attrs = OrderedDict(() if attrs is None else attrs)
 
+        if isinstance(orig_shape, ShapeCastable):
+            self._format = orig_shape.format(orig_shape(self), "")
+        else:
+            self._format = Format("{}", self)
+
         if decoder is not None:
             # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
             # this is the only way to add a custom filter to the signal right now.

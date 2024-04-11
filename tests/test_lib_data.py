@@ -647,6 +647,9 @@ class ViewTestCase(FHDLTestCase):
             def from_bits(self, bits):
                 return bits
 
+            def format(self, value, spec):
+                return Format("")
+
         v = Signal(data.StructLayout({
             "f": WrongCastable()
         }))

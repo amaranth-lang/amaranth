@@ -7,6 +7,9 @@ from amaranth.hdl._cd import *
 from amaranth.hdl._dsl import *
 from amaranth.hdl._ir import *
 from amaranth.hdl._mem import *
+from amaranth.hdl._nir import SignalField
+
+from amaranth.lib import enum, data
 
 from .utils import *
 
@@ -3501,3 +3504,41 @@ class UndrivenTestCase(FHDLTestCase):
             (cell 3 0 (flipflop 3.0:5 10 pos 0 0))
         )
         """)
+
+
+class FieldsTestCase(FHDLTestCase):
+    def test_fields(self):
+        class MyEnum(enum.Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+            C = 2
+        l = data.StructLayout({"a": MyEnum, "b": signed(3)})
+        s1 = Signal(l)
+        s2 = Signal(MyEnum)
+        s3 = Signal(signed(3))
+        s4 = Signal(unsigned(4))
+        nl = build_netlist(Fragment.get(Module(), None), [
+            s1.as_value(), s2.as_value(), s3, s4,
+        ])
+        self.assertEqual(nl.signal_fields[s1.as_value()], {
+            (): SignalField(nl.signals[s1.as_value()], signed=False),
+            ('a',): SignalField(nl.signals[s1.as_value()][0:2], signed=False, enum_name="MyEnum", enum_variants={
+                0: "A",
+                1: "B",
+                2: "C",
+            }),
+            ('b',): SignalField(nl.signals[s1.as_value()][2:5], signed=True)
+        })
+        self.assertEqual(nl.signal_fields[s2.as_value()], {
+            (): SignalField(nl.signals[s2.as_value()], signed=False, enum_name="MyEnum", enum_variants={
+                0: "A",
+                1: "B",
+                2: "C",
+            }),
+        })
+        self.assertEqual(nl.signal_fields[s3], {
+            (): SignalField(nl.signals[s3], signed=True),
+        })
+        self.assertEqual(nl.signal_fields[s4], {
+            (): SignalField(nl.signals[s4], signed=False),
+        })
