@@ -35,11 +35,11 @@ Examples
     from amaranth.lib.crc.catalog import CRC16_CCITT, CRC16_USB
 
 
-    # Compute a CRC in hardware using the predefined CRC16-CCITT algorithm and the data word
+    # Compute a CRC in hardware using the predefined CRC16-CCITT algorithm and a data word
     # width of 8 bits (in other words, computing it over bytes).
     m.submodules.crc16_ccitt = crc16_ccitt = CRC16_CCITT().create()
 
-    # Compute a CRC in hardware using the predefined CRC16-USB algorithm and the data word
+    # Compute a CRC in hardware using the predefined CRC16-USB algorithm and a data word
     # width of 32 bits.
     m.submodules.crc16_usb = crc16_usb = CRC16_USB(32).create()
 
