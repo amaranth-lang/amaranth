@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import io
 
 from ..utils import bits_for
+from .._utils import to_binary
 from ..lib import wiring
 from ..hdl import _repr, _ast, _ir, _nir
 
@@ -421,6 +422,7 @@ class ModuleEmitter:
         self.emit_cell_wires()
         self.emit_submodule_wires()
         self.emit_connects()
+        self.emit_signal_fields()
         self.emit_submodules()
         self.emit_cells()
 
@@ -491,12 +493,12 @@ class ModuleEmitter:
             attrs.update(signal.attrs)
             self.value_src_loc[value] = signal.src_loc
 
-            for repr in signal._value_repr:
-                if repr.path == () and isinstance(repr.format, _repr.FormatEnum):
-                    enum = repr.format.enum
-                    attrs["enum_base_type"] = enum.__name__
-                    for enum_value in enum:
-                        attrs["enum_value_{:0{}b}".format(enum_value.value, len(signal))] = enum_value.name
+            field = self.netlist.signal_fields[signal][()]
+            if field.enum_name is not None:
+                attrs["enum_base_type"] = field.enum_name
+            if field.enum_variants is not None:
+                for var_val, var_name in field.enum_variants.items():
+                    attrs["enum_value_" + to_binary(var_val, len(signal))] = var_name
 
             if name in self.module.ports:
                 port_value, _flow = self.module.ports[name]
@@ -665,6 +667,30 @@ class ModuleEmitter:
         for name, (wire, value) in self.sigport_wires.items():
             if name not in self.driven_sigports:
                 self.builder.connect(wire.name, self.sigspec(value))
+
+    def emit_signal_fields(self):
+        for signal, name in self.module.signal_names.items():
+            fields = self.netlist.signal_fields[signal]
+            for path, field in fields.items():
+                if path == ():
+                    continue
+                name_parts = [name]
+                for component in path:
+                    if isinstance(component, str):
+                        name_parts.append(f".{component}")
+                    elif isinstance(component, int):
+                        name_parts.append(f"[{component}]")
+                    else:
+                        assert False # :nocov:
+                attrs = {}
+                if field.enum_name is not None:
+                    attrs["enum_base_type"] = field.enum_name
+                if field.enum_variants is not None:
+                    for var_val, var_name in field.enum_variants.items():
+                        attrs["enum_value_" + to_binary(var_val, len(field.value))] = var_name
+                wire = self.builder.wire(width=len(field.value), signed=field.signed, attrs=attrs,
+                                         name="".join(name_parts), src_loc=signal.src_loc)
+                self.builder.connect(wire.name, self.sigspec(field.value))
 
     def emit_submodules(self):
         for submodule_idx in self.module.submodules:

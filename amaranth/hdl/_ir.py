@@ -690,7 +690,7 @@ class NetlistDriver:
 
 
 class NetlistEmitter:
-    def __init__(self, netlist: _nir.Netlist, design, *, all_undef_to_ff=False):
+    def __init__(self, netlist: _nir.Netlist, design: Design, *, all_undef_to_ff=False):
         self.netlist = netlist
         self.design = design
         self.all_undef_to_ff = all_undef_to_ff
@@ -776,7 +776,7 @@ class NetlistEmitter:
     def emit_operator(self, module_idx: int, operator: str, *inputs: _nir.Value, src_loc):
         op = _nir.Operator(module_idx, operator=operator, inputs=inputs, src_loc=src_loc)
         return self.netlist.add_value_cell(op.width, op)
-    
+
     def emit_matches(self, module_idx: int, value: _nir.Value, patterns, *, src_loc):
         key = module_idx, value, patterns, src_loc
         try:
@@ -1334,6 +1334,42 @@ class NetlistEmitter:
             else:
                 raise ValueError(f"Invalid port direction {dir!r}")
 
+    def emit_signal_fields(self):
+        for signal, fragment in self.design.signal_lca.items():
+            module_idx = self.fragment_module_idx[fragment]
+            fields = {}
+            def emit_format(path, fmt):
+                if isinstance(fmt, _ast.Format):
+                    specs = [
+                        chunk[0]
+                        for chunk in fmt._chunks
+                        if not isinstance(chunk, str)
+                    ]
+                    if len(specs) != 1:
+                        return
+                    val, signed = self.emit_rhs(module_idx, specs[0])
+                    fields[path] = _nir.SignalField(val, signed=signed)
+                elif isinstance(fmt, _ast.Format.Enum):
+                    val, signed = self.emit_rhs(module_idx, fmt._value)
+                    fields[path] = _nir.SignalField(val, signed=signed,
+                                                    enum_name=fmt._name,
+                                                    enum_variants=fmt._variants)
+                elif isinstance(fmt, _ast.Format.Struct):
+                    val, signed = self.emit_rhs(module_idx, fmt._value)
+                    fields[path] = _nir.SignalField(val, signed=signed)
+                    for name, subfmt in fmt._fields.items():
+                        emit_format(path + (name,), subfmt)
+                elif isinstance(fmt, _ast.Format.Array):
+                    val, signed = self.emit_rhs(module_idx, fmt._value)
+                    fields[path] = _nir.SignalField(val, signed=signed)
+                    for idx, subfmt in enumerate(fmt._fields):
+                        emit_format(path + (idx,), subfmt)
+            emit_format((), signal._format)
+            val, signed = self.emit_rhs(module_idx, signal)
+            if () not in fields or fields[()].value != val:
+                fields[()] = _nir.SignalField(val, signed=signed)
+            self.netlist.signal_fields[signal] = fields
+
     def emit_drivers(self):
         for driver in self.drivers.values():
             if (driver.domain is not None and
@@ -1452,6 +1488,7 @@ class NetlistEmitter:
             for subfragment, _name, sub_src_loc in fragment.subfragments:
                 self.emit_fragment(subfragment, module_idx, cell_src_loc=sub_src_loc)
             if parent_module_idx is None:
+                self.emit_signal_fields()
                 self.emit_drivers()
                 self.emit_top_ports(fragment)
                 if self.all_undef_to_ff:

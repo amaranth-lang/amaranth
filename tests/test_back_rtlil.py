@@ -4,7 +4,7 @@ import re
 from amaranth.back import rtlil
 from amaranth.hdl import *
 from amaranth.hdl._ast import *
-from amaranth.lib import memory, wiring
+from amaranth.lib import memory, wiring, data, enum
 
 from .utils import *
 
@@ -2009,6 +2009,67 @@ class PrintTestCase(RTLILTestCase):
         end
         """)
 
+
+class DetailTestCase(RTLILTestCase):
+    def test_enum(self):
+        class MyEnum(enum.Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+            C = 2
+
+        sig = Signal(MyEnum)
+        m = Module()
+        m.d.comb += sig.eq(MyEnum.A)
+        self.assertRTLIL(m, [sig.as_value()], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            attribute \enum_base_type "MyEnum"
+            attribute \enum_value_00 "A"
+            attribute \enum_value_01 "B"
+            attribute \enum_value_10 "C"
+            wire width 2 output 0 \sig
+            connect \sig 2'00
+        end
+        """)
+
+    def test_struct(self):
+        class MyEnum(enum.Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+            C = 2
+
+        class Meow(data.Struct):
+            a: MyEnum
+            b: 3
+            c: signed(4)
+            d: data.ArrayLayout(2, 2)
+
+        sig = Signal(Meow)
+        m = Module()
+        self.assertRTLIL(m, [sig.as_value()], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 13 input 0 \sig
+            attribute \enum_base_type "MyEnum"
+            attribute \enum_value_00 "A"
+            attribute \enum_value_01 "B"
+            attribute \enum_value_10 "C"
+            wire width 2 \sig.a
+            wire width 3 \sig.b
+            wire width 4 signed \sig.c
+            wire width 4 \sig.d
+            wire width 2 \sig.d[0]
+            wire width 2 \sig.d[1]
+            connect \sig.a \sig [1:0]
+            connect \sig.b \sig [4:2]
+            connect \sig.c \sig [8:5]
+            connect \sig.d \sig [12:9]
+            connect \sig.d[0] \sig [10:9]
+            connect \sig.d[1] \sig [12:11]
+        end
+        """)
 
 class ComponentTestCase(RTLILTestCase):
     def test_component(self):
