@@ -2,8 +2,8 @@ import enum as py_enum
 import warnings
 import operator
 
-from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning
-from ..hdl._repr import *
+from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning, Format
+from ..hdl._repr import Repr, FormatEnum
 
 
 __all__ = py_enum.__all__ + ["EnumView", "FlagView"]
@@ -175,6 +175,11 @@ class EnumType(ShapeCastable, py_enum.EnumMeta):
 
     def from_bits(cls, bits):
         return cls(bits)
+
+    def format(cls, value, format_spec):
+        if format_spec != "":
+            raise ValueError(f"Format specifier {format_spec!r} is not supported for enums")
+        return Format.Enum(value, cls)
 
     def _value_repr(cls, value):
         yield Repr(FormatEnum(cls), value)
