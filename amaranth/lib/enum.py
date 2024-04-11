@@ -179,7 +179,7 @@ class EnumType(ShapeCastable, py_enum.EnumMeta):
     def format(cls, value, format_spec):
         if format_spec != "":
             raise ValueError(f"Format specifier {format_spec!r} is not supported for enums")
-        return Format.Enum(value, cls)
+        return Format.Enum(value, cls, name=cls.__name__)
 
     def _value_repr(cls, value):
         yield Repr(FormatEnum(cls), value)

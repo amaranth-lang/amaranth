@@ -2769,8 +2769,11 @@ class Format(_FormatLike):
 
 
     class Enum(_FormatLike):
-        def __init__(self, value, /, variants):
+        def __init__(self, value, /, variants, *, name=None):
             self._value = Value.cast(value)
+            if name is not None and not isinstance(name, str):
+                raise TypeError(f"Enum name must be a string or None, not {name!r}")
+            self._name = name
             if isinstance(variants, EnumMeta):
                 self._variants = {Const.cast(member.value).value: member.name for member in variants}
             else:
@@ -2796,7 +2799,8 @@ class Format(_FormatLike):
                 f" ({val!r} {name!r})"
                 for val, name in self._variants.items()
             )
-            return f"(format-enum {self._value!r}{variants})"
+            name = "-" if self._name is None else repr(self._name)
+            return f"(format-enum {self._value!r} {name}{variants})"
 
 
     class Struct(_FormatLike):

@@ -320,3 +320,13 @@ class EnumTestCase(FHDLTestCase):
             A = 1
             B = py_enum.member(2)
         self.assertIs(2, EnumB.B.value)
+
+    def test_format(self):
+        class EnumA(Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+
+        sig = Signal(EnumA)
+        self.assertRepr(EnumA.format(sig, ""), """
+        (format-enum (sig sig) 'EnumA' (0 'A') (1 'B'))
+        """)
