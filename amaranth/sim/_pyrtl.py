@@ -153,12 +153,16 @@ class _ValueCompiler(ValueVisitor, _Compiler):
 
 
 class _RHSValueCompiler(_ValueCompiler):
-    def __init__(self, state, emitter, *, mode, inputs=None):
+    def __init__(self, state, emitter, *, mode, inputs=None, rrhs=None):
         super().__init__(state, emitter)
         assert mode in ("curr", "next")
         self.mode = mode
         # If not None, `inputs` gets populated with RHS signals.
         self.inputs = inputs
+        # When this compiler is used to grab the "next" value from within _LHSValueCompiler,
+        # we still need to use "curr" mode for reading part offsets etc. Allow setting a separate
+        # _RhsValueCompiler for these contexts.
+        self.rrhs = rrhs or self
 
     def sign(self, value):
         value_mask = (1 << len(value)) - 1
@@ -251,7 +255,7 @@ class _RHSValueCompiler(_ValueCompiler):
 
     def on_Part(self, value):
         offset_mask = (1 << len(value.offset)) - 1
-        offset = f"({value.stride} * ({offset_mask:#x} & {self(value.offset)}))"
+        offset = f"({value.stride} * ({offset_mask:#x} & {self.rrhs(value.offset)}))"
         return f"({(1 << value.width) - 1} & " \
                f"{self(value.value)} >> {offset})"
 
@@ -267,7 +271,7 @@ class _RHSValueCompiler(_ValueCompiler):
         return f"0"
 
     def on_SwitchValue(self, value):
-        gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self(value.test)}")
+        gen_test = self.emitter.def_var("test", f"{(1 << len(value.test)) - 1:#x} & {self.rrhs(value.test)}")
         gen_value = self.emitter.def_var("rhs_switch", "0")
         def case_handler(patterns, elem):
             self.emitter.append(f"{gen_value} = {self.sign(elem)}")
@@ -290,7 +294,7 @@ class _LHSValueCompiler(_ValueCompiler):
         self.rrhs = rhs
         # `lrhs` is used to translate the read part of a read-modify-write cycle during partial
         # update of an lvalue.
-        self.lrhs = _RHSValueCompiler(state, emitter, mode="next", inputs=None)
+        self.lrhs = _RHSValueCompiler(state, emitter, mode="next", inputs=None, rrhs=rhs)
         # If not None, `outputs` gets populated with signals on LHS.
         self.outputs = outputs
 
