@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from ..hdl import *
 from ..lib import wiring, data
 from ..lib.wiring import In, Out
+from .._utils import deprecated, _ignore_deprecated
 from .. import tracer
 
 
@@ -889,6 +890,8 @@ class Pin(wiring.PureInterface):
         """A signature for :class:`Pin`.  The parameters are as defined on the ``Pin`` class,
         and are accessible as attributes.
         """
+        # TODO(amaranth-0.6): remove
+        @deprecated("`amaranth.lib.io.Pin` is deprecated, use `amaranth.lib.io.*Buffer` instead")
         def __init__(self, width, dir, *, xdr=0):
             if not isinstance(width, int) or width < 0:
                 raise TypeError("Width must be a non-negative integer, not {!r}"
@@ -942,17 +945,20 @@ class Pin(wiring.PureInterface):
         def create(self, *, path=None, src_loc_at=0):
             return Pin(self.width, self.dir, xdr=self.xdr, path=path, src_loc_at=1 + src_loc_at)
 
+    # TODO(amaranth-0.6): remove
+    @deprecated("`amaranth.lib.io.Pin` is deprecated, use `amaranth.lib.io.*Buffer` instead")
     def __init__(self, width, dir, *, xdr=0, name=None, path=None, src_loc_at=0):
         if name is not None:
             if path is not None:
                 raise ValueError("Cannot pass both name and path")
             path = (name,)
         if path is None:
-            name = tracer.get_var_name(depth=2 + src_loc_at, default="$pin")
+            name = tracer.get_var_name(depth=3 + src_loc_at, default="$pin")
             path = (name,)
         self.path = tuple(path)
         self.name = "__".join(path)
-        signature = Pin.Signature(width, dir, xdr=xdr)
+        with _ignore_deprecated():
+            signature = Pin.Signature(width, dir, xdr=xdr)
         super().__init__(signature, path=path, src_loc_at=src_loc_at + 1)
 
     @property

@@ -1,8 +1,10 @@
+import warnings
 from collections import OrderedDict
 
 from ..hdl import *
 from ..hdl._ast import SignalDict
 from ..lib import wiring, io
+from .._utils import _ignore_deprecated
 
 from .dsl import *
 
@@ -247,7 +249,11 @@ class ResourceManager:
                 if dir == "-":
                     return port
                 else:
-                    pin = wiring.flipped(io.Pin(len(phys), dir, xdr=xdr, path=path))
+                    warnings.warn(f"Using platform.request without `dir=\"-\"` is deprecated; "
+                                  f"use `amaranth.lib.io.*Buffer` components instead",
+                                  DeprecationWarning, stacklevel=2)
+                    with _ignore_deprecated():
+                        pin = wiring.flipped(io.Pin(len(phys), dir, xdr=xdr, path=path))
                     buffer = PinBuffer(pin, port)
                     self._pins.append((pin, port, buffer))
 

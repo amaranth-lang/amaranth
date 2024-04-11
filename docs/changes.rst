@@ -41,7 +41,8 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
 * Ensure all elaboratables are subclasses of :class:`Elaboratable`
 * Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
-* Remove uses of ``amaranth.lib.coding.*`` by inlining or copying the implementation of the modules.
+* Remove uses of ``amaranth.lib.coding.*`` by inlining or copying the implementation of the modules
+* Update uses of ``platform.request`` to pass ``dir="-"`` and use :mod:`amaranth.lib.io` buffers
 
 
 Implemented RFCs
@@ -74,6 +75,7 @@ Implemented RFCs
 * `RFC 50`_: ``Print`` statement and string formatting
 * `RFC 51`_: Add ``ShapeCastable.from_bits`` and ``amaranth.lib.data.Const``
 * `RFC 53`_: Low-level I/O primitives
+* `RFC 55`_: New ``lib.io`` components
 * `RFC 58`_: Core support for ``ValueCastable`` formatting
 * `RFC 59`_: Get rid of upwards propagation of clock domains
 * `RFC 62`_: The ``MemoryData`` class
