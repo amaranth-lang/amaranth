@@ -15,7 +15,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
         * ``nextpnr-nexus``
         * ``prjoxide``
 
-    FIXME The environment is populated by running the script specified in the environment variable
+    The environment is populated by running the script specified in the environment variable
     ``AMARANTH_ENV_OXIDE``, if present.
 
     Available overrides:
@@ -27,7 +27,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
         * ``yosys_opts``: adds extra options for ``yosys``.
         * ``nextpnr_opts``: adds extra options for ``nextpnr-nexus``.
         * ``prjoxide_opts``: adds extra options for ``prjoxide``.
-        * ``add_preferences``: inserts commands at the end of the LPF file.
+        * ``add_preferences``: inserts commands at the end of the PDC file.
 
     Build products:
         * ``{{name}}.rpt``: Yosys log.
@@ -40,9 +40,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
     .. rubric:: Radiant toolchain
 
     Required tools:
-        * ``yosys`` # optional
         * ``radiantc``
-        * ``programmer`` # optional
 
     The environment is populated by running the script specified in the environment variable
     ``AMARANTH_ENV_RADIANT``, if present. On Linux, radiant_env as provided by Radiant
@@ -129,15 +127,6 @@ class LatticeNexusPlatform(TemplatedPlatform):
                 ldc_set_port -iobuf {{ '{' }}{%- for key, value in attrs.items() %}{{key}}={{value}} {% endfor %}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}}
                 {% endif %}
             {% endfor %}
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-            {#
-                {% if port_signal is not none -%}
-                    set_frequency "{{port_signal.name}}" {{frequency/1000000}};
-                {% else -%}
-                    set_frequency "{{net_signal|hierarchy(".")}}" {{frequency}} HZ;
-                {% endif %}
-            #}
-            {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """
     }
@@ -159,7 +148,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
         """,
         r"""
         {{invoke_tool("prjoxide")}}
-            {# {{verbose("--verbose")}} #}
+            {{verbose("--verbose")}}
             {{get_override("prjoxide_opts")|options}}
             pack {{name}}.fasm
             {{name}}.bit
@@ -234,18 +223,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
         {{invoke_tool("radiantc")}}
             {{name}}.tcl
         """,
-        ## TODO: FIXME
-        #r"""
-        #{{invoke_tool("programmer")}}
-        #    -oft -bit
-        #    -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.bit
-        #""",
-        #r"""
-        #{{invoke_tool("programmer")}}
-        #    -oft -xcfsingle -revd -op "Fast Program"
-        #    -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.xcf
-        #""",
-    ]
+        ]
 
     # Common logic
 
@@ -689,7 +667,7 @@ class LatticeNexusPlatform(TemplatedPlatform):
             if "o" in pin.dir:
                 o = pin_o
             if pin.dir in ("oe", "io"):
-                t = Repl(~pin.oe, pin.width)
+                t = (~pin.oe).replicate(pin.width)
         elif pin.xdr == 1:
             if "i" in pin.dir:
                 get_ireg(pin.i_clk, i, pin_i)
