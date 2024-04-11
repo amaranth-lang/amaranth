@@ -133,9 +133,7 @@ class Parameters:
             xor_output=self._xor_output)
 
     def residue(self):
-        """Obtain the residual value left in the CRC register after processing a valid trailing CRC.
-
-        A trailing CRC data word is also known as a codeword."""
+        """Obtain the residual value left in the CRC register after processing a valid trailing CRC."""
         # Residue is computed by initialising to (possibly reflected) xor_output, feeding crc_width
         # worth of 0 bits, then taking the (possibly reflected) output without any XOR.
         if self._reflect_output:
@@ -273,10 +271,10 @@ class Processor(Elaboratable):
     computes every new bit of the CRC in parallel.
 
     The :py:`match_detected` output may be used to validate data with a trailing CRC (also known as
-    a codeword). If the most recently processed data word(s) form the valid CRC of all the previous
-    data words since :py:`start` was asserted, the CRC register will always take on a fixed value
-    known as the :meth:`residue <Parameters.residue>`. The :py:`match_detected` output indicates
-    whether the CRC register currently contains this residue.
+    a codeword in coding theory). If the most recently processed data word(s) form the valid CRC of
+    all the previous data words since :py:`start` was asserted, the CRC register will always take on
+    a fixed value known as the :meth:`residue <Parameters.residue>`. The :py:`match_detected` output
+    indicates whether the CRC register currently contains this residue.
 
     Parameters
     ----------
