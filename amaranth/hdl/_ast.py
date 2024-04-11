@@ -2559,8 +2559,27 @@ class Initial(Value):
         return "(initial)"
 
 
+class _FormatLike:
+    def _as_format(self) -> "Format":
+        raise NotImplementedError # :nocov:
+
+    def __add__(self, other):
+        if not isinstance(other, _FormatLike):
+            return NotImplemented
+        return Format._from_chunks(self._as_format()._chunks + other._as_format()._chunks)
+
+    def __format__(self, format_desc):
+        """Forbidden formatting.
+
+        ``Format`` objects cannot be directly formatted for the same reason as the ``Value``s
+        they contain.
+        """
+        raise TypeError(f"Format object {self!r} cannot be converted to string. Use `repr` "
+                        f"to print the AST, or pass it to the `Print` statement.")
+
+
 @final
-class Format:
+class Format(_FormatLike):
     def __init__(self, format, *args, **kwargs):
         fmt = string.Formatter()
         chunks = []
@@ -2615,17 +2634,17 @@ class Format:
                     shape = obj.shape()
                     if isinstance(shape, ShapeCastable):
                         fmt = shape.format(obj, format_spec)
-                        if not isinstance(fmt, Format):
+                        if not isinstance(fmt, _FormatLike):
                             raise TypeError(f"`ShapeCastable.format` must return a 'Format' instance, not {fmt!r}")
-                        chunks += fmt._chunks
+                        chunks += fmt._as_format()._chunks
                     else:
                         obj = Value.cast(obj)
                         self._parse_format_spec(format_spec, obj.shape())
                         chunks.append((obj, format_spec))
-                elif isinstance(obj, Format):
+                elif isinstance(obj, _FormatLike):
                     if format_spec != "":
                         raise ValueError(f"Format specifiers ({format_spec!r}) cannot be used for 'Format' objects")
-                    chunks += obj._chunks
+                    chunks += obj._as_format()._chunks
                 else:
                     chunks.append(fmt.format_field(obj, format_spec))
 
@@ -2637,6 +2656,9 @@ class Format:
                 raise ValueError(f"format keyword argument {name!r} was not used")
 
         self._chunks = self._clean_chunks(chunks)
+
+    def _as_format(self):
+        return self
 
     @classmethod
     def _from_chunks(cls, chunks):
@@ -2671,24 +2693,10 @@ class Format:
                     format_string.append("{}")
         return ("".join(format_string), tuple(args))
 
-    def __add__(self, other):
-        if not isinstance(other, Format):
-            return NotImplemented
-        return Format._from_chunks(self._chunks + other._chunks)
-
     def __repr__(self):
         format_string, args = self._to_format_string()
         args = "".join(f" {arg!r}" for arg in args)
         return f"(format {format_string!r}{args})"
-
-    def __format__(self, format_desc):
-        """Forbidden formatting.
-
-        ``Format`` objects cannot be directly formatted for the same reason as the ``Value``s
-        they contain.
-        """
-        raise TypeError(f"Format object {self!r} cannot be converted to string. Use `repr` "
-                        f"to print the AST, or pass it to the `Print` statement.")
 
     _FORMAT_SPEC_PATTERN = re.compile(r"""
         (?:
@@ -2758,6 +2766,90 @@ class Format:
                 obj, format_spec = chunk
                 res |= obj._rhs_signals()
         return res
+
+
+    class Enum(_FormatLike):
+        def __init__(self, value, /, variants):
+            self._value = Value.cast(value)
+            if isinstance(variants, EnumMeta):
+                self._variants = {Const.cast(member.value).value: member.name for member in variants}
+            else:
+                self._variants = dict(variants)
+            for val, name in self._variants.items():
+                if not isinstance(val, int):
+                    raise TypeError(f"Variant values must be integers, not {val!r}")
+                if not isinstance(name, str):
+                    raise TypeError(f"Variant names must be strings, not {name!r}")
+
+        def _as_format(self):
+            def str_val(name):
+                name = name.encode()
+                return Const(int.from_bytes(name, "little"), len(name) * 8)
+            value = SwitchValue(self._value, [
+                (val, str_val(name))
+                for val, name in self._variants.items()
+            ] + [(None, str_val("[unknown]"))])
+            return Format("{:s}", value)
+
+        def __repr__(self):
+            variants = "".join(
+                f" ({val!r} {name!r})"
+                for val, name in self._variants.items()
+            )
+            return f"(format-enum {self._value!r}{variants})"
+
+
+    class Struct(_FormatLike):
+        def __init__(self, value, /, fields):
+            self._value = Value.cast(value)
+            self._fields: dict[str, _FormatLike] = dict(fields)
+            for name, format in self._fields.items():
+                if not isinstance(name, str):
+                    raise TypeError(f"Field names must be strings, not {name!r}")
+                if not isinstance(format, _FormatLike):
+                    raise TypeError(f"Field format must be a 'Format', not {format!r}")
+
+        def _as_format(self):
+            chunks = ["{"]
+            for idx, (name, field) in enumerate(self._fields.items()):
+                if idx != 0:
+                    chunks.append(", ")
+                chunks.append(f"{name}=")
+                chunks += field._as_format()._chunks
+            chunks.append("}")
+            return Format._from_chunks(chunks)
+
+        def __repr__(self):
+            fields = "".join(
+                f" ({name!r} {field!r})"
+                for name, field in self._fields.items()
+            )
+            return f"(format-struct {self._value!r}{fields})"
+
+
+    class Array(_FormatLike):
+        def __init__(self, value, /, fields):
+            self._value = Value.cast(value)
+            self._fields = list(fields)
+            for format in self._fields:
+                if not isinstance(format, (Format, Format.Enum, Format.Struct, Format.Array)):
+                    raise TypeError(f"Field format must be a 'Format', not {format!r}")
+
+        def _as_format(self):
+            chunks = ["["]
+            for idx, field in enumerate(self._fields):
+                if idx != 0:
+                    chunks.append(", ")
+                chunks += field._as_format()._chunks
+            chunks.append("]")
+            return Format._from_chunks(chunks)
+
+        def __repr__(self):
+            fields = "".join(
+                f" {field!r}"
+                for field in self._fields
+            )
+            return f"(format-array {self._value!r}{fields})"
 
 
 class _StatementList(list):
@@ -2872,8 +2964,10 @@ class Property(Statement, MustUse):
         self._test   = Value.cast(test)
         if isinstance(message, str):
             message = Format._from_chunks([message])
-        if message is not None and not isinstance(message, Format):
-            raise TypeError(f"Property message must be None, str, or Format, not {message!r}")
+        if message is not None:
+            if not isinstance(message, _FormatLike):
+                raise TypeError(f"Property message must be None, str, or Format, not {message!r}")
+            message = message._as_format()
         self._message = message
         del self._MustUse__silence
 

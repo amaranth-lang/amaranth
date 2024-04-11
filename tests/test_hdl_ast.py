@@ -1736,6 +1736,97 @@ class FormatTestCase(FHDLTestCase):
             f"{fmt}"
 
 
+class FormatEnumTestCase(FHDLTestCase):
+    def test_construct(self):
+        a = Signal(3)
+        fmt = Format.Enum(a, {1: "A", 2: "B", 3: "C"})
+        self.assertRepr(fmt, "(format-enum (sig a) (1 'A') (2 'B') (3 'C'))")
+        self.assertRepr(Format("{}", fmt), """
+            (format '{:s}' (switch-value (sig a)
+                (case 001 (const 8'd65))
+                (case 010 (const 8'd66))
+                (case 011 (const 8'd67))
+                (default (const 72'd1723507152241428428123))
+            ))
+        """)
+
+        class MyEnum(Enum):
+            A = 0
+            B = 3
+            C = 4
+
+        fmt = Format.Enum(a, MyEnum)
+        self.assertRepr(fmt, "(format-enum (sig a) (0 'A') (3 'B') (4 'C'))")
+        self.assertRepr(Format("{}", fmt), """
+            (format '{:s}' (switch-value (sig a)
+                (case 000 (const 8'd65))
+                (case 011 (const 8'd66))
+                (case 100 (const 8'd67))
+                (default (const 72'd1723507152241428428123))
+            ))
+        """)
+
+    def test_construct_wrong(self):
+        a = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Variant values must be integers, not 'a'$"):
+            Format.Enum(a, {"a": "B"})
+        with self.assertRaisesRegex(TypeError,
+                r"^Variant names must be strings, not 123$"):
+            Format.Enum(a, {1: 123})
+
+
+class FormatStructTestCase(FHDLTestCase):
+    def test_construct(self):
+        sig = Signal(3)
+        fmt = Format.Struct(sig, {"a": Format("{}", sig[0]), "b": Format("{}", sig[1:3])})
+        self.assertRepr(fmt, """
+        (format-struct (sig sig)
+            ('a' (format '{}' (slice (sig sig) 0:1)))
+            ('b' (format '{}' (slice (sig sig) 1:3)))
+        )
+        """)
+        self.assertRepr(Format("{}", fmt), """
+            (format '{{a={}, b={}}}'
+                (slice (sig sig) 0:1)
+                (slice (sig sig) 1:3)
+            )
+        """)
+
+    def test_construct_wrong(self):
+        sig = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Field names must be strings, not 1$"):
+            Format.Struct(sig, {1: Format("{}", sig[1:3])})
+        with self.assertRaisesRegex(TypeError,
+                r"^Field format must be a 'Format', not \(slice \(sig sig\) 1:3\)$"):
+            Format.Struct(sig, {"a": sig[1:3]})
+
+
+class FormatArrayTestCase(FHDLTestCase):
+    def test_construct(self):
+        sig = Signal(4)
+        fmt = Format.Array(sig, [Format("{}", sig[0:2]), Format("{}", sig[2:4])])
+        self.assertRepr(fmt, """
+        (format-array (sig sig)
+            (format '{}' (slice (sig sig) 0:2))
+            (format '{}' (slice (sig sig) 2:4))
+        )
+        """)
+        self.assertRepr(Format("{}", fmt), """
+            (format '[{}, {}]'
+                (slice (sig sig) 0:2)
+                (slice (sig sig) 2:4)
+            )
+        """)
+
+    def test_construct_wrong(self):
+        sig = Signal(3)
+        with self.assertRaisesRegex(TypeError,
+                r"^Field format must be a 'Format', not \(slice \(sig sig\) 1:3\)$"):
+            Format.Array(sig, [sig[1:3]])
+
+
 class PrintTestCase(FHDLTestCase):
     def test_construct(self):
         a = Signal()
