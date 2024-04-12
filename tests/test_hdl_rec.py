@@ -203,7 +203,7 @@ class RecordTestCase(FHDLTestCase):
 
     def test_enum_decoder(self):
         r1 = Record([("a", UnsignedEnum)])
-        self.assertEqual(r1.a.decoder(UnsignedEnum.FOO), "FOO/1")
+        self.assertRepr(r1.a._format, "(format-enum (sig r1__a) 'UnsignedEnum' (1 'FOO') (2 'BAR') (3 'BAZ'))")
 
     def test_operators(self):
         r1 = Record([("a", 1)])

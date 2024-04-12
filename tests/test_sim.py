@@ -469,10 +469,10 @@ class SimulatorUnitTestCase(FHDLTestCase):
 
 class SimulatorIntegrationTestCase(FHDLTestCase):
     @contextmanager
-    def assertSimulation(self, module, *, deadline=None):
+    def assertSimulation(self, module, *, deadline=None, traces=[]):
         sim = Simulator(module)
         yield sim
-        with sim.write_vcd("test.vcd", "test.gtkw"):
+        with sim.write_vcd("test.vcd", "test.gtkw", traces=traces):
             if deadline is None:
                 sim.run()
             else:
@@ -1336,10 +1336,25 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             self.assertEqual(eval_format(state, Format("{:s}", sig5)), "ABCD")
             self.assertEqual(eval_format(state, Format("{:<5s}", sig5)), "ABCD ")
 
-        sim = Simulator(Module())
-        sim.add_testbench(testbench)
-        with sim.write_vcd("test.vcd", fs_per_delta=1):
-            sim.run()
+        with self.assertSimulation(Module(), traces=[sig, sig2, sig3, sig4, sig5]) as sim:
+            sim.add_testbench(testbench)
+
+    def test_decoder(self):
+        def decoder(val):
+            return f".oO{val}Oo."
+
+        sig = Signal(2, decoder=decoder)
+
+        def testbench():
+            yield Delay(1e-6)
+            yield sig.eq(1)
+            yield Delay(1e-6)
+            yield sig.eq(2)
+            yield Delay(1e-6)
+
+        with self.assertSimulation(Module(), traces=[sig]) as sim:
+            sim.add_testbench(testbench)
+
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):

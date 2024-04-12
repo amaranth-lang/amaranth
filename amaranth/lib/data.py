@@ -6,7 +6,6 @@ import operator
 
 from amaranth._utils import final
 from amaranth.hdl import *
-from amaranth.hdl._repr import Repr, FormatInt, FormatEnum
 from amaranth import hdl
 
 
@@ -263,21 +262,6 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
                     field_value = field_value.as_signed()
                 fields[str(key)] = Format("{}", field_value)
         return Format.Struct(value, fields)
-
-    def _value_repr(self, value):
-        yield Repr(FormatInt(), value)
-        for key, field in self:
-            shape = Shape.cast(field.shape)
-            field_value = value[field.offset:field.offset+shape.width]
-            if shape.signed:
-                field_value = field_value.as_signed()
-            if isinstance(field.shape, ShapeCastable):
-                for repr in field.shape._value_repr(field_value):
-                    yield Repr(repr.format, repr.value, path=(key,) + repr.path)
-            elif isinstance(field.shape, type) and issubclass(field.shape, Enum):
-                yield Repr(FormatEnum(field.shape), field_value, path=(key,))
-            else:
-                yield Repr(FormatInt(), field_value, path=(key,))
 
 
 class StructLayout(Layout):

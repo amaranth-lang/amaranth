@@ -138,7 +138,7 @@ class EnumTestCase(FHDLTestCase):
             B = -3
         a = Signal(EnumA)
         self.assertRepr(a, "(sig a)")
-        self.assertRepr(a._value_repr, "(Repr(FormatEnum(EnumA), (sig a), ()),)")
+        self.assertRepr(a._format, "(format-enum (sig a) 'EnumA' (0 'A') (-3 'B'))")
 
     def test_enum_view(self):
         class EnumA(Enum, shape=signed(4)):
