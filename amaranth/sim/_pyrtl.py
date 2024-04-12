@@ -8,6 +8,7 @@ from ..hdl._ast import SignalSet, _StatementList, Property
 from ..hdl._xfrm import ValueVisitor, StatementVisitor
 from ..hdl._mem import MemoryInstance
 from ._base import BaseProcess
+from ._pyeval import value_to_string
 
 
 __all__ = ["PyRTLProcess"]
@@ -354,17 +355,6 @@ class _LHSValueCompiler(_ValueCompiler):
                 self(elem)(arg)
             self._emit_switch(gen_test, value.cases, case_handler)
         return gen
-
-
-def value_to_string(value):
-    """Unpack a Verilog-like (but LSB-first) string of unknown width from an integer."""
-    msg = bytearray()
-    while value:
-        byte = value & 0xff
-        value >>= 8
-        if byte:
-            msg.append(byte)
-    return msg.decode()
 
 
 def pin_blame(src_loc, exc):
