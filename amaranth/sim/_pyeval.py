@@ -128,6 +128,33 @@ def eval_value(sim, value):
         assert False # :nocov:
 
 
+def value_to_string(value):
+    """Unpack a Verilog-like (but LSB-first) string of unknown width from an integer."""
+    msg = bytearray()
+    while value:
+        byte = value & 0xff
+        value >>= 8
+        if byte:
+            msg.append(byte)
+    return msg.decode()
+
+
+def eval_format(sim, fmt):
+    fmt = Format("{}", fmt)
+    chunks = []
+    for chunk in fmt._chunks:
+        if isinstance(chunk, str):
+            chunks.append(chunk)
+        else:
+            value, spec = chunk
+            value = eval_value(sim, value)
+            if spec.endswith("s"):
+                chunks.append(format(value_to_string(value), spec[:-1]))
+            else:
+                chunks.append(format(value, spec))
+    return "".join(chunks)
+
+
 def _eval_assign_inner(sim, lhs, lhs_start, rhs, rhs_len):
     if isinstance(lhs, Operator) and lhs.operator in ("u", "s"):
         _eval_assign_inner(sim, lhs.operands[0], lhs_start, rhs, rhs_len)

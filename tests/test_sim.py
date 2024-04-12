@@ -13,9 +13,9 @@ with warnings.catch_warnings():
 from amaranth.hdl._dsl import  *
 from amaranth.hdl._ir import *
 from amaranth.sim import *
+from amaranth.sim._pyeval import eval_format
 from amaranth.lib.memory import Memory
-from amaranth.lib.data import View, StructLayout
-from amaranth.lib import enum
+from amaranth.lib import enum, data
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -1302,6 +1302,44 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with sim.write_vcd("test.vcd", fs_per_delta=1):
             sim.run()
 
+    def test_eval_format(self):
+        class MyEnum(enum.Enum, shape=2):
+            A = 0
+            B = 1
+            C = 2
+
+        sig = Signal(8)
+        sig2 = Signal(MyEnum)
+        sig3 = Signal(data.StructLayout({"a": signed(3), "b": 2}))
+        sig4 = Signal(data.ArrayLayout(2, 4))
+        sig5 = Signal(32, init=0x44434241)
+
+        def testbench():
+            state = sim._engine._state
+            yield sig.eq(123)
+            self.assertEqual(eval_format(state, sig._format), "123")
+            self.assertEqual(eval_format(state, Format("{:#04x}", sig)), "0x7b")
+            self.assertEqual(eval_format(state, Format("sig={}", sig)), "sig=123")
+
+            self.assertEqual(eval_format(state, sig2.as_value()._format), "A")
+            yield sig2.eq(1)
+            self.assertEqual(eval_format(state, sig2.as_value()._format), "B")
+            yield sig2.eq(3)
+            self.assertEqual(eval_format(state, sig2.as_value()._format), "[unknown]")
+
+            yield sig3.eq(0xc)
+            self.assertEqual(eval_format(state, sig3.as_value()._format), "{a=-4, b=1}")
+
+            yield sig4.eq(0x1e)
+            self.assertEqual(eval_format(state, sig4.as_value()._format), "[2, 3, 1, 0]")
+
+            self.assertEqual(eval_format(state, Format("{:s}", sig5)), "ABCD")
+            self.assertEqual(eval_format(state, Format("{:<5s}", sig5)), "ABCD ")
+
+        sim = Simulator(Module())
+        sim.add_testbench(testbench)
+        with sim.write_vcd("test.vcd", fs_per_delta=1):
+            sim.run()
 
 class SimulatorRegressionTestCase(FHDLTestCase):
     def test_bug_325(self):
