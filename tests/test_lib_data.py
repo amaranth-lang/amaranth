@@ -531,10 +531,11 @@ class ViewTestCase(FHDLTestCase):
         self.assertIsInstance(cv, Signal)
         self.assertEqual(cv.shape(), unsigned(3))
         self.assertEqual(cv.name, "v")
-        self.assertRepr(cv._value_repr, """
-        (Repr(FormatInt(), (sig v), ()),
-            Repr(FormatInt(), (slice (sig v) 0:1), ('a',)),
-            Repr(FormatInt(), (slice (sig v) 1:3), ('b',)))
+        self.assertRepr(cv._format, """
+        (format-struct (sig v)
+            ('a' (format '{}' (slice (sig v) 0:1)))
+            ('b' (format '{}' (slice (sig v) 1:3)))
+        )
         """)
 
     def test_construct_signal_init(self):

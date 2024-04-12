@@ -61,6 +61,7 @@ Implemented RFCs
 .. _RFC 59: https://amaranth-lang.org/rfcs/0059-no-domain-upwards-propagation.html
 .. _RFC 62: https://amaranth-lang.org/rfcs/0062-memory-data.html
 .. _RFC 63: https://amaranth-lang.org/rfcs/0063-remove-lib-coding.html
+.. _RFC 65: https://amaranth-lang.org/rfcs/0065-format-struct-enum.html
 
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
@@ -75,6 +76,7 @@ Implemented RFCs
 * `RFC 59`_: Get rid of upwards propagation of clock domains
 * `RFC 62`_: The ``MemoryData`` class
 * `RFC 63`_: Remove ``amaranth.lib.coding``
+* `RFC 65`_: Special formatting for structures and enums
 
 
 Language changes

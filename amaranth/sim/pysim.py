@@ -2,12 +2,12 @@ from contextlib import contextmanager
 import itertools
 import re
 import os.path
+import enum as py_enum
 
 from ..hdl import *
-from ..hdl._repr import *
-from ..hdl._mem import MemoryInstance
-from ..hdl._ast import SignalDict, Slice, Operator
+from ..hdl._ast import SignalDict
 from ._base import *
+from ._pyeval import eval_format, eval_value
 from ._pyrtl import _FragmentCompiler
 from ._pycoro import PyCoroProcess
 from ._pyclock import PyClockProcess
@@ -21,23 +21,8 @@ class _VCDWriter:
     def decode_to_vcd(format, value):
         return format.format(value).expandtabs().replace(" ", "_")
 
-    @staticmethod
-    def eval_field(field, signal, value):
-        if isinstance(field, Signal):
-            assert field is signal
-            return value
-        elif isinstance(field, Const):
-            return field.value
-        elif isinstance(field, Slice):
-            sub = _VCDWriter.eval_field(field.value, signal, value)
-            return (sub >> field.start) & ((1 << (field.stop - field.start)) - 1)
-        elif isinstance(field, Operator) and field.operator in ('s', 'u'):
-            sub = _VCDWriter.eval_field(field.operands[0], signal, value)
-            return Const(sub, field.shape()).value
-        else:
-            raise NotImplementedError # :nocov:
-
-    def __init__(self, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0, processes=()):
+    def __init__(self, state, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0, processes=()):
+        self.state = state
         self.fs_per_delta = fs_per_delta
 
         # Although pyvcd is a mandatory dependency, be resilient and import it as needed, so that
@@ -123,16 +108,8 @@ class _VCDWriter:
         for signal, names in itertools.chain(signal_names.items(), trace_names.items()):
             self.vcd_signal_vars[signal] = []
             self.gtkw_signal_names[signal] = []
-            for repr in signal._value_repr:
-                var_init = self.eval_field(repr.value, signal, signal.init)
-                if isinstance(repr.format, FormatInt):
-                    var_type = "wire"
-                    var_size = repr.value.shape().width
-                else:
-                    var_type = "string"
-                    var_size = 1
-                    var_init = self.decode_to_vcd(repr.format, var_init)
 
+            def add_var(path, var_type, var_size, var_init, value):
                 vcd_var = None
                 for (*var_scope, var_name) in names:
                     if re.search(r"[ \t\r\n]", var_name):
@@ -140,12 +117,12 @@ class _VCDWriter:
                                         .format(".".join(var_scope), var_name))
 
                     field_name = var_name
-                    for item in repr.path:
+                    for item in path:
                         if isinstance(item, int):
                             field_name += f"[{item}]"
                         else:
                             field_name += f".{item}"
-                    if repr.path:
+                    if path:
                         field_name = "\\" + field_name
 
                     if vcd_var is None:
@@ -162,7 +139,35 @@ class _VCDWriter:
                             scope=var_scope, name=field_name,
                             var=vcd_var)
 
-                self.vcd_signal_vars[signal].append((vcd_var, repr))
+                self.vcd_signal_vars[signal].append((vcd_var, value))
+
+            def add_wire_var(path, value):
+                add_var(path, "wire", len(value), eval_value(self.state, value), value)
+
+            def add_format_var(path, fmt):
+                add_var(path, "string", 1, eval_format(self.state, fmt), fmt)
+
+            def add_format(path, fmt):
+                if isinstance(fmt, Format.Struct):
+                    add_wire_var(path, fmt._value)
+                    for name, subfmt in fmt._fields.items():
+                        add_format(path + (name,), subfmt)
+                elif isinstance(fmt, Format.Array):
+                    add_wire_var(path, fmt._value)
+                    for idx, subfmt in enumerate(fmt._fields):
+                        add_format(path + (idx,), subfmt)
+                elif (isinstance(fmt, Format) and
+                        len(fmt._chunks) == 1 and
+                        isinstance(fmt._chunks[0], tuple) and
+                        fmt._chunks[0][1] == ""):
+                    add_wire_var(path, fmt._chunks[0][0])
+                else:
+                    add_format_var(path, fmt)
+
+            if signal._decoder is not None and not isinstance(signal._decoder, py_enum.EnumMeta):
+                add_var((), "string", 1, signal._decoder(signal._init), signal._decoder)
+            else:
+                add_format((), signal._format)
 
         for memory, memory_name in memories.items():
             self.vcd_memory_vars[memory] = vcd_vars = []
@@ -205,11 +210,15 @@ class _VCDWriter:
                 except KeyError:
                     pass # try another name
 
-    def update_signal(self, timestamp, signal, value):
+    def update_signal(self, timestamp, signal):
         for (vcd_var, repr) in self.vcd_signal_vars.get(signal, ()):
-            var_value = self.eval_field(repr.value, signal, value)
-            if not isinstance(repr.format, FormatInt):
-                var_value = self.decode_to_vcd(repr.format, var_value)
+            if isinstance(repr, Value):
+                var_value = eval_value(self.state, repr)
+            elif isinstance(repr, (Format, Format.Enum)):
+                var_value = eval_format(self.state, repr)
+            else:
+                # decoder
+                var_value = repr(eval_value(self.state, signal))
             self.vcd_writer.change(vcd_var, timestamp, var_value)
 
     def update_memory(self, timestamp, memory, addr, value):
@@ -512,7 +521,7 @@ class PySimEngine(BaseEngine):
                     if isinstance(change, _PySignalState):
                         signal_state = change
                         vcd_writer.update_signal(now_plus_deltas,
-                            signal_state.signal, signal_state.curr)
+                            signal_state.signal)
                     elif isinstance(change, _PyMemoryChange):
                         vcd_writer.update_memory(now_plus_deltas, change.state.memory,
                             change.addr, change.state.data[change.addr])
@@ -559,7 +568,7 @@ class PySimEngine(BaseEngine):
 
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
-        vcd_writer = _VCDWriter(self._design,
+        vcd_writer = _VCDWriter(self._state, self._design,
             vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces, fs_per_delta=fs_per_delta,
             processes=self._testbenches)
         try:

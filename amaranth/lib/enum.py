@@ -3,7 +3,6 @@ import warnings
 import operator
 
 from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning, Format
-from ..hdl._repr import Repr, FormatEnum
 
 
 __all__ = py_enum.__all__ + ["EnumView", "FlagView"]
@@ -180,9 +179,6 @@ class EnumType(ShapeCastable, py_enum.EnumMeta):
         if format_spec != "":
             raise ValueError(f"Format specifier {format_spec!r} is not supported for enums")
         return Format.Enum(value, cls, name=cls.__name__)
-
-    def _value_repr(cls, value):
-        yield Repr(FormatEnum(cls), value)
 
 
 # In 3.11, Python renamed EnumMeta to EnumType. Like Python itself, we support both for

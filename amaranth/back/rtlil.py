@@ -5,7 +5,7 @@ import io
 from ..utils import bits_for
 from .._utils import to_binary
 from ..lib import wiring
-from ..hdl import _repr, _ast, _ir, _nir
+from ..hdl import _ast, _ir, _nir
 
 
 __all__ = ["convert", "convert_fragment"]

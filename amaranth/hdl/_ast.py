@@ -406,10 +406,6 @@ class ShapeCastable:
         """
         return Format(f"{{:{spec}}}", Value.cast(obj))
 
-    # TODO: write an RFC for turning this into a proper interface method
-    def _value_repr(self, value):
-        return (_repr.Repr(_repr.FormatInt(), value),)
-
 
 class _ShapeLikeMeta(type):
     def __subclasscheck__(cls, subclass):
@@ -2097,46 +2093,15 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
         if isinstance(orig_shape, ShapeCastable):
             self._format = orig_shape.format(orig_shape(self), "")
+        elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
+            self._format = Format.Enum(self, orig_shape, name=orig_shape.__name__)
         else:
             self._format = Format("{}", self)
 
-        if decoder is not None:
-            # The value representation is specified explicitly. Since we do not expose `hdl._repr`,
-            # this is the only way to add a custom filter to the signal right now.
-            if isinstance(decoder, type) and issubclass(decoder, Enum):
-                self._value_repr = (_repr.Repr(_repr.FormatEnum(decoder), self),)
-            else:
-                self._value_repr = (_repr.Repr(_repr.FormatCustom(decoder), self),)
-        else:
-            # If it's an enum, expose it via `self.decoder` for compatibility, whether it's a Python
-            # enum or an Amaranth enum. This also sets the value representation, even for custom
-            # shape-castables that implement their own `_value_repr`.
-            if isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
-                decoder = orig_shape
-            else:
-                decoder = None
-            # The value representation is specified implicitly in the shape of the signal.
-            if isinstance(orig_shape, ShapeCastable):
-                # A custom shape-castable always has a `_value_repr`, at least the default one.
-                self._value_repr = tuple(orig_shape._value_repr(self))
-            elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
-                # A non-Amaranth enum needs a value repr constructed for it.
-                self._value_repr = (_repr.Repr(_repr.FormatEnum(orig_shape), self),)
-            else:
-                # Any other case is formatted as a plain integer.
-                self._value_repr = (_repr.Repr(_repr.FormatInt(), self),)
-
-        # Compute the value representation that will be used by Amaranth.
         if isinstance(decoder, type) and issubclass(decoder, Enum):
-            # Violence. In the name of backwards compatibility!
-            def enum_decoder(value):
-                try:
-                    return "{0.name:}/{0.value:}".format(decoder(value))
-                except ValueError:
-                    return str(value)
-            self._decoder = enum_decoder
-        else:
-            self._decoder = decoder
+            self._format = Format.Enum(self, decoder, name=decoder.__name__)
+
+        self._decoder = decoder
 
     def shape(self):
         return Shape(self._width, self._signed)
@@ -3348,6 +3313,3 @@ class SignalDict(_MappedKeyDict):
 class SignalSet(_MappedKeySet):
     _map_key   = SignalKey
     _unmap_key = lambda self, key: key.signal
-
-
-from . import _repr
