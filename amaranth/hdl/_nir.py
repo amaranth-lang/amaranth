@@ -768,7 +768,7 @@ class Part(Cell):
 
 
 class Matches(Cell):
-    """A combinatorial cell performing a comparison like ``Value.matches``
+    """A combinational cell performing a comparison like ``Value.matches``
     (or, equivalently, a case condition).
 
     Attributes

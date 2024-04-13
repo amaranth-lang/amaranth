@@ -342,7 +342,7 @@ Signals
 .. |emph:assigned| replace:: *assigned*
 .. _emph:assigned: #lang-assigns
 
-A *signal* is a value representing a (potentially) varying number. Signals can be |emph:assigned|_ in a :ref:`combinatorial <lang-comb>` or :ref:`synchronous <lang-sync>` domain, in which case they are generated as wires or registers, respectively. Signals always have a well-defined value; they cannot be uninitialized or undefined.
+A *signal* is a value representing a (potentially) varying number. Signals can be |emph:assigned|_ in a :ref:`combinational <lang-comb>` or :ref:`synchronous <lang-sync>` domain, in which case they are generated as wires or registers, respectively. Signals always have a well-defined value; they cannot be uninitialized or undefined.
 
 
 Signal shapes
@@ -403,7 +403,7 @@ Initial signal values
 
 Each signal has an *initial value*, specified with the ``init=`` parameter. If the initial value is not specified explicitly, zero is used by default. An initial value can be specified with an integer or an enumeration member.
 
-Signals :ref:`assigned <lang-assigns>` in a :ref:`combinatorial <lang-comb>` domain assume their initial value when none of the assignments are :ref:`active <lang-active>`. Signals assigned in a :ref:`synchronous <lang-sync>` domain assume their initial value after *power-on reset* and, unless the signal is :ref:`reset-less <lang-resetless>`, *explicit reset*. Signals that are used but never assigned are equivalent to constants of their initial value.
+Signals :ref:`assigned <lang-assigns>` in a :ref:`combinational <lang-comb>` domain assume their initial value when none of the assignments are :ref:`active <lang-active>`. Signals assigned in a :ref:`synchronous <lang-sync>` domain assume their initial value after *power-on reset* and, unless the signal is :ref:`reset-less <lang-resetless>`, *explicit reset*. Signals that are used but never assigned are equivalent to constants of their initial value.
 
 .. doctest::
 
@@ -422,7 +422,7 @@ Reset-less signals
 
 Signals assigned in a :ref:`synchronous <lang-sync>` domain can be *resettable* or *reset-less*, specified with the ``reset_less=`` parameter. If the parameter is not specified, signals are resettable by default. Resettable signals assume their :ref:`initial value <lang-initial>` on explicit reset, which can be asserted via the :ref:`clock domain <lang-clockdomains>` or by :ref:`modifying control flow <lang-controlinserter>` with :class:`ResetInserter`. Reset-less signals are not affected by explicit reset.
 
-Signals assigned in a :ref:`combinatorial <lang-comb>` domain are not affected by the ``reset_less`` parameter.
+Signals assigned in a :ref:`combinational <lang-comb>` domain are not affected by the ``reset_less`` parameter.
 
 .. doctest::
 
@@ -845,11 +845,11 @@ Control domains
 
 A *control domain* is a named group of :ref:`signals <lang-signals>` that change their value in identical conditions.
 
-All designs have a single predefined *combinatorial domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinatorial domain, and refers to the same domain in all modules.
+All designs have a single predefined *combinational domain*, containing all signals that change immediately when any value used to compute them changes. The name ``comb`` is reserved for the combinational domain, and refers to the same domain in all modules.
 
 A design can also have any amount of user-defined *synchronous domains*, also called :ref:`clock domains <lang-clockdomains>`, containing signals that change when a specific edge occurs on the domain's clock signal or, for domains with asynchronous reset, on the domain's reset signal. Most modules only use a single synchronous domain, conventionally called ``sync``, but the name ``sync`` does not have to be used, and lacks any special meaning beyond being the default.
 
-The behavior of assignments differs for signals in :ref:`combinatorial <lang-comb>` and :ref:`synchronous <lang-sync>` domains. Collectively, signals in synchronous domains contain the state of a design, whereas signals in the combinatorial domain cannot form feedback loops or hold state.
+The behavior of assignments differs for signals in :ref:`combinational <lang-comb>` and :ref:`synchronous <lang-sync>` domains. Collectively, signals in synchronous domains contain the state of a design, whereas signals in the combinational domain cannot form feedback loops or hold state.
 
 
 .. _lang-assigns:
@@ -980,7 +980,7 @@ If multiple assignments change the value of the same signal bits, the assignment
    b = Signal(9)
    m.d.comb += b.eq(Cat(C(4, 3), C(6, 3), C(3, 3)))
 
-Multiple assignments to the same signal bits are more useful when combined with control structures, which can make some of the assignments :ref:`active or inactive <lang-active>`. If all assignments to some signal bits are :ref:`inactive <lang-active>`, their final values are determined by the signal's domain, :ref:`combinatorial <lang-comb>` or :ref:`synchronous <lang-sync>`.
+Multiple assignments to the same signal bits are more useful when combined with control structures, which can make some of the assignments :ref:`active or inactive <lang-active>`. If all assignments to some signal bits are :ref:`inactive <lang-active>`, their final values are determined by the signal's domain, :ref:`combinational <lang-comb>` or :ref:`synchronous <lang-sync>`.
 
 
 .. _lang-control:
@@ -1227,10 +1227,10 @@ Note that in Python, assignments made using :py:`with x() as y:` syntax persist 
 
 .. _lang-comb:
 
-Combinatorial evaluation
+Combinational evaluation
 ========================
 
-Signals in the combinatorial :ref:`control domain <lang-domains>` change whenever any value used to compute them changes. The final value of a combinatorial signal is equal to its :ref:`initial value <lang-initial>` updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>`. Combinatorial signals cannot hold any state.
+Signals in the combinational :ref:`control domain <lang-domains>` change whenever any value used to compute them changes. The final value of a combinational signal is equal to its :ref:`initial value <lang-initial>` updated by the :ref:`active assignments <lang-active>` in the :ref:`assignment order <lang-assignorder>`. Combinational signals cannot hold any state.
 
 Consider the following code:
 
@@ -1248,11 +1248,11 @@ Consider the following code:
 
 Whenever the signals ``en`` or ``b`` change, the signal ``a`` changes as well. If ``en`` is false, the final value of ``a`` is its initial value, ``1``. If ``en`` is true, the final value of ``a`` is equal to ``b + 1``.
 
-A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (e.g. implement a constant driver or a transparent latch), or unstable (e.g. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
+A combinational signal that is computed directly or indirectly based on its own value is a part of a *combinational feedback loop*, sometimes shortened to just *feedback loop*. Combinational feedback loops can be stable (e.g. implement a constant driver or a transparent latch), or unstable (e.g. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinational feedback loop, including transparent latches.
 
 .. note::
 
-   In the exceedingly rare case when a combinatorial feedback loop is desirable, it is possible to implement it by directly instantiating technology primitives (e.g. device-specific LUTs or latches). This is also the only way to introduce a combinatorial feedback loop with well-defined behavior in simulation and synthesis, regardless of the HDL being used.
+   In the exceedingly rare case when a combinational feedback loop is desirable, it is possible to implement it by directly instantiating technology primitives (e.g. device-specific LUTs or latches). This is also the only way to introduce a combinational feedback loop with well-defined behavior in simulation and synthesis, regardless of the HDL being used.
 
 
 .. _lang-sync:
@@ -1308,9 +1308,9 @@ Assertions may be nested within a :ref:`control block <lang-control>`:
 
 .. warning::
 
-    While is is also possible to add assertions to the :ref:`combinatorial domain <lang-comb>`, simulations of combinatorial circuits may have *glitches*: instantaneous, transient changes in the values of expressions that are being computed which do not affect the result of the computation (and are not visible in most waveform viewers for that reason). Depending on the tools used for simulation, a glitch in the condition of an assertion or of a :ref:`control block <lang-control>` that contains it may cause the simulation to be terminated, even if the glitch would have been instantaneously resolved afterwards.
+    While is is also possible to add assertions to the :ref:`combinational domain <lang-comb>`, simulations of combinational circuits may have *glitches*: instantaneous, transient changes in the values of expressions that are being computed which do not affect the result of the computation (and are not visible in most waveform viewers for that reason). Depending on the tools used for simulation, a glitch in the condition of an assertion or of a :ref:`control block <lang-control>` that contains it may cause the simulation to be terminated, even if the glitch would have been instantaneously resolved afterwards.
 
-    If the condition of an assertion is assigned in a synchronous domain, then it is safe to add that assertion in the combinatorial domain. For example, neither of the assertions in the example below will be violated due to glitches, regardless of which domain the :py:`ip` and :py:`booting` signals are driven by:
+    If the condition of an assertion is assigned in a synchronous domain, then it is safe to add that assertion in the combinational domain. For example, neither of the assertions in the example below will be violated due to glitches, regardless of which domain the :py:`ip` and :py:`booting` signals are driven by:
 
     .. testcode::
 
@@ -1321,7 +1321,7 @@ Assertions may be nested within a :ref:`control block <lang-control>`:
         with m.If(booting):
             m.d.comb += Assert(ip_sync < 128)
 
-    Assertions should be added in a :ref:`synchronous domain <lang-sync>` when possible. In cases where it is not, such as if the condition is a signal that is assigned in a synchronous domain elsewhere, care should be taken while adding the assertion to the combinatorial domain.
+    Assertions should be added in a :ref:`synchronous domain <lang-sync>` when possible. In cases where it is not, such as if the condition is a signal that is assigned in a synchronous domain elsewhere, care should be taken while adding the assertion to the combinational domain.
 
 
 .. _lang-print:
@@ -1329,7 +1329,7 @@ Assertions may be nested within a :ref:`control block <lang-control>`:
 Debug printing
 ==============
 
-The value of any expression, or of several of them, can be printed to the terminal during simulation using the :class:`Print` statement. When added to the :ref:`combinatorial domain <lang-comb>`, the value of an expression is printed whenever it changes:
+The value of any expression, or of several of them, can be printed to the terminal during simulation using the :class:`Print` statement. When added to the :ref:`combinational domain <lang-comb>`, the value of an expression is printed whenever it changes:
 
 .. testcode::
 
@@ -1537,7 +1537,7 @@ A non-Amaranth design unit can be added as a submodule using an :ref:`instance <
 Modifying control flow
 ----------------------
 
-Control flow within an elaboratable can be altered without introducing a new clock domain by using *control flow modifiers* that affect :ref:`synchronous evaluation <lang-sync>` of signals in a specified domain (or domains). They never affect :ref:`combinatorial evaluation <lang-comb>`. There are two control flow modifiers:
+Control flow within an elaboratable can be altered without introducing a new clock domain by using *control flow modifiers* that affect :ref:`synchronous evaluation <lang-sync>` of signals in a specified domain (or domains). They never affect :ref:`combinational evaluation <lang-comb>`. There are two control flow modifiers:
 
 * :class:`ResetInserter` introduces a synchronous reset input (or inputs), updating all of the signals in the specified domains to their :ref:`initial value <lang-initial>` whenever the active edge occurs on the clock of the domain *if* the synchronous reset input is asserted.
 * :class:`EnableInserter` introduces a synchronous enable input (or inputs), preventing any of the signals in the specified domains from changing value whenever the active edge occurs on the clock of the domain *unless* the synchronous enable input is asserted.
@@ -1659,7 +1659,7 @@ The renaming of the ``sync`` clock domain in it causes the behavior of the final
 
 .. warning::
 
-    A combinatorial signal can change synchronously to a clock domain, as in the example above, in which case it may only be sampled from the same clock domain unless explicitly synchronized. Renaming a clock domain must be assumed to potentially affect any output of an elaboratable.
+    A combinational signal can change synchronously to a clock domain, as in the example above, in which case it may only be sampled from the same clock domain unless explicitly synchronized. Renaming a clock domain must be assumed to potentially affect any output of an elaboratable.
 
 
 .. _lang-memory:
@@ -1843,7 +1843,7 @@ An *I/O buffer instance* is a submodule that allows connecting :ref:`I/O values 
 
     m = Module()
 
-In the input configuration, the buffer combinatorially drives a signal :py:`i` by the port:
+In the input configuration, the buffer combinationally drives a signal :py:`i` by the port:
 
 .. testcode::
 
@@ -1851,7 +1851,7 @@ In the input configuration, the buffer combinatorially drives a signal :py:`i` b
     port_i = Signal(4)
     m.submodules += IOBufferInstance(port, i=port_i)
 
-In the output configuration, the buffer combinatorially drives the port by a value :py:`o`:
+In the output configuration, the buffer combinationally drives the port by a value :py:`o`:
 
 .. testcode::
 
@@ -1859,7 +1859,7 @@ In the output configuration, the buffer combinatorially drives the port by a val
     port_o = Signal(4)
     m.submodules += IOBufferInstance(port, o=port_o)
 
-In the tristatable output configuration, the buffer combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+In the tristatable output configuration, the buffer combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
 .. testcode::
 
@@ -1868,7 +1868,7 @@ In the tristatable output configuration, the buffer combinatorially drives the p
     port_oe = Signal()
     m.submodules += IOBufferInstance(port, o=port_o, oe=port_oe)
 
-In the bidirectional (input/output) configuration, the buffer combiatorially drives a signal :py:`i` by the port, combinatorially drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
+In the bidirectional (input/output) configuration, the buffer combinationally drives a signal :py:`i` by the port, combinationally drives the port by a value :py:`o` if :py:`oe` is asserted, and does not drive (leaves in a high-impedance state, or tristates) the port otherwise:
 
 .. testcode::
 

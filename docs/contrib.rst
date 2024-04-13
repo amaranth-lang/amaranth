@@ -136,6 +136,7 @@ Some of the formatting guidelines are:
 * For properties, phrase the short description (first line of docstring) like ``Value of thing.``, i.e. as a declarative sentence.
 * When documenting signatures of interfaces, as well as components, use the (non-standard) `Members` section to document their interface members, and only that section; do not document them in an `Attributes` section.
 * If an anchor for a section is needed, namespace it, e.g. the ``.. _lang-assignable:`` anchor is a part of the ``lang`` namespace. Anchor names are global.
+* To refer to non-sequential logic, use the term "combinational" over "combinatorial".
 
 
 Contributing your changes

@@ -35,7 +35,7 @@ class ClockDomain:
     ----------
     clk : Signal, inout
         The clock for this domain. Can be driven or used to drive other signals (preferably
-        in combinatorial context).
+        in combinational context).
     rst : Signal or None, inout
         Reset signal for this domain. Can be driven or used to drive.
     """

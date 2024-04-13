@@ -277,7 +277,7 @@ Going back to the stream example, the producer and the consumer now communicate 
 
     wiring.connect(m, producer.source, consumer.sink)
 
-This function examines the signatures of the two provided interface objects, ensuring that they are exactly complementary, and then adds combinatorial :py:`.eq()` statements to the module for each of the port pairs to form the connection. Aside from the *connectability* check, the single line above is equivalent to:
+This function examines the signatures of the two provided interface objects, ensuring that they are exactly complementary, and then adds combinational :py:`.eq()` statements to the module for each of the port pairs to form the connection. Aside from the *connectability* check, the single line above is equivalent to:
 
 .. testcode::
 
