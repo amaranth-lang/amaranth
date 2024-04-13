@@ -1,5 +1,6 @@
 from amaranth.hdl._ast import *
 from amaranth.hdl._mem import MemoryData
+from amaranth.hdl._ir import DriverConflict
 
 
 def _eval_matches(test, patterns):
@@ -165,6 +166,8 @@ def _eval_assign_inner(sim, lhs, lhs_start, rhs, rhs_len):
         if lhs_start >= len(lhs):
             return
         slot = sim.get_signal(lhs)
+        if sim.slots[slot].is_comb:
+            raise DriverConflict("Combinationally driven signals cannot be overriden by testbenches")
         value = sim.slots[slot].next
         mask = (1 << lhs_stop) - (1 << lhs_start)
         value &= ~mask

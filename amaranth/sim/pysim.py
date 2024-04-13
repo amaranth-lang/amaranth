@@ -303,10 +303,11 @@ class _Timeline:
 
 
 class _PySignalState(BaseSignalState):
-    __slots__ = ("signal", "curr", "next", "waiters", "pending")
+    __slots__ = ("signal", "is_comb", "curr", "next", "waiters", "pending")
 
     def __init__(self, signal, pending):
         self.signal = signal
+        self.is_comb = False
         self.pending = pending
         self.waiters = {}
         self.curr = self.next = signal.init

@@ -479,6 +479,7 @@ class _FragmentCompiler:
             if domain_name == "comb":
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)
+                    self.state.slots[signal_index].is_comb = True
                     emitter.append(f"next_{signal_index} = {signal.init}")
 
                 inputs = SignalSet()
