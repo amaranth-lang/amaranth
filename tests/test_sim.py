@@ -1395,3 +1395,15 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             self.assertEqual((yield C(0b1111, 4) ^ ~C(1, 1)), 0b1111)
         sim.add_testbench(process)
         sim.run()
+
+    def test_comb_assign(self):
+        c = Signal()
+        m = Module()
+        m.d.comb += c.eq(1)
+        sim = Simulator(m)
+        def testbench():
+            with self.assertRaisesRegex(DriverConflict,
+                    r"^Combinationally driven signals cannot be overriden by testbenches$"):
+                yield c.eq(0)
+        sim.add_testbench(testbench)
+        sim.run()

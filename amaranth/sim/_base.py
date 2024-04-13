@@ -19,6 +19,7 @@ class BaseSignalState:
     __slots__ = ()
 
     signal = NotImplemented
+    is_comb = NotImplemented
 
     curr = NotImplemented
     next = NotImplemented
