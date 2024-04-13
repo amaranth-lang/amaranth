@@ -1986,14 +1986,14 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         name this ``Signal`` is assigned to. If the empty string, then this ``Signal`` is treated
         as private and is generally hidden from view.
     init : int or integral Enum
-        Reset (synchronous) or default (combinatorial) value.
+        Reset (synchronous) or default (combinational) value.
         When this ``Signal`` is assigned to in synchronous context and the corresponding clock
         domain is reset, the ``Signal`` assumes the given value. When this ``Signal`` is unassigned
-        in combinatorial context (due to conditional assignments not being taken), the ``Signal``
+        in combinational context (due to conditional assignments not being taken), the ``Signal``
         assumes its ``init`` value. Defaults to 0.
     reset_less : bool
         If ``True``, do not generate reset logic for this ``Signal`` in synchronous statements.
-        The ``init`` value is only used as a combinatorial default or as the initial value.
+        The ``init`` value is only used as a combinational default or as the initial value.
         Defaults to ``False``.
     attrs : dict
         Dictionary of synthesis attributes.

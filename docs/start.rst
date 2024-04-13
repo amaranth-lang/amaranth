@@ -31,7 +31,7 @@ The reusable building block of Amaranth designs is a ``Component``: a Python cla
 
 .. TODO: link to Elaboratable reference
 
-Most ``elaborate`` implementations use a ``Module`` helper to describe combinatorial (``m.d.comb``) and synchronous (``m.d.sync``) logic controlled with conditional syntax (``m.If``, ``m.Elif``, ``m.Else``) similar to Python's. They can also instantiate vendor-defined black boxes or modules written in other HDLs.
+Most ``elaborate`` implementations use a ``Module`` helper to describe combinational (``m.d.comb``) and synchronous (``m.d.sync``) logic controlled with conditional syntax (``m.If``, ``m.Elif``, ``m.Else``) similar to Python's. They can also instantiate vendor-defined black boxes or modules written in other HDLs.
 
 .. TODO: link to DSL reference
 

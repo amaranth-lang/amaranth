@@ -296,7 +296,7 @@ class DifferentialPort(PortLike):
 
 
 class Buffer(wiring.Component):
-    """A combinatorial I/O buffer.
+    """A combinational I/O buffer.
 
     Parameters
     ----------
@@ -309,7 +309,7 @@ class Buffer(wiring.Component):
         Created based on constructor arguments.
     """
     class Signature(wiring.Signature):
-        """A signature of a combinatorial I/O buffer.
+        """A signature of a combinational I/O buffer.
 
         Parameters
         ----------
@@ -665,7 +665,7 @@ class Pin(wiring.PureInterface):
         If ``"io"`` is specified, both the ``i``/``iN`` and ``o``/``oN`` signals are present, and
         an ``oe`` signal is present.
     xdr : int
-        Gearbox ratio. If equal to 0, the I/O buffer is combinatorial, and only ``i``/``o``
+        Gearbox ratio. If equal to 0, the I/O buffer is combinational, and only ``i``/``o``
         signals are present. If equal to 1, the I/O buffer is SDR, and only ``i``/``o`` signals are
         present. If greater than 1, the I/O buffer includes a gearbox, and ``iN``/``oN`` signals
         are present instead, where ``N in range(0, N)``. For example, if ``xdr=2``, the I/O buffer

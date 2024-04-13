@@ -183,7 +183,7 @@ class Simulator:
         """Advance the simulation.
 
         Run every process and commit changes until a fixed point is reached, then advance time
-        to the closest deadline (if any). If there is an unstable combinatorial loop,
+        to the closest deadline (if any). If there is an unstable combinational loop,
         this function will never return.
 
         Returns ``True`` if there are any active processes, ``False`` otherwise.
