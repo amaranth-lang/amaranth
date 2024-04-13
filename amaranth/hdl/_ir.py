@@ -709,7 +709,7 @@ class NetlistEmitter:
     def emit_signal(self, signal) -> _nir.Value:
         if signal in self.netlist.signals:
             return self.netlist.signals[signal]
-        value = self.netlist.alloc_late_value(len(signal))
+        value = self.netlist.alloc_late_value(signal)
         self.netlist.signals[signal] = value
         for bit, net in enumerate(value):
             self.late_net_to_signal[net] = (signal, bit)
@@ -1738,6 +1738,7 @@ def build_netlist(fragment, ports=(), *, name="top", all_undef_to_ff=False, **kw
         design = fragment.prepare(ports=ports, hierarchy=(name,), **kwargs)
     netlist = _nir.Netlist()
     _emit_netlist(netlist, design, all_undef_to_ff=all_undef_to_ff)
+    netlist.check_comb_cycles()
     netlist.resolve_all_nets()
     _compute_net_flows(netlist)
     _compute_ports(netlist)
