@@ -63,8 +63,8 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(user_led.width, 1)
         self.assertEqual(user_led.dir, "o")
 
-        pins = list(self.cm.iter_pins())
-        (pin, port, buffer), = pins
+        (pin, port, buffer), = self.cm.iter_pins()
+        buffer._MustUse__silence = True
 
         self.assertIs(pin, user_led)
         self.assertEqual(port.io.name, "user_led_0__io")
@@ -77,12 +77,18 @@ class ResourceManagerTestCase(FHDLTestCase):
         i2c = self.cm.request("i2c", 0, dir={"sda": "o"})
         self.assertIsInstance(flipped(i2c.sda), Pin)
         self.assertEqual(i2c.sda.dir, "o")
+        ((_, _, scl_buffer), (_, _, sda_buffer)) = self.cm.iter_pins()
+        scl_buffer._MustUse__silence = True
+        sda_buffer._MustUse__silence = True
 
     def test_request_tristate(self):
         i2c = self.cm.request("i2c", 0)
         self.assertEqual(i2c.sda.dir, "io")
 
-        ((scl_pin, scl_port, _), (sda_pin, sda_port, _)) = self.cm.iter_pins()
+        ((scl_pin, scl_port, scl_buffer), (sda_pin, sda_port, sda_buffer)) = self.cm.iter_pins()
+        scl_buffer._MustUse__silence = True
+        sda_buffer._MustUse__silence = True
+
         self.assertIs(scl_pin, i2c.scl)
         self.assertIs(sda_pin, i2c.sda)
         self.assertEqual(scl_port.io.name, "i2c_0__scl__io")
@@ -96,7 +102,9 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(clk100.dir, "i")
         self.assertEqual(clk100.width, 1)
 
-        (clk100_pin, clk100_port, _), = self.cm.iter_pins()
+        (clk100_pin, clk100_port, buffer), = self.cm.iter_pins()
+        buffer._MustUse__silence = True
+
         self.assertIs(clk100_pin, clk100)
         self.assertEqual(clk100_port.p.name, "clk100_0__p")
         self.assertEqual(clk100_port.p.width, clk100.width)
@@ -115,9 +123,11 @@ class ResourceManagerTestCase(FHDLTestCase):
         cs = self.cm.request("cs")
         clk = self.cm.request("clk")
         (
-            (cs_pin, cs_port, _),
-            (clk_pin, clk_port, _),
+            (cs_pin, cs_port, cs_buffer),
+            (clk_pin, clk_port, clk_buffer),
         ) = self.cm.iter_pins()
+        cs_buffer._MustUse__silence = True
+        clk_buffer._MustUse__silence = True
 
         self.assertIs(cs_pin, cs)
         self.assertEqual(cs_port.invert, (True,))
@@ -138,27 +148,31 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_request_via_connector(self):
         self.cm.add_resources([
             Resource("spi", 0,
-                Subsignal("ss",   Pins("1", conn=("pmod", 0))),
+                Subsignal("cs",   Pins("1", conn=("pmod", 0))),
                 Subsignal("clk",  Pins("2", conn=("pmod", 0))),
-                Subsignal("miso", Pins("3", conn=("pmod", 0))),
-                Subsignal("mosi", Pins("4", conn=("pmod", 0))),
+                Subsignal("cipo", Pins("3", conn=("pmod", 0))),
+                Subsignal("copi", Pins("4", conn=("pmod", 0))),
             )
         ])
         spi0 = self.cm.request("spi", 0)
         (
-            (ss_pin, ss_port, _),
-            (clk_pin, clk_port, _),
-            (miso_pin, miso_port, _),
-            (mosi_pin, mosi_port, _),
+            (cs_pin, cs_port, cs_buffer),
+            (clk_pin, clk_port, clk_buffer),
+            (cipo_pin, cipo_port, cipo_buffer),
+            (copi_pin, copi_port, copi_buffer),
         ) = self.cm.iter_pins()
-        self.assertIs(ss_pin, spi0.ss)
+        cs_buffer._MustUse__silence = True
+        clk_buffer._MustUse__silence = True
+        cipo_buffer._MustUse__silence = True
+        copi_buffer._MustUse__silence = True
+        self.assertIs(cs_pin, spi0.cs)
         self.assertIs(clk_pin, spi0.clk)
-        self.assertIs(miso_pin, spi0.miso)
-        self.assertIs(mosi_pin, spi0.mosi)
-        self.assertEqual(ss_port.io.metadata[0].name, "B0")
+        self.assertIs(cipo_pin, spi0.cipo)
+        self.assertIs(copi_pin, spi0.copi)
+        self.assertEqual(cs_port.io.metadata[0].name, "B0")
         self.assertEqual(clk_port.io.metadata[0].name, "B1")
-        self.assertEqual(miso_port.io.metadata[0].name, "B2")
-        self.assertEqual(mosi_port.io.metadata[0].name, "B3")
+        self.assertEqual(cipo_port.io.metadata[0].name, "B2")
+        self.assertEqual(copi_port.io.metadata[0].name, "B3")
 
     def test_request_via_nested_connector(self):
         new_connectors = [
@@ -167,35 +181,41 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.cm.add_connectors(new_connectors)
         self.cm.add_resources([
             Resource("spi", 0,
-                Subsignal("ss",   Pins("1", conn=("pmod_extension", 0))),
+                Subsignal("cs",   Pins("1", conn=("pmod_extension", 0))),
                 Subsignal("clk",  Pins("2", conn=("pmod_extension", 0))),
-                Subsignal("miso", Pins("3", conn=("pmod_extension", 0))),
-                Subsignal("mosi", Pins("4", conn=("pmod_extension", 0))),
+                Subsignal("cipo", Pins("3", conn=("pmod_extension", 0))),
+                Subsignal("copi", Pins("4", conn=("pmod_extension", 0))),
             )
         ])
         spi0 = self.cm.request("spi", 0)
         (
-            (ss_pin, ss_port, _),
-            (clk_pin, clk_port, _),
-            (miso_pin, miso_port, _),
-            (mosi_pin, mosi_port, _),
+            (cs_pin, cs_port, cs_buffer),
+            (clk_pin, clk_port, clk_buffer),
+            (cipo_pin, cipo_port, cipo_buffer),
+            (copi_pin, copi_port, copi_buffer),
         ) = self.cm.iter_pins()
-        self.assertIs(ss_pin, spi0.ss)
+        cs_buffer._MustUse__silence = True
+        clk_buffer._MustUse__silence = True
+        cipo_buffer._MustUse__silence = True
+        copi_buffer._MustUse__silence = True
+        self.assertIs(cs_pin, spi0.cs)
         self.assertIs(clk_pin, spi0.clk)
-        self.assertIs(miso_pin, spi0.miso)
-        self.assertIs(mosi_pin, spi0.mosi)
-        self.assertEqual(ss_port.io.metadata[0].name, "B0")
+        self.assertIs(cipo_pin, spi0.cipo)
+        self.assertIs(copi_pin, spi0.copi)
+        self.assertEqual(cs_port.io.metadata[0].name, "B0")
         self.assertEqual(clk_port.io.metadata[0].name, "B1")
-        self.assertEqual(miso_port.io.metadata[0].name, "B2")
-        self.assertEqual(mosi_port.io.metadata[0].name, "B3")
+        self.assertEqual(cipo_port.io.metadata[0].name, "B2")
+        self.assertEqual(copi_port.io.metadata[0].name, "B3")
 
     def test_request_clock(self):
         clk100 = self.cm.request("clk100", 0)
         clk50 = self.cm.request("clk50", 0, dir="i")
         (
-            (clk100_pin, clk100_port, _),
-            (clk50_pin, clk50_port, _),
+            (clk100_pin, clk100_port, clk100_buffer),
+            (clk50_pin, clk50_port, clk50_buffer),
         ) = self.cm.iter_pins()
+        clk100_buffer._MustUse__silence = True
+        clk50_buffer._MustUse__silence = True
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
             (clk100.i, clk100_port.p, 100e6),
             (clk50.i, clk50_port.io, 50e6)
@@ -207,6 +227,9 @@ class ResourceManagerTestCase(FHDLTestCase):
         self.assertEqual(list(self.cm.iter_clock_constraints()), [
             (i2c.scl.o, None, 100e3)
         ])
+        ((_, _, scl_buffer), (_, _, sda_buffer)) = self.cm.iter_pins()
+        scl_buffer._MustUse__silence = True
+        sda_buffer._MustUse__silence = True
 
     def test_wrong_resources(self):
         with self.assertRaisesRegex(TypeError, r"^Object 'wrong' is not a Resource$"):
@@ -244,9 +267,11 @@ class ResourceManagerTestCase(FHDLTestCase):
             self.cm.add_clock_constraint(Signal(), None)
 
     def test_wrong_request_duplicate(self):
+        self.cm.request("user_led", 0)
+        (pin, port, buffer), = self.cm.iter_pins()
+        buffer._MustUse__silence = True
         with self.assertRaisesRegex(ResourceError,
                 r"^Resource user_led#0 has already been requested$"):
-            self.cm.request("user_led", 0)
             self.cm.request("user_led", 0)
 
     def test_wrong_request_duplicate_physical(self):
@@ -254,6 +279,8 @@ class ResourceManagerTestCase(FHDLTestCase):
             Resource("clk20", 0, Pins("H1", dir="i")),
         ])
         self.cm.request("clk100", 0)
+        (pin, port, buffer), = self.cm.iter_pins()
+        buffer._MustUse__silence = True
         with self.assertRaisesRegex(ResourceError,
                 (r"^Resource component clk20_0 uses physical pin H1, but it is already "
                     r"used by resource component clk100_0 that was requested earlier$")):
@@ -293,6 +320,8 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_wrong_clock_constraint_twice(self):
         clk100 = self.cm.request("clk100")
+        (pin, port, buffer), = self.cm.iter_pins()
+        buffer._MustUse__silence = True
         with self.assertRaisesRegex(ValueError,
                 (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
