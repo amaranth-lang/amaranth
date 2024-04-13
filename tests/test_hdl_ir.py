@@ -7,7 +7,7 @@ from amaranth.hdl._cd import *
 from amaranth.hdl._dsl import *
 from amaranth.hdl._ir import *
 from amaranth.hdl._mem import *
-from amaranth.hdl._nir import SignalField
+from amaranth.hdl._nir import SignalField, CombinationalCycle
 
 from amaranth.lib import enum, data
 
@@ -3542,3 +3542,22 @@ class FieldsTestCase(FHDLTestCase):
         self.assertEqual(nl.signal_fields[s4], {
             (): SignalField(nl.signals[s4], signed=False),
         })
+
+
+class CycleTestCase(FHDLTestCase):
+    def test_cycle(self):
+        a = Signal()
+        b = Signal()
+        m = Module()
+        m.d.comb += [
+            a.eq(~b),
+            b.eq(~a),
+        ]
+        with self.assertRaisesRegex(CombinationalCycle,
+                r"^Combinational cycle detected, path:\n"
+                r".*test_hdl_ir.py:\d+: operator ~ bit 0\n"
+                r".*test_hdl_ir.py:\d+: signal b bit 0\n"
+                r".*test_hdl_ir.py:\d+: operator ~ bit 0\n"
+                r".*test_hdl_ir.py:\d+: signal a bit 0\n"
+                r"$"):
+            build_netlist(Fragment.get(m, None), [])
