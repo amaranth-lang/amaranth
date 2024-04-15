@@ -172,23 +172,60 @@ class _VCDWriter:
         for memory, memory_name in memories.items():
             self.vcd_memory_vars[memory] = vcd_vars = []
             self.gtkw_memory_names[memory] = gtkw_names = []
-            width = Shape.cast(memory.shape).width
-            if width > 1:
-                suffix = f"[{width - 1}:0]"
-            else:
-                suffix = ""
-            for idx, init in enumerate(memory._init._raw):
-                field_name = "\\" + memory_name[-1] + f"[{idx}]"
-                var_scope = memory_name[:-1]
-                vcd_var = self.vcd_writer.register_var(
-                    scope=var_scope, name=field_name,
-                    var_type="wire", size=width, init=init,
-                )
-                vcd_vars.append(vcd_var)
-                gtkw_field_name = field_name + suffix
-                gtkw_name = ".".join((*var_scope, gtkw_field_name))
-                gtkw_names.append(gtkw_name)
 
+            for idx, row in enumerate(memory):
+                row_vcd_vars = []
+                row_gtkw_names = []
+                var_scope = memory_name[:-1]
+
+                def add_mem_var(path, var_type, var_size, var_init, value):
+                    field_name = "\\" + memory_name[-1] + f"[{idx}]"
+                    for item in path:
+                        if isinstance(item, int):
+                            field_name += f"[{item}]"
+                        else:
+                            field_name += f".{item}"
+                    row_vcd_vars.append((self.vcd_writer.register_var(
+                        scope=var_scope, name=field_name, var_type=var_type,
+                        size=var_size, init=var_init
+                    ), value))
+                    if var_size > 1:
+                        suffix = f"[{var_size - 1}:0]"
+                    else:
+                        suffix = ""
+                    row_gtkw_names.append(".".join((*var_scope, field_name)) + suffix)
+
+                def add_mem_wire_var(path, value):
+                    add_mem_var(path, "wire", len(value), eval_value(self.state, value), value)
+
+                def add_mem_format_var(path, fmt):
+                    add_mem_var(path, "string", 1, eval_format(self.state, fmt), fmt)
+
+                def add_mem_format(path, fmt):
+                    if isinstance(fmt, Format.Struct):
+                        add_mem_wire_var(path, fmt._value)
+                        for name, subfmt in fmt._fields.items():
+                            add_mem_format(path + (name,), subfmt)
+                    elif isinstance(fmt, Format.Array):
+                        add_mem_wire_var(path, fmt._value)
+                        for idx, subfmt in enumerate(fmt._fields):
+                            add_mem_format(path + (idx,), subfmt)
+                    elif (isinstance(fmt, Format) and
+                            len(fmt._chunks) == 1 and
+                            isinstance(fmt._chunks[0], tuple) and
+                            fmt._chunks[0][1] == ""):
+                        add_mem_wire_var(path, fmt._chunks[0][0])
+                    else:
+                        add_mem_format_var(path, fmt)
+
+                if isinstance(memory._shape, ShapeCastable):
+                    fmt = memory._shape.format(memory._shape(row), "")
+                    add_mem_format((), fmt)
+                else:
+                    add_mem_wire_var((), row)
+
+                vcd_vars.append(row_vcd_vars)
+                gtkw_names.append(row_gtkw_names)
 
         self.vcd_process_vars = {}
         if fs_per_delta == 0:
@@ -221,9 +258,15 @@ class _VCDWriter:
                 var_value = repr(eval_value(self.state, signal))
             self.vcd_writer.change(vcd_var, timestamp, var_value)
 
-    def update_memory(self, timestamp, memory, addr, value):
-        vcd_var = self.vcd_memory_vars[memory][addr]
-        self.vcd_writer.change(vcd_var, timestamp, value)
+    def update_memory(self, timestamp, memory, addr):
+        if memory not in self.vcd_memory_vars:
+            return
+        for vcd_var, repr in self.vcd_memory_vars[memory][addr]:
+            if isinstance(repr, Value):
+                var_value = eval_value(self.state, repr)
+            else:
+                var_value = eval_format(self.state, repr)
+            self.vcd_writer.change(vcd_var, timestamp, var_value)
 
     def update_process(self, timestamp, process, command):
         try:
@@ -249,11 +292,12 @@ class _VCDWriter:
                     for name in self.gtkw_signal_names[trace]:
                         self.gtkw_save.trace(name)
                 elif isinstance(trace, MemoryData):
-                    for name in self.gtkw_memory_names[trace]:
-                        self.gtkw_save.trace(name)
+                    for row_names in self.gtkw_memory_names[trace]:
+                        for name in row_names:
+                            self.gtkw_save.trace(name)
                 elif isinstance(trace, MemoryData._Row):
-                    name = self.gtkw_memory_names[trace._memory][trace._index]
-                    self.gtkw_save.trace(name)
+                    for name in self.gtkw_memory_names[trace._memory][trace._index]:
+                        self.gtkw_save.trace(name)
                 else:
                     assert False # :nocov:
 
@@ -524,7 +568,7 @@ class PySimEngine(BaseEngine):
                             signal_state.signal)
                     elif isinstance(change, _PyMemoryChange):
                         vcd_writer.update_memory(now_plus_deltas, change.state.memory,
-                            change.addr, change.state.data[change.addr])
+                            change.addr)
                     else:
                         assert False # :nocov:
 
