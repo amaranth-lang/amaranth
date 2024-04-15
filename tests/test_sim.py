@@ -10,7 +10,8 @@ from amaranth.hdl._cd import  *
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from amaranth.hdl.rec import *
-from amaranth.hdl._dsl import  *
+from amaranth.hdl._dsl import *
+from amaranth.hdl._mem import MemoryData
 from amaranth.hdl._ir import *
 from amaranth.sim import *
 from amaranth.sim._pyeval import eval_format
@@ -1353,6 +1354,26 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             yield Delay(1e-6)
 
         with self.assertSimulation(Module(), traces=[sig]) as sim:
+            sim.add_testbench(testbench)
+
+    def test_mem_shape(self):
+        class MyEnum(enum.Enum, shape=2):
+            A = 0
+            B = 1
+            C = 2
+
+        mem1 = MemoryData(shape=8, depth=4, init=[1, 2, 3])
+        mem2 = MemoryData(shape=MyEnum, depth=4, init=[MyEnum.A, MyEnum.B, MyEnum.C])
+        mem3 = MemoryData(shape=data.StructLayout({"a": signed(3), "b": 2}), depth=4, init=[{"a": 2, "b": 1}])
+
+        def testbench():
+            yield Delay(1e-6)
+            yield mem1[0].eq(4)
+            yield mem2[3].eq(MyEnum.C)
+            yield mem3[2].eq(mem3._shape.const({"a": -1, "b": 2}))
+            yield Delay(1e-6)
+
+        with self.assertSimulation(Module(), traces=[mem1, mem2, mem3]) as sim:
             sim.add_testbench(testbench)
 
 
