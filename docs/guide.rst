@@ -1250,14 +1250,6 @@ Whenever the signals ``en`` or ``b`` change, the signal ``a`` changes as well. I
 
 A combinatorial signal that is computed directly or indirectly based on its own value is a part of a *combinatorial feedback loop*, sometimes shortened to just *feedback loop*. Combinatorial feedback loops can be stable (e.g. implement a constant driver or a transparent latch), or unstable (e.g. implement a ring oscillator). Amaranth prohibits using assignments to describe any kind of a combinatorial feedback loop, including transparent latches.
 
-.. warning::
-
-   The current version of Amaranth does not detect combinatorial feedback loops, but processes the design under the assumption that there aren't any. If the design does in fact contain a combinatorial feedback loop, it will likely be **silently miscompiled**, though some cases will be detected during synthesis or place & route.
-
-   This hazard will be eliminated in the future.
-
-.. TODO: fix this, either as a part of https://github.com/amaranth-lang/amaranth/issues/6 or on its own
-
 .. note::
 
    In the exceedingly rare case when a combinatorial feedback loop is desirable, it is possible to implement it by directly instantiating technology primitives (e.g. device-specific LUTs or latches). This is also the only way to introduce a combinatorial feedback loop with well-defined behavior in simulation and synthesis, regardless of the HDL being used.
