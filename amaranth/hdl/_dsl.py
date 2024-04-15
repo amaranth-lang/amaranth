@@ -191,9 +191,11 @@ class _ModuleBuilderDomainSet:
             raise TypeError("Only clock domains may be added to `m.domains`, not {!r}"
                             .format(domain))
         if domain.name != name:
-            raise NameError("Clock domain name {!r} must match name in `m.domains.{} += ...` "
-                            "syntax"
-                            .format(domain.name, name))
+            if name == "cd_" + domain.name:
+                raise NameError(f"Domain name should not be prefixed with 'cd_' in `m.domains`, "
+                                f"use `m.domains.{domain.name} = ...` instead")
+            raise NameError(f"Clock domain name {domain.name!r} must match name in "
+                            f"`m.domains.{name} = ...` syntax")
         self._builder._add_domain(domain)
 
 

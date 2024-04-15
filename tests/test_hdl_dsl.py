@@ -930,7 +930,7 @@ class DSLTestCase(FHDLTestCase):
     def test_domain_add_wrong_name(self):
         m = Module()
         with self.assertRaisesRegex(NameError,
-                r"^Clock domain name 'bar' must match name in `m\.domains\.foo \+= \.\.\.` syntax$"):
+                r"^Clock domain name 'bar' must match name in `m\.domains\.foo = \.\.\.` syntax$"):
             m.domains.foo = ClockDomain("bar")
 
     def test_domain_add_wrong_duplicate(self):
@@ -968,3 +968,10 @@ class DSLTestCase(FHDLTestCase):
         )
         """)
         self.assertEqual(len(f2.subfragments), 0)
+
+    def test_bug_1331(self):
+        m = Module()
+        with self.assertRaisesRegex(NameError,
+                r"^Domain name should not be prefixed with 'cd_' in `m.domains`, "
+                r"use `m.domains.rx = ...` instead$"):
+            m.domains.cd_rx = ClockDomain()
