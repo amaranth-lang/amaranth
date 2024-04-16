@@ -994,8 +994,9 @@ class Value(metaclass=ABCMeta):
         """
         return Operator("r^", [self])
 
+    # TODO(amaranth-0.6): remove
+    @deprecated("`a.implies(b)` is deprecated, use `~a | b` instead")
     def implies(self, conclusion):
-        # TODO: should we document or just deprecate this?
         return ~self | conclusion
 
     def __check_shamt(self):
