@@ -156,12 +156,15 @@ class FIFOModelEquivalenceSpec(Elaboratable):
             gold.w_data.eq(dut.w_data),
         ]
 
-        m.d.comb += Assert(dut.r_rdy.implies(gold.r_rdy))
-        m.d.comb += Assert(dut.w_rdy.implies(gold.w_rdy))
+        with m.If(dut.r_rdy):
+            m.d.comb += Assert(gold.r_rdy)
+        with m.If(dut.w_rdy):
+            m.d.comb += Assert(gold.w_rdy)
         m.d.comb += Assert(dut.r_level == gold.r_level)
         m.d.comb += Assert(dut.w_level == gold.w_level)
 
-        m.d.comb += Assert(dut.r_rdy.implies(dut.r_data == gold.r_data))
+        with m.If(dut.r_rdy):
+            m.d.comb += Assert(dut.r_data == gold.r_data)
 
         return m
 

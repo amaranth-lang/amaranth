@@ -566,7 +566,6 @@ Operation             Description                                Notes
 ``a & b``             bitwise AND
 ``a | b``             bitwise OR
 ``a ^ b``             bitwise XOR
-``a.implies(b)``      bitwise IMPLY_
 ``a >> b``            arithmetic right shift by variable amount  [#opB1]_, [#opB2]_
 ``a << b``            left shift by variable amount              [#opB2]_
 ``a.rotate_left(i)``  left rotate by constant amount             [#opB3]_
@@ -575,7 +574,6 @@ Operation             Description                                Notes
 ``a.shift_right(i)``  right shift by constant amount             [#opB3]_
 ===================== ========================================== ======
 
-.. _IMPLY: https://en.wikipedia.org/wiki/IMPLY_gate
 .. [#opB1] Logical and arithmetic right shift of an unsigned value are equivalent. Logical right shift of a signed value can be expressed by :ref:`converting it to unsigned <lang-convops>` first.
 .. [#opB2] Shift amount must be unsigned; integer shifts in Python require the amount to be positive.
 .. [#opB3] Shift and rotate amounts can be negative, in which case the direction is reversed.
