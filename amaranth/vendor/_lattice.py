@@ -123,7 +123,7 @@ class FFBuffer(io.FFBuffer):
         return m
 
 
-class DDRBuffer(io.DDRBuffer):
+class DDRBufferECP5(io.DDRBuffer):
     def elaborate(self, platform):
         m = Module()
 
@@ -164,9 +164,50 @@ class DDRBuffer(io.DDRBuffer):
         return m
 
 
-class LatticeECP5Platform(TemplatedPlatform):
+class DDRBufferMachXO2(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            for bit in range(len(self.port)):
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDRXE",
+                    i_SCLK=ClockSignal(self.i_domain),
+                    i_RST=Const(0),
+                    i_D=buf.i[bit],
+                    o_Q0=i0_inv[bit],
+                    o_Q1=i1_inv[bit],
+                )
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDRXE",
+                    i_SCLK=ClockSignal(self.o_domain),
+                    i_RST=Const(0),
+                    i_D0=o0_inv[bit],
+                    i_D1=o1_inv[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+
+        return m
+
+
+class LatticePlatform(TemplatedPlatform):
     """
-    .. rubric:: Trellis toolchain
+    .. rubric:: Trellis toolchain (ECP5 only)
 
     Required tools:
         * ``yosys``
@@ -195,7 +236,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream.
         * ``{{name}}.svf``: JTAG programming vector.
 
-    .. rubric:: Diamond toolchain
+    .. rubric:: Diamond toolchain (ECP5, MachXO2, MachXO3)
 
     Required tools:
         * ``pnmainc``
@@ -217,8 +258,11 @@ class LatticeECP5Platform(TemplatedPlatform):
 
     Build products:
         * ``{{name}}_impl/{{name}}_impl.htm``: consolidated log.
+        * ``{{name}}.jed``: JEDEC fuse file (MachXO2, MachXO3 only).
         * ``{{name}}.bit``: binary bitstream.
-        * ``{{name}}.svf``: JTAG programming vector.
+        * ``{{name}}.svf``: JTAG programming vector (ECP5 only).
+        * ``{{name}}_flash.svf``: JTAG programming vector for FLASH programming (MachXO2, MachXO3 only).
+        * ``{{name}}_sram.svf``: JTAG programming vector for SRAM programming (MachXO2, MachXO3 only).
     """
 
     toolchain = None # selected when creating platform
@@ -378,6 +422,9 @@ class LatticeECP5Platform(TemplatedPlatform):
             prj_run Map -impl impl
             prj_run PAR -impl impl
             prj_run Export -impl impl -task Bitgen
+            {% if family == "machxo2" -%}
+                prj_run Export -impl impl -task Jedecgen
+            {% endif %}
             {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
         """,
         "{{name}}.lpf": r"""
@@ -405,7 +452,7 @@ class LatticeECP5Platform(TemplatedPlatform):
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
     }
-    _diamond_command_templates = [
+    _diamond_command_templates_ecp5 = [
         # These don't have any usable command-line option overrides.
         r"""
         {{invoke_tool("pnmainc")}}
@@ -422,11 +469,53 @@ class LatticeECP5Platform(TemplatedPlatform):
             -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.svf
         """,
     ]
+    _diamond_command_templates_machxo2 = [
+        # These don't have any usable command-line option overrides.
+        r"""
+        {{invoke_tool("pnmainc")}}
+            {{name}}.tcl
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -bit
+            -if {{name}}_impl/{{name}}_impl.bit -of {{name}}.bit
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -jed
+            -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}}
+            -if {{name}}_impl/{{name}}_impl.jed -of {{name}}.jed
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -svfsingle -revd -op "FLASH Erase,Program,Verify"
+            -if {{name}}_impl/{{name}}_impl.jed -of {{name}}_flash.svf
+        """,
+        r"""
+        {{invoke_tool("ddtcmd")}}
+            -oft -svfsingle -revd -op "SRAM Fast Program"
+            -if {{name}}_impl/{{name}}_impl.bit -of {{name}}_sram.svf
+        """,
+    ]
 
     # Common logic
 
-    def __init__(self, *, toolchain="Trellis"):
+    def __init__(self, *, toolchain=None):
         super().__init__()
+
+        device = self.device.lower()
+        if device.startswith(("lfe5", "lae5")):
+            self.family = "ecp5"
+        elif device.startswith(("lcmxo2-", "lcmxo3l", "lcmxo3d", "lamxo2-", "lamxo3l", "lamxo3d", "lfmnx-")):
+            self.family = "machxo2"
+        else:
+            raise ValueError(f"Device '{self.device}' is not recognized")
+
+        if toolchain is None:
+            if self.family == "ecp5":
+                toolchain = "Trellis"
+            else:
+                toolchain = "Diamond"
 
         assert toolchain in ("Trellis", "Diamond")
         self.toolchain = toolchain
@@ -452,23 +541,46 @@ class LatticeECP5Platform(TemplatedPlatform):
         if self.toolchain == "Trellis":
             return self._trellis_command_templates
         if self.toolchain == "Diamond":
-            return self._diamond_command_templates
+            if self.family == "ecp5":
+                return self._diamond_command_templates_ecp5
+            if self.family == "machxo2":
+                return self._diamond_command_templates_machxo2
         assert False
+
+    # These numbers were extracted from
+    # "MachXO2 sysCLOCK PLL Design and Usage Guide"
+    _supported_osch_freqs = [
+        2.08, 2.15, 2.22, 2.29, 2.38, 2.46, 2.56, 2.66, 2.77, 2.89,
+        3.02, 3.17, 3.33, 3.50, 3.69, 3.91, 4.16, 4.29, 4.43, 4.59,
+        4.75, 4.93, 5.12, 5.32, 5.54, 5.78, 6.05, 6.33, 6.65, 7.00,
+        7.39, 7.82, 8.31, 8.58, 8.87, 9.17, 9.50, 9.85, 10.23, 10.64,
+        11.08, 11.57, 12.09, 12.67, 13.30, 14.00, 14.78, 15.65, 15.65, 16.63,
+        17.73, 19.00, 20.46, 22.17, 24.18, 26.60, 29.56, 33.25, 38.00, 44.33,
+        53.20, 66.50, 88.67, 133.00
+    ]
 
     @property
     def default_clk_constraint(self):
         if self.default_clk == "OSCG":
+            # Internal high-speed oscillator on ECP5 devices.
             return Clock(310e6 / self.oscg_div)
+        if self.default_clk == "OSCH":
+            # Internal high-speed oscillator on MachXO2/MachXO3L devices.
+            # It can have a range of frequencies.
+            assert self.osch_frequency in self._supported_osch_freqs
+            return Clock(int(self.osch_frequency * 1e6))
+        # Otherwise, use the defined Clock resource.
         return super().default_clk_constraint
 
     def create_missing_domain(self, name):
-        # Lattice ECP5 devices have two global set/reset signals: PUR, which is driven at startup
+        # Lattice devices have two global set/reset signals: PUR, which is driven at startup
         # by the configuration logic and unconditionally resets every storage element, and GSR,
         # which is driven by user logic and each storage element may be configured as affected or
         # unaffected by GSR. PUR is purely asynchronous, so even though it is a low-skew global
         # network, its deassertion may violate a setup/hold constraint with relation to a user
         # clock. To avoid this, a GSR/SGSR instance should be driven synchronized to user clock.
         if name == "sync" and self.default_clk is not None:
+            using_osch = False
             m = Module()
             if self.default_clk == "OSCG":
                 if not hasattr(self, "oscg_div"):
@@ -480,6 +592,14 @@ class LatticeECP5Platform(TemplatedPlatform):
                                      .format(self.oscg_div))
                 clk_i = Signal()
                 m.submodules += Instance("OSCG", p_DIV=self.oscg_div, o_OSC=clk_i)
+            elif self.default_clk == "OSCH":
+                osch_freq = self.osch_frequency
+                if osch_freq not in self._supported_osch_freqs:
+                    raise ValueError("Frequency {!r} is not valid for OSCH clock. Valid frequencies are {!r}"
+                             .format(osch_freq, self._supported_osch_freqs))
+                osch_freq_param = f"{float(osch_freq):.2f}"
+                clk_i = Signal()
+                m.submodules += [ Instance("OSCH", p_NOM_FREQ=osch_freq_param, i_STDBY=Const(0), o_OSC=clk_i, o_SEDSTDBY=Signal()) ]
             else:
                 clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
@@ -489,7 +609,7 @@ class LatticeECP5Platform(TemplatedPlatform):
 
             gsr0 = Signal()
             gsr1 = Signal()
-            # There is no end-of-startup signal on ECP5, but PUR is released after IOB enable, so
+            # There is no end-of-startup signal on Lattice, but PUR is released after IOB enable, so
             # a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
             m.submodules += [
                 Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=~rst_i, o_Q=gsr0),
@@ -512,7 +632,12 @@ class LatticeECP5Platform(TemplatedPlatform):
         elif isinstance(buffer, io.FFBuffer):
             result = FFBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.DDRBuffer):
-            result = DDRBuffer(buffer.direction, buffer.port)
+            if self.family == "ecp5":
+                result = DDRBufferECP5(buffer.direction, buffer.port)
+            elif self.family == "machxo2":
+                result = DDRBufferMachXO2(buffer.direction, buffer.port)
+            else:
+                raise NotImplementedError # :nocov:
         else:
             raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
         if buffer.direction is not io.Direction.Output:
@@ -522,5 +647,5 @@ class LatticeECP5Platform(TemplatedPlatform):
             result.oe = buffer.oe
         return result
 
-    # CDC primitives are not currently specialized for ECP5.
+    # CDC primitives are not currently specialized for Lattice.
     # While Diamond supports false path constraints; nextpnr-ecp5 does not.
