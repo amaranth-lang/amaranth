@@ -54,7 +54,7 @@ def convert(elaboratable, name="top", platform=None, *, ports=None, emit_src=Tru
                     dir = _ir.PortDirection.Input
                 else:
                     dir = _ir.PortDirection.Output
-                ports["__".join(path)] = (value, dir)
+                ports["__".join(map(str, path))] = (value, dir)
     elif ports is None:
         raise TypeError("The `convert()` function requires a `ports=` argument")
     fragment = _ir.Fragment.get(elaboratable, platform)
