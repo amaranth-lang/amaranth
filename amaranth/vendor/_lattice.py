@@ -207,11 +207,11 @@ class DDRBufferMachXO2(io.DDRBuffer):
 
 class LatticePlatform(TemplatedPlatform):
     """
-    .. rubric:: Trellis toolchain (ECP5 only)
+    .. rubric:: Trellis toolchain (ECP5, MachXO2, MachXO3)
 
     Required tools:
         * ``yosys``
-        * ``nextpnr-ecp5``
+        * ``nextpnr-ecp5`` or ``nextpnr-machxo2``
         * ``ecppack``
 
     The environment is populated by running the script specified in the environment variable
@@ -220,11 +220,11 @@ class LatticePlatform(TemplatedPlatform):
     Available overrides:
         * ``verbose``: enables logging of informational messages to standard error.
         * ``read_verilog_opts``: adds options for ``read_verilog`` Yosys command.
-        * ``synth_opts``: adds options for ``synth_ecp5`` Yosys command.
+        * ``synth_opts``: adds options for ``synth_<family>`` Yosys command.
         * ``script_after_read``: inserts commands after ``read_ilang`` in Yosys script.
-        * ``script_after_synth``: inserts commands after ``synth_ecp5`` in Yosys script.
+        * ``script_after_synth``: inserts commands after ``synth_<family>`` in Yosys script.
         * ``yosys_opts``: adds extra options for ``yosys``.
-        * ``nextpnr_opts``: adds extra options for ``nextpnr-ecp5``.
+        * ``nextpnr_opts``: adds extra options for ``nextpnr-<family>``.
         * ``ecppack_opts``: adds extra options for ``ecppack``.
         * ``add_preferences``: inserts commands at the end of the LPF file.
 
@@ -294,9 +294,14 @@ class LatticePlatform(TemplatedPlatform):
         "BG756": "caBGA756",
     }
 
-    _trellis_required_tools = [
+    _trellis_required_tools_ecp5 = [
         "yosys",
         "nextpnr-ecp5",
+        "ecppack"
+    ]
+    _trellis_required_tools_machxo2 = [
+        "yosys",
+        "nextpnr-machxo2",
         "ecppack"
     ]
     _trellis_file_templates = {
@@ -322,7 +327,11 @@ class LatticePlatform(TemplatedPlatform):
             {% endfor %}
             read_ilang {{name}}.il
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
-            synth_ecp5 {{get_override("synth_opts")|options}} -top {{name}}
+            {% if platform.family == "ecp5" %}
+                synth_ecp5 {{get_override("synth_opts")|options}} -top {{name}}
+            {% else %}
+                synth_lattice -family xo2 {{get_override("synth_opts")|options}} -top {{name}}
+            {% endif %}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
             write_json {{name}}.json
         """,
@@ -356,13 +365,17 @@ class LatticePlatform(TemplatedPlatform):
             {{name}}.ys
         """,
         r"""
-        {{invoke_tool("nextpnr-ecp5")}}
+        {{invoke_tool("nextpnr-" + platform.family)}}
             {{quiet("--quiet")}}
             {{get_override("nextpnr_opts")|options}}
             --log {{name}}.tim
-            {{platform._nextpnr_device_options[platform.device]}}
-            --package {{platform._nextpnr_package_options[platform.package]|upper}}
-            --speed {{platform.speed}}
+            {% if platform.family == "ecp5" %}
+                {{platform._nextpnr_device_options[platform.device]}}
+                --package {{platform._nextpnr_package_options[platform.package]|upper}}
+                --speed {{platform.speed}}
+            {% else %}
+                --device {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}}
+            {% endif %}
             --json {{name}}.json
             --lpf {{name}}.lpf
             --textcfg {{name}}.config
@@ -422,7 +435,7 @@ class LatticePlatform(TemplatedPlatform):
             prj_run Map -impl impl
             prj_run PAR -impl impl
             prj_run Export -impl impl -task Bitgen
-            {% if family == "machxo2" -%}
+            {% if platform.family == "machxo2" -%}
                 prj_run Export -impl impl -task Jedecgen
             {% endif %}
             {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
@@ -523,7 +536,10 @@ class LatticePlatform(TemplatedPlatform):
     @property
     def required_tools(self):
         if self.toolchain == "Trellis":
-            return self._trellis_required_tools
+            if self.family == "ecp5":
+                return self._trellis_required_tools_ecp5
+            elif self.family == "machxo2":
+                return self._trellis_required_tools_machxo2
         if self.toolchain == "Diamond":
             return self._diamond_required_tools
         assert False
