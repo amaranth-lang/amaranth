@@ -31,10 +31,9 @@ See the [Language guide](https://amaranth-lang.org/docs/amaranth/latest/guide.ht
 Amaranth can be used to target any FPGA or ASIC process that accepts behavioral Verilog-2001 as input. It also offers extended support for many FPGA families, providing toolchain integration, abstractions for device-specific primitives, and more. Specifically:
 
   * Lattice iCE40 (toolchains: **Yosys+nextpnr**, LSE-iCECube2, Synplify-iCECube2);
-  * Lattice MachXO2 (toolchains: Diamond);
-  * Lattice MachXO3L (toolchains: Diamond);
+  * Lattice MachXO2, MachXO3L (toolchains: **Yosys+nextpnr**, Diamond);
   * Lattice ECP5 (toolchains: **Yosys+nextpnr**, Diamond);
-  * Lattice Nexus (toolchains: **Yosys+nextpnr**, Diamond);
+  * Lattice Nexus (toolchains: **Yosys+nextpnr**, Radiant);
   * AMD Virtex, Virtex E, Spartan 2, Spartan 2E (toolchains: ISE);
   * AMD Virtex II, Virtex II Pro (toolchains: ISE);
   * AMD Spartan 3, Spartan 3E, Spartan 3A, Spartan 3AN, Spartan 3A DSP (toolchains: ISE);

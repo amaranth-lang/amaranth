@@ -205,6 +205,47 @@ class DDRBufferMachXO2(io.DDRBuffer):
         return m
 
 
+class DDRBufferNexus(io.DDRBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i0_inv = Signal(len(self.port))
+            i1_inv = Signal(len(self.port))
+            for bit in range(len(self.port)):
+                m.submodules[f"i_ddr{bit}"] = Instance("IDDRX1",
+                    i_SCLK=ClockSignal(self.i_domain),
+                    i_RST=Const(0),
+                    i_D=buf.i[bit],
+                    o_Q0=i0_inv[bit],
+                    o_Q1=i1_inv[bit],
+                )
+            m.d.comb += self.i[0].eq(i0_inv ^ inv_mask)
+            m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o0_inv = Signal(len(self.port))
+            o1_inv = Signal(len(self.port))
+            m.d.comb += [
+                o0_inv.eq(self.o[0] ^ inv_mask),
+                o1_inv.eq(self.o[1] ^ inv_mask),
+            ]
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ddr{bit}"] = Instance("ODDRX1",
+                    i_SCLK=ClockSignal(self.o_domain),
+                    i_RST=Const(0),
+                    i_D0=o0_inv[bit],
+                    i_D1=o1_inv[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+
+        return m
+
+
 class LatticePlatform(TemplatedPlatform):
     """
     .. rubric:: Trellis toolchain (ECP5, MachXO2, MachXO3)
@@ -236,6 +277,35 @@ class LatticePlatform(TemplatedPlatform):
         * ``{{name}}.bit``: binary bitstream.
         * ``{{name}}.svf``: JTAG programming vector.
 
+    .. rubric:: Oxide toolchain (Nexus)
+
+    Required tools:
+        * ``yosys``
+        * ``nextpnr-nexus``
+        * ``prjoxide``
+
+    The environment is populated by running the script specified in the environment variable
+    ``AMARANTH_ENV_OXIDE``, if present.
+
+    Available overrides:
+        * ``verbose``: enables logging of informational messages to standard error.
+        * ``read_verilog_opts``: adds options for ``read_verilog`` Yosys command.
+        * ``synth_opts``: adds options for ``synth_nexus`` Yosys command.
+        * ``script_after_read``: inserts commands after ``read_ilang`` in Yosys script.
+        * ``script_after_synth``: inserts commands after ``synth_nexus`` in Yosys script.
+        * ``yosys_opts``: adds extra options for ``yosys``.
+        * ``nextpnr_opts``: adds extra options for ``nextpnr-nexus``.
+        * ``prjoxide_opts``: adds extra options for ``prjoxide``.
+        * ``add_preferences``: inserts commands at the end of the PDC file.
+
+    Build products:
+        * ``{{name}}.rpt``: Yosys log.
+        * ``{{name}}.json``: synthesized RTL.
+        * ``{{name}}.tim``: nextpnr log.
+        * ``{{name}}.config``: ASCII bitstream.
+        * ``{{name}}.bit``: binary bitstream.
+        * ``{{name}}.xcf``: JTAG programming vector.
+
     .. rubric:: Diamond toolchain (ECP5, MachXO2, MachXO3)
 
     Required tools:
@@ -263,6 +333,30 @@ class LatticePlatform(TemplatedPlatform):
         * ``{{name}}.svf``: JTAG programming vector (ECP5 only).
         * ``{{name}}_flash.svf``: JTAG programming vector for FLASH programming (MachXO2, MachXO3 only).
         * ``{{name}}_sram.svf``: JTAG programming vector for SRAM programming (MachXO2, MachXO3 only).
+
+    .. rubric:: Radiant toolchain (Nexus)
+
+    Required tools:
+        * ``radiantc``
+
+    The environment is populated by running the script specified in the environment variable
+    ``AMARANTH_ENV_RADIANT``, if present. On Linux, radiant_env as provided by Radiant
+    itself is a good candidate. On Windows, the following script (named ``radiant_env.bat``,
+    for instance) is known to work::
+
+        @echo off
+        set PATH=C:\\lscc\\radiant\\%RADIANT_VERSION%\\bin\\nt64;%PATH%
+
+    Available overrides:
+        * ``script_project``: inserts commands before ``prj_save`` in Tcl script.
+        * ``script_after_export``: inserts commands after ``prj_run Export`` in Tcl script.
+        * ``add_constraints``: inserts commands at the end of the SDC file.
+        * ``add_preferences``: inserts commands at the end of the PDC file.
+
+    Build products:
+        * ``{{name}}_impl/{{name}}_impl.htm``: consolidated log.
+        * ``{{name}}.bit``: binary bitstream.
+        * ``{{name}}.xcf``: JTAG programming vector. (if using ``programmer``)
     """
 
     toolchain = None # selected when creating platform
@@ -390,6 +484,77 @@ class LatticePlatform(TemplatedPlatform):
         """
     ]
 
+    # Oxide templates
+
+    _oxide_required_tools = [ 
+        "yosys",
+        "nextpnr-nexus",
+        "prjoxide"
+    ]
+    _oxide_file_templates = {
+        **TemplatedPlatform.build_script_templates,
+        "{{name}}.il": r"""
+            # {{autogenerated}}
+            {{emit_rtlil()}}
+        """,
+        "{{name}}.debug.v": r"""
+            /* {{autogenerated}} */
+            {{emit_debug_verilog()}}
+        """,
+        "{{name}}.ys": r"""
+            # {{autogenerated}}
+            {% for file in platform.iter_files(".v") -%}
+                read_verilog {{get_override("read_verilog_opts")|options}} {{file}}
+            {% endfor %}
+            {% for file in platform.iter_files(".sv") -%}
+                read_verilog -sv {{get_override("read_verilog_opts")|options}} {{file}}
+            {% endfor %}
+            {% for file in platform.iter_files(".il") -%}
+                read_ilang {{file}}
+            {% endfor %}
+            read_ilang {{name}}.il
+            delete w:$verilog_initial_trigger
+            {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
+            synth_nexus {{get_override("synth_opts")|options}} -top {{name}}
+            {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
+            write_json {{name}}.json
+        """,
+        "{{name}}.pdc": r"""
+            # {{autogenerated}}
+            {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
+                ldc_set_location -site {{ '{' }}{{pin_name}}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}} 
+                {% if attrs -%}
+                ldc_set_port -iobuf {{ '{' }}{%- for key, value in attrs.items() %}{{key}}={{value}} {% endfor %}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}}
+                {% endif %}
+            {% endfor %}
+            {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
+        """
+    }
+    _oxide_command_templates = [
+        r"""
+        {{invoke_tool("yosys")}}
+            {{get_override("yosys_opts")|options}}
+            -l {{name}}.rpt
+            {{name}}.ys
+        """,
+        r"""
+        {{invoke_tool("nextpnr-nexus")}}
+            {{get_override("nextpnr_opts")|options}}
+            --log {{name}}.tim
+            --device {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}}            
+            --pdc {{name}}.pdc
+            --json {{name}}.json
+            --fasm {{name}}.fasm
+        """,
+        r"""
+        {{invoke_tool("prjoxide")}}
+            {{verbose("--verbose")}}
+            {{get_override("prjoxide_opts")|options}}
+            pack {{name}}.fasm
+            {{name}}.bit
+        """
+    ]
+
     # Diamond templates
 
     _diamond_required_tools = [
@@ -511,6 +676,76 @@ class LatticePlatform(TemplatedPlatform):
         """,
     ]
 
+    # Radiant templates
+
+    _radiant_required_tools = [
+        "radiantc",
+    ]
+    _radiant_file_templates = {
+        **TemplatedPlatform.build_script_templates,
+        "build_{{name}}.sh": r"""
+            # {{autogenerated}}
+            set -e{{verbose("x")}}
+            if [ -z "$BASH" ] ; then exec /bin/bash "$0" "$@"; fi
+            {{emit_commands("sh")}}
+        """,
+        "{{name}}.v": r"""
+            /* {{autogenerated}} */
+            {{emit_verilog()}}
+        """,
+        "{{name}}.debug.v": r"""
+            /* {{autogenerated}} */
+            {{emit_debug_verilog()}}
+        """,
+        "{{name}}.tcl": r"""
+            prj_create -name {{name}} -impl impl \
+                -dev {{platform.device}}-{{platform.speed}}{{platform.package}}{{platform.grade}} \
+                -synthesis synplify
+            {% for file in platform.iter_files(".v", ".sv", ".vhd", ".vhdl") -%}
+                prj_add_source {{file|tcl_quote}}
+            {% endfor %}
+            prj_add_source {{name}}.v
+            prj_add_source {{name}}.sdc
+            prj_add_source {{name}}.pdc
+            prj_set_impl_opt top \"{{name}}\"
+            {{get_override("script_project")|default("# (script_project placeholder)")}}
+            prj_save
+            prj_run Synthesis -impl impl -forceOne
+            prj_run Map -impl impl
+            prj_run PAR -impl impl
+            prj_run Export -impl impl -task Bitgen
+            {{get_override("script_after_export")|default("# (script_after_export placeholder)")}}
+        """,
+        # Pre-synthesis SDC constraints
+        "{{name}}.sdc": r"""
+            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
+                {% if port_signal is not none -%}
+                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
+                {% else -%}
+                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
+                {% endif %}
+            {% endfor %}
+            {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
+        """,
+        # Physical PDC contraints
+        "{{name}}.pdc": r"""
+            {% for port_name, pin_name, attrs in platform.iter_port_constraints_bits() -%}
+                ldc_set_location -site "{{pin_name}}" [get_ports {{port_name|tcl_quote}}]
+                {% if attrs -%}
+                ldc_set_port -iobuf { {%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %} } [get_ports {{port_name|tcl_quote}}]
+                {% endif %}
+            {% endfor %}
+            {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
+        """,
+    }
+    _radiant_command_templates = [
+        # These don't have any usable command-line option overrides.
+        r"""
+        {{invoke_tool("radiantc")}}
+            {{name}}.tcl
+        """,
+    ]
+
     # Common logic
 
     def __init__(self, *, toolchain=None):
@@ -521,16 +756,23 @@ class LatticePlatform(TemplatedPlatform):
             self.family = "ecp5"
         elif device.startswith(("lcmxo2-", "lcmxo3l", "lcmxo3d", "lamxo2-", "lamxo3l", "lamxo3d", "lfmnx-")):
             self.family = "machxo2"
+        elif device.startswith(("lifcl-", "lfcpnx-", "lfd2nx-", "lfmxo5-", "ut24c")):
+            self.family = "nexus"
         else:
             raise ValueError(f"Device '{self.device}' is not recognized")
 
         if toolchain is None:
-            if self.family == "ecp5":
+            if self.family == "nexus":
+                toolchain = "Oxide"
+            elif self.family == "ecp5":
                 toolchain = "Trellis"
             else:
                 toolchain = "Diamond"
 
-        assert toolchain in ("Trellis", "Diamond")
+        if self.family == "nexus":
+            assert toolchain in ("Oxide", "Radiant")
+        else:
+            assert toolchain in ("Trellis", "Diamond")
         self.toolchain = toolchain
 
     @property
@@ -540,27 +782,39 @@ class LatticePlatform(TemplatedPlatform):
                 return self._trellis_required_tools_ecp5
             elif self.family == "machxo2":
                 return self._trellis_required_tools_machxo2
+        if self.toolchain == "Oxide":
+            return self._oxide_required_tools
         if self.toolchain == "Diamond":
             return self._diamond_required_tools
+        if self.toolchain == "Radiant":
+            return self._radiant_required_tools
         assert False
 
     @property
     def file_templates(self):
         if self.toolchain == "Trellis":
             return self._trellis_file_templates
+        if self.toolchain == "Oxide":
+            return self._oxide_file_templates
         if self.toolchain == "Diamond":
             return self._diamond_file_templates
+        if self.toolchain == "Radiant":
+            return self._radiant_file_templates
         assert False
 
     @property
     def command_templates(self):
         if self.toolchain == "Trellis":
             return self._trellis_command_templates
+        if self.toolchain == "Oxide":
+            return self._oxide_command_templates
         if self.toolchain == "Diamond":
             if self.family == "ecp5":
                 return self._diamond_command_templates_ecp5
             if self.family == "machxo2":
                 return self._diamond_command_templates_machxo2
+        if self.toolchain == "Radiant":
+            return self._radiant_command_templates
         assert False
 
     # These numbers were extracted from
@@ -585,6 +839,9 @@ class LatticePlatform(TemplatedPlatform):
             # It can have a range of frequencies.
             assert self.osch_frequency in self._supported_osch_freqs
             return Clock(int(self.osch_frequency * 1e6))
+        if self.default_clk == "OSCA":
+            # Internal high-speed oscillator on Nexus devices.
+            return Clock(450e6 / self.osca_div)
         # Otherwise, use the defined Clock resource.
         return super().default_clk_constraint
 
@@ -615,7 +872,22 @@ class LatticePlatform(TemplatedPlatform):
                              .format(osch_freq, self._supported_osch_freqs))
                 osch_freq_param = f"{float(osch_freq):.2f}"
                 clk_i = Signal()
-                m.submodules += [ Instance("OSCH", p_NOM_FREQ=osch_freq_param, i_STDBY=Const(0), o_OSC=clk_i, o_SEDSTDBY=Signal()) ]
+                m.submodules += Instance("OSCH", p_NOM_FREQ=osch_freq_param, i_STDBY=Const(0), o_OSC=clk_i, o_SEDSTDBY=Signal())
+            elif self.default_clk == "OSCA":
+                if not hasattr(self, "osca_div"):
+                    raise ValueError("OSCA divider (osca_div) must be an integer between 2 "
+                                      "and 256")
+                if not isinstance(self.osca_div, int) or self.osca_div < 2 or self.osca_div > 256:
+                    raise ValueError("OSCA divider (osca_div) must be an integer between 2 "
+                                     "and 256, not {!r}"
+                                     .format(self.osca_div))
+                clk_i = Signal()
+                m.submodules += Instance("OSCA",
+                    p_HF_CLK_DIV=str(self.osca_div - 1),
+                    i_HFOUTEN=Const(1),
+                    i_HFSDSCEN=Const(0),  # HFSDSCEN used for SED/SEC detector
+                    o_HFCLKOUT=clk_i,
+                )
             else:
                 clk_i = self.request(self.default_clk).i
             if self.default_rst is not None:
@@ -627,14 +899,40 @@ class LatticePlatform(TemplatedPlatform):
             gsr1 = Signal()
             # There is no end-of-startup signal on Lattice, but PUR is released after IOB enable, so
             # a simple reset synchronizer (with PUR as the asynchronous reset) does the job.
-            m.submodules += [
-                Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=~rst_i, o_Q=gsr0),
-                Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=gsr0,   o_Q=gsr1),
-                # Although we already synchronize the reset input to user clock, SGSR has dedicated
-                # clock routing to the center of the FPGA; use that just in case it turns out to be
-                # more reliable. (None of this is documented.)
-                Instance("SGSR", i_CLK=clk_i, i_GSR=gsr1),
-            ]
+            if self.family == "nexus":
+                # On Nexus all the D-type FFs have either an synchronous or asynchronous preset.
+                # Here we build a simple reset synchronizer from D-type FFs with a positive-level
+                # asynchronous preset which we tie low
+                m.submodules += [
+                    Instance(
+                        "FD1P3BX",
+                        p_GSR="DISABLED",
+                        i_CK=clk_i,
+                        i_D=~rst_i,
+                        i_SP=Const(1),
+                        i_PD=Const(0),
+                        o_Q=gsr0,
+                    ),
+                    Instance(
+                        "FD1P3BX",
+                        p_GSR="DISABLED",
+                        i_CK=clk_i,
+                        i_D=gsr0,
+                        i_SP=Const(1),
+                        i_PD=Const(0),
+                        o_Q=gsr1,
+                    ),
+                    Instance("GSR", p_SYNCMODE="SYNC", i_CLK=clk_i, i_GSR_N=gsr1),
+                ]
+            else:
+                m.submodules += [
+                    Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=~rst_i, o_Q=gsr0),
+                    Instance("FD1S3AX", p_GSR="DISABLED", i_CK=clk_i, i_D=gsr0,   o_Q=gsr1),
+                    # Although we already synchronize the reset input to user clock, SGSR has dedicated
+                    # clock routing to the center of the FPGA; use that just in case it turns out to be
+                    # more reliable. (None of this is documented.)
+                    Instance("SGSR", i_CLK=clk_i, i_GSR=gsr1),
+                ]
             # GSR implicitly connects to every appropriate storage element. As such, the sync
             # domain is reset-less; domains driven by other clocks would need to have dedicated
             # reset circuitry or otherwise meet setup/hold constraints on their own.
@@ -652,6 +950,8 @@ class LatticePlatform(TemplatedPlatform):
                 result = DDRBufferECP5(buffer.direction, buffer.port)
             elif self.family == "machxo2":
                 result = DDRBufferMachXO2(buffer.direction, buffer.port)
+            elif self.family == "nexus":
+                result = DDRBufferNexus(buffer.direction, buffer.port)
             else:
                 raise NotImplementedError # :nocov:
         else:
