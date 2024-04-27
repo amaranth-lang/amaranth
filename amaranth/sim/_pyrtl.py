@@ -501,15 +501,15 @@ class _FragmentCompiler:
                         lhs(port._data)(data)
 
                 for input in inputs:
-                    self.state.add_trigger(domain_process, input)
+                    self.state.add_signal_trigger(domain_process, input)
 
             else:
                 domain = fragment.domains[domain_name]
                 clk_trigger = 1 if domain.clk_edge == "pos" else 0
-                self.state.add_trigger(domain_process, domain.clk, trigger=clk_trigger)
+                self.state.add_signal_trigger(domain_process, domain.clk, trigger=clk_trigger)
                 if domain.rst is not None and domain.async_reset:
                     rst_trigger = 1
-                    self.state.add_trigger(domain_process, domain.rst, trigger=rst_trigger)
+                    self.state.add_signal_trigger(domain_process, domain.rst, trigger=rst_trigger)
 
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)

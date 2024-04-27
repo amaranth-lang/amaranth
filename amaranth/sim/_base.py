@@ -52,10 +52,10 @@ class BaseSimulation:
 
     slots = NotImplemented
 
-    def add_trigger(self, process, signal, *, trigger=None):
+    def add_signal_trigger(self, process, signal, *, trigger=None):
         raise NotImplementedError # :nocov:
 
-    def remove_trigger(self, process, signal):
+    def remove_signal_trigger(self, process, signal):
         raise NotImplementedError # :nocov:
 
     def add_memory_trigger(self, process, memory):
