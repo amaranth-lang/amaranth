@@ -42,12 +42,12 @@ class PyCoroProcess(BaseProcess):
         return f"{inspect.getfile(frame)}:{inspect.getlineno(frame)}"
 
     def add_trigger(self, signal, trigger=None):
-        self.state.add_trigger(self, signal, trigger=trigger)
+        self.state.add_signal_trigger(self, signal, trigger=trigger)
         self.waits_on.add(signal)
 
     def clear_triggers(self):
         for signal in self.waits_on:
-            self.state.remove_trigger(self, signal)
+            self.state.remove_signal_trigger(self, signal)
         self.waits_on.clear()
 
     def run(self):

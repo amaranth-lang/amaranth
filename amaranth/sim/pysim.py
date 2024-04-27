@@ -476,13 +476,13 @@ class _PySimulation(BaseSimulation):
             self.memories[memory] = index
             return index
 
-    def add_trigger(self, process, signal, *, trigger=None):
+    def add_signal_trigger(self, process, signal, *, trigger=None):
         index = self.get_signal(signal)
         assert (process not in self.slots[index].waiters or
                 self.slots[index].waiters[process] == trigger)
         self.slots[index].waiters[process] = trigger
 
-    def remove_trigger(self, process, signal):
+    def remove_signal_trigger(self, process, signal):
         index = self.get_signal(signal)
         assert process in self.slots[index].waiters
         del self.slots[index].waiters[process]
