@@ -1,13 +1,61 @@
 import inspect
 
+from .._utils import deprecated
 from ..hdl import *
 from ..hdl._ast import Statement, Assign, SignalSet, ValueCastable
-from .core import Tick, Settle, Delay, Passive, Active
 from ._base import BaseProcess, BaseMemoryState
 from ._pyeval import eval_value, eval_assign
 
 
-__all__ = ["PyCoroProcess"]
+__all__ = ["Command", "Settle", "Delay", "Tick", "Passive", "Active", "PyCoroProcess"]
+
+
+class Command:
+    pass
+
+
+class Settle(Command):
+    @deprecated("The `Settle` command is deprecated per RFC 27. Use `add_testbench` to write "
+                "testbenches; in them, an equivalent of `yield Settle()` is performed "
+                "automatically.")
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return "(settle)"
+
+
+class Delay(Command):
+    def __init__(self, interval=None):
+        self.interval = None if interval is None else float(interval)
+
+    def __repr__(self):
+        if self.interval is None:
+            return "(delay ε)"
+        else:
+            return f"(delay {self.interval * 1e6:.3}us)"
+
+
+class Tick(Command):
+    def __init__(self, domain="sync"):
+        if not isinstance(domain, (str, ClockDomain)):
+            raise TypeError("Domain must be a string or a ClockDomain instance, not {!r}"
+                            .format(domain))
+        assert domain != "comb"
+        self.domain = domain
+
+    def __repr__(self):
+        return f"(tick {self.domain})"
+
+
+class Passive(Command):
+    def __repr__(self):
+        return "(passive)"
+
+
+class Active(Command):
+    def __repr__(self):
+        return "(active)"
 
 
 class PyCoroProcess(BaseProcess):
