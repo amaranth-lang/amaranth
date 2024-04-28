@@ -3598,3 +3598,28 @@ class DomainLookupTestCase(FHDLTestCase):
         self.assertIs(design.lookup_domain("sync", xm5), m1_c)
         self.assertIs(design.lookup_domain("d", xm4), m4_d)
         self.assertIs(design.lookup_domain("d", xm5), m5_d)
+
+
+class RequirePosedgeTestCase(FHDLTestCase):
+    def test_require_ok(self):
+        m = Module()
+        m.domains.sync = ClockDomain()
+        m.submodules += RequirePosedge("sync")
+        Fragment.get(m, None).prepare()
+
+    def test_require_fail(self):
+        m = Module()
+        m.domains.sync = ClockDomain(clk_edge="neg")
+        m.submodules += RequirePosedge("sync")
+        with self.assertRaisesRegex(DomainRequirementFailed,
+                r"^Domain sync has a negedge clock, but posedge clock is required by top.U\$0 at .*$"):
+            Fragment.get(m, None).prepare()
+
+    def test_require_renamed(self):
+        m = Module()
+        m.domains.sync = ClockDomain(clk_edge="pos")
+        m.domains.test = ClockDomain(clk_edge="neg")
+        m.submodules += DomainRenamer("test")(RequirePosedge("sync"))
+        with self.assertRaisesRegex(DomainRequirementFailed,
+                r"^Domain test has a negedge clock, but posedge clock is required by top.U\$0 at .*$"):
+            Fragment.get(m, None).prepare()

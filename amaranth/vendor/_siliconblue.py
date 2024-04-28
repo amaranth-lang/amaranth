@@ -4,6 +4,7 @@
 from abc import abstractmethod
 
 from ..hdl import *
+from ..hdl._ir import RequirePosedge
 from ..lib.cdc import ResetSynchronizer
 from ..lib import io
 from ..build import *
@@ -506,10 +507,12 @@ class SiliconBluePlatform(TemplatedPlatform):
                 else:
                     io_args.append(("o", "D_IN_0", i[bit]))
             elif isinstance(buffer, io.FFBuffer):
+                m.submodules += RequirePosedge(self.i_domain)
                 i_type =     0b00 # PIN_INPUT_REGISTERED aka PIN_INPUT_DDR
                 io_args.append(("i", "INPUT_CLK", ClockSignal(buffer.i_domain)))
                 io_args.append(("o", "D_IN_0", i[bit]))
             elif isinstance(buffer, io.DDRBuffer):
+                m.submodules += RequirePosedge(self.i_domain)
                 i_type =     0b00 # PIN_INPUT_REGISTERED aka PIN_INPUT_DDR
                 io_args.append(("i", "INPUT_CLK", ClockSignal(buffer.i_domain)))
                 io_args.append(("o", "D_IN_0", i0[bit]))
@@ -521,10 +524,12 @@ class SiliconBluePlatform(TemplatedPlatform):
                 o_type = 0b1010   # PIN_OUTPUT_TRISTATE
                 io_args.append(("i", "D_OUT_0", o[bit]))
             elif isinstance(buffer, io.FFBuffer):
+                m.submodules += RequirePosedge(self.o_domain)
                 o_type = 0b1101   # PIN_OUTPUT_REGISTERED_ENABLE_REGISTERED
                 io_args.append(("i", "OUTPUT_CLK", ClockSignal(buffer.o_domain)))
                 io_args.append(("i", "D_OUT_0", o[bit]))
             elif isinstance(buffer, io.DDRBuffer):
+                m.submodules += RequirePosedge(self.o_domain)
                 o_type = 0b1100   # PIN_OUTPUT_DDR_ENABLE_REGISTERED
                 io_args.append(("i", "OUTPUT_CLK", ClockSignal(buffer.o_domain)))
                 io_args.append(("i", "D_OUT_0", o0[bit]))

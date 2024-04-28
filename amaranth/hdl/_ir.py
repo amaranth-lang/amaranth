@@ -10,8 +10,9 @@ from . import _ast, _cd, _ir, _nir
 
 __all__ = [
     "AlreadyElaborated", "UnusedElaboratable", "Elaboratable", "DuplicateElaboratable",
-    "DriverConflict", "Fragment", "Instance", "IOBufferInstance", "PortDirection", "Design",
-    "build_netlist",
+    "DomainRequirementFailed", "DriverConflict",
+    "Fragment", "Instance", "IOBufferInstance", "RequirePosedge", "PortDirection",
+    "Design", "build_netlist",
 ]
 
 
@@ -38,6 +39,11 @@ class DriverConflict(Exception):
 
 class DuplicateElaboratable(Exception):
     pass
+
+
+class DomainRequirementFailed(Exception):
+    """Raised when a module has unsatisfied requirements about a clock domain, such as getting
+    a negedge domain when only posedge domains are supported."""
 
 
 class Fragment:
@@ -385,6 +391,19 @@ class IOBufferInstance(Fragment):
         self.src_loc = src_loc or tracer.get_src_loc(src_loc_at)
 
 
+class RequirePosedge(Fragment):
+    """A special fragment that requires a given domain to have :py:`clk_edge="pos"`, failing
+    elaboration otherwise.
+
+    This is a private interface, without a stability guarantee.
+    """
+
+    def __init__(self, domain, *, src_loc_at=0, src_loc=None):
+        super().__init__()
+        self._domain = domain
+        self.src_loc = src_loc or tracer.get_src_loc(src_loc_at)
+
+
 def _add_name(assigned_names, name):
     if name in assigned_names:
         name = f"{name}${len(assigned_names)}"
@@ -429,6 +448,7 @@ class Design:
             else:
                 self._use_signal(fragment, conn)
         self._assign_names(fragment, hierarchy)
+        self._check_domain_requires()
 
     def _compute_fragment_depth_parent(self, fragment: Fragment, parent: "Fragment | None", depth: int):
         """Recursively computes every fragment's depth and parent."""
@@ -576,6 +596,8 @@ class Design:
                 self._use_signal(fragment, domain.clk)
                 if domain.rst is not None:
                     self._use_signal(fragment, domain.rst)
+        elif isinstance(fragment, _ir.RequirePosedge):
+            pass
         else:
             for domain_name, statements in fragment.statements.items():
                 if domain_name != "comb":
@@ -661,6 +683,18 @@ class Design:
                 subfragment_name = f"U${subfragment_index}"
             subfragment_name = _add_name(frag_info.assigned_names, subfragment_name)
             self._assign_names(subfragment, hierarchy=(*hierarchy, subfragment_name))
+
+    def _check_domain_requires(self):
+        for fragment, fragment_info in self.fragments.items():
+            if isinstance(fragment, RequirePosedge):
+                domain = fragment.domains[fragment._domain]
+                if domain.clk_edge != "pos":
+                    if fragment.src_loc is None:
+                        src_loc = "<unknown>:0"
+                    else:
+                        src_loc = f"{fragment.src_loc[0]}:{fragment.src_loc[1]}"
+                    fragment_name = ".".join(fragment_info.name)
+                    raise DomainRequirementFailed(f"Domain {domain.name} has a negedge clock, but posedge clock is required by {fragment_name} at {src_loc}")
 
     def lookup_domain(self, domain, context):
         if domain == "comb":
@@ -1491,6 +1525,8 @@ class NetlistEmitter:
             assert parent_module_idx is not None
             self.emit_iobuffer(parent_module_idx, fragment)
             self.fragment_module_idx[fragment] = parent_module_idx
+        elif isinstance(fragment, _ir.RequirePosedge):
+            pass
         elif type(fragment) is _ir.Fragment:
             module_idx = self.netlist.add_module(parent_module_idx, fragment_name, src_loc=fragment.src_loc, cell_src_loc=cell_src_loc)
             self.fragment_module_idx[fragment] = module_idx

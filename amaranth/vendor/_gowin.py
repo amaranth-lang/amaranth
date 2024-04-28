@@ -4,6 +4,7 @@ import math
 import re
 
 from ..hdl import *
+from ..hdl._ir import RequirePosedge
 from ..lib import io, wiring
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
@@ -131,6 +132,7 @@ class DDRBuffer(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -144,6 +146,7 @@ class DDRBuffer(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = self.o[0] ^ inv_mask
             o1_inv = self.o[1] ^ inv_mask
             for bit in range(len(self.port)):
