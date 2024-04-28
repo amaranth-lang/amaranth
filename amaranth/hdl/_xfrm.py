@@ -314,6 +314,8 @@ class FragmentTransformer:
                     oe=fragment.oe,
                     src_loc=fragment.src_loc,
                 )
+        elif isinstance(fragment, RequirePosedge):
+            new_fragment = RequirePosedge(fragment._domain, src_loc=fragment.src_loc)
         else:
             new_fragment = Fragment(src_loc=fragment.src_loc)
         new_fragment.attrs = OrderedDict(fragment.attrs)
@@ -445,6 +447,8 @@ class DomainCollector(ValueVisitor, StatementVisitor):
                 self.on_value(port._data)
                 self.on_value(port._en)
                 self._add_used_domain(port._domain)
+        if isinstance(fragment, RequirePosedge):
+            self._add_used_domain(fragment._domain)
 
         if isinstance(fragment, Instance):
             for name, (value, dir) in fragment.ports.items():
@@ -534,6 +538,12 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
         for port in new_fragment._write_ports:
             if port._domain in self.domain_map:
                 port._domain = self.domain_map[port._domain]
+
+    def on_fragment(self, fragment):
+        new_fragment = super().on_fragment(fragment)
+        if isinstance(new_fragment, RequirePosedge) and new_fragment._domain in self.domain_map:
+            new_fragment._domain = self.domain_map[new_fragment._domain]
+        return new_fragment
 
 
 class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer):

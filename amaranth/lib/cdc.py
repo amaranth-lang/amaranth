@@ -1,6 +1,7 @@
 import warnings
 
 from .. import *
+from ..hdl._ir import RequirePosedge
 
 
 __all__ = ["FFSynchronizer", "AsyncFFSynchronizer", "ResetSynchronizer", "PulseSynchronizer"]
@@ -187,6 +188,7 @@ class AsyncFFSynchronizer(Elaboratable):
             ClockSignal("async_ff").eq(ClockSignal(self._o_domain)),
             self.o.eq(flops[-1])
         ]
+        m.submodules += RequirePosedge(self._o_domain)
 
         return m
 

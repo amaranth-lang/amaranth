@@ -2,6 +2,7 @@ import re
 from abc import abstractmethod
 
 from ..hdl import *
+from ..hdl._ir import RequirePosedge
 from ..lib.cdc import ResetSynchronizer
 from ..lib import io, wiring
 from ..build import *
@@ -125,11 +126,13 @@ class FFBuffer(io.FFBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i_inv = Signal.like(self.i)
             _make_dff(m, "i", self.i_domain, buf.i, i_inv, iob=True)
             m.d.comb += self.i.eq(i_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o_inv = Signal.like(self.o)
             m.d.comb += o_inv.eq(self.o ^ inv_mask)
             _make_dff(m, "o", self.o_domain, o_inv, buf.o, iob=True)
@@ -146,6 +149,7 @@ class DDRBufferVirtex2(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             # First-generation input DDR register: basically just two FFs with opposite
@@ -161,6 +165,7 @@ class DDRBufferVirtex2(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             o1_ff = Signal(len(self.port))
@@ -210,6 +215,7 @@ class DDRBufferSpartan3E(io.DDRBuffer):
         }
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             if platform.family == "spartan6" or isinstance(self.port, io.DifferentialPort):
@@ -257,6 +263,7 @@ class DDRBufferSpartan3E(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
@@ -333,6 +340,7 @@ class DDRBufferVirtex4(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -352,6 +360,7 @@ class DDRBufferVirtex4(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
@@ -384,6 +393,7 @@ class DDRBufferUltrascale(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -402,6 +412,7 @@ class DDRBufferUltrascale(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
@@ -1234,6 +1245,7 @@ class XilinxPlatform(TemplatedPlatform):
 
     def get_async_ff_sync(self, async_ff_sync):
         m = Module()
+        m.submodules += RequirePosedge(async_ff_sync._o_domain)
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)
         # Instantiate a chain of async_ff_sync._stages FDPEs with all
         # their PRE pins connected to either async_ff_sync.i or

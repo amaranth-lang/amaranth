@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from ..hdl import *
+from ..hdl._ir import RequirePosedge
 from ..lib import io, wiring
 from ..build import *
 
@@ -107,6 +108,7 @@ class FFBufferECP5(io.FFBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i_inv = Signal.like(self.i)
             for bit in range(len(self.port)):
                 m.submodules[f"i_ff{bit}"] = Instance("IFS1P3DX",
@@ -119,6 +121,7 @@ class FFBufferECP5(io.FFBuffer):
             m.d.comb += self.i.eq(i_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o_inv = Signal.like(self.o)
             m.d.comb += o_inv.eq(self.o ^ inv_mask)
             for bit in range(len(self.port)):
@@ -142,6 +145,7 @@ class FFBufferNexus(io.FFBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i_inv = Signal.like(self.i)
             for bit in range(len(self.port)):
                 m.submodules[f"i_ff{bit}"] = Instance("IFD1P3DX",
@@ -154,6 +158,7 @@ class FFBufferNexus(io.FFBuffer):
             m.d.comb += self.i.eq(i_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o_inv = Signal.like(self.o)
             m.d.comb += o_inv.eq(self.o ^ inv_mask)
             for bit in range(len(self.port)):
@@ -177,6 +182,7 @@ class DDRBufferECP5(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -191,6 +197,7 @@ class DDRBufferECP5(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
@@ -218,6 +225,7 @@ class DDRBufferMachXO2(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -232,6 +240,7 @@ class DDRBufferMachXO2(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
@@ -259,6 +268,7 @@ class DDRBufferNexus(io.DDRBuffer):
         inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
 
         if self.direction is not io.Direction.Output:
+            m.submodules += RequirePosedge(self.i_domain)
             i0_inv = Signal(len(self.port))
             i1_inv = Signal(len(self.port))
             for bit in range(len(self.port)):
@@ -273,6 +283,7 @@ class DDRBufferNexus(io.DDRBuffer):
             m.d.comb += self.i[1].eq(i1_inv ^ inv_mask)
 
         if self.direction is not io.Direction.Input:
+            m.submodules += RequirePosedge(self.o_domain)
             o0_inv = Signal(len(self.port))
             o1_inv = Signal(len(self.port))
             m.d.comb += [
