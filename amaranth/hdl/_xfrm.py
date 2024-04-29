@@ -252,6 +252,9 @@ class FragmentTransformer:
             for domain, statements in fragment.statements.items():
                 new_fragment.add_statements(domain, statements)
 
+    def map_domain_renames(self, fragment, new_fragment):
+        new_fragment.domain_renames = dict(fragment.domain_renames)
+
     def map_memory_ports(self, fragment, new_fragment):
         if hasattr(self, "on_value"):
             for port in new_fragment._read_ports:
@@ -318,6 +321,7 @@ class FragmentTransformer:
         self.map_subfragments(fragment, new_fragment)
         self.map_domains(fragment, new_fragment)
         self.map_statements(fragment, new_fragment)
+        self.map_domain_renames(fragment, new_fragment)
         return new_fragment
 
     def __call__(self, value, *, src_loc_at=0):
@@ -512,6 +516,15 @@ class DomainRenamer(FragmentTransformer, ValueTransformer, StatementTransformer)
                 self.domain_map.get(domain, domain),
                 map(self.on_statement, statements)
             )
+
+    def map_domain_renames(self, fragment, new_fragment):
+        new_fragment.domain_renames = {
+            src: self.domain_map.get(dst, dst)
+            for src, dst in fragment.domain_renames.items()
+        }
+        for src, dst in self.domain_map.items():
+            if src not in new_fragment.domain_renames:
+                new_fragment.domain_renames[src] = dst
 
     def map_memory_ports(self, fragment, new_fragment):
         super().map_memory_ports(fragment, new_fragment)
