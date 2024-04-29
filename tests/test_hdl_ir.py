@@ -8,6 +8,7 @@ from amaranth.hdl._dsl import *
 from amaranth.hdl._ir import *
 from amaranth.hdl._mem import *
 from amaranth.hdl._nir import SignalField, CombinationalCycle
+from amaranth.hdl._xfrm import *
 
 from amaranth.lib import enum, data
 
@@ -3561,3 +3562,39 @@ class CycleTestCase(FHDLTestCase):
                 r".*test_hdl_ir.py:\d+: signal a bit 0\n"
                 r"$"):
             build_netlist(Fragment.get(m, None), [])
+
+
+class DomainLookupTestCase(FHDLTestCase):
+    def test_domain_lookup(self):
+        m1 = Module()
+        m1_a = m1.domains.a = ClockDomain("a")
+        m1_b = m1.domains.b = ClockDomain("b")
+        m1_c = m1.domains.c = ClockDomain("c")
+        m2 = Module()
+        m3 = Module()
+        m3.d.sync += Print("m3")
+        m4 = Module()
+        m4.d.sync += Print("m4")
+        m4_d = m4.domains.d = ClockDomain("d")
+        m5 = Module()
+        m5.d.sync += Print("m5")
+        m5_d = m5.domains.d = ClockDomain("d")
+
+        m1.submodules.m2 = xm2 = DomainRenamer({"a": "b"})(m2)
+        m2.submodules.m3 = xm3 = DomainRenamer("a")(m3)
+        m2.submodules.m4 = xm4 = DomainRenamer("b")(m4)
+        m2.submodules.m5 = xm5 = DomainRenamer("c")(m5)
+
+        design = Fragment.get(m1, None).prepare()
+
+        self.assertIs(design.lookup_domain("a", m1), m1_a)
+        self.assertIs(design.lookup_domain("b", m1), m1_b)
+        self.assertIs(design.lookup_domain("c", m1), m1_c)
+        self.assertIs(design.lookup_domain("a", xm2), m1_b)
+        self.assertIs(design.lookup_domain("b", xm2), m1_b)
+        self.assertIs(design.lookup_domain("c", xm2), m1_c)
+        self.assertIs(design.lookup_domain("sync", xm3), m1_b)
+        self.assertIs(design.lookup_domain("sync", xm4), m1_b)
+        self.assertIs(design.lookup_domain("sync", xm5), m1_c)
+        self.assertIs(design.lookup_domain("d", xm4), m4_d)
+        self.assertIs(design.lookup_domain("d", xm5), m5_d)

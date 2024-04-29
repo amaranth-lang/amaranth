@@ -71,6 +71,7 @@ class Fragment:
         self.src_loc = src_loc
         self.origins = None
         self.domains_propagated_up = {}
+        self.domain_renames = {}
 
     def add_domains(self, *domains):
         for domain in flatten(domains):
@@ -654,6 +655,19 @@ class Design:
                 subfragment_name = f"U${subfragment_index}"
             subfragment_name = _add_name(frag_info.assigned_names, subfragment_name)
             self._assign_names(subfragment, hierarchy=(*hierarchy, subfragment_name))
+
+    def lookup_domain(self, domain, context):
+        if domain == "comb":
+            raise KeyError("comb")
+        if context is not None:
+            try:
+                fragment = self.elaboratables[context]
+            except KeyError:
+                raise ValueError(f"Elaboratable {context!r} is not a part of the design")
+        else:
+            fragment = self.fragment
+        domain = fragment.domain_renames.get(domain, domain)
+        return fragment.domains[domain]
 
 
 ############################################################################################### >:3
