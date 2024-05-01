@@ -3,6 +3,9 @@ from amaranth.hdl._mem import MemoryData
 from amaranth.hdl._ir import DriverConflict
 
 
+__all__ = ["eval_value", "eval_format", "eval_assign"]
+
+
 def _eval_matches(test, patterns):
     if patterns is None:
         return True
@@ -175,7 +178,7 @@ def _eval_assign_inner(sim, lhs, lhs_start, rhs, rhs_len):
         value &= (1 << len(lhs)) - 1
         if lhs._signed and (value & (1 << (len(lhs) - 1))):
             value |= -1 << (len(lhs) - 1)
-        sim.slots[slot].set(value)
+        sim.slots[slot].update(value)
     elif isinstance(lhs, MemoryData._Row):
         lhs_stop = lhs_start + rhs_len
         if lhs_stop > len(lhs):
@@ -222,6 +225,7 @@ def _eval_assign_inner(sim, lhs, lhs_start, rhs, rhs_len):
                 return
     else:
         raise ValueError(f"Value {lhs!r} cannot be assigned")
+
 
 def eval_assign(sim, lhs, value):
     _eval_assign_inner(sim, lhs, 0, value, len(lhs))

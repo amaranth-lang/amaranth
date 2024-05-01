@@ -17,18 +17,21 @@ class PyClockProcess(BaseProcess):
 
     def reset(self):
         self.runnable = True
-        self.passive = True
+        self.critical = False
 
         self.initial = True
 
     def run(self):
         self.runnable = False
 
+        def waker():
+            self.runnable = True
+
         if self.initial:
             self.initial = False
-            self.state.wait_interval(self, self.phase)
+            self.state.set_delay_waker(self.phase, waker)
 
         else:
             clk_state = self.state.slots[self.slot]
-            clk_state.set(not clk_state.curr)
-            self.state.wait_interval(self, self.period // 2)
+            clk_state.update(not clk_state.curr)
+            self.state.set_delay_waker(self.period // 2, waker)

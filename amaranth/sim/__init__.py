@@ -1,4 +1,8 @@
 from .core import *
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+__all__ = [
+    "DomainReset", "BrokenTrigger", "Simulator",
+    # deprecated
+    "Settle", "Delay", "Tick", "Passive", "Active",
+]

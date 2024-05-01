@@ -7,9 +7,9 @@ import enum as py_enum
 from ..hdl import *
 from ..hdl._ast import SignalDict
 from ._base import *
-from ._pyeval import eval_format, eval_value
+from ._async import *
+from ._pyeval import eval_format, eval_value, eval_assign
 from ._pyrtl import _FragmentCompiler
-from ._pycoro import PyCoroProcess
 from ._pyclock import PyClockProcess
 
 
@@ -268,16 +268,6 @@ class _VCDWriter:
                 var_value = eval_format(self.state, repr)
             self.vcd_writer.change(vcd_var, timestamp, var_value)
 
-    def update_process(self, timestamp, process, command):
-        try:
-            vcd_var = self.vcd_process_vars[process]
-        except KeyError:
-            return
-        # Ensure that the waveform viewer displays a change point even if the previous command is
-        # the same as the next one.
-        self.vcd_writer.change(vcd_var, timestamp, "")
-        self.vcd_writer.change(vcd_var, timestamp, repr(command))
-
     def close(self, timestamp):
         if self.vcd_writer is not None:
             self.vcd_writer.close(timestamp)
@@ -307,80 +297,80 @@ class _VCDWriter:
             self.gtkw_file.close()
 
 
-class _Timeline:
+class _PyTimeline:
     def __init__(self):
         self.now = 0
-        self.deadlines = dict()
+        self.wakers = {}
 
     def reset(self):
         self.now = 0
-        self.deadlines.clear()
+        self.wakers.clear()
 
-    def at(self, run_at, process):
-        assert process not in self.deadlines
-        self.deadlines[process] = run_at
-
-    def delay(self, delay_by, process):
-        if delay_by is None:
-            run_at = self.now
-        else:
-            run_at = self.now + delay_by
-        self.at(run_at, process)
+    def set_waker(self, interval, waker):
+        self.wakers[waker] = self.now + interval
 
     def advance(self):
-        nearest_processes = set()
+        nearest_wakers = set()
         nearest_deadline = None
-        for process, deadline in self.deadlines.items():
-            if deadline is None:
-                if nearest_deadline is not None:
-                    nearest_processes.clear()
-                nearest_processes.add(process)
-                nearest_deadline = self.now
-                break
-            elif nearest_deadline is None or deadline <= nearest_deadline:
+        for waker, deadline in self.wakers.items():
+            if nearest_deadline is None or deadline <= nearest_deadline:
                 assert deadline >= self.now
                 if nearest_deadline is not None and deadline < nearest_deadline:
-                    nearest_processes.clear()
-                nearest_processes.add(process)
+                    nearest_wakers.clear()
+                nearest_wakers.add(waker)
                 nearest_deadline = deadline
 
-        if not nearest_processes:
+        if not nearest_wakers:
             return False
 
-        for process in nearest_processes:
-            process.runnable = True
-            del self.deadlines[process]
-        self.now = nearest_deadline
+        for waker in nearest_wakers:
+            waker()
+            del self.wakers[waker]
 
+        self.now = nearest_deadline
         return True
 
 
+def _run_wakers(wakers: list, *args):
+    # Python doesn't have `.retain()` :(
+    index = 0
+    for waker in wakers:
+        if waker(*args):
+            wakers[index] = waker
+            index += 1
+    del wakers[index:]
+
+
 class _PySignalState(BaseSignalState):
-    __slots__ = ("signal", "is_comb", "curr", "next", "waiters", "pending")
+    __slots__ = ("signal", "is_comb", "curr", "next", "wakers", "pending")
 
     def __init__(self, signal, pending):
-        self.signal = signal
+        self.signal  = signal
         self.is_comb = False
         self.pending = pending
-        self.waiters = {}
-        self.curr = self.next = signal.init
+        self.wakers  = list()
+        self.reset()
 
-    def set(self, value):
-        if self.next == value:
-            return
-        self.next = value
-        self.pending.add(self)
+    def reset(self):
+        self.curr = self.next = self.signal.init
+
+    def add_waker(self, waker):
+        assert waker not in self.wakers
+        self.wakers.append(waker)
+
+    def update(self, value):
+        if self.next != value:
+            self.next = value
+            self.pending.add(self)
 
     def commit(self):
         if self.curr == self.next:
             return False
-        self.curr = self.next
 
-        awoken_any = False
-        for process, trigger in self.waiters.items():
-            if trigger is None or trigger == self.curr:
-                process.runnable = awoken_any = True
-        return awoken_any
+        _run_wakers(self.wakers, self.curr, self.next)
+
+        self.curr = self.next
+        return True
 
 
 class _PyMemoryChange:
@@ -388,73 +378,65 @@ class _PyMemoryChange:
 
     def __init__(self, state, addr):
         self.state = state
-        self.addr = addr
+        self.addr  = addr
 
 
 class _PyMemoryState(BaseMemoryState):
-    __slots__ = ("memory", "data", "write_queue", "waiters", "pending")
+    __slots__ = ("memory", "data", "write_queue", "wakers", "pending")
 
     def __init__(self, memory, pending):
-        self.memory = memory
+        self.memory  = memory
         self.pending = pending
-        self.waiters = {}
+        self.wakers  = list()
         self.reset()
 
     def reset(self):
         self.data = list(self.memory._init._raw)
-        self.write_queue = []
+        self.write_queue = {}
 
-    def commit(self):
-        if not self.write_queue:
-            return False
-
-        for addr, value, mask in self.write_queue:
-            curr = self.data[addr]
-            value = (value & mask) | (curr & ~mask)
-            self.data[addr] = value
-        self.write_queue.clear()
-
-        awoken_any = False
-        for process in self.waiters:
-            process.runnable = awoken_any = True
-        return awoken_any
+    def add_waker(self, waker):
+        assert waker not in self.wakers
+        self.wakers.append(waker)
 
     def read(self, addr):
-        if addr not in range(self.memory.depth):
-            return 0
-
-        return self.data[addr]
+        if addr in range(self.memory.depth):
+            return self.data[addr]
+        return 0
 
     def write(self, addr, value, mask=None):
-        if addr not in range(self.memory.depth):
-            return
-        if mask == 0:
-            return
+        if addr in range(self.memory.depth):
+            if addr not in self.write_queue:
+                self.write_queue[addr] = self.data[addr]
+            if mask is not None:
+                value = (value & mask) | (self.write_queue[addr] & ~mask)
+            self.write_queue[addr] = value
+            self.pending.add(self)
 
-        if mask is None:
-            mask = (1 << Shape.cast(self.memory.shape).width) - 1
+    def commit(self):
+        assert self.write_queue # `commit()` is only called if `self` is pending
 
-        self.write_queue.append((addr, value, mask))
-        self.pending.add(self)
+        _run_wakers(self.wakers)
+
+        changed = False
+        for addr, value in self.write_queue.items():
+            if self.data[addr] != value:
+                self.data[addr] = value
+                changed = True
+        self.write_queue.clear()
+        return changed
 
 
-class _PySimulation(BaseSimulation):
+class _PyEngineState(BaseEngineState):
     def __init__(self):
-        self.timeline  = _Timeline()
-        self.signals   = SignalDict()
-        self.memories  = {}
-        self.slots     = []
-        self.pending   = set()
+        self.timeline = _PyTimeline()
+        self.signals  = SignalDict()
+        self.memories = dict()
+        self.slots    = list()
+        self.pending  = set()
 
     def reset(self):
         self.timeline.reset()
-        for signal, index in self.signals.items():
-            state = self.slots[index]
-            assert isinstance(state, _PySignalState)
-            state.curr = state.next = signal.init
-        for index in self.memories.values():
-            state = self.slots[index]
-            assert isinstance(state, _PyMemoryState)
+        for state in self.slots:
             state.reset()
         self.pending.clear()
 
@@ -476,35 +458,21 @@ class _PySimulation(BaseSimulation):
             self.memories[memory] = index
             return index
 
-    def add_signal_trigger(self, process, signal, *, trigger=None):
-        index = self.get_signal(signal)
-        assert (process not in self.slots[index].waiters or
-                self.slots[index].waiters[process] == trigger)
-        self.slots[index].waiters[process] = trigger
+    def set_delay_waker(self, interval, waker):
+        self.timeline.set_waker(interval, waker)
 
-    def remove_signal_trigger(self, process, signal):
-        index = self.get_signal(signal)
-        assert process in self.slots[index].waiters
-        del self.slots[index].waiters[process]
+    def add_signal_waker(self, signal, waker):
+        self.slots[self.get_signal(signal)].add_waker(waker)
 
-    def add_memory_trigger(self, process, memory):
-        index = self.get_memory(memory)
-        self.slots[index].waiters[process] = None
-
-    def remove_memory_trigger(self, process, memory):
-        index = self.get_memory(memory)
-        assert process in self.slots[index].waiters
-        del self.slots[index].waiters[process]
-
-    def wait_interval(self, process, interval):
-        self.timeline.delay(interval, process)
+    def add_memory_waker(self, memory, waker):
+        self.slots[self.get_memory(memory)].add_waker(waker)
 
     def commit(self, changed=None):
         converged = True
         for state in self.pending:
             if changed is not None:
                 if isinstance(state, _PyMemoryState):
-                    for addr, _value, _mask in state.write_queue:
+                    for addr in state.write_queue:
                         changed.add(_PyMemoryChange(state, addr))
                 elif isinstance(state, _PySignalState):
                     changed.add(state)
@@ -516,57 +484,177 @@ class _PySimulation(BaseSimulation):
         return converged
 
 
+class _PyTriggerState:
+    def __init__(self, engine, combination, pending, *, oneshot):
+        self._engine = engine
+        self._combination = combination
+        self._active = pending
+        self._oneshot = oneshot
+
+        self._result = None
+        self._broken = False
+        self._triggers_hit = set()
+        self._delay_wakers = dict()
+
+        for trigger in combination._triggers:
+            if isinstance(trigger, SampleTrigger):
+                pass # does not cause a wakeup
+            elif isinstance(trigger, ChangedTrigger):
+                self.add_changed_waker(trigger)
+            elif isinstance(trigger, EdgeTrigger):
+                self.add_edge_waker(trigger)
+            elif isinstance(trigger, DelayTrigger):
+                self.add_delay_waker(trigger)
+            else:
+                assert False # :nocov:
+
+    def add_changed_waker(self, trigger):
+        def waker(curr, next):
+            if self._broken:
+                return False
+            self.activate()
+            return not self._oneshot
+        self._engine.state.add_signal_waker(trigger.signal, waker)
+
+    def add_edge_waker(self, trigger):
+        def waker(curr, next):
+            if self._broken:
+                return False
+            curr_bit = (curr >> trigger.bit) & 1
+            next_bit = (next >> trigger.bit) & 1
+            if curr_bit == next_bit or next_bit != trigger.polarity:
+                return True # wait until next edge
+            self._triggers_hit.add(trigger)
+            self.activate()
+            return not self._oneshot
+        self._engine.state.add_signal_waker(trigger.signal, waker)
+
+    def add_delay_waker(self, trigger):
+        def waker():
+            if self._broken:
+                return
+            self._triggers_hit.add(trigger)
+            self.activate()
+        self._engine.state.set_delay_waker(trigger.interval_fs, waker)
+        self._delay_wakers[waker] = trigger.interval_fs
+
+    def activate(self):
+        if self._combination._process.waits_on is self:
+            self._active.add(self)
+        else:
+            self._broken = True
+
+    def run(self):
+        result = []
+        for trigger in self._combination._triggers:
+            if isinstance(trigger, (SampleTrigger, ChangedTrigger)):
+                value = self._engine.get_value(trigger.value)
+                if isinstance(trigger.shape, ShapeCastable):
+                    result.append(trigger.shape.from_bits(value))
+                else:
+                    result.append(value)
+            elif isinstance(trigger, (EdgeTrigger, DelayTrigger)):
+                result.append(trigger in self._triggers_hit)
+            else:
+                assert False # :nocov:
+        self._result = tuple(result)
+
+        self._combination._process.runnable = True
+        self._combination._process.waits_on = None
+        self._triggers_hit.clear()
+        for waker, interval_fs in self._delay_wakers.items():
+            self._engine.state.set_delay_waker(interval_fs, waker)
+
+    def __await__(self):
+        self._result = None
+        if self._broken:
+            raise BrokenTrigger
+        yield self
+        if self._broken:
+            raise BrokenTrigger
+        return self._result
+
+
 class PySimEngine(BaseEngine):
     def __init__(self, design):
-        self._state = _PySimulation()
-        self._timeline = self._state.timeline
-
         self._design = design
+
+        self._state = _PyEngineState()
         self._processes = _FragmentCompiler(self._state)(self._design.fragment)
         self._testbenches = []
         self._delta_cycles = 0
         self._vcd_writers = []
+        self._active_triggers = set()
 
-    def add_clock_process(self, clock, *, phase, period):
-        self._processes.add(PyClockProcess(self._state, clock,
-                                           phase=phase, period=period))
+    @property
+    def state(self) -> BaseEngineState:
+        return self._state
 
-    def add_coroutine_process(self, process, *, default_cmd):
-        self._processes.add(PyCoroProcess(self._state, self._design.fragment.domains, process,
-                                          default_cmd=default_cmd))
+    @property
+    def now(self):
+        return self._state.timeline.now
 
-    def add_testbench_process(self, process):
-        self._testbenches.append(PyCoroProcess(self._state, self._design.fragment.domains, process,
-                                               testbench=True, on_command=self._debug_process))
+    def _now_plus_deltas(self, fs_per_delta):
+        return self._state.timeline.now + self._delta_cycles * fs_per_delta
 
     def reset(self):
         self._state.reset()
         for process in self._processes:
             process.reset()
 
-    def _step_rtl(self):
-        # Performs the two phases of a delta cycle in a loop:
+    def add_clock_process(self, clock, *, phase, period):
+        self._processes.add(PyClockProcess(self._state, clock,
+                                           phase=phase, period=period))
+
+    def add_async_process(self, simulator, process):
+        self._processes.add(AsyncProcess(self._design, self, process,
+                                         testbench=False, background=True))
+
+    def add_async_testbench(self, simulator, process, *, background):
+        self._testbenches.append(AsyncProcess(self._design, self, process,
+                                              testbench=True, background=background))
+
+    def add_trigger_combination(self, combination, *, oneshot):
+        return _PyTriggerState(self, combination, self._active_triggers, oneshot=oneshot)
+
+    def get_value(self, expr):
+        return eval_value(self._state, Value.cast(expr))
+
+    def set_value(self, expr, value):
+        assert isinstance(value, int)
+        return eval_assign(self._state, Value.cast(expr), value)
+
+    def step_design(self):
+        # Performs the three phases of a delta cycle in a loop:
         converged = False
         while not converged:
             changed = set() if self._vcd_writers else None
 
-            # 1. eval: run and suspend every non-waiting process once, queueing signal changes
+            # 1a. trigger: run every active trigger, sampling values and waking up processes;
+            for trigger_state in self._active_triggers:
+                trigger_state.run()
+            self._active_triggers.clear()
+
+            # 1b. eval: run every runnable processes once, queueing signal changes;
             for process in self._processes:
                 if process.runnable:
                     process.runnable = False
                     process.run()
+                    if type(process) is AsyncProcess and process.waits_on is not None:
+                        assert type(process.waits_on) is _PyTriggerState, \
+                            "Async processes may only await simulation triggers"
 
-            # 2. commit: apply every queued signal change, waking up any waiting processes
+            # 2. commit: apply queued signal changes, activating any awaited triggers.
             converged = self._state.commit(changed)
 
             for vcd_writer in self._vcd_writers:
-                now_plus_deltas = self._now_plus_deltas(vcd_writer)
+                now_plus_deltas = self._now_plus_deltas(vcd_writer.fs_per_delta)
                 for change in changed:
-                    if isinstance(change, _PySignalState):
+                    if type(change) is _PySignalState:
                         signal_state = change
                         vcd_writer.update_signal(now_plus_deltas,
                             signal_state.signal)
-                    elif isinstance(change, _PyMemoryChange):
+                    elif type(change) is _PyMemoryChange:
                         vcd_writer.update_memory(now_plus_deltas, change.state.memory,
                             change.addr)
                     else:
@@ -574,41 +662,33 @@ class PySimEngine(BaseEngine):
 
             self._delta_cycles += 1
 
-    def _debug_process(self, process, command):
-        for vcd_writer in self._vcd_writers:
-            now_plus_deltas = self._now_plus_deltas(vcd_writer)
-            vcd_writer.update_process(now_plus_deltas, process, command)
+    def advance(self):
+        # Run triggers and processes until the simulation converges.
+        self.step_design()
 
-        self._delta_cycles += 1
-
-    def _step_tb(self):
-        # Run processes waiting for an interval to expire (mainly `add_clock_process()``)
-        self._step_rtl()
-
-        # Run testbenches waiting for an interval to expire, or for a signal to change state
+        # Run testbenches that have been awoken in `step_design()` by active triggers.
         converged = False
         while not converged:
             converged = True
-            # Schedule testbenches in a deterministic, predictable order by iterating a list
+            # Schedule testbenches in a deterministic order (the one in which they were added).
             for testbench in self._testbenches:
                 if testbench.runnable:
                     testbench.runnable = False
-                    while testbench.run():
-                        # Testbench has changed simulation state; run processes triggered by that
-                        converged = False
-                        self._step_rtl()
+                    testbench.run()
+                    if type(testbench) is AsyncProcess and testbench.waits_on is not None:
+                        assert type(testbench.waits_on) is _PyTriggerState, \
+                            "Async testbenches may only await simulation triggers"
+                    converged = False
 
-    def advance(self):
-        self._step_tb()
-        self._timeline.advance()
-        return any(not process.passive for process in (*self._processes, *self._testbenches))
+        # Now that the simulation has converged for the current time, advance the timeline.
+        self._state.timeline.advance()
 
-    @property
-    def now(self):
-        return self._timeline.now
-
-    def _now_plus_deltas(self, vcd_writer):
-        return self._timeline.now + self._delta_cycles * vcd_writer.fs_per_delta
+        # Check if the simulation has any critical processes or testbenches.
+        for runnables in (self._processes, self._testbenches):
+            for runnable in runnables:
+                if runnable.critical:
+                    return True
+        return False
 
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
@@ -619,5 +699,5 @@ class PySimEngine(BaseEngine):
             self._vcd_writers.append(vcd_writer)
             yield
         finally:
-            vcd_writer.close(self._now_plus_deltas(vcd_writer))
+            vcd_writer.close(self._now_plus_deltas(vcd_writer.fs_per_delta))
             self._vcd_writers.remove(vcd_writer)

@@ -1,15 +1,14 @@
-__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseSimulation", "BaseEngine"]
+__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState", "BaseEngine"]
 
 
 class BaseProcess:
     __slots__ = ()
 
-    def __init__(self):
-        self.reset()
+    runnable = False
+    critical = False
 
     def reset(self):
-        self.runnable = False
-        self.passive  = True
+        raise NotImplementedError # :nocov:
 
     def run(self):
         raise NotImplementedError # :nocov:
@@ -24,7 +23,7 @@ class BaseSignalState:
     curr = NotImplemented
     next = NotImplemented
 
-    def set(self, value):
+    def update(self, value):
         raise NotImplementedError # :nocov:
 
 
@@ -40,7 +39,7 @@ class BaseMemoryState:
         raise NotImplementedError # :nocov:
 
 
-class BaseSimulation:
+class BaseEngineState:
     def reset(self):
         raise NotImplementedError # :nocov:
 
@@ -52,37 +51,47 @@ class BaseSimulation:
 
     slots = NotImplemented
 
-    def add_signal_trigger(self, process, signal, *, trigger=None):
+    def set_delay_waker(self, interval, waker):
         raise NotImplementedError # :nocov:
 
-    def remove_signal_trigger(self, process, signal):
+    def add_signal_waker(self, signal, waker):
         raise NotImplementedError # :nocov:
 
-    def add_memory_trigger(self, process, memory):
-        raise NotImplementedError # :nocov:
-
-    def remove_memory_trigger(self, process, memory):
-        raise NotImplementedError # :nocov:
-
-    def wait_interval(self, process, interval):
+    def add_memory_waker(self, memory, waker):
         raise NotImplementedError # :nocov:
 
 
 class BaseEngine:
-    def add_clock_process(self, clock, *, phase, period):
+    @property
+    def state(self) -> BaseEngineState:
         raise NotImplementedError # :nocov:
 
-    def add_coroutine_process(self, process, *, default_cmd):
-        raise NotImplementedError # :nocov:
-
-    def add_testbench_process(self, process):
+    @property
+    def now(self):
         raise NotImplementedError # :nocov:
 
     def reset(self):
         raise NotImplementedError # :nocov:
 
-    @property
-    def now(self):
+    def add_clock_process(self, clock, *, phase, period):
+        raise NotImplementedError # :nocov:
+
+    def add_async_process(self, simulator, process):
+        raise NotImplementedError # :nocov:
+
+    def add_async_testbench(self, simulator, process, *, background):
+        raise NotImplementedError # :nocov:
+
+    def add_trigger_combination(self, combination, *, oneshot):
+        raise NotImplementedError # :nocov:
+
+    def get_value(self, expr):
+        raise NotImplementedError # :nocov:
+
+    def set_value(self, expr, value):
+        raise NotImplementedError # :nocov:
+
+    def step_design(self):
         raise NotImplementedError # :nocov:
 
     def advance(self):
