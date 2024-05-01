@@ -7,10 +7,16 @@ from ..hdl._ir import *
 from ..hdl._ast import Value, ValueLike
 from ..hdl._mem import MemoryData
 from ._base import BaseEngine
-from ._pycoro import Tick, Settle, Delay, Passive, Active
+from ._async import DomainReset, BrokenTrigger
+from ._pycoro import Tick, Settle, Delay, Passive, Active, coro_wrapper
 
 
-__all__ = ["Settle", "Delay", "Tick", "Passive", "Active", "Simulator"]
+__all__ = [
+    "DomainReset", "BrokenTrigger",
+    "Simulator",
+    # deprecated
+    "Settle", "Delay", "Tick", "Passive", "Active",
+]
 
 
 class Simulator:
@@ -37,11 +43,23 @@ class Simulator:
 
     def add_process(self, process):
         process = self._check_process(process)
-        def wrapper():
-            # Only start a bench process after comb settling, so that the initial values are correct.
-            yield object.__new__(Settle)
-            yield from process()
-        self._engine.add_coroutine_process(wrapper, default_cmd=None)
+        if inspect.iscoroutinefunction(process):
+            self._engine.add_async_process(self, process)
+        else:
+            def wrapper():
+                # Only start a bench process after comb settling, so that the initial values are correct.
+                yield Active()
+                yield object.__new__(Settle)
+                yield from process()
+            wrap_process = coro_wrapper(wrapper, testbench=False)
+            self._engine.add_async_process(self, wrap_process)
+
+    def add_testbench(self, process, *, background=False):
+        if inspect.iscoroutinefunction(process):
+            self._engine.add_async_testbench(self, process, background=background)
+        else:
+            process = coro_wrapper(process, testbench=True)
+            self._engine.add_async_testbench(self, process, background=background)
 
     @deprecated("The `add_sync_process` method is deprecated per RFC 27. Use `add_process` or `add_testbench` instead.")
     def add_sync_process(self, process, *, domain="sync"):
@@ -52,6 +70,7 @@ class Simulator:
             generator = process()
             result = None
             exception = None
+            yield Active()
             yield Tick(domain)
             while True:
                 try:
@@ -67,10 +86,8 @@ class Simulator:
                 except Exception as e:
                     result = None
                     exception = e
-        self._engine.add_coroutine_process(wrapper, default_cmd=Tick(domain))
-
-    def add_testbench(self, process):
-        self._engine.add_testbench_process(self._check_process(process))
+        wrap_process = coro_wrapper(wrapper, testbench=False, default_cmd=Tick(domain))
+        self._engine.add_async_process(self, wrap_process)
 
     def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
         """Add a clock process.

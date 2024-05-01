@@ -18,7 +18,7 @@ _USE_PATTERN_MATCHING = (sys.version_info >= (3, 10))
 
 
 class PyRTLProcess(BaseProcess):
-    __slots__ = ("is_comb", "runnable", "passive", "run")
+    __slots__ = ("is_comb", "runnable", "critical", "run")
 
     def __init__(self, *, is_comb):
         self.is_comb  = is_comb
@@ -27,7 +27,7 @@ class PyRTLProcess(BaseProcess):
 
     def reset(self):
         self.runnable = self.is_comb
-        self.passive  = True
+        self.critical = False
 
 
 class _PythonEmitter:
@@ -443,8 +443,30 @@ class _StatementCompiler(StatementVisitor, _Compiler):
         compiler = cls(state, emitter)
         compiler(stmt)
         for signal_index in output_indexes:
-            emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
+            emitter.append(f"slots[{signal_index}].update(next_{signal_index})")
         return emitter.flush()
+
+
+def comb_waker(process):
+    def waker(curr, next):
+        process.runnable = True
+        return True
+    return waker
+
+
+def edge_waker(process, polarity):
+    def waker(curr, next):
+        if next == polarity:
+            process.runnable = True
+        return True
+    return waker
+
+
+def memory_waker(process):
+    def waker():
+        process.runnable = True
+        return True
+    return waker
 
 
 class _FragmentCompiler:
@@ -486,7 +508,7 @@ class _FragmentCompiler:
                 _StatementCompiler(self.state, emitter, inputs=inputs)(domain_stmts)
 
                 if isinstance(fragment, MemoryInstance):
-                    self.state.add_memory_trigger(domain_process, fragment._data)
+                    self.state.add_memory_waker(fragment._data, memory_waker(domain_process))
                     memory_index = self.state.get_memory(fragment._data)
                     rhs = _RHSValueCompiler(self.state, emitter, mode="curr", inputs=inputs)
                     lhs = _LHSValueCompiler(self.state, emitter, rhs=rhs)
@@ -500,16 +522,16 @@ class _FragmentCompiler:
                         data = emitter.def_var("read_data", f"slots[{memory_index}].read({addr})")
                         lhs(port._data)(data)
 
+                waker = comb_waker(domain_process)
                 for input in inputs:
-                    self.state.add_signal_trigger(domain_process, input)
+                    self.state.add_signal_waker(input, waker)
 
             else:
                 domain = fragment.domains[domain_name]
-                clk_trigger = 1 if domain.clk_edge == "pos" else 0
-                self.state.add_signal_trigger(domain_process, domain.clk, trigger=clk_trigger)
-                if domain.rst is not None and domain.async_reset:
-                    rst_trigger = 1
-                    self.state.add_signal_trigger(domain_process, domain.rst, trigger=rst_trigger)
+                clk_polarity = 1 if domain.clk_edge == "pos" else 0
+                self.state.add_signal_waker(domain.clk, edge_waker(domain_process, clk_polarity))
+                if domain.async_reset and domain.rst is not None:
+                    self.state.add_signal_waker(domain.rst, edge_waker(domain_process, 1))
 
                 for signal in domain_signals:
                     signal_index = self.state.get_signal(signal)
@@ -572,7 +594,7 @@ class _FragmentCompiler:
 
             for signal in domain_signals:
                 signal_index = self.state.get_signal(signal)
-                emitter.append(f"slots[{signal_index}].set(next_{signal_index})")
+                emitter.append(f"slots[{signal_index}].update(next_{signal_index})")
 
             # There shouldn't be any exceptions raised by the generated code, but if there are
             # (almost certainly due to a bug in the code generator), use this environment variable
