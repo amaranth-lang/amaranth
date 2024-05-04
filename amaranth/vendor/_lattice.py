@@ -77,7 +77,7 @@ class IOBuffer(io.Buffer):
         return m
 
 
-def _make_oereg(m, domain, oe, q):
+def _make_oereg_ecp5_machxo2(m, domain, oe, q):
     for bit in range(len(q)):
         m.submodules[f"oe_ff{bit}"] = Instance("OFS1P3DX",
             i_SCLK=ClockSignal(domain),
@@ -88,7 +88,18 @@ def _make_oereg(m, domain, oe, q):
         )
 
 
-class FFBuffer(io.FFBuffer):
+def _make_oereg_nexus(m, domain, oe, q):
+    for bit in range(len(q)):
+        m.submodules[f"oe_ff{bit}"] = Instance("OFD1P3DX",
+            i_CK=ClockSignal(domain),
+            i_SP=Const(1),
+            i_CD=Const(0),
+            i_D=oe,
+            o_Q=q[bit],
+        )
+
+
+class FFBufferECP5(io.FFBuffer):
     def elaborate(self, platform):
         m = Module()
 
@@ -118,7 +129,42 @@ class FFBuffer(io.FFBuffer):
                     i_D=o_inv[bit],
                     o_Q=buf.o[bit],
                 )
-            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+            _make_oereg_ecp5_machxo2(m, self.o_domain, ~self.oe, buf.t)
+
+        return m
+
+
+class FFBufferNexus(io.FFBuffer):
+    def elaborate(self, platform):
+        m = Module()
+
+        m.submodules.buf = buf = InnerBuffer(self.direction, self.port)
+        inv_mask = sum(inv << bit for bit, inv in enumerate(self.port.invert))
+
+        if self.direction is not io.Direction.Output:
+            i_inv = Signal.like(self.i)
+            for bit in range(len(self.port)):
+                m.submodules[f"i_ff{bit}"] = Instance("IFD1P3DX",
+                    i_CK=ClockSignal(self.i_domain),
+                    i_SP=Const(1),
+                    i_CD=Const(0),
+                    i_D=buf.i[bit],
+                    o_Q=i_inv[bit],
+                )
+            m.d.comb += self.i.eq(i_inv ^ inv_mask)
+
+        if self.direction is not io.Direction.Input:
+            o_inv = Signal.like(self.o)
+            m.d.comb += o_inv.eq(self.o ^ inv_mask)
+            for bit in range(len(self.port)):
+                m.submodules[f"o_ff{bit}"] = Instance("OFD1P3DX",
+                    i_CK=ClockSignal(self.o_domain),
+                    i_SP=Const(1),
+                    i_CD=Const(0),
+                    i_D=o_inv[bit],
+                    o_Q=buf.o[bit],
+                )
+            _make_oereg_nexus(m, self.o_domain, ~self.oe, buf.t)
 
         return m
 
@@ -159,7 +205,7 @@ class DDRBufferECP5(io.DDRBuffer):
                     i_D1=o1_inv[bit],
                     o_Q=buf.o[bit],
                 )
-            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+            _make_oereg_ecp5_machxo2(m, self.o_domain, ~self.oe, buf.t)
 
         return m
 
@@ -200,7 +246,7 @@ class DDRBufferMachXO2(io.DDRBuffer):
                     i_D1=o1_inv[bit],
                     o_Q=buf.o[bit],
                 )
-            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+            _make_oereg_ecp5_machxo2(m, self.o_domain, ~self.oe, buf.t)
 
         return m
 
@@ -241,7 +287,7 @@ class DDRBufferNexus(io.DDRBuffer):
                     i_D1=o1_inv[bit],
                     o_Q=buf.o[bit],
                 )
-            _make_oereg(m, self.o_domain, ~self.oe, buf.t)
+            _make_oereg_nexus(m, self.o_domain, ~self.oe, buf.t)
 
         return m
 
@@ -951,7 +997,12 @@ class LatticePlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            if self.family in ("ecp5", "machxo2"):
+                result = FFBufferECP5(buffer.direction, buffer.port)
+            elif self.family == "nexus":
+                result = FFBufferNexus(buffer.direction, buffer.port)
+            else:
+                raise NotImplementedError # :nocov:
         elif isinstance(buffer, io.DDRBuffer):
             if self.family == "ecp5":
                 result = DDRBufferECP5(buffer.direction, buffer.port)
