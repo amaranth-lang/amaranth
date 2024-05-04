@@ -472,6 +472,53 @@ class FFBufferTestCase(FHDLTestCase):
                 r"^Output buffer doesn't have an input domain$"):
             FFBuffer("o", port, i_domain="input")
 
+    def test_create_from(self):
+        io = IOPort(4)
+        port = SingleEndedPort(io)
+        original_buf = FFBuffer("i", port)
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Input)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "FFBuffer.Signature(Direction.Input, 4).flip()")
+        self.assertEqual(buf.i_domain, "sync")
+        with self.assertRaisesRegex(AttributeError,
+                r"^Input buffer doesn't have an output domain$"):
+            buf.o_domain
+        original_buf = FFBuffer("i", port, i_domain="inp")
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.i_domain, "inp")
+        original_buf = FFBuffer("o", port)
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Output)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "FFBuffer.Signature(Direction.Output, 4).flip()")
+        self.assertEqual(buf.o_domain, "sync")
+        with self.assertRaisesRegex(AttributeError,
+                r"^Output buffer doesn't have an input domain$"):
+            buf.i_domain
+        original_buf = FFBuffer("o", port, o_domain="out")
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.o_domain, "out")
+        original_buf = FFBuffer("io", port)
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Bidir)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "FFBuffer.Signature(Direction.Bidir, 4).flip()")
+        self.assertEqual(buf.i_domain, "sync")
+        self.assertEqual(buf.o_domain, "sync")
+        original_buf = FFBuffer("io", port, i_domain="input", o_domain="output")
+        buf = FFBuffer.create_from(original_buf)
+        self.assertEqual(buf.i_domain, "input")
+        self.assertEqual(buf.o_domain, "output")
+
+    def test_create_from_wrong(self):
+        io = IOPort(4)
+        port = SingleEndedPort(io)
+        original_buf = Buffer("i", port)
+        with self.assertRaisesRegex(TypeError,
+                r"^'buffer' must be a FFBuffer to create a <class 'amaranth.lib.io.FFBuffer'>$"):
+            FFBuffer.create_from(original_buf)
+
     def test_elaborate(self):
         io = IOPort(4)
 
@@ -713,6 +760,53 @@ class DDRBufferTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Output buffer doesn't have an input domain$"):
             DDRBuffer("o", port, i_domain="input")
+
+    def test_create_from(self):
+        io = IOPort(4)
+        port = SingleEndedPort(io)
+        original_buf = DDRBuffer("i", port)
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Input)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "DDRBuffer.Signature(Direction.Input, 4).flip()")
+        self.assertEqual(buf.i_domain, "sync")
+        with self.assertRaisesRegex(AttributeError,
+                r"^Input buffer doesn't have an output domain$"):
+            buf.o_domain
+        original_buf = DDRBuffer("i", port, i_domain="inp")
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.i_domain, "inp")
+        original_buf = DDRBuffer("o", port)
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Output)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "DDRBuffer.Signature(Direction.Output, 4).flip()")
+        self.assertEqual(buf.o_domain, "sync")
+        with self.assertRaisesRegex(AttributeError,
+                r"^Output buffer doesn't have an input domain$"):
+            buf.i_domain
+        original_buf = DDRBuffer("o", port, o_domain="out")
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.o_domain, "out")
+        original_buf = DDRBuffer("io", port)
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.direction, Direction.Bidir)
+        self.assertIs(buf.port, port)
+        self.assertRepr(buf.signature, "DDRBuffer.Signature(Direction.Bidir, 4).flip()")
+        self.assertEqual(buf.i_domain, "sync")
+        self.assertEqual(buf.o_domain, "sync")
+        original_buf = DDRBuffer("io", port, i_domain="input", o_domain="output")
+        buf = DDRBuffer.create_from(original_buf)
+        self.assertEqual(buf.i_domain, "input")
+        self.assertEqual(buf.o_domain, "output")
+
+    def test_create_from_wrong(self):
+        io = IOPort(4)
+        port = SingleEndedPort(io)
+        original_buf = Buffer("i", port)
+        with self.assertRaisesRegex(TypeError,
+                r"^'buffer' must be a DDRBuffer to create a <class 'amaranth.lib.io.DDRBuffer'>$"):
+            DDRBuffer.create_from(original_buf)
 
 
 class PinSignatureTestCase(FHDLTestCase):
