@@ -543,9 +543,9 @@ class GowinPlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            result = FFBuffer.create_from(buffer)
         elif isinstance(buffer, io.DDRBuffer):
-            result = DDRBuffer(buffer.direction, buffer.port)
+            result = DDRBuffer.create_from(buffer)
         else:
             raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
         if buffer.direction is not io.Direction.Output:

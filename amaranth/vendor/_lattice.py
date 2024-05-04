@@ -951,14 +951,14 @@ class LatticePlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            result = FFBuffer.create_from(buffer)
         elif isinstance(buffer, io.DDRBuffer):
             if self.family == "ecp5":
-                result = DDRBufferECP5(buffer.direction, buffer.port)
+                result = DDRBufferECP5.create_from(buffer)
             elif self.family == "machxo2":
-                result = DDRBufferMachXO2(buffer.direction, buffer.port)
+                result = DDRBufferMachXO2.create_from(buffer)
             elif self.family == "nexus":
-                result = DDRBufferNexus(buffer.direction, buffer.port)
+                result = DDRBufferNexus.create_from(buffer)
             else:
                 raise NotImplementedError # :nocov:
         else:

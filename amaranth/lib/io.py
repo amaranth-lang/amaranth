@@ -488,6 +488,21 @@ class FFBuffer(wiring.Component):
         if port.direction is Direction.Output and self.direction is not Direction.Output:
             raise ValueError(f"Output port cannot be used with {self.direction.name} buffer")
 
+    @classmethod
+    def create_from(cls, buffer):
+        """Called on classes which inherit from :class:`FFBuffer` but do not
+        overload the constructor.  This method calls the :class:`FFBuffer`
+        constructor above to create a new instance.
+        """
+
+        if not isinstance(buffer, FFBuffer):
+            raise TypeError(f"'buffer' must be a FFBuffer to create a {cls!r}")
+
+        i_domain = getattr(buffer, '_i_domain', None)
+        o_domain = getattr(buffer, '_o_domain', None)
+
+        return cls(buffer.direction, buffer.port, i_domain=i_domain, o_domain=o_domain)
+
     @property
     def port(self):
         return self._port
@@ -618,6 +633,21 @@ class DDRBuffer(wiring.Component):
             raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
         if port.direction is Direction.Output and self.direction is not Direction.Output:
             raise ValueError(f"Output port cannot be used with {self.direction.name} buffer")
+
+    @classmethod
+    def create_from(cls, buffer):
+        """Called on classes which inherit from :class:`DDRBuffer` but do not
+        overload the constructor.  This method calls the :class:`DDRBuffer`
+        constructor to create a new instance.
+        """
+
+        if not isinstance(buffer, DDRBuffer):
+            raise TypeError(f"'buffer' must be a DDRBuffer to create a {cls!r}")
+
+        i_domain = getattr(buffer, '_i_domain', None)
+        o_domain = getattr(buffer, '_o_domain', None)
+
+        return cls(buffer.direction, buffer.port, i_domain=i_domain, o_domain=o_domain)
 
     @property
     def port(self):

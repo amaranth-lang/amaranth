@@ -1168,16 +1168,16 @@ class XilinxPlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            result = FFBuffer.create_from(buffer)
         elif isinstance(buffer, io.DDRBuffer):
             if self.family in ("virtex2", "virtex2p", "spartan3"):
-                result = DDRBufferVirtex2(buffer.direction, buffer.port)
+                result = DDRBufferVirtex2.create_from(buffer)
             elif self.family in ("spartan3e", "spartan3a", "spartan3adsp", "spartan6"):
-                result = DDRBufferSpartan3E(buffer.direction, buffer.port)
+                result = DDRBufferSpartan3E.create_from(buffer)
             elif self.family in ("virtex4", "virtex5", "virtex6", "series7"):
-                result = DDRBufferVirtex4(buffer.direction, buffer.port)
+                result = DDRBufferVirtex4.create_from(buffer)
             elif self.family in ("ultrascale", "ultrascaleplus"):
-                result = DDRBufferUltrascale(buffer.direction, buffer.port)
+                result = DDRBufferUltrascale.create_from(buffer)
             else:
                 raise TypeError(f"Family {self.family} doesn't implement DDR buffers")
         else:
