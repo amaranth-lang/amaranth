@@ -475,9 +475,13 @@ class AlteraPlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            result = FFBuffer(buffer.direction, buffer.port,
+                              i_domain=buffer.i_domain,
+                              o_domain=buffer.o_domain)
         elif isinstance(buffer, io.DDRBuffer):
-            result = DDRBuffer(buffer.direction, buffer.port)
+            result = DDRBuffer(buffer.direction, buffer.port,
+                               i_domain=buffer.i_domain,
+                               o_domain=buffer.o_domain)
         else:
             raise TypeError(f"Unsupported buffer type {buffer!r}") # :nocov:
         if buffer.direction is not io.Direction.Output:

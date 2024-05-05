@@ -1168,16 +1168,26 @@ class XilinxPlatform(TemplatedPlatform):
         if isinstance(buffer, io.Buffer):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
-            result = FFBuffer(buffer.direction, buffer.port)
+            result = FFBuffer(buffer.direction, buffer.port,
+                              i_domain=buffer.i_domain,
+                              o_domain=buffer.o_domain)
         elif isinstance(buffer, io.DDRBuffer):
             if self.family in ("virtex2", "virtex2p", "spartan3"):
-                result = DDRBufferVirtex2(buffer.direction, buffer.port)
+                result = DDRBufferVirtex2(buffer.direction, buffer.port,
+                                          i_domain=buffer.i_domain,
+                                          o_domain=buffer.o_domain)
             elif self.family in ("spartan3e", "spartan3a", "spartan3adsp", "spartan6"):
-                result = DDRBufferSpartan3E(buffer.direction, buffer.port)
+                result = DDRBufferSpartan3E(buffer.direction, buffer.port,
+                                            i_domain=buffer.i_domain,
+                                            o_domain=buffer.o_domain)
             elif self.family in ("virtex4", "virtex5", "virtex6", "series7"):
-                result = DDRBufferVirtex4(buffer.direction, buffer.port)
+                result = DDRBufferVirtex4(buffer.direction, buffer.port,
+                                          i_domain=buffer.i_domain,
+                                          o_domain=buffer.o_domain)
             elif self.family in ("ultrascale", "ultrascaleplus"):
-                result = DDRBufferUltrascale(buffer.direction, buffer.port)
+                result = DDRBufferUltrascale(buffer.direction, buffer.port,
+                                             i_domain=buffer.i_domain,
+                                             o_domain=buffer.o_domain)
             else:
                 raise TypeError(f"Family {self.family} doesn't implement DDR buffers")
         else:
