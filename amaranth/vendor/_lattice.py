@@ -998,18 +998,28 @@ class LatticePlatform(TemplatedPlatform):
             result = IOBuffer(buffer.direction, buffer.port)
         elif isinstance(buffer, io.FFBuffer):
             if self.family in ("ecp5", "machxo2"):
-                result = FFBufferECP5(buffer.direction, buffer.port)
+                result = FFBufferECP5(buffer.direction, buffer.port,
+                                      i_domain=buffer.i_domain,
+                                      o_domain=buffer.o_domain)
             elif self.family == "nexus":
-                result = FFBufferNexus(buffer.direction, buffer.port)
+                result = FFBufferNexus(buffer.direction, buffer.port,
+                                       i_domain=buffer.i_domain,
+                                       o_domain=buffer.o_domain)
             else:
                 raise NotImplementedError # :nocov:
         elif isinstance(buffer, io.DDRBuffer):
             if self.family == "ecp5":
-                result = DDRBufferECP5(buffer.direction, buffer.port)
+                result = DDRBufferECP5(buffer.direction, buffer.port,
+                                       i_domain=buffer.i_domain,
+                                       o_domain=buffer.o_domain)
             elif self.family == "machxo2":
-                result = DDRBufferMachXO2(buffer.direction, buffer.port)
+                result = DDRBufferMachXO2(buffer.direction, buffer.port,
+                                          i_domain=buffer.i_domain,
+                                          o_domain=buffer.o_domain)
             elif self.family == "nexus":
-                result = DDRBufferNexus(buffer.direction, buffer.port)
+                result = DDRBufferNexus(buffer.direction, buffer.port,
+                                        i_domain=buffer.i_domain,
+                                        o_domain=buffer.o_domain)
             else:
                 raise NotImplementedError # :nocov:
         else:
