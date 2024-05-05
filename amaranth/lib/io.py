@@ -477,12 +477,16 @@ class FFBuffer(wiring.Component):
         super().__init__(FFBuffer.Signature(direction, len(port)).flip())
         if self.signature.direction is not Direction.Output:
             self._i_domain = i_domain or "sync"
-        elif i_domain is not None:
-            raise ValueError("Output buffer doesn't have an input domain")
+        else:
+            if i_domain is not None:
+                raise ValueError("Output buffer doesn't have an input domain")
+            self._i_domain = None
         if self.signature.direction is not Direction.Input:
             self._o_domain = o_domain or "sync"
-        elif o_domain is not None:
-            raise ValueError("Input buffer doesn't have an output domain")
+        else:
+            if o_domain is not None:
+                raise ValueError("Input buffer doesn't have an output domain")
+            self._o_domain = None
         if port.direction is Direction.Input and self.direction is not Direction.Input:
             raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
         if port.direction is Direction.Output and self.direction is not Direction.Output:
@@ -498,14 +502,10 @@ class FFBuffer(wiring.Component):
 
     @property
     def i_domain(self):
-        if self.direction is Direction.Output:
-            raise AttributeError("Output buffer doesn't have an input domain")
         return self._i_domain
 
     @property
     def o_domain(self):
-        if self.direction is Direction.Input:
-            raise AttributeError("Input buffer doesn't have an output domain")
         return self._o_domain
 
     def elaborate(self, platform):
@@ -608,12 +608,16 @@ class DDRBuffer(wiring.Component):
         super().__init__(DDRBuffer.Signature(direction, len(port)).flip())
         if self.signature.direction is not Direction.Output:
             self._i_domain = i_domain or "sync"
-        elif i_domain is not None:
-            raise ValueError("Output buffer doesn't have an input domain")
+        else:
+            if i_domain is not None:
+                raise ValueError("Output buffer doesn't have an input domain")
+            self._i_domain = None
         if self.signature.direction is not Direction.Input:
             self._o_domain = o_domain or "sync"
-        elif o_domain is not None:
-            raise ValueError("Input buffer doesn't have an output domain")
+        else:
+            if o_domain is not None:
+                raise ValueError("Input buffer doesn't have an output domain")
+            self._o_domain = None
         if port.direction is Direction.Input and self.direction is not Direction.Input:
             raise ValueError(f"Input port cannot be used with {self.direction.name} buffer")
         if port.direction is Direction.Output and self.direction is not Direction.Output:
@@ -629,14 +633,10 @@ class DDRBuffer(wiring.Component):
 
     @property
     def i_domain(self):
-        if self.direction is Direction.Output:
-            raise AttributeError("Output buffer doesn't have an input domain")
         return self._i_domain
 
     @property
     def o_domain(self):
-        if self.direction is Direction.Input:
-            raise AttributeError("Input buffer doesn't have an output domain")
         return self._o_domain
 
     def elaborate(self, platform):

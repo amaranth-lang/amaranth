@@ -426,19 +426,15 @@ class FFBufferTestCase(FHDLTestCase):
         self.assertIs(buf.port, port)
         self.assertRepr(buf.signature, "FFBuffer.Signature(Direction.Input, 4).flip()")
         self.assertEqual(buf.i_domain, "sync")
-        with self.assertRaisesRegex(AttributeError,
-                r"^Input buffer doesn't have an output domain$"):
-            buf.o_domain
+        self.assertIs(buf.o_domain, None)
         buf = FFBuffer("i", port, i_domain="inp")
         self.assertEqual(buf.i_domain, "inp")
         buf = FFBuffer("o", port)
         self.assertEqual(buf.direction, Direction.Output)
         self.assertIs(buf.port, port)
         self.assertRepr(buf.signature, "FFBuffer.Signature(Direction.Output, 4).flip()")
+        self.assertIs(buf.i_domain, None)
         self.assertEqual(buf.o_domain, "sync")
-        with self.assertRaisesRegex(AttributeError,
-                r"^Output buffer doesn't have an input domain$"):
-            buf.i_domain
         buf = FFBuffer("o", port, o_domain="out")
         self.assertEqual(buf.o_domain, "out")
         buf = FFBuffer("io", port)
@@ -668,19 +664,15 @@ class DDRBufferTestCase(FHDLTestCase):
         self.assertIs(buf.port, port)
         self.assertRepr(buf.signature, "DDRBuffer.Signature(Direction.Input, 4).flip()")
         self.assertEqual(buf.i_domain, "sync")
-        with self.assertRaisesRegex(AttributeError,
-                r"^Input buffer doesn't have an output domain$"):
-            buf.o_domain
+        self.assertIs(buf.o_domain, None)
         buf = DDRBuffer("i", port, i_domain="inp")
         self.assertEqual(buf.i_domain, "inp")
         buf = DDRBuffer("o", port)
         self.assertEqual(buf.direction, Direction.Output)
         self.assertIs(buf.port, port)
         self.assertRepr(buf.signature, "DDRBuffer.Signature(Direction.Output, 4).flip()")
+        self.assertIs(buf.i_domain, None)
         self.assertEqual(buf.o_domain, "sync")
-        with self.assertRaisesRegex(AttributeError,
-                r"^Output buffer doesn't have an input domain$"):
-            buf.i_domain
         buf = DDRBuffer("o", port, o_domain="out")
         self.assertEqual(buf.o_domain, "out")
         buf = DDRBuffer("io", port)
