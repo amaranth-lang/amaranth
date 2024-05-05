@@ -11,7 +11,7 @@ class LEDBlinker(Elaboratable):
         timer = Signal(range(half_freq + 1))
 
         with m.If(timer == half_freq):
-            m.d.sync += led.eq(~led)
+            m.d.sync += led.o.eq(~led.o)
             m.d.sync += timer.eq(0)
         with m.Else():
             m.d.sync += timer.eq(timer + 1)
