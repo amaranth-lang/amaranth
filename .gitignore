@@ -12,6 +12,7 @@ __pycache__/
 # coverage
 /.coverage
 /htmlcov
+/coverage.xml
 
 # tests
 /tests/spec_*/
