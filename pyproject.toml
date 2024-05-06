@@ -83,7 +83,7 @@ examples = [
 [tool.pdm.scripts]
 _.env_file = ".env.toolchain"
 
-test.composite = ["test-code", "test-docs"]
+test.composite = ["test-code", "test-docs", "coverage-xml"]
 test-code.env = {PYTHONWARNINGS = "error"}
 test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"
 test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
@@ -94,3 +94,4 @@ document-linkcheck.cmd = "sphinx-build docs/ docs/_linkcheck/ -b linkcheck"
 
 coverage-text.cmd = "python -m coverage report"
 coverage-html.cmd = "python -m coverage html"
+coverage-xml.cmd  = "python -m coverage xml"
