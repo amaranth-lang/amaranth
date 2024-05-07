@@ -288,8 +288,11 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         self._domains      = {}
         self._generated    = {}
         self._src_loc      = tracer.get_src_loc()
+        self._frozen       = False
 
     def _check_context(self, construct, context):
+        if self._frozen:
+            raise AlreadyElaborated(f"Cannot modify a module that has already been elaborated")
         if self._ctrl_context != context:
             if self._ctrl_context is None:
                 raise SyntaxError("{} is not permitted outside of {}"
@@ -616,6 +619,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                     src_loc=src_loc))
 
     def _add_statement(self, assigns, domain, depth):
+        if self._frozen:
+            raise AlreadyElaborated(f"Cannot modify a module that has already been elaborated")
+
         while len(self._ctrl_stack) > self.domain._depth:
             self._pop_ctrl()
 
@@ -643,6 +649,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
         if not hasattr(submodule, "elaborate"):
             raise TypeError("Trying to add {!r}, which does not implement .elaborate(), as "
                             "a submodule".format(submodule))
+        if self._frozen:
+            raise AlreadyElaborated(f"Cannot modify a module that has already been elaborated")
         if name == None:
             self._anon_submodules.append((submodule, src_loc))
         else:
@@ -660,6 +668,8 @@ class Module(_ModuleBuilderRoot, Elaboratable):
     def _add_domain(self, cd):
         if cd.name in self._domains:
             raise NameError(f"Clock domain named '{cd.name}' already exists")
+        if self._frozen:
+            raise AlreadyElaborated(f"Cannot modify a module that has already been elaborated")
         self._domains[cd.name] = cd
 
     def _flush(self):
@@ -668,6 +678,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
 
     def elaborate(self, platform):
         self._flush()
+        self._frozen = True
 
         fragment = Fragment(src_loc=self._src_loc)
         for name, (submodule, src_loc) in self._named_submodules.items():

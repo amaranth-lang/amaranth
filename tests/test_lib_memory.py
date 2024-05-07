@@ -439,15 +439,15 @@ class MemoryTestCase(FHDLTestCase):
         m = memory.Memory(shape=unsigned(8), depth=4, init=[])
         m.write_port()
         m.elaborate(None)
-        with self.assertRaisesRegex(memory.FrozenMemory,
+        with self.assertRaisesRegex(AlreadyElaborated,
                 r"^Cannot add a memory port to a memory that has already been elaborated$"):
             m.write_port()
-        with self.assertRaisesRegex(memory.FrozenMemory,
+        with self.assertRaisesRegex(AlreadyElaborated,
                 r"^Cannot add a memory port to a memory that has already been elaborated$"):
             m.read_port()
-        with self.assertRaisesRegex(memory.FrozenMemory,
+        with self.assertRaisesRegex(AlreadyElaborated,
                 r"^Cannot set 'init' on a memory that has already been elaborated$"):
             m.init = [1, 2, 3, 4]
-        with self.assertRaisesRegex(memory.FrozenMemory,
+        with self.assertRaisesRegex(AlreadyElaborated,
                 r"^Cannot set 'init' on a memory that has already been elaborated$"):
             m.init[0] = 1

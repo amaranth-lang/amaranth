@@ -4,17 +4,12 @@ from collections.abc import MutableSequence
 
 from .. import tracer
 from ._ast import *
-from ._ir import Elaboratable, Fragment
+from ._ir import Elaboratable, Fragment, AlreadyElaborated
 from ..utils import ceil_log2
 from .._utils import deprecated, final
 
 
-__all__ = ["FrozenMemory", "MemoryData", "Memory", "ReadPort", "WritePort", "DummyPort"]
-
-
-@final
-class FrozenMemory(Exception):
-    """Exception raised when a memory array is being modified after elaboration."""
+__all__ = ["MemoryData", "Memory", "ReadPort", "WritePort", "DummyPort"]
 
 
 @final
@@ -30,7 +25,7 @@ class MemoryData:
     a default value for rows that are not explicitly initialized.
 
     Changing the initial contents of a :class:`MemoryData` is only possible until it is used to
-    elaborate a memory; afterwards, attempting to do so will raise :exc:`FrozenMemory`.
+    elaborate a memory; afterwards, attempting to do so will raise :exc:`AlreadyElaborated`.
 
     .. warning::
 
@@ -101,7 +96,7 @@ class MemoryData:
 
         def __setitem__(self, index, value):
             if self._frozen:
-                raise FrozenMemory("Cannot set 'init' on a memory that has already been elaborated")
+                raise AlreadyElaborated("Cannot set 'init' on a memory that has already been elaborated")
 
             if isinstance(index, slice):
                 indices = range(*index.indices(len(self._elems)))
@@ -181,7 +176,7 @@ class MemoryData:
     @init.setter
     def init(self, init):
         if self._frozen:
-            raise FrozenMemory("Cannot set 'init' on a memory that has already been elaborated")
+            raise AlreadyElaborated("Cannot set 'init' on a memory that has already been elaborated")
         self._init = MemoryData.Init(init, shape=self._shape, depth=self._depth)
 
     def __repr__(self):
