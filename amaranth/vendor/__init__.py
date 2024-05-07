@@ -5,6 +5,7 @@
 # Keep this list sorted alphabetically.
 __all__ = [
     "AlteraPlatform",
+    "AMDPlatform",
     "GowinPlatform",
     "IntelPlatform",
     "LatticeECP5Platform",
@@ -39,7 +40,7 @@ def __getattr__(name):
     if name in ("SiliconBluePlatform", "LatticeICE40Platform"):
         from ._siliconblue import SiliconBluePlatform
         return SiliconBluePlatform
-    if name == "XilinxPlatform":
+    if name in ("XilinxPlatform", "AMDPlatform"):
         from ._xilinx import XilinxPlatform
         return XilinxPlatform
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
