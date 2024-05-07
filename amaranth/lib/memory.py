@@ -2,15 +2,14 @@ import operator
 from collections import OrderedDict
 from collections.abc import MutableSequence
 
-from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const
-from ..hdl._mem import FrozenMemory
+from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const, AlreadyElaborated
 from ..utils import ceil_log2
 from .._utils import final
 from .. import tracer
 from . import wiring, data
 
 
-__all__ = ["FrozenMemory", "Memory", "ReadPort", "WritePort"]
+__all__ = ["Memory", "ReadPort", "WritePort"]
 
 
 class Memory(wiring.Component):
@@ -24,7 +23,7 @@ class Memory(wiring.Component):
     the :ref:`elaborate <lang-elaboration>` method.
 
     Adding ports or changing initial contents of a :class:`Memory` is only possible until it is
-    elaborated; afterwards, attempting to do so will raise :class:`~amaranth.hdl.FrozenMemory`.
+    elaborated; afterwards, attempting to do so will raise :class:`~amaranth.hdl.AlreadyElaborated`.
 
     Platform overrides
     ------------------
@@ -121,7 +120,7 @@ class Memory(wiring.Component):
         :class:`ReadPort`
         """
         if self._frozen:
-            raise FrozenMemory("Cannot add a memory port to a memory that has already been elaborated")
+            raise AlreadyElaborated("Cannot add a memory port to a memory that has already been elaborated")
         signature = ReadPort.Signature(shape=self.shape, addr_width=ceil_log2(self.depth))
         return ReadPort(signature, memory=self, domain=domain, transparent_for=transparent_for,
                         src_loc_at=1 + src_loc_at)
@@ -146,7 +145,7 @@ class Memory(wiring.Component):
         :class:`WritePort`
         """
         if self._frozen:
-            raise FrozenMemory("Cannot add a memory port to a memory that has already been elaborated")
+            raise AlreadyElaborated("Cannot add a memory port to a memory that has already been elaborated")
         signature = WritePort.Signature(
             shape=self.shape, addr_width=ceil_log2(self.depth), granularity=granularity)
         return WritePort(signature, memory=self, domain=domain,

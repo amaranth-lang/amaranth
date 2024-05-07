@@ -6,6 +6,7 @@ from collections import OrderedDict
 from amaranth.hdl._ast import *
 from amaranth.hdl._cd import *
 from amaranth.hdl._dsl import *
+from amaranth.hdl._ir import *
 from amaranth.lib.enum import Enum
 
 from .utils import *
@@ -975,3 +976,35 @@ class DSLTestCase(FHDLTestCase):
                 r"^Domain name should not be prefixed with 'cd_' in `m.domains`, "
                 r"use `m.domains.rx = ...` instead$"):
             m.domains.cd_rx = ClockDomain()
+
+    def test_freeze(self):
+        a = Signal()
+        m = Module()
+        f = Fragment.get(m, None)
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            m.d.comb += a.eq(1)
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            with m.If(a):
+                pass
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            with m.Switch(a):
+                pass
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            with m.FSM():
+                pass
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            m.submodules.a = Module()
+
+        with self.assertRaisesRegex(AlreadyElaborated,
+                r"^Cannot modify a module that has already been elaborated$"):
+            m.domains.sync = ClockDomain()

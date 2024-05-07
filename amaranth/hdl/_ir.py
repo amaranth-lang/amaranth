@@ -3,15 +3,21 @@ from collections import defaultdict, OrderedDict
 import enum
 import warnings
 
-from .._utils import flatten, to_binary
+from .._utils import flatten, to_binary, final
 from .. import tracer, _unused
 from . import _ast, _cd, _ir, _nir
 
 
 __all__ = [
-    "UnusedElaboratable", "Elaboratable", "DuplicateElaboratable", "DriverConflict", "Fragment",
-    "Instance", "IOBufferInstance", "PortDirection", "Design", "build_netlist",
+    "AlreadyElaborated", "UnusedElaboratable", "Elaboratable", "DuplicateElaboratable",
+    "DriverConflict", "Fragment", "Instance", "IOBufferInstance", "PortDirection", "Design",
+    "build_netlist",
 ]
+
+
+@final
+class AlreadyElaborated(Exception):
+    """Exception raised when an elaboratable is being modified after elaboration."""
 
 
 class UnusedElaboratable(_unused.UnusedMustUse):
