@@ -26,7 +26,7 @@ class Elaboratable(_unused.MustUse):
     _MustUse__warning = UnusedElaboratable
 
 
-class DriverConflict(UserWarning):
+class DriverConflict(Exception):
     pass
 
 
