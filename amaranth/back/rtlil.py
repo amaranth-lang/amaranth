@@ -20,6 +20,12 @@ _escape_map = str.maketrans({
 })
 
 
+# Special hack to emit 'x consts for memory read port init.
+class Undef:
+    def __init__(self, width):
+        self.width = width
+
+
 def _signed(value):
     if isinstance(value, str):
         return False
@@ -27,6 +33,8 @@ def _signed(value):
         return value < 0
     elif isinstance(value, _ast.Const):
         return value.shape().signed
+    elif isinstance(value, Undef):
+        return False
     else:
         assert False, f"Invalid constant {value!r}"
 
@@ -45,6 +53,8 @@ def _const(value):
     elif isinstance(value, _ast.Const):
         value_twos_compl = value.value & ((1 << len(value)) - 1)
         return "{}'{:0{}b}".format(len(value), value_twos_compl, len(value))
+    elif isinstance(value, Undef):
+        return f"{value.width}'" + "x" * value.width
     else:
         assert False, f"Invalid constant {value!r}"
 
@@ -1070,9 +1080,27 @@ class ModuleEmitter:
             "WIDTH": cell.width,
             "TRANSPARENCY_MASK": _ast.Const(transparency_mask, memory_info.num_write_ports),
             "COLLISION_X_MASK": _ast.Const(0, memory_info.num_write_ports),
-            "ARST_VALUE": _ast.Const(0, cell.width),
-            "SRST_VALUE": _ast.Const(0, cell.width),
-            "INIT_VALUE": _ast.Const(0, cell.width),
+            # Horrible hack alert: Yosys has two different Verilog code patterns it can emit for
+            # transparent synchronous read ports — the old, limitted one and the generic new one.
+            # The old one essentially consists of a combinational read port with a register added
+            # on the *address* input. It has several limitations:
+            #
+            # - can only express read ports transparent wrt *all* write ports
+            # - cannot support initial values
+            # - cannot support reset
+            # - cannot support clock enable
+            #
+            # The new pattern can express any supported read port, but is not widely recognized
+            # by other toolchains, leading to memory inference failures. Thus, Yosys will use
+            # the old pattern whenever possible.
+            #
+            # In order to enable Yosys to use the old pattern and avoid memory inference regressions
+            # with non-Yosys synthesis, we need to emit undefined initial value here. This is in
+            # direct conflict with RFC 54, and will have to be revisited before 0.6, possibly
+            # requiring a large-scale design change in Amaranth memory support.
+            "ARST_VALUE": Undef(cell.width),
+            "SRST_VALUE": Undef(cell.width),
+            "INIT_VALUE": Undef(cell.width),
             "CE_OVER_SRST": False,
         }
         if isinstance(cell, _nir.AsyncReadPort):
