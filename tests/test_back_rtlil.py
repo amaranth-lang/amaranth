@@ -1643,9 +1643,9 @@ class MemoryTestCase(RTLILTestCase):
                 parameter \WIDTH 8
                 parameter \TRANSPARENCY_MASK 1'0
                 parameter \COLLISION_X_MASK 1'0
-                parameter \ARST_VALUE 8'00000000
-                parameter \SRST_VALUE 8'00000000
-                parameter \INIT_VALUE 8'00000000
+                parameter \ARST_VALUE 8'xxxxxxxx
+                parameter \SRST_VALUE 8'xxxxxxxx
+                parameter \INIT_VALUE 8'xxxxxxxx
                 parameter \CE_OVER_SRST 0
                 parameter \CLK_ENABLE 0
                 parameter \CLK_POLARITY 1
@@ -1725,9 +1725,9 @@ class MemoryTestCase(RTLILTestCase):
                 parameter \WIDTH 8
                 parameter \TRANSPARENCY_MASK 1'1
                 parameter \COLLISION_X_MASK 1'0
-                parameter \ARST_VALUE 8'00000000
-                parameter \SRST_VALUE 8'00000000
-                parameter \INIT_VALUE 8'00000000
+                parameter \ARST_VALUE 8'xxxxxxxx
+                parameter \SRST_VALUE 8'xxxxxxxx
+                parameter \INIT_VALUE 8'xxxxxxxx
                 parameter \CE_OVER_SRST 0
                 parameter \CLK_ENABLE 1
                 parameter \CLK_POLARITY 1
