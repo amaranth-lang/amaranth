@@ -1214,7 +1214,7 @@ class XilinxPlatform(TemplatedPlatform):
     def get_ff_sync(self, ff_sync):
         m = Module()
         flops = [Signal(ff_sync.i.shape(), name=f"stage{index}",
-                        init=ff_sync._reset, reset_less=ff_sync._reset_less,
+                        init=ff_sync._init, reset_less=ff_sync._reset_less,
                         attrs={"ASYNC_REG": "TRUE"})
                  for index in range(ff_sync._stages)]
         if self.toolchain == "Vivado":
