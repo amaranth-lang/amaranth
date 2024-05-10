@@ -135,7 +135,7 @@ def _extract_schemas(package, *, base_uri, path="schema/"):
     entry_points = distribution(package).entry_points
     for entry_point in entry_points.select(group="amaranth.lib.meta"):
         schema = entry_point.load().schema
-        relative_path = entry_point.name # v0.5/component.json
+        relative_path = entry_point.name # "0.5/component.json"
         schema_filename = pathlib.Path(path) / relative_path
         assert schema["$id"] == f"{base_uri}/{relative_path}", \
             f"Schema $id {schema['$id']} must be {base_uri}/{relative_path}"
