@@ -60,7 +60,9 @@ rst_prolog = """
 """
 
 linkcheck_ignore = [
-    r"^http://127\.0\.0\.1:8000$"
+    r"^http://127\.0\.0\.1:8000$",
+    # Picked up automatically by ReST and doesn't have an index.
+    r"^https://amaranth-lang\.org/schema/$",
 ]
 
 linkcheck_anchors_ignore_for_url = [
