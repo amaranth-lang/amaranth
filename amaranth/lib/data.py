@@ -481,6 +481,11 @@ class ArrayLayout(Layout):
 
         Arrays that have padding can be described with a :class:`FlexibleLayout`.
 
+    .. note::
+
+        This class, :class:`amaranth.lib.data.ArrayLayout`, is distinct from and serves a different
+        function than :class:`amaranth.hdl.Array`.
+
     Attributes
     ----------
     elem_shape : :class:`.ShapeLike`

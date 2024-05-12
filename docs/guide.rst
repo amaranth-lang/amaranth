@@ -813,6 +813,10 @@ Crucially, this means that any Python object can be added to an array; the only 
 
     Each time an array proxy object with :py:`n` elements is used in an expression, it generates a multiplexer with :py:`n` branches. However, using :py:`k` of such array proxy objects in an expression generates a multiplexer with :py:`n**k` branches. This can generate extremely large circuits that may quickly exhaust the resources of the synthesis target or even the available RAM.
 
+.. note::
+
+    Arrays, :class:`amaranth.hdl.Array`, are distinct from and serve a different function than :class:`amaranth.lib.data.ArrayLayout`.
+
 
 .. _lang-data:
 
