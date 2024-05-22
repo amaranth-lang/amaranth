@@ -718,16 +718,34 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_add_process_wrong(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
-                    r"^Cannot add a process 1 because it is not a generator function$"):
+                    r"^Cannot add a process 1 because it is not an async function or "
+                    r"generator function$"):
                 sim.add_process(1)
 
     def test_add_process_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
-                    r"^Cannot add a process <.+?> because it is not a generator function$"):
+                    r"^Cannot add a process <.+?> because it is not an async function or "
+                    r"generator function$"):
                 def process():
                     yield Delay()
                 sim.add_process(process())
+
+    def test_add_testbench_wrong(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a testbench 1 because it is not an async function or "
+                    r"generator function$"):
+                sim.add_testbench(1)
+
+    def test_add_testbench_wrong_generator(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a testbench <.+?> because it is not an async function or "
+                    r"generator function$"):
+                def testbench():
+                    yield Delay()
+                sim.add_testbench(testbench())
 
     def test_add_clock_wrong_twice(self):
         m = Module()
@@ -1935,3 +1953,12 @@ class SimulatorRegressionTestCase(FHDLTestCase):
 
         self.assertTrue(reached_tb)
         self.assertTrue(reached_proc)
+
+    def test_bug_1363(self):
+        sim = Simulator(Module())
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot add a testbench <.+?> because it is not an async function or "
+                r"generator function$"):
+            async def testbench():
+                yield Delay()
+            sim.add_testbench(testbench())
