@@ -11,7 +11,7 @@ name = "amaranth"
 description = "Amaranth hardware definition language"
 readme = "README.md"
 authors = [{name = "Amaranth HDL contributors"}]
-license = {file = "LICENSE.txt"}
+license = { text = "BSD-2-clause" }
 
 requires-python = "~=3.8"
 dependencies = [
