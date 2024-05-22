@@ -5,7 +5,9 @@ import os.path
 import enum as py_enum
 
 from ..hdl import *
+from ..hdl._mem import MemoryInstance
 from ..hdl._ast import SignalDict
+from ..lib import data, wiring
 from ._base import *
 from ._async import *
 from ._pyeval import eval_format, eval_value, eval_assign
@@ -49,7 +51,7 @@ class _VCDWriter:
         self.gtkw_file = gtkw_file
         self.gtkw_save = gtkw_file and vcd.gtkw.GTKWSave(self.gtkw_file)
 
-        self.traces = []
+        self.traces = traces
 
         signal_names = SignalDict()
         memories = {}
@@ -64,9 +66,9 @@ class _VCDWriter:
 
         trace_names = SignalDict()
         assigned_names = set()
-        for trace in traces:
-            if isinstance(trace, ValueLike):
-                trace = Value.cast(trace)
+        def traverse_traces(traces):
+            if isinstance(traces, ValueLike):
+                trace = Value.cast(traces)
                 if isinstance(trace, MemoryData._Row):
                     memory = trace._memory
                     if not memory in memories:
@@ -77,7 +79,6 @@ class _VCDWriter:
                             assert name not in assigned_names
                         memories[memory] = ("bench", name)
                         assigned_names.add(name)
-                    self.traces.append(trace)
                 else:
                     for trace_signal in trace._rhs_signals():
                         if trace_signal not in signal_names:
@@ -88,19 +89,27 @@ class _VCDWriter:
                                 assert name not in assigned_names
                             trace_names[trace_signal] = {("bench", name)}
                             assigned_names.add(name)
-                        self.traces.append(trace_signal)
-            elif isinstance(trace, MemoryData):
-                if not trace in memories:
-                    if trace.name not in assigned_names:
-                        name = trace.name
+            elif isinstance(traces, MemoryData):
+                if not traces in memories:
+                    if traces.name not in assigned_names:
+                        name = traces.name
                     else:
-                        name = f"{trace.name}${len(assigned_names)}"
+                        name = f"{traces.name}${len(assigned_names)}"
                         assert name not in assigned_names
-                    memories[trace] = ("bench", name)
+                    memories[traces] = ("bench", name)
                     assigned_names.add(name)
-                self.traces.append(trace)
+            elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
+                for name in traces.signature.members:
+                    traverse_traces(getattr(traces, name))
+            elif isinstance(traces, list) or isinstance(traces, tuple):
+                for trace in traces:
+                    traverse_traces(trace)
+            elif isinstance(traces, dict):
+                for trace in traces.values():
+                    traverse_traces(trace)
             else:
-                raise TypeError(f"{trace!r} is not a traceable object")
+                raise TypeError(f"{traces!r} is not a traceable object")
+        traverse_traces(traces)
 
         if self.vcd_writer is None:
             return
@@ -277,19 +286,40 @@ class _VCDWriter:
             self.gtkw_save.dumpfile_size(self.vcd_file.tell())
 
             self.gtkw_save.treeopen("top")
-            for trace in self.traces:
-                if isinstance(trace, Signal):
-                    for name in self.gtkw_signal_names[trace]:
+
+            def traverse_traces(traces):
+                if isinstance(traces, Signal):
+                    for name in self.gtkw_signal_names[traces]:
                         self.gtkw_save.trace(name)
-                elif isinstance(trace, MemoryData):
-                    for row_names in self.gtkw_memory_names[trace]:
+                elif isinstance(traces, data.View):
+                    with self.gtkw_save.group("view"):
+                        trace = Value.cast(traces)
+                        for trace_signal in trace._rhs_signals():
+                            for name in self.gtkw_signal_names[trace_signal]:
+                                self.gtkw_save.trace(name)
+                elif isinstance(traces, ValueLike):
+                    traverse_traces(Value.cast(traces))
+                elif isinstance(traces, MemoryData):
+                    for row_names in self.gtkw_memory_names[traces]:
                         for name in row_names:
                             self.gtkw_save.trace(name)
-                elif isinstance(trace, MemoryData._Row):
-                    for name in self.gtkw_memory_names[trace._memory][trace._index]:
+                elif isinstance(traces, MemoryData._Row):
+                    for name in self.gtkw_memory_names[traces._memory][traces._index]:
                         self.gtkw_save.trace(name)
+                elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
+                    with self.gtkw_save.group("interface"):
+                        for _, _, member in traces.signature.flatten(traces):
+                            traverse_traces(member)
+                elif isinstance(traces, list) or isinstance(traces, tuple):
+                    for trace in traces:
+                        traverse_traces(trace)
+                elif isinstance(traces, dict):
+                    for name, trace in traces.items():
+                        with self.gtkw_save.group(name):
+                            traverse_traces(trace)
                 else:
                     assert False # :nocov:
+            traverse_traces(self.traces)
 
         if self.close_vcd:
             self.vcd_file.close()

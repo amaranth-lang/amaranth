@@ -212,17 +212,25 @@ class Simulator:
                     file.close()
             raise ValueError("Cannot start writing waveforms after advancing simulation time")
 
-        for trace in traces:
-            if isinstance(trace, ValueLike):
-                trace_cast = Value.cast(trace)
+        def traverse_traces(traces):
+            if isinstance(traces, ValueLike):
+                trace_cast = Value.cast(traces)
                 if isinstance(trace_cast, MemoryData._Row):
-                    continue
+                    return
                 for trace_signal in trace_cast._rhs_signals():
                     if trace_signal.name == "":
-                        if trace_signal is trace:
+                        if trace_signal is traces:
                             raise TypeError("Cannot trace signal with private name")
                         else:
-                            raise TypeError(f"Cannot trace signal with private name (within {trace!r})")
+                            raise TypeError(f"Cannot trace signal with private name (within {traces!r})")
+            elif isinstance(traces, (list, tuple)):
+                for trace in traces:
+                    traverse_traces(trace)
+            elif isinstance(traces, dict):
+                for trace in traces.values():
+                    traverse_traces(trace)
+
+        traverse_traces(traces)
 
         return self._engine.write_vcd(vcd_file=vcd_file, gtkw_file=gtkw_file,
                                       traces=traces, fs_per_delta=fs_per_delta)
