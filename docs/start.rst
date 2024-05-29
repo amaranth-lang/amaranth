@@ -47,14 +47,23 @@ To verify its functionality, the counter can be simulated for a small amount of 
    :start-after: # --- TEST ---
    :end-before: # --- CONVERT ---
 
-The test bench is implemented as a Python generator function that is co-simulated with the counter itself. The test bench can inspect the simulated signals with ``yield sig``, update them with ``yield sig.eq(val)``, and advance the simulation by one clock cycle with ``yield``.
+The testbench is implemented as a Python :py:`async` function that is simulated concurrently with the counter itself. The testbench can inspect the simulated signals using :py:`ctx.get(sig)`, update them using :py:`ctx.set(sig, val)`, and advance the simulation by one clock cycle with :py:`await ctx.tick()`. See the :doc:`simulator documentation <simulator>` for details.
 
-.. TODO: link to simulator reference
+When run, the testbench finishes successfully, since all of the assertions hold, and produces a VCD file with waveforms recorded for every :class:`Signal` as well as the clock of the ``sync`` domain:
 
-When run, the test bench finishes successfully, since all of the assertions hold, and produces a VCD file with waveforms recorded for every ``Signal`` as well as the clock of the ``sync`` domain:
+.. wavedrom:: start/up_counter
 
-.. image:: _images/up_counter_gtkwave.png
-	 :alt: A screenshot of GTKWave displaying waveforms near the clock cycle where the counter overflows.
+    {
+        "signal": [
+            {"name": "clk",   "wave": "p.........."},
+            {"name": "count", "wave": "===========", "data": ["17", "18", "19", "20", "21", "22", "23", "24", "25", "0", "1"]},
+            {"name": "en",    "wave": "1.........."},
+            {"name": "ovf",   "wave": "0.......10."},
+        ],
+        "head": {
+            "tock": 48
+        }
+    }
 
 
 Converting a counter

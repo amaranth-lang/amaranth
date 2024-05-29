@@ -755,14 +755,14 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         m.d.sync += s.eq(0)
         with self.assertSimulation(m) as sim:
             sim.add_clock(1)
-            with self.assertRaisesRegex(ValueError,
+            with self.assertRaisesRegex(DriverConflict,
                     r"^Domain 'sync' already has a clock driving it$"):
                 sim.add_clock(1)
 
     def test_add_clock_wrong_missing(self):
         m = Module()
         with self.assertSimulation(m) as sim:
-            with self.assertRaisesRegex(ValueError,
+            with self.assertRaisesRegex(NameError,
                     r"^Domain 'sync' is not present in simulation$"):
                 sim.add_clock(1)
 
@@ -1978,9 +1978,19 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             with self.assertRaisesRegex(ValueError,
                     r"^Combinational domain does not have a clock$"):
                 await ctx.tick("comb")
+            with self.assertRaisesRegex(NameError,
+                    r"^Clock domain named 'sync2' does not exist$"):
+                await ctx.tick("sync2")
             with self.assertRaisesRegex(ValueError,
                     r"^Context cannot be provided if a clock domain is specified directly$"):
                 await ctx.tick(cd_sync, context=m)
+            with self.assertRaisesRegex(ValueError,
+                    r"^Delay cannot be negative$"):
+                await ctx.delay(-1)
+            s = Signal(data.StructLayout({"a": unsigned(1)}))
+            with self.assertRaisesRegex(TypeError,
+                    r"^The shape of a condition may only be `signed` or `unsigned`, not StructLayout.*$"):
+                await ctx.tick().until(s)
             reached_tb = True
 
         sim = Simulator(m)
