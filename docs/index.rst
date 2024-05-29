@@ -15,6 +15,7 @@ Language & toolchain
    guide
    reference
    stdlib
+   simulator
    platform
    changes
    contrib

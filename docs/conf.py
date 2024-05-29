@@ -39,6 +39,10 @@ autodoc_default_options = {
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
 
+# Amaranth mostly does not include typehints, and showing them in some places but not others is
+# worse than not showing them at all.
+autodoc_typehints = "none"
+
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_use_ivar = True

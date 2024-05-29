@@ -47,29 +47,29 @@ from amaranth.sim import Simulator
 
 
 dut = UpCounter(25)
-def bench():
+async def bench(ctx):
     # Disabled counter should not overflow.
-    yield dut.en.eq(0)
+    ctx.set(dut.en, 0)
     for _ in range(30):
-        yield
-        assert not (yield dut.ovf)
+        await ctx.tick()
+        assert not ctx.get(dut.ovf)
 
     # Once enabled, the counter should overflow in 25 cycles.
-    yield dut.en.eq(1)
-    for _ in range(25):
-        yield
-        assert not (yield dut.ovf)
-    yield
-    assert (yield dut.ovf)
+    ctx.set(dut.en, 1)
+    for _ in range(24):
+        await ctx.tick()
+        assert not ctx.get(dut.ovf)
+    await ctx.tick()
+    assert ctx.get(dut.ovf)
 
     # The overflow should clear in one cycle.
-    yield
-    assert not (yield dut.ovf)
+    await ctx.tick()
+    assert not ctx.get(dut.ovf)
 
 
 sim = Simulator(dut)
 sim.add_clock(1e-6) # 1 MHz
-sim.add_sync_process(bench)
+sim.add_testbench(bench)
 with sim.write_vcd("up_counter.vcd"):
     sim.run()
 # --- CONVERT ---

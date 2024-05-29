@@ -29,20 +29,23 @@ Migrating from version 0.4
 
 Apply the following changes to code written against Amaranth 0.4 to migrate it to version 0.5:
 
-* Replace uses of ``m.Case()`` with no patterns with ``m.Default()``
-* Replace uses of ``Value.matches()`` with no patterns with ``Const(1)``
-* Update uses of ``amaranth.utils.log2_int(need_pow2=False)`` to :func:`amaranth.utils.ceil_log2`
-* Update uses of ``amaranth.utils.log2_int(need_pow2=True)`` to :func:`amaranth.utils.exact_log2`
-* Update uses of ``reset=`` keyword argument to ``init=``
-* Convert uses of ``Simulator.add_sync_process`` used as testbenches to ``Simulator.add_testbench``
-* Convert other uses of ``Simulator.add_sync_process`` to ``Simulator.add_process``
-* Replace uses of ``amaranth.hdl.Memory`` with ``amaranth.lib.memory.Memory``
-* Replace imports of ``amaranth.asserts.{Assert, Assume, Cover}`` with imports from ``amaranth.hdl``
-* Remove any usage of ``name=`` with assertions, possibly replacing them with custom messages
-* Ensure all elaboratables are subclasses of :class:`Elaboratable`
+* Replace uses of :py:`m.Case()` with no patterns with :py:`m.Default()`.
+* Replace uses of :py:`Value.matches()` with no patterns with :py:`Const(1)`.
+* Update uses of :py:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`.
+* Update uses of :py:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`.
+* Update uses of :py:`reset=` keyword argument to :py:`init=`.
+* Convert uses of :py:`Simulator.add_sync_process` used as testbenches to :meth:`Simulator.add_testbench <amaranth.sim.Simulator.add_testbench>`.
+* Convert other uses of :py:`Simulator.add_sync_process` to :meth:`Simulator.add_process <amaranth.sim.Simulator.add_process>`.
+* Convert simulator processes and testbenches to use the new async API.
+* Replace uses of :py:`amaranth.hdl.Memory` with :class:`amaranth.lib.memory.Memory`.
+* Replace imports of :py:`amaranth.asserts.Assert`, :py:`Assume`, and :py:`Cover` with imports from :py:`amaranth.hdl`.
+* Remove uses of :py:`name=` keyword argument of :py:`Assert`, :py:`Assume`, and :py:`Cover`; a message can be used instead.
+* Ensure all elaboratables are subclasses of :class:`Elaboratable`.
 * Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
-* Remove uses of ``amaranth.lib.coding.*`` by inlining or copying the implementation of the modules
-* Update uses of ``platform.request`` to pass ``dir="-"`` and use :mod:`amaranth.lib.io` buffers
+* Remove uses of :py:`amaranth.lib.coding.*` by inlining or copying the implementation of the modules.
+* Update uses of :py:`platform.request` to pass :py:`dir="-"` and use :mod:`amaranth.lib.io` buffers.
+* Update uses of :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` with explicit :py:`phase` to take into account simulator no longer adding implicit :py:`period / 2`. (Previously, :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` was documented to first toggle the clock at the time :py:`phase`, but actually first toggled the clock at :py:`period / 2 + phase`.)
+* Update uses of :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` to remove the :py:`run_passive=True` argument. If the code uses :py:`run_passive=False`, ensure it still works with the new behavior.
 
 
 Implemented RFCs
@@ -51,6 +54,7 @@ Implemented RFCs
 .. _RFC 17: https://amaranth-lang.org/rfcs/0017-remove-log2-int.html
 .. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 30: https://amaranth-lang.org/rfcs/0030-component-metadata.html
+.. _RFC 36: https://amaranth-lang.org/rfcs/0036-async-testbench-functions.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 .. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
@@ -68,6 +72,7 @@ Implemented RFCs
 * `RFC 17`_: Remove ``log2_int``
 * `RFC 27`_: Testbench processes for the simulator
 * `RFC 30`_: Component metadata
+* `RFC 36`_: Async testbench functions
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
 * `RFC 43`_: Rename ``reset=`` to ``init=``
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
@@ -94,12 +99,12 @@ Language changes
 * Added: :meth:`ShapeCastable.from_bits` method. (`RFC 51`_)
 * Added: IO values, :class:`IOPort` objects, :class:`IOBufferInstance` objects. (`RFC 53`_)
 * Added: :class:`MemoryData` objects. (`RFC 62`_)
-* Changed: ``m.Case()`` with no patterns is never active instead of always active. (`RFC 39`_)
-* Changed: ``Value.matches()`` with no patterns is ``Const(0)`` instead of ``Const(1)``. (`RFC 39`_)
-* Changed: ``Signal(range(stop), init=stop)`` warning has been changed into a hard error and made to trigger on any out-of range value.
-* Changed: ``Signal(range(0))`` is now valid without a warning.
-* Changed: ``Shape.cast(range(1))`` is now ``unsigned(0)``. (`RFC 46`_)
-* Changed: the ``reset=`` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and ``m.FSM()`` has been renamed to ``init=``. (`RFC 43`_)
+* Changed: :py:`m.Case()` with no patterns is never active instead of always active. (`RFC 39`_)
+* Changed: :py:`Value.matches()` with no patterns is :py:`Const(0)` instead of :py:`Const(1)`. (`RFC 39`_)
+* Changed: :py:`Signal(range(stop), init=stop)` warning has been changed into a hard error and made to trigger on any out-of range value.
+* Changed: :py:`Signal(range(0))` is now valid without a warning.
+* Changed: :py:`Shape.cast(range(1))` is now :py:`unsigned(0)`. (`RFC 46`_)
+* Changed: the :py:`reset=` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and :py:`m.FSM()` has been renamed to :py:`init=`. (`RFC 43`_)
 * Changed: :class:`Shape` has been made immutable and hashable.
 * Changed: :class:`Assert`, :class:`Assume`, :class:`Cover` have been moved to :mod:`amaranth.hdl` from :mod:`amaranth.asserts`. (`RFC 50`_)
 * Changed: :class:`Instance` IO ports now accept only IO values, not plain values. (`RFC 53`_)
@@ -127,17 +132,21 @@ Standard library changes
 * Added: :mod:`amaranth.lib.meta`, :class:`amaranth.lib.wiring.ComponentMetadata`. (`RFC 30`_)
 * Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
 * Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
-* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with ``fwft=False``. (`RFC 20`_)
-* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with ``fwft=False``. (`RFC 20`_)
+* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with :py:`fwft=False`. (`RFC 20`_)
+* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with :py:`fwft=False`. (`RFC 20`_)
 
 
 Toolchain changes
 -----------------
 
-* Added: ``Simulator.add_testbench``. (`RFC 27`_)
+* Added: :meth:`Simulator.add_testbench <amaranth.sim.Simulator.add_testbench>`. (`RFC 27`_)
+* Added: async function support in :meth:`Simulator.add_testbench <amaranth.sim.Simulator.add_testbench>` and :meth:`Simulator.add_process <amaranth.sim.Simulator.add_process>`. (`RFC 36`_)
 * Added: support for :class:`amaranth.hdl.Assert` in simulation. (`RFC 50`_)
-* Deprecated: ``Settle`` simulation command. (`RFC 27`_)
-* Deprecated: ``Simulator.add_sync_process``. (`RFC 27`_)
+* Changed: :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` no longer implicitly adds :py:`period / 2` when :py:`phase` is specified, actually matching the documentation.
+* Changed: :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` always runs the simulation until the given deadline, even when no critical processes or testbenches are present.
+* Deprecated: :py:`Settle` simulation command. (`RFC 27`_)
+* Deprecated: :py:`Simulator.add_sync_process`. (`RFC 27`_)
+* Deprecated: the :py:`run_passive` argument to :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` has been deprecated, and does nothing.
 * Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
@@ -150,7 +159,7 @@ Platform integration changes
 * Added: :meth:`BuildPlan.extract`.
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
 * Changed: ``IntelPlatform`` renamed to ``AlteraPlatform``.
-* Deprecated: argument ``run_script=`` in :meth:`BuildPlan.execute_local`.
+* Deprecated: argument :py:`run_script=` in :meth:`BuildPlan.execute_local`.
 * Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
 

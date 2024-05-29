@@ -27,7 +27,7 @@ Amaranth HDL requires Python 3.8; it works on CPython_ 3.8 (or newer), and works
 
 For most workflows, Amaranth requires Yosys_ |yosys-version|. A `compatible version of Yosys <amaranth-yosys_>`_ is distributed via PyPI_ for most popular platforms, so it is usually not necessary to install Yosys separately.
 
-Simulating Amaranth code requires no additional software. However, a waveform viewer like GTKWave_ is invaluable for debugging. As an alternative to GTKWave, the `Amaranth Playground`_ can be used to display waveforms for simple designs.
+Simulating Amaranth code requires no additional software. However, a waveform viewer like Surfer_ or GTKWave_ is invaluable for debugging. As an alternative, the `Amaranth Playground`_ can be used to display waveforms for simple designs.
 
 Synthesizing, placing and routing an Amaranth design for an FPGA requires the FPGA family specific toolchain. The open source iCE40, ECP5, MachXO2/3, Nexus, and Gowin toolchains are distributed via PyPI_ for most popular platforms by the YoWASP_ project.
 
@@ -39,6 +39,7 @@ Synthesizing, placing and routing an Amaranth design for an FPGA requires the FP
 .. _Yosys: https://yosyshq.net/yosys/
 .. _amaranth-yosys: https://pypi.org/project/amaranth-yosys/
 .. _PyPI: https://pypi.org/
+.. _Surfer: https://surfer-project.org/
 .. _GTKWave: https://gtkwave.sourceforge.net/
 .. _YoWASP: https://yowasp.org/
 
@@ -58,10 +59,6 @@ Installing prerequisites
 
       :ref:`Install Python <python:using-on-windows>`, either from Windows Store or using the full installer. If using the full installer, make sure to install a 64-bit version of Python.
 
-      `Download GTKWave`_, either win32 or win64 binaries. GTKWave does not need to be installed; it can be unpacked to any convenient location and run from there.
-
-      .. _Download GTKWave: https://sourceforge.net/projects/gtkwave/files/
-
       |upgrade-pip|
 
       .. code-block:: doscon
@@ -71,11 +68,11 @@ Installing prerequisites
    .. platform-choice:: macos
       :title: macOS
 
-      Install Homebrew_. Then, install Python and GTKWave by running:
+      Install Homebrew_. Then, install Python by running:
 
       .. code-block:: console
 
-         $ brew install python gtkwave
+         $ brew install python
 
       .. _Homebrew: https://brew.sh
 
@@ -89,11 +86,11 @@ Installing prerequisites
       :altname: linux
       :title: Debian
 
-      Install Python and GTKWave by running:
+      Install Python by running:
 
       .. code-block:: console
 
-         $ sudo apt-get install python3-pip gtkwave
+         $ sudo apt-get install python3-pip
 
       On architectures other than |builtin-yosys-architectures|, install Yosys by running:
 
@@ -113,16 +110,16 @@ Installing prerequisites
       :altname: linux
       :title: Arch Linux
 
-      Install Python, pip, GTKWave and Yosys by running:
+      Install Python and pip by running:
 
       .. code-block:: console
 
-         $ sudo pacman -S python python-pip gtkwave yosys
+         $ sudo pacman -S python python-pip
 
    .. platform-choice:: linux
       :title: Other Linux
 
-      Install Python and GTKWave from the package repository of your distribution.
+      Install Python from the package repository of your distribution.
 
       On architectures other than |builtin-yosys-architectures|, install Yosys from the package repository of your distribution.
 

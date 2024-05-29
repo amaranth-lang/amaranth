@@ -171,20 +171,34 @@ However, the memory read port is also configured to be *transparent* relative to
 
 
 Simulation
-==========
+++++++++++
 
-.. todo::
+There are two ways to interact with a memory array in a simulator: requesting a read and/or write port that is used only in a testbench, or directly reading and writing memory contents. In most cases, directly accessing memory contents using :meth:`MemoryData.__getitem__ <amaranth.hdl.MemoryData.__getitem__>` is more convenient.
 
-    This section will be written once the simulator itself is documented.
+For example, this :doc:`testbench </simulator>` will clear the least significant bit of every memory row:
+
+.. testcode::
+
+    async def testbench(ctx):
+        for index in len(memory.data):
+            ctx.set(memory.data[index], ctx.get(memory.data[index]) & ~1)
 
 
 Memory description
 ==================
 
 .. autoexception:: amaranth.hdl.AlreadyElaborated
-   :noindex:
+    :noindex:
+
+    ..
+        :canonical: amaranth.hdl.AlreadyElaborated
+        (not available until `amaranth.hdl` documents it)
 
 .. autoclass:: amaranth.hdl.MemoryData
+
+    ..
+        :canonical: amaranth.hdl.MemoryData
+        (not available until `amaranth.hdl` documents it)
 
 
 Memory component

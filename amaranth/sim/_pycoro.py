@@ -14,8 +14,8 @@ class Command:
 
 class Settle(Command):
     @deprecated("The `Settle` command is deprecated per RFC 27. Use `add_testbench` to write "
-                "testbenches; in them, an equivalent of `yield Settle()` is performed "
-                "automatically.")
+                "testbenches; there, an equivalent of `yield Settle()` is performed "
+                "automatically after each `ctx.set()`.")
     def __init__(self):
         pass
 
@@ -37,8 +37,7 @@ class Delay(Command):
 class Tick(Command):
     def __init__(self, domain="sync"):
         if not isinstance(domain, (str, ClockDomain)):
-            raise TypeError("Domain must be a string or a ClockDomain instance, not {!r}"
-                            .format(domain))
+            raise TypeError(f"Domain must be a string or a ClockDomain instance, not {domain!r}")
         assert domain != "comb"
         self.domain = domain
 

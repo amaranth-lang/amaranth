@@ -142,7 +142,8 @@ class _VCDWriter:
                             suffix = f"[{var_size - 1}:0]"
                         else:
                             suffix = ""
-                        self.gtkw_signal_names[signal].append(".".join((*var_scope, field_name)) + suffix)
+                        self.gtkw_signal_names[signal].append(
+                            ".".join((*var_scope, field_name)) + suffix)
                     else:
                         self.vcd_writer.register_alias(
                             scope=var_scope, name=field_name,
