@@ -686,9 +686,9 @@ class LatticePlatform(TemplatedPlatform):
             set_hierarchy_separator {/}
             {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
                 {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_quote}}]
+                    create_clock -name {{port_signal.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_quote("Diamond")}}]
                 {% else -%}
-                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|tcl_quote}}]
+                    create_clock -name {{net_signal.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|tcl_quote("Diamond")}}]
                 {% endif %}
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
