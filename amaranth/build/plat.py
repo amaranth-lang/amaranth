@@ -330,8 +330,15 @@ class TemplatedPlatform(Platform):
                     return f"_{ord(match.group(1)[0]):02x}_"
             return "".join(escape_one(m) for m in re.finditer(r"([^A-Za-z0-9_])|(.)", string))
 
-        def tcl_quote(string):
-            return '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
+        def tcl_quote(string, quirk=None):
+            escaped = '"' + re.sub(r"([$[\\])", r"\\\1", string) + '"'
+            if quirk == "Diamond":
+                # Diamond seems to assign `clk\$2` as a name for the Verilog net `\clk$2 `, and
+                # `clk\\\$2` as a name for the Verilog net `\clk\$2 `.
+                return escaped.replace("\\", "\\\\")
+            else:
+                assert quirk is None
+                return escaped
 
         def verbose(arg):
             if get_override_flag("verbose"):
