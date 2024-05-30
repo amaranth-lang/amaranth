@@ -726,10 +726,11 @@ class DDRBuffer(wiring.Component):
     port : :class:`PortLike`
         Port driven by the buffer.
     i_domain : :class:`str`
-        Name of the input registers' clock domain. Only used when :py:`direction in (Input, Bidir)`.
+        Name of the input register's clock domain. Used when :py:`direction in (Input, Bidir)`.
+        Defaults to :py:`"sync"`.
     o_domain : :class:`str`
-        Name of the output and output enable registers' clock domain. Only used when
-        :py:`direction in (Output, Bidir)`.
+        Name of the output and output enable registers' clock domain. Used when
+        :py:`direction in (Output, Bidir)`. Defaults to :py:`"sync"`.
 
     Attributes
     ----------
