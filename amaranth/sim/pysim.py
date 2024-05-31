@@ -23,7 +23,7 @@ class _VCDWriter:
     def decode_to_vcd(format, value):
         return format.format(value).expandtabs().replace(" ", "_")
 
-    def __init__(self, state, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0, processes=()):
+    def __init__(self, state, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0):
         self.state = state
         self.fs_per_delta = fs_per_delta
 
@@ -235,26 +235,6 @@ class _VCDWriter:
 
                 vcd_vars.append(row_vcd_vars)
                 gtkw_names.append(row_gtkw_names)
-
-        self.vcd_process_vars = {}
-        if fs_per_delta == 0:
-            return # Not useful without delta cycle expansion.
-        for index, process in enumerate(processes):
-            func_name = process.constructor.__name__
-            func_file = os.path.basename(process.constructor.__code__.co_filename)
-            func_line = process.constructor.__code__.co_firstlineno
-            for name in (
-                f"{process.constructor.__name__}",
-                f"{process.constructor.__name__}!{func_file};{func_line}",
-                f"{process.constructor.__name__}#{index}",
-            ):
-                try:
-                    self.vcd_process_vars[process] = self.vcd_writer.register_var(
-                        scope=("debug", "proc"), name=name, var_type="string", size=None,
-                        init="(init)")
-                    break
-                except KeyError:
-                    pass # try another name
 
     def update_signal(self, timestamp, signal):
         for (vcd_var, repr) in self.vcd_signal_vars.get(signal, ()):
@@ -723,8 +703,7 @@ class PySimEngine(BaseEngine):
     @contextmanager
     def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
         vcd_writer = _VCDWriter(self._state, self._design,
-            vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces, fs_per_delta=fs_per_delta,
-            processes=self._testbenches)
+            vcd_file=vcd_file, gtkw_file=gtkw_file, traces=traces, fs_per_delta=fs_per_delta)
         try:
             self._vcd_writers.append(vcd_writer)
             yield
