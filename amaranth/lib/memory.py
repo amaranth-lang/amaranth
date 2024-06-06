@@ -23,7 +23,8 @@ class Memory(wiring.Component):
     the :ref:`elaborate <lang-elaboration>` method.
 
     Adding ports or changing initial contents of a :class:`Memory` is only possible until it is
-    elaborated; afterwards, attempting to do so will raise :class:`~amaranth.hdl.AlreadyElaborated`.
+    elaborated; afterwards, attempting to do so will raise the
+    :class:`~amaranth.hdl.AlreadyElaborated` exception.
 
     Platform overrides
     ------------------
