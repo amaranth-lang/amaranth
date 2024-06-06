@@ -25,7 +25,8 @@ class MemoryData:
     a default value for rows that are not explicitly initialized.
 
     Changing the initial contents of a :class:`MemoryData` is only possible until it is used to
-    elaborate a memory; afterwards, attempting to do so will raise :exc:`AlreadyElaborated`.
+    elaborate a memory; afterwards, attempting to do so will raise the :class:`AlreadyElaborated`
+    exception.
 
     .. warning::
 
@@ -510,7 +511,8 @@ class DummyPort:
     any such attributes may be set manually.
     """
     # TODO(amaranth-0.6): remove
-    @deprecated("`DummyPort` is deprecated, use `amaranth.lib.memory.ReadPort` or `amaranth.lib.memory.WritePort` instead")
+    @deprecated("`DummyPort` is deprecated, use `amaranth.lib.memory.ReadPort` or "
+                "`amaranth.lib.memory.WritePort` instead")
     def __init__(self, *, data_width, addr_width, domain="sync", name=None, granularity=None):
         self.domain = domain
 
