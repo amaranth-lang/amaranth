@@ -887,6 +887,12 @@ class DSLTestCase(FHDLTestCase):
         with self.assertRaisesRegex(NameError, r"^Submodule named 'foo' already exists$"):
             m1.submodules.foo = m2
 
+    def test_submodule_named_empty(self):
+        m1 = Module()
+        m2 = Module()
+        with self.assertRaisesRegex(NameError, r"^Submodule name must not be empty$"):
+            m1.submodules[""] = m2
+
     def test_submodule_get(self):
         m1 = Module()
         m2 = Module()
