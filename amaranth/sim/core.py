@@ -81,6 +81,7 @@ class Simulator:
         self._design  = Fragment.get(toplevel, platform=None).prepare()
         self._engine  = engine(self._design)
         self._clocked = set()
+        self._running = False
 
     def add_clock(self, period, *, phase=None, domain="sync", if_exists=False):
         """Add a clock to the simulation.
@@ -103,14 +104,17 @@ class Simulator:
             a clock domain with that name, and :py:`if_exists` is :py:`False`.
         :exc:`~amaranth.hdl.DriverConflict`
             If :py:`domain` already has a clock driving it.
+        :exc:`RuntimeError`
+            If the simulation has been advanced since its creation or last reset.
         """
+        if self._running:
+            raise RuntimeError(r"Cannot add a clock to a running simulation")
         if isinstance(domain, ClockDomain):
             if (domain.name in self._design.fragment.domains and
                     domain is not self._design.fragment.domains[domain.name]):
                 warnings.warn(
-                    f"Adding a clock process that drives a clock domain object "
-                    f"named {domain.name!r}, which is distinct from an identically named domain "
-                    f"in the simulated design",
+                    f"Adding a clock that drives a clock domain object named {domain.name!r}, "
+                    f"which is distinct from an identically named domain in the simulated design",
                     UserWarning, stacklevel=2)
         elif domain in self._design.fragment.domains:
             domain = self._design.fragment.domains[domain]
@@ -166,7 +170,14 @@ class Simulator:
         At each point in time, all of the non-waiting testbenches are executed in the order in
         which they were added. If two testbenches share state, or must manipulate the design in
         a coordinated way, they may rely on this execution order for correctness.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If the simulation has been advanced since its creation or last reset.
         """
+        if self._running:
+            raise RuntimeError(r"Cannot add a testbench to a running simulation")
         constructor = self._check_function(constructor, kind="testbench")
         if inspect.iscoroutinefunction(constructor):
             self._engine.add_async_testbench(self, constructor, background=background)
@@ -216,7 +227,14 @@ class Simulator:
             if it is not intended to be a part of a circuit), with access to it synchronized using
             :py:`await ctx.tick().sample(...)`. Such state is visible in a waveform viewer,
             simplifying debugging.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If the simulation has been advanced since its creation or last reset.
         """
+        if self._running:
+            raise RuntimeError(r"Cannot add a process to a running simulation")
         process = self._check_function(process, kind="process")
         if inspect.iscoroutinefunction(process):
             self._engine.add_async_process(self, process)
@@ -311,6 +329,7 @@ class Simulator:
         Returns :py:`True` if the simulation contains any critical testbenches or processes, and
         :py:`False` otherwise.
         """
+        self._running = True
         return self._engine.advance()
 
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=(), fs_per_delta=0):
@@ -390,3 +409,4 @@ class Simulator:
         * Each clock, testbench, and process is restarted.
         """
         self._engine.reset()
+        self._running = False
