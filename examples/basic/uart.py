@@ -110,38 +110,37 @@ if __name__ == "__main__":
         sim = Simulator(uart)
         sim.add_clock(1e-6)
 
-        def loopback_proc():
-            yield Passive()
-            while True:
-                yield uart.rx_i.eq((yield uart.tx_o))
-                yield
-        sim.add_sync_process(loopback_proc)
+        async def testbench_loopback(ctx):
+            async for val in ctx.changed(uart.tx_o):
+                ctx.set(uart.rx_i, val)
 
-        def transmit_proc():
-            assert (yield uart.tx_ack)
-            assert not (yield uart.rx_rdy)
+        sim.add_testbench(testbench_loopback, background=True)
 
-            yield uart.tx_data.eq(0x5A)
-            yield uart.tx_rdy.eq(1)
-            yield
-            yield uart.tx_rdy.eq(0)
-            yield
-            assert not (yield uart.tx_ack)
+        async def testbench_transmit(ctx):
+            assert ctx.get(uart.tx_ack)
+            assert not ctx.get(uart.rx_rdy)
 
-            for _ in range(uart.divisor * 12): yield
+            ctx.set(uart.tx_data, 0x5A)
+            ctx.set(uart.tx_rdy, 1)
+            await ctx.tick()
+            ctx.set(uart.tx_rdy, 0)
+            await ctx.tick()
+            assert not ctx.get(uart.tx_ack)
 
-            assert (yield uart.tx_ack)
-            assert (yield uart.rx_rdy)
-            assert not (yield uart.rx_err)
-            assert (yield uart.rx_data) == 0x5A
+            await ctx.tick().repeat(uart.divisor * 12)
 
-            yield uart.rx_ack.eq(1)
-            yield
-            yield uart.rx_ack.eq(0)
-            yield
-            assert not (yield uart.rx_rdy)
+            assert ctx.get(uart.tx_ack)
+            assert ctx.get(uart.rx_rdy)
+            assert not ctx.get(uart.rx_err)
+            assert ctx.get(uart.rx_data) == 0x5A
 
-        sim.add_sync_process(transmit_proc)
+            ctx.set(uart.rx_ack, 1)
+            await ctx.tick()
+            ctx.set(uart.rx_ack, 0)
+            await ctx.tick()
+            assert not ctx.get(uart.rx_rdy)
+
+        sim.add_testbench(testbench_transmit)
 
         with sim.write_vcd("uart.vcd", "uart.gtkw"):
             sim.run()
