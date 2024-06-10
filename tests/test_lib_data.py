@@ -1277,8 +1277,8 @@ class RFCExamplesTestCase(TestCase):
             ]
 
         @self.simulate(m1)
-        def check_m1():
-            self.assertEqual((yield flt_a.as_value()), 0xbf800000)
+        async def check_m1(ctx):
+            self.assertEqual(ctx.get(flt_a.as_value()), 0xbf800000)
 
         class FloatOrInt32(data.Union):
             float: Float32
@@ -1293,8 +1293,8 @@ class RFCExamplesTestCase(TestCase):
         ]
 
         @self.simulate(m2)
-        def check_m2():
-            self.assertEqual((yield is_gt_1), 1)
+        async def check_m2(ctx):
+            self.assertEqual(ctx.get(is_gt_1), 1)
 
         class Op(Enum):
           ADD = 0
@@ -1317,8 +1317,8 @@ class RFCExamplesTestCase(TestCase):
         ]
 
         @self.simulate(m3)
-        def check_m3():
-            self.assertEqual((yield adder_op.as_value()), 0x7c40000000000001)
+        async def check_m3(ctx):
+            self.assertEqual(ctx.get(adder_op.as_value()), 0x7c40000000000001)
 
     def test_rfc_example_2(self):
         class Kind(Enum):
@@ -1346,8 +1346,8 @@ class RFCExamplesTestCase(TestCase):
         ]
 
         @self.simulate(m1)
-        def check_m1():
-            self.assertEqual((yield view1.as_value()), 0b011)
+        async def check_m1(ctx):
+            self.assertEqual(ctx.get(view1.as_value()), 0b011)
 
         class SomeVariant(data.Struct):
             class Value(data.Union):
@@ -1371,8 +1371,8 @@ class RFCExamplesTestCase(TestCase):
         ]
 
         @self.simulate(m2)
-        def check_m2():
-            self.assertEqual((yield view2.as_value()), 0b010)
+        async def check_m2(ctx):
+            self.assertEqual(ctx.get(view2.as_value()), 0b010)
 
         layout2 = data.StructLayout({
             "ready": unsigned(1),

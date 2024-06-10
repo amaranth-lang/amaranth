@@ -12,68 +12,68 @@ from .utils import *
 class EncoderTestCase(FHDLTestCase):
     def test_basic(self):
         enc = Encoder(4)
-        def process():
-            self.assertEqual((yield enc.n), 1)
-            self.assertEqual((yield enc.o), 0)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(enc.n), 1)
+            self.assertEqual(ctx.get(enc.o), 0)
 
-            yield enc.i.eq(0b0001)
-            self.assertEqual((yield enc.n), 0)
-            self.assertEqual((yield enc.o), 0)
+            ctx.set(enc.i, 0b0001)
+            self.assertEqual(ctx.get(enc.n), 0)
+            self.assertEqual(ctx.get(enc.o), 0)
 
-            yield enc.i.eq(0b0100)
-            self.assertEqual((yield enc.n), 0)
-            self.assertEqual((yield enc.o), 2)
+            ctx.set(enc.i, 0b0100)
+            self.assertEqual(ctx.get(enc.n), 0)
+            self.assertEqual(ctx.get(enc.o), 2)
 
-            yield enc.i.eq(0b0110)
-            self.assertEqual((yield enc.n), 1)
-            self.assertEqual((yield enc.o), 0)
+            ctx.set(enc.i, 0b0110)
+            self.assertEqual(ctx.get(enc.n), 1)
+            self.assertEqual(ctx.get(enc.o), 0)
 
         sim = Simulator(enc)
-        sim.add_testbench(process)
+        sim.add_testbench(testbench)
         sim.run()
 
 
 class PriorityEncoderTestCase(FHDLTestCase):
     def test_basic(self):
         enc = PriorityEncoder(4)
-        def process():
-            self.assertEqual((yield enc.n), 1)
-            self.assertEqual((yield enc.o), 0)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(enc.n), 1)
+            self.assertEqual(ctx.get(enc.o), 0)
 
-            yield enc.i.eq(0b0001)
-            self.assertEqual((yield enc.n), 0)
-            self.assertEqual((yield enc.o), 0)
+            ctx.set(enc.i, 0b0001)
+            self.assertEqual(ctx.get(enc.n), 0)
+            self.assertEqual(ctx.get(enc.o), 0)
 
-            yield enc.i.eq(0b0100)
-            self.assertEqual((yield enc.n), 0)
-            self.assertEqual((yield enc.o), 2)
+            ctx.set(enc.i, 0b0100)
+            self.assertEqual(ctx.get(enc.n), 0)
+            self.assertEqual(ctx.get(enc.o), 2)
 
-            yield enc.i.eq(0b0110)
-            self.assertEqual((yield enc.n), 0)
-            self.assertEqual((yield enc.o), 1)
+            ctx.set(enc.i, 0b0110)
+            self.assertEqual(ctx.get(enc.n), 0)
+            self.assertEqual(ctx.get(enc.o), 1)
 
         sim = Simulator(enc)
-        sim.add_testbench(process)
+        sim.add_testbench(testbench)
         sim.run()
 
 
 class DecoderTestCase(FHDLTestCase):
     def test_basic(self):
         dec = Decoder(4)
-        def process():
-            self.assertEqual((yield dec.o), 0b0001)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(dec.o), 0b0001)
 
-            yield dec.i.eq(1)
-            self.assertEqual((yield dec.o), 0b0010)
+            ctx.set(dec.i, 1)
+            self.assertEqual(ctx.get(dec.o), 0b0010)
 
-            yield dec.i.eq(3)
-            self.assertEqual((yield dec.o), 0b1000)
+            ctx.set(dec.i, 3)
+            self.assertEqual(ctx.get(dec.o), 0b1000)
 
-            yield dec.n.eq(1)
-            self.assertEqual((yield dec.o), 0b0000)
+            ctx.set(dec.n, 1)
+            self.assertEqual(ctx.get(dec.o), 0b0000)
 
         sim = Simulator(dec)
-        sim.add_testbench(process)
+        sim.add_testbench(testbench)
         sim.run()
 
 

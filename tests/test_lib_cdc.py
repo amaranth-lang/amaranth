@@ -23,16 +23,14 @@ class FFSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(frag)
         sim.add_clock(1e-6)
-        def process():
-            self.assertEqual((yield o), 0)
-            yield i.eq(1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-        sim.add_process(process)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(o), 0)
+            ctx.set(i, 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+        sim.add_testbench(testbench)
         sim.run()
 
     def test_init_value(self):
@@ -42,16 +40,14 @@ class FFSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(frag)
         sim.add_clock(1e-6)
-        def process():
-            self.assertEqual((yield o), 1)
-            yield i.eq(0)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-        sim.add_process(process)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(o), 1)
+            ctx.set(i, 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+        sim.add_testbench(testbench)
         sim.run()
 
     def test_reset_value(self):
@@ -63,16 +59,14 @@ class FFSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(frag)
         sim.add_clock(1e-6)
-        def process():
-            self.assertEqual((yield o), 1)
-            yield i.eq(0)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-        sim.add_process(process)
+        async def testbench(ctx):
+            self.assertEqual(ctx.get(o), 1)
+            ctx.set(i, 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+        sim.add_testbench(testbench)
         sim.run()
 
     def test_reset_wrong(self):
@@ -114,31 +108,31 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_clock(1e-6)
-        def process():
+        async def testbench(ctx):
             # initial reset
-            self.assertEqual((yield i), 0)
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
+            self.assertEqual(ctx.get(i), 0)
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
 
-            yield i.eq(1)
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield i.eq(0)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-        sim.add_testbench(process)
+            ctx.set(i, 1)
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            ctx.set(i, 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+        sim.add_testbench(testbench)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -151,31 +145,31 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_clock(1e-6)
-        def process():
+        async def testbench(ctx):
             # initial reset
-            self.assertEqual((yield i), 1)
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
+            self.assertEqual(ctx.get(i), 1)
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
 
-            yield i.eq(0)
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield i.eq(1)
-            yield Tick()
-            self.assertEqual((yield o), 1)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-            self.assertEqual((yield o), 0)
-            yield Tick()
-        sim.add_testbench(process)
+            ctx.set(i, 0)
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            ctx.set(i, 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(o), 0)
+            await ctx.tick()
+        sim.add_testbench(testbench)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -199,31 +193,30 @@ class ResetSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_clock(1e-6)
-        def process():
+        async def testbench(ctx):
             # initial reset
-            self.assertEqual((yield s), 1)
-            yield Tick()
-            self.assertEqual((yield s), 1)
-            yield Tick()
-            self.assertEqual((yield s), 1)
-            yield Tick()
-            self.assertEqual((yield s), 0)
-            yield Tick()
+            self.assertEqual(ctx.get(s), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 0)
+            await ctx.tick()
 
-            yield arst.eq(1)
-            yield Delay(1e-8)
-            self.assertEqual((yield s), 0)
-            yield Tick()
-            self.assertEqual((yield s), 1)
-            yield arst.eq(0)
-            yield Tick()
-            self.assertEqual((yield s), 1)
-            yield Tick()
-            self.assertEqual((yield s), 1)
-            yield Tick()
-            self.assertEqual((yield s), 0)
-            yield Tick()
-        sim.add_testbench(process)
+            ctx.set(arst, 1)
+            self.assertEqual(ctx.get(s), 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 1)
+            ctx.set(arst, 0)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 1)
+            await ctx.tick()
+            self.assertEqual(ctx.get(s), 0)
+            await ctx.tick()
+        sim.add_testbench(testbench)
         with sim.write_vcd("test.vcd"):
             sim.run()
 
@@ -245,21 +238,21 @@ class PulseSynchronizerTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_clock(1e-6)
-        def process():
-            yield ps.i.eq(0)
+        async def testbench(ctx):
+            ctx.set(ps.i, 0)
             # TODO: think about reset
             for n in range(5):
-                yield Tick()
+                await ctx.tick()
             # Make sure no pulses are generated in quiescent state
             for n in range(3):
-                yield Tick()
-                self.assertEqual((yield ps.o), 0)
+                await ctx.tick()
+                self.assertEqual(ctx.get(ps.o), 0)
             # Check conservation of pulses
             accum = 0
             for n in range(10):
-                yield ps.i.eq(1 if n < 4 else 0)
-                yield Tick()
-                accum += yield ps.o
+                ctx.set(ps.i, 1 if n < 4 else 0)
+                await ctx.tick()
+                accum += ctx.get(ps.o)
             self.assertEqual(accum, 4)
-        sim.add_process(process)
+        sim.add_testbench(testbench)
         sim.run()
