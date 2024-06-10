@@ -88,6 +88,17 @@ The captured data is saved to a :abbr:`VCD` file :file:`example1.vcd`, which can
         ]
     }
 
+The :meth:`Simulator.reset` method reverts the simulation to its initial state. It can be used to speed up tests by capturing the waveforms only when the simulation is known to encounter an error:
+
+.. testcode::
+
+    try:
+        sim.run()
+    except:
+        sim.reset()
+        with sim.write_vcd("example1_error.vcd"):
+            sim.run()
+
 
 Testing synchronous circuits
 ++++++++++++++++++++++++++++
