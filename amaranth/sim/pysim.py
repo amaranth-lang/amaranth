@@ -611,6 +611,8 @@ class PySimEngine(BaseEngine):
         self._state.reset()
         for process in self._processes:
             process.reset()
+        for testbench in self._testbenches:
+            testbench.reset()
 
     def add_clock_process(self, clock, *, phase, period):
         self._processes.add(PyClockProcess(self._state, clock,
