@@ -22,13 +22,13 @@ print(verilog.convert(ctr, ports=[ctr.o, ctr.en]))
 
 sim = Simulator(ctr)
 sim.add_clock(1e-6)
-def ce_proc():
-    yield Tick(); yield Tick(); yield Tick()
-    yield ctr.en.eq(1)
-    yield Tick(); yield Tick(); yield Tick()
-    yield ctr.en.eq(0)
-    yield Tick(); yield Tick(); yield Tick()
-    yield ctr.en.eq(1)
-sim.add_testbench(ce_proc)
+async def testbench_ce(ctx):
+    await ctx.tick().repeat(3)
+    ctx.set(ctr.en, 1)
+    await ctx.tick().repeat(3)
+    ctx.set(ctr.en, 0)
+    await ctx.tick().repeat(3)
+    ctx.set(ctr.en,1)
+sim.add_testbench(testbench_ce)
 with sim.write_vcd("ctrl.vcd", "ctrl.gtkw", traces=[ctr.en, ctr.v, ctr.o]):
-    sim.run_until(100e-6, run_passive=True)
+    sim.run_until(100e-6)
