@@ -1472,8 +1472,8 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         dut.d.sync += Signal().eq(0)
         sim = Simulator(dut)
         with self.assertWarnsRegex(UserWarning,
-                r"^Adding a clock process that drives a clock domain object named 'sync', "
-                r"which is distinct from an identically named domain in the simulated design$"):
+                r"^Adding a clock that drives a clock domain object named 'sync', which is "
+                r"distinct from an identically named domain in the simulated design$"):
             sim.add_clock(1e-6, domain=ClockDomain("sync"))
 
     def test_bug_826(self):
@@ -2009,3 +2009,40 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             async def testbench():
                 yield Delay()
             sim.add_testbench(testbench())
+
+    def test_issue_1368(self):
+        sim = Simulator(Module())
+        async def testbench(ctx):
+            sim.add_clock(1e-6)
+        sim.add_testbench(testbench)
+        with self.assertRaisesRegex(RuntimeError,
+                r"^Cannot add a clock to a running simulation$"):
+            sim.run()
+
+        sim = Simulator(Module())
+        async def testbench(ctx):
+            async def testbench2(ctx):
+                pass
+            sim.add_testbench(testbench2)
+        sim.add_testbench(testbench)
+        with self.assertRaisesRegex(RuntimeError,
+                r"^Cannot add a testbench to a running simulation$"):
+            sim.run()
+
+        sim = Simulator(Module())
+        async def process(ctx):
+            async def process2(ctx):
+                pass
+            sim.add_process(process2)
+        sim.add_process(process)
+        with self.assertRaisesRegex(RuntimeError,
+                r"^Cannot add a process to a running simulation$"):
+            sim.run()
+
+        async def process_empty(ctx):
+            pass
+        sim = Simulator(Module())
+        sim.run()
+        sim.reset()
+        sim.add_process(process_empty) # should succeed
+        sim.run() # suppress 'coroutine was never awaited' warning
