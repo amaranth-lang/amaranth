@@ -792,6 +792,9 @@ class View(ValueCastable):
         :exc:`TypeError`
             If :meth:`.ShapeCastable.__call__` does not return a value or a value-castable object.
         """
+        if isinstance(key, slice):
+            raise TypeError(
+                "View cannot be indexed with a slice; did you mean to call `.as_value()` first?")
         if isinstance(self.__layout, ArrayLayout):
             if not isinstance(key, (int, Value, ValueCastable)):
                 raise TypeError(

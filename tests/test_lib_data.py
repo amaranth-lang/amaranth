@@ -670,6 +670,12 @@ class ViewTestCase(FHDLTestCase):
                 r"with a value$"):
             Signal(data.StructLayout({}))[Signal(1)]
 
+    def test_index_wrong_slice(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^View cannot be indexed with a slice; did you mean to call `.as_value\(\)` "
+                r"first\?$"):
+            Signal(data.StructLayout({}))[0:1]
+
     def test_getattr(self):
         v = Signal(data.UnionLayout({
             "a": unsigned(2),
