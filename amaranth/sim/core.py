@@ -57,11 +57,8 @@ class Simulator:
 
     .. note::
 
-        Resetting the simulator can also be used to amortize the startup cost while validating
-        a large design with many short test. In this case, instead of adding new testbenches,
-        the behavior of the already added testbenches would be modified for each of the tests.
-
-        It can also be used to capture waveforms only for simulations that encounter an error.
+        Resetting the simulator can also be used to amortize the startup cost of repeatedly
+        simulating a large design.
 
     Arguments
     ---------
