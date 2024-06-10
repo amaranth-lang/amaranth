@@ -325,47 +325,47 @@ class AsyncFIFOSimCase(FHDLTestCase):
 
         ff_syncronizer_latency = 2
 
-        def testbench():
+        async def testbench(ctx):
             for i in range(10):
-                yield fifo.w_data.eq(i)
-                yield fifo.w_en.eq(1)
-                yield Tick()
+                ctx.set(fifo.w_data, i)
+                ctx.set(fifo.w_en, 1)
+                _, _, r_level = await ctx.tick().sample(fifo.r_level)
 
                 if (i - ff_syncronizer_latency) > 0:
-                    self.assertEqual((yield fifo.r_level), i - ff_syncronizer_latency)
+                    self.assertEqual(r_level, i - ff_syncronizer_latency)
                 else:
-                    self.assertEqual((yield fifo.r_level), 0)
+                    self.assertEqual(r_level, 0)
 
         simulator = Simulator(fifo)
         simulator.add_clock(100e-6)
-        simulator.add_process(testbench)
+        simulator.add_testbench(testbench)
         simulator.run()
 
     def check_async_fifo_level(self, fifo, fill_in, expected_level, read=False):
         write_done = Signal()
 
-        def write_process():
+        async def testbench_write(ctx):
             for i in range(fill_in):
-                yield fifo.w_data.eq(i)
-                yield fifo.w_en.eq(1)
-                yield Tick("write")
-            yield fifo.w_en.eq(0)
-            yield Tick ("write")
-            self.assertEqual((yield fifo.w_level), expected_level)
-            yield write_done.eq(1)
+                ctx.set(fifo.w_data, i)
+                ctx.set(fifo.w_en, 1)
+                await ctx.tick("write")
+            ctx.set(fifo.w_en, 0)
+            await ctx.tick ("write")
+            self.assertEqual(ctx.get(fifo.w_level), expected_level)
+            ctx.set(write_done, 1)
 
-        def read_process():
+        async def testbench_read(ctx):
             if read:
-                yield fifo.r_en.eq(1)
-            while not (yield write_done):
-                yield Tick("read")
-            self.assertEqual((yield fifo.r_level), expected_level)
+                ctx.set(fifo.r_en, 1)
+            while not ctx.get(write_done):
+                await ctx.tick("read")
+            self.assertEqual(ctx.get(fifo.r_level), expected_level)
 
         simulator = Simulator(fifo)
         simulator.add_clock(100e-6, domain="write")
-        simulator.add_testbench(write_process)
+        simulator.add_testbench(testbench_write)
         simulator.add_clock(50e-6, domain="read")
-        simulator.add_testbench(read_process)
+        simulator.add_testbench(testbench_read)
         with simulator.write_vcd("test.vcd"):
             simulator.run()
 

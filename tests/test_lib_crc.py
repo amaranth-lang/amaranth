@@ -241,18 +241,18 @@ class CRCTestCase(unittest.TestCase):
         crc = getattr(catalog, name)(data_width=8).create()
         check = CRC_CHECKS[name][0]
 
-        def process():
+        async def testbench(ctx):
             for word in b"123456789":
-                yield crc.start.eq(word == b"1")
-                yield crc.data.eq(word)
-                yield crc.valid.eq(1)
-                yield Tick()
-            yield crc.valid.eq(0)
-            yield Tick()
-            assert (yield crc.crc) == check
+                ctx.set(crc.start, word == b"1")
+                ctx.set(crc.data, word)
+                ctx.set(crc.valid, 1)
+                await ctx.tick()
+            ctx.set(crc.valid, 0)
+            await ctx.tick()
+            assert ctx.get(crc.crc) == check
 
         sim = Simulator(crc)
-        sim.add_testbench(process)
+        sim.add_testbench(testbench)
         sim.add_clock(1e-6)
         sim.run()
 
@@ -287,20 +287,20 @@ class CRCTestCase(unittest.TestCase):
                 d = [bits[i : i+m] for i in range(0, len(bits), m)]
             words = [int(x, 2) for x in d]
 
-            def process():
-                yield crc.start.eq(1)
-                yield Tick()
-                yield crc.start.eq(0)
+            async def testbench(ctx):
+                ctx.set(crc.start, 1)
+                await ctx.tick()
+                ctx.set(crc.start, 0)
                 for word in words:
-                    yield crc.data.eq(word)
-                    yield crc.valid.eq(1)
-                    yield Tick()
-                yield crc.valid.eq(0)
-                yield Tick()
-                assert (yield crc.crc) == check
+                    ctx.set(crc.data, word)
+                    ctx.set(crc.valid, 1)
+                    await ctx.tick()
+                ctx.set(crc.valid, 0)
+                await ctx.tick()
+                assert ctx.get(crc.crc) == check
 
             sim = Simulator(crc)
-            sim.add_testbench(process)
+            sim.add_testbench(testbench)
             sim.add_clock(1e-6)
             sim.run()
 
@@ -344,20 +344,20 @@ class CRCTestCase(unittest.TestCase):
                     words += [int(x) for x in f"{byte:08b}"]
             words = words[:72 + n]
 
-        def process():
-            yield crc.start.eq(1)
-            yield Tick()
-            yield crc.start.eq(0)
+        async def testbench(ctx):
+            ctx.set(crc.start, 1)
+            await ctx.tick()
+            ctx.set(crc.start, 0)
             for word in words:
-                yield crc.data.eq(word)
-                yield crc.valid.eq(1)
-                yield Tick()
-            yield crc.valid.eq(0)
-            yield Tick()
-            assert (yield crc.match_detected)
+                ctx.set(crc.data, word)
+                ctx.set(crc.valid, 1)
+                await ctx.tick()
+            ctx.set(crc.valid, 0)
+            await ctx.tick()
+            assert ctx.get(crc.match_detected)
 
         sim = Simulator(crc)
-        sim.add_testbench(process)
+        sim.add_testbench(testbench)
         sim.add_clock(1e-6)
         sim.run()
 
