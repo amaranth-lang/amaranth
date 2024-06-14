@@ -6,7 +6,7 @@ from amaranth.hdl._dsl import *
 from amaranth.hdl._ir import *
 from amaranth.hdl._xfrm import *
 from amaranth.hdl._mem import *
-from amaranth.hdl._mem import MemoryInstance
+from amaranth.lib.memory import Memory
 
 from .utils import *
 from amaranth._utils import _ignore_deprecated
@@ -120,7 +120,7 @@ class DomainRenamerTestCase(FHDLTestCase):
     def test_rename_mem_ports(self):
         m = Module()
         with _ignore_deprecated():
-            mem = Memory(depth=4, width=16)
+            mem = Memory(depth=4, shape=16, init=[])
         m.submodules.mem = mem
         mem.read_port(domain="a")
         mem.read_port(domain="b")
@@ -362,23 +362,23 @@ class EnableInserterTestCase(FHDLTestCase):
 
     def test_enable_read_port(self):
         with _ignore_deprecated():
-            mem = Memory(width=8, depth=4)
-        mem.read_port(transparent=False)
+            mem = Memory(shape=8, depth=4, init=[])
+        mem_r = mem.read_port()
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
         self.assertRepr(f._read_ports[0]._en, """
-        (& (sig mem_r_en) (sig c1))
+        (& (sig mem_r__en) (sig c1))
         """)
 
     def test_enable_write_port(self):
         with _ignore_deprecated():
-            mem = Memory(width=8, depth=4)
-        mem.write_port(granularity=2)
+            mem = Memory(shape=8, depth=4, init=[])
+        mem_w = mem.write_port(granularity=2)
         f = EnableInserter(self.c1)(mem).elaborate(platform=None)
         self.assertRepr(f._write_ports[0]._en, """
         (switch-value
             (sig c1)
             (case 0 (const 4'd0))
-            (default (sig mem_w_en))
+            (default (sig mem_w__en))
         )
         """)
 

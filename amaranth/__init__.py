@@ -20,6 +20,5 @@ __all__ = [
     "Module",
     "ClockDomain",
     "Elaboratable", "Fragment", "Instance",
-    "Memory",
     "DomainRenamer", "ResetInserter", "EnableInserter",
 ]
