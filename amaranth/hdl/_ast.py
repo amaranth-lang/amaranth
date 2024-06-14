@@ -2352,19 +2352,6 @@ class Array(MutableSequence):
         b = Signal.range(10)
         r = Signal(8)
         m.d.comb += r.eq(mult[a][b])
-
-    Array of records::
-
-        layout = [
-            ("r_data", 16),
-            ("r_en",   1),
-        ]
-        buses  = Array(Record(layout) for busno in range(4))
-        master = Record(layout)
-        m.d.comb += [
-            buses[sel].r_en.eq(master.r_en),
-            master.r_data.eq(buses[sel].r_data),
-        ]
     """
     def __init__(self, iterable=()):
         self._inner    = list(iterable)

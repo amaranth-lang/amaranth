@@ -72,7 +72,6 @@ The prelude exports exactly the following names:
 * :class:`Fragment`
 * :class:`Instance`
 * :class:`Memory`
-* :class:`Record` (deprecated)
 * :class:`DomainRenamer`
 * :class:`ResetInserter`
 * :class:`EnableInserter`

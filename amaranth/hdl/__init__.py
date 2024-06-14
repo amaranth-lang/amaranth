@@ -10,7 +10,6 @@ from ._ir import AlreadyElaborated, UnusedElaboratable, Elaboratable, DriverConf
 from ._ir import Instance, IOBufferInstance
 from ._mem import MemoryData, MemoryInstance, Memory, ReadPort, WritePort, DummyPort
 from ._nir import CombinationalCycle
-from ._rec import Record
 from ._xfrm import DomainRenamer, ResetInserter, EnableInserter
 
 
@@ -33,8 +32,6 @@ __all__ = [
     "CombinationalCycle",
     # _mem
     "MemoryData", "MemoryInstance", "Memory", "ReadPort", "WritePort", "DummyPort",
-    # _rec
-    "Record",
     # _xfrm
     "DomainRenamer", "ResetInserter", "EnableInserter",
 ]

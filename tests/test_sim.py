@@ -7,9 +7,6 @@ from textwrap import dedent
 from amaranth._utils import flatten
 from amaranth.hdl._ast import *
 from amaranth.hdl._cd import  *
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    from amaranth.hdl.rec import *
 from amaranth.hdl._dsl import *
 from amaranth.hdl._mem import MemoryData
 from amaranth.hdl._ir import *
@@ -321,14 +318,6 @@ class SimulatorUnitTestCase(FHDLTestCase):
         n = Signal(3)
         stmt = lambda y, a: [Cat(Cat(l, Cat(m)), n).eq(a), y.eq(Cat(n, m, l))]
         self.assertStatement(stmt, [C(0b100101110, 9)], C(0b110101100, 9))
-
-    def test_record(self):
-        rec = Record([
-            ("l", 1),
-            ("m", 2),
-        ])
-        stmt = lambda y, a: [rec.eq(a), y.eq(rec)]
-        self.assertStatement(stmt, [C(0b101, 3)], C(0b101, 3))
 
     def test_replicate(self):
         stmt = lambda y, a: y.eq(a.replicate(3))
