@@ -29,23 +29,23 @@ Migrating from version 0.4
 
 Apply the following changes to code written against Amaranth 0.4 to migrate it to version 0.5:
 
+* Update uses of :py:`reset=` keyword argument to :py:`init=`.
+* Ensure all elaboratables are subclasses of :class:`Elaboratable`.
 * Replace uses of :py:`m.Case()` with no patterns with :py:`m.Default()`.
 * Replace uses of :py:`Value.matches()` with no patterns with :py:`Const(1)`.
-* Update uses of :py:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`.
-* Update uses of :py:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`.
-* Update uses of :py:`reset=` keyword argument to :py:`init=`.
+* Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
+* Replace imports of :py:`amaranth.asserts.Assert`, :py:`Assume`, and :py:`Cover` with imports from :py:`amaranth.hdl`.
+* Remove uses of :py:`name=` keyword argument of :py:`Assert`, :py:`Assume`, and :py:`Cover`; a message can be used instead.
+* Replace uses of :py:`amaranth.hdl.Memory` with :class:`amaranth.lib.memory.Memory`.
+* Update uses of :py:`platform.request` to pass :py:`dir="-"` and use :mod:`amaranth.lib.io` buffers.
+* Remove uses of :py:`amaranth.lib.coding.*` by inlining or copying the implementation of the modules.
 * Convert uses of :py:`Simulator.add_sync_process` used as testbenches to :meth:`Simulator.add_testbench <amaranth.sim.Simulator.add_testbench>`.
 * Convert other uses of :py:`Simulator.add_sync_process` to :meth:`Simulator.add_process <amaranth.sim.Simulator.add_process>`.
 * Convert simulator processes and testbenches to use the new async API.
-* Replace uses of :py:`amaranth.hdl.Memory` with :class:`amaranth.lib.memory.Memory`.
-* Replace imports of :py:`amaranth.asserts.Assert`, :py:`Assume`, and :py:`Cover` with imports from :py:`amaranth.hdl`.
-* Remove uses of :py:`name=` keyword argument of :py:`Assert`, :py:`Assume`, and :py:`Cover`; a message can be used instead.
-* Ensure all elaboratables are subclasses of :class:`Elaboratable`.
-* Ensure clock domains aren't used outside the module that defines them, or its submodules; move clock domain definitions upwards in the hierarchy as necessary
-* Remove uses of :py:`amaranth.lib.coding.*` by inlining or copying the implementation of the modules.
-* Update uses of :py:`platform.request` to pass :py:`dir="-"` and use :mod:`amaranth.lib.io` buffers.
 * Update uses of :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` with explicit :py:`phase` to take into account simulator no longer adding implicit :py:`period / 2`. (Previously, :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` was documented to first toggle the clock at the time :py:`phase`, but actually first toggled the clock at :py:`period / 2 + phase`.)
 * Update uses of :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` to remove the :py:`run_passive=True` argument. If the code uses :py:`run_passive=False`, ensure it still works with the new behavior.
+* Update uses of :py:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`.
+* Update uses of :py:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`.
 
 
 Implemented RFCs
