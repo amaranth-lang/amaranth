@@ -29,6 +29,7 @@ Language changes
 .. currentmodule:: amaranth.hdl
 
 * Removed (deprecated in 0.4): :class:`Record`.
+* Removed (deprecated in 0.5): public submodules of :mod:`amaranth.hdl`.
 
 
 Standard library changes
