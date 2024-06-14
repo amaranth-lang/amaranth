@@ -922,8 +922,8 @@ class Const(ValueCastable):
     Slicing a constant or accessing its attributes returns a part of the underlying value
     corresponding to the field with that index or name. If the shape of the field is
     a :class:`Layout`, the returned value is a :class:`Const`; if it is a different
-    :ref:`shape-like <lang-shapelike>` object implementing :meth:`~.ShapeCastable.from_bits`,
-    it will be the result of calling that method; otherwise, it is an :class:`int`.
+    :ref:`shape-like <lang-shapelike>` object, it will be the result of calling
+    :meth:`~.ShapeCastable.from_bits`; otherwise, it is an :class:`int`.
 
     Slicing a constant whose layout is an :class:`ArrayLayout` can be done with an index that is
     an Amaranth value rather than a constant integer. The returned element is chosen dynamically
@@ -990,8 +990,8 @@ class Const(ValueCastable):
         """Slice the underlying value.
 
         A field corresponding to :py:`key` is looked up in the layout. If the field's shape is
-        a shape-castable object that has a :meth:`~.ShapeCastable.from_bits` method, returns
-        the result of calling that method. Otherwise, returns an :class:`int`.
+        a shape-castable object, returns the result of calling :meth:`~.ShapeCastable.from_bits`.
+        Otherwise, returns an :class:`int`.
 
         Arguments
         ---------

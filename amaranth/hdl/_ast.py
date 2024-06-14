@@ -253,9 +253,8 @@ class ShapeCastable:
             raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
                             f"the '__call__' method")
         if cls.from_bits is ShapeCastable.from_bits:
-            warnings.warn(f"Class '{cls.__name__}' deriving from 'ShapeCastable' does not override "
-                          f"the 'from_bits' method, which will be required in Amaranth 0.6",
-                          DeprecationWarning, stacklevel=2)
+            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+                            f"the 'from_bits' method")
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
@@ -321,8 +320,10 @@ class ShapeCastable:
         """
         return super().const(*args, **kwargs) # :nocov:
 
-    def from_bits(self, raw):
-        """Lift a bit pattern to a higher-level representation.
+    def from_bits(self, *args, **kwargs):
+        """from_bits(raw)
+
+        Lift a bit pattern to a higher-level representation.
 
         This method is called by the Amaranth language to lift :py:`raw`, which is an :class:`int`,
         to a higher-level representation, which may be any object accepted by :meth:`const`.
@@ -353,7 +354,7 @@ class ShapeCastable:
             either directly or as a cause of another exception. While not constrained here,
             usually the exception class will be :exc:`ValueError`.
         """
-        return raw
+        return super().from_bits(*args, **kwargs) # :nocov:
 
     def __call__(self, *args, **kwargs):
         """__call__(obj)
