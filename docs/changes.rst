@@ -28,6 +28,7 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
+* Changed: overriding :meth:`ValueCastable.from_bits` is now mandatory. (`RFC 51`_)
 * Removed: (deprecated in 0.4) :class:`Record`.
 * Removed: (deprecated in 0.5) public submodules of :mod:`amaranth.hdl`.
 * Removed: (deprecated in 0.5) :meth:`Value.implies`.
