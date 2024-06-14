@@ -1,13 +1,17 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.sim import *
 from amaranth.back import verilog
 
 
-class Counter(Elaboratable):
+class Counter(wiring.Component):
+    o: Out(1)
+    en: In(1)
+
     def __init__(self, width):
+        super().__init__()
         self.v = Signal(width, init=2**width-1)
-        self.o = Signal()
-        self.en = Signal()
 
     def elaborate(self, platform):
         m = Module()
@@ -18,7 +22,7 @@ class Counter(Elaboratable):
 
 ctr = Counter(width=16)
 
-print(verilog.convert(ctr, ports=[ctr.o, ctr.en]))
+print(verilog.convert(ctr))
 
 sim = Simulator(ctr)
 sim.add_clock(1e-6)

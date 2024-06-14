@@ -1,7 +1,9 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 
 
-class UART(Elaboratable):
+class UART(wiring.Component):
     """
     Parameters
     ----------
@@ -15,18 +17,20 @@ class UART(Elaboratable):
         self.data_bits = data_bits
         self.divisor   = divisor
 
-        self.tx_o    = Signal()
-        self.rx_i    = Signal()
+        super().__init__({
+            "tx_o": Out(1),
+            "rx_i": In(1),
 
-        self.tx_data = Signal(data_bits)
-        self.tx_rdy  = Signal()
-        self.tx_ack  = Signal()
+            "tx_data": In(data_bits),
+            "tx_rdy": In(1),
+            "tx_ack": Out(1),
 
-        self.rx_data = Signal(data_bits)
-        self.rx_err  = Signal()
-        self.rx_ovf  = Signal()
-        self.rx_rdy  = Signal()
-        self.rx_ack  = Signal()
+            "rx_data": Out(data_bits),
+            "rx_err": Out(1),
+            "rx_ovf": Out(1),
+            "rx_rdy": Out(1),
+            "rx_ack": In(1),
+        })
 
     def elaborate(self, platform):
         m = Module()
@@ -90,11 +94,6 @@ class UART(Elaboratable):
 
 if __name__ == "__main__":
     uart = UART(divisor=5)
-    ports = [
-        uart.tx_o, uart.rx_i,
-        uart.tx_data, uart.tx_rdy, uart.tx_ack,
-        uart.rx_data, uart.rx_rdy, uart.rx_err, uart.rx_ovf, uart.rx_ack
-    ]
 
     import argparse
 
@@ -148,4 +147,4 @@ if __name__ == "__main__":
     if args.action == "generate":
         from amaranth.back import verilog
 
-        print(verilog.convert(uart, ports=ports))
+        print(verilog.convert(uart))

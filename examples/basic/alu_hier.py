@@ -1,12 +1,16 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class Adder(Elaboratable):
+class Adder(wiring.Component):
     def __init__(self, width):
-        self.a   = Signal(width)
-        self.b   = Signal(width)
-        self.o   = Signal(width)
+        super().__init__({
+            "a": In(width),
+            "b": In(width),
+            "o": Out(width),
+        })
 
     def elaborate(self, platform):
         m = Module()
@@ -14,11 +18,13 @@ class Adder(Elaboratable):
         return m
 
 
-class Subtractor(Elaboratable):
+class Subtractor(wiring.Component):
     def __init__(self, width):
-        self.a   = Signal(width)
-        self.b   = Signal(width)
-        self.o   = Signal(width)
+        super().__init__({
+            "a": In(width),
+            "b": In(width),
+            "o": Out(width),
+        })
 
     def elaborate(self, platform):
         m = Module()
@@ -26,13 +32,14 @@ class Subtractor(Elaboratable):
         return m
 
 
-class ALU(Elaboratable):
+class ALU(wiring.Component):
     def __init__(self, width):
-        self.op  = Signal()
-        self.a   = Signal(width)
-        self.b   = Signal(width)
-        self.o   = Signal(width)
-
+        super().__init__({
+            "op": In(1),
+            "a": In(width),
+            "b": In(width),
+            "o": Out(width),
+        })
         self.add = Adder(width)
         self.sub = Subtractor(width)
 
@@ -55,4 +62,4 @@ class ALU(Elaboratable):
 
 if __name__ == "__main__":
     alu = ALU(width=16)
-    main(alu, ports=[alu.op, alu.a, alu.b, alu.o])
+    main(alu)

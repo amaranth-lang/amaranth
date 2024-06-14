@@ -1,15 +1,19 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.lib.memory import Memory
 from amaranth.cli import main
 
 
-class RegisterFile(Elaboratable):
+class RegisterFile(wiring.Component):
+    adr: In(4)
+    dat_r: Out(8)
+    dat_w: In(8)
+    we: In(1)
+
     def __init__(self):
-        self.adr   = Signal(4)
-        self.dat_r = Signal(8)
-        self.dat_w = Signal(8)
-        self.we    = Signal()
-        self.mem   = Memory(shape=8, depth=16, init=[0xaa, 0x55])
+        super().__init__()
+        self.mem = Memory(shape=8, depth=16, init=[0xaa, 0x55])
 
     def elaborate(self, platform):
         m = Module()
@@ -28,4 +32,4 @@ class RegisterFile(Elaboratable):
 
 if __name__ == "__main__":
     rf = RegisterFile()
-    main(rf, ports=[rf.adr, rf.dat_r, rf.dat_w, rf.we])
+    main(rf)

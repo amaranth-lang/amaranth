@@ -1,11 +1,15 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class ClockDivisor(Elaboratable):
+class ClockDivisor(wiring.Component):
+    o: Out(1)
+
     def __init__(self, factor):
+        super().__init__()
         self.v = Signal(factor)
-        self.o = Signal()
 
     def elaborate(self, platform):
         m = Module()

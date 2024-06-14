@@ -43,9 +43,8 @@ def main_parser(parser=None):
     return parser
 
 
-def main_runner(parser, args, design, platform=None, name="top", ports=()):
+def main_runner(parser, args, design, platform=None, name="top", ports=None):
     if args.action == "generate":
-        fragment = Fragment.get(design, platform)
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
             if args.generate_file.name.endswith(".il"):
@@ -57,11 +56,11 @@ def main_runner(parser, args, design, platform=None, name="top", ports=()):
         if generate_type is None:
             parser.error("Unable to auto-detect language, specify explicitly with -t/--type")
         if generate_type == "il":
-            output = rtlil.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
+            output = rtlil.convert(design, platform=platform, name=name, ports=ports, emit_src=args.emit_src)
         if generate_type == "cc":
-            output = cxxrtl.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
+            output = cxxrtl.convert(design, platform=platform, name=name, ports=ports, emit_src=args.emit_src)
         if generate_type == "v":
-            output = verilog.convert(fragment, name=name, ports=ports, emit_src=args.emit_src)
+            output = verilog.convert(design, platform=platform, name=name, ports=ports, emit_src=args.emit_src)
         if args.generate_file:
             args.generate_file.write(output)
         else:
