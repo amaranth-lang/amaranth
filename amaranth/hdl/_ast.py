@@ -994,11 +994,6 @@ class Value(metaclass=ABCMeta):
         """
         return Operator("r^", [self])
 
-    # TODO(amaranth-0.6): remove
-    @deprecated("`a.implies(b)` is deprecated, use `~a | b` instead")
-    def implies(self, conclusion):
-        return ~self | conclusion
-
     def __check_shamt(self):
         if self.shape().signed:
             # Neither Python nor HDLs implement shifts by negative values; prohibit any shifts
@@ -2481,7 +2476,6 @@ class ArrayProxy(ValueCastable):
     any = _proxy_value("any")
     all = _proxy_value("all")
     xor = _proxy_value("xor")
-    implies = _proxy_value("implies")
     __lshift__ = _proxy_value("__lshift__")
     __rlshift__ = _proxy_value("__rlshift__")
     __rshift__ = _proxy_value("__rshift__")

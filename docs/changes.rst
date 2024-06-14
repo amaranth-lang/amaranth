@@ -28,8 +28,9 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
-* Removed (deprecated in 0.4): :class:`Record`.
-* Removed (deprecated in 0.5): public submodules of :mod:`amaranth.hdl`.
+* Removed: (deprecated in 0.4) :class:`Record`.
+* Removed: (deprecated in 0.5) public submodules of :mod:`amaranth.hdl`.
+* Removed: (deprecated in 0.5) :meth:`Value.implies`.
 
 
 Standard library changes
