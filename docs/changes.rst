@@ -23,6 +23,14 @@ Version 0.6 (unreleased)
 ========================
 
 
+Language changes
+----------------
+
+.. currentmodule:: amaranth.hdl
+
+* Removed (deprecated in 0.4): :class:`Record`.
+
+
 Standard library changes
 ------------------------
 
