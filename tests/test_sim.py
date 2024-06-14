@@ -1506,6 +1506,22 @@ class SimulatorRegressionTestCase(FHDLTestCase):
                 r"^Clock signal is already driven by combinational logic$"):
             sim.add_clock(1e-6)
 
+    def test_initial(self):
+        a = Signal(4, init=3)
+        m = Module()
+        sim = Simulator(m)
+        fired = 0
+
+        async def process(ctx):
+            nonlocal fired
+            async for val_a, in ctx.changed(a):
+                self.assertEqual(val_a, 3)
+                fired += 1
+
+        sim.add_process(process)
+        sim.run()
+        self.assertEqual(fired, 1)
+
     def test_sample(self):
         m = Module()
         m.domains.sync = cd_sync = ClockDomain()

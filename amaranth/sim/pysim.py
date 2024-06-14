@@ -555,7 +555,7 @@ class _PyTriggerState:
         else:
             self._broken = True
 
-    def run(self):
+    def compute_result(self):
         result = []
         for trigger in self._combination._triggers:
             if isinstance(trigger, (SampleTrigger, ChangedTrigger)):
@@ -570,11 +570,19 @@ class _PyTriggerState:
                 assert False # :nocov:
         self._result = tuple(result)
 
+    def run(self):
+        self.compute_result()
         self._combination._process.runnable = True
         self._combination._process.waits_on = None
         self._triggers_hit.clear()
         for waker, interval_fs in self._delay_wakers.items():
             self._engine.state.set_delay_waker(interval_fs, waker)
+
+    def initial_eligible(self):
+        return not self._oneshot and any(
+            isinstance(trigger, ChangedTrigger)
+            for trigger in self._combination._triggers
+        )
 
     def __await__(self):
         self._result = None

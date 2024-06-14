@@ -749,10 +749,18 @@ class AsyncProcess(BaseProcess):
         self.critical = not self.background
         self.waits_on = None
         self.coroutine = self.constructor(self.context)
+        self.first_await = True
 
     def run(self):
         try:
             self.waits_on = self.coroutine.send(None)
+            # Special case to make combination logic replacement work correctly: ensure that
+            # a process looping over `changed()` always gets awakened at least once at time 0,
+            # to see the initial values.
+            if self.first_await and self.waits_on.initial_eligible():
+                self.waits_on.compute_result()
+                self.waits_on = self.coroutine.send(None)
+            self.first_await = False
         except StopIteration:
             self.critical = False
             self.waits_on = None
