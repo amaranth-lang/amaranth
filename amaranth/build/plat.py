@@ -34,6 +34,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         self.extra_files = OrderedDict()
 
         self._prepared   = False
+        self._design     = None
 
     @property
     def default_clk_constraint(self):
@@ -148,9 +149,16 @@ class Platform(ResourceManager, metaclass=ABCMeta):
             buffer = DomainLowerer()(buffer)
             fragment.add_subfragment(buffer, name=f"pin_{pin.name}")
 
-        ports = [(port.name, port, None) for port in self.iter_ports()]
-        design = Design(fragment, ports, hierarchy=(name,))
-        return self.toolchain_prepare(design, name, **kwargs)
+        self._design = Design(fragment, [], hierarchy=(name,))
+        return self.toolchain_prepare(self._design, name, **kwargs)
+
+    def iter_port_constraints_bits(self):
+        for (name, port, _dir) in self._design.ports:
+            if len(port) == 1:
+                yield name, port.metadata[0].name, port.metadata[0].attrs
+            else:
+                for bit, meta in enumerate(port.metadata):
+                    yield f"{name}[{bit}]", meta.name, meta.attrs
 
     @abstractmethod
     def toolchain_prepare(self, fragment, name, **kwargs):

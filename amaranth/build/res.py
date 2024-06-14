@@ -107,8 +107,6 @@ class ResourceManager:
         self.connectors = OrderedDict()
         self._conn_pins = OrderedDict()
 
-        # List of all IOPort instances created
-        self._ports     = []
         # List of (pin, port, buffer) pairs for non-dir="-" requests.
         self._pins      = []
         # Constraint list
@@ -220,7 +218,6 @@ class ResourceManager:
                         PortMetadata(name, attrs)
                         for name in phys_names
                     ])
-                    self._ports.append(iop)
                     port = io.SingleEndedPort(iop, invert=phys.invert, direction=direction)
                 if isinstance(phys, DiffPairs):
                     phys_names_p = phys.p.map_names(self._conn_pins, resource)
@@ -234,7 +231,6 @@ class ResourceManager:
                         PortMetadata(name, attrs)
                         for name in phys_names_n
                     ])
-                    self._ports += [p, n]
                     port = io.DifferentialPort(p, n, invert=phys.invert, direction=direction)
 
                 for phys_name in phys_names:
@@ -273,17 +269,6 @@ class ResourceManager:
 
     def iter_pins(self):
         yield from self._pins
-
-    def iter_ports(self):
-        yield from self._ports
-
-    def iter_port_constraints_bits(self):
-        for port in self._ports:
-            if len(port) == 1:
-                yield port.name, port.metadata[0].name, port.metadata[0].attrs
-            else:
-                for bit, meta in enumerate(port.metadata):
-                    yield f"{port.name}[{bit}]", meta.name, meta.attrs
 
     def add_clock_constraint(self, clock, frequency):
         if isinstance(clock, ClockSignal):
