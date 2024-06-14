@@ -1230,7 +1230,7 @@ class Struct(View, metaclass=_AggregateMeta):
 
         >>> IEEE754Single.as_shape()
         StructLayout({'fraction': 23, 'exponent': 8, 'sign': 1})
-        >>> Signal(IEEE754Single).as_value().width
+        >>> Signal(IEEE754Single).as_value().shape().width
         32
 
     Instances of this class can be used where :ref:`values <lang-values>` are expected:
