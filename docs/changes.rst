@@ -68,6 +68,7 @@ Apply the following changes to code written against Amaranth 0.4 to migrate it t
 * Update uses of :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` to remove the :py:`run_passive=True` argument. If the code uses :py:`run_passive=False`, ensure it still works with the new behavior.
 * Update uses of :py:`amaranth.utils.log2_int(need_pow2=False)` to :func:`amaranth.utils.ceil_log2`.
 * Update uses of :py:`amaranth.utils.log2_int(need_pow2=True)` to :func:`amaranth.utils.exact_log2`.
+* Replace uses of :py:`a.implies(b)` with `~a | b`.
 
 
 Implemented RFCs
@@ -138,6 +139,7 @@ Language changes
 * Deprecated: :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 * Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
 * Deprecated: upwards propagation of clock domains. (`RFC 59`_)
+* Deprecated: :meth:`Value.implies`.
 * Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
 * Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
 * Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
