@@ -1607,18 +1607,6 @@ class Const(Value, metaclass=_ConstMeta):
     def value(self):
         return self._value
 
-    # TODO(amaranth-0.6): remove
-    @property
-    @deprecated("`const.width` is deprecated and will be removed in Amaranth 0.6; use `len(const)` instead")
-    def width(self):
-        return self.shape().width
-
-    # TODO(amaranth-0.6): remove
-    @property
-    @deprecated("`const.signed` is deprecated and will be removed in Amaranth 0.6; use `const.shape().signed` instead")
-    def signed(self):
-        return self.shape().signed
-
     def _rhs_signals(self):
         return SignalSet()
 
@@ -2088,18 +2076,6 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
 
     def shape(self):
         return Shape(self._width, self._signed)
-
-    # TODO(amaranth-0.6): remove
-    @property
-    @deprecated("`signal.width` is deprecated and will be removed in Amaranth 0.6; use `len(signal)` instead")
-    def width(self):
-        return self.shape().width
-
-    # TODO(amaranth-0.6): remove
-    @property
-    @deprecated("`signal.signed` is deprecated and will be removed in Amaranth 0.6; use `signal.shape().signed` instead")
-    def signed(self):
-        return self.shape().signed
 
     @property
     def init(self):
