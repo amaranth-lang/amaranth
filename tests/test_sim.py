@@ -1497,6 +1497,15 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim.add_testbench(testbench)
         sim.run()
 
+    def test_comb_clock_conflict(self):
+        c = Signal()
+        m = Module()
+        m.d.comb += ClockSignal().eq(c)
+        sim = Simulator(m)
+        with self.assertRaisesRegex(DriverConflict,
+                r"^Clock signal is already driven by combinational logic$"):
+            sim.add_clock(1e-6)
+
     def test_sample(self):
         m = Module()
         m.domains.sync = cd_sync = ClockDomain()

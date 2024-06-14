@@ -616,6 +616,10 @@ class PySimEngine(BaseEngine):
             testbench.reset()
 
     def add_clock_process(self, clock, *, phase, period):
+        slot = self.state.get_signal(clock)
+        if self.state.slots[slot].is_comb:
+            raise DriverConflict("Clock signal is already driven by combinational logic")
+
         self._processes.add(PyClockProcess(self._state, clock,
                                            phase=phase, period=period))
 
