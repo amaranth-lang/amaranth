@@ -1472,20 +1472,6 @@ class ValueCastable:
         """
         return super().shape(*args, **kwargs) # :nocov:
 
-    # TODO(amaranth-0.6): remove
-    @staticmethod
-    @deprecated("`ValueCastable.lowermethod` is no longer required and will be removed in Amaranth 0.6")
-    def lowermethod(func):
-        @functools.wraps(func)
-        def wrapper_memoized(self, *args, **kwargs):
-            # Use `in self.__dict__` instead of `hasattr` to avoid interfering with custom
-            # `__getattr__` implementations.
-            if not "_ValueCastable__lowered_to" in self.__dict__:
-                self.__lowered_to = func(self, *args, **kwargs)
-            return self.__lowered_to
-        wrapper_memoized.__memoized = True
-        return wrapper_memoized
-
 
 class _ValueLikeMeta(type):
     def __subclasscheck__(cls, subclass):

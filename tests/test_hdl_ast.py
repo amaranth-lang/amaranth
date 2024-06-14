@@ -1483,19 +1483,6 @@ class MockValueCastableFormatWrong(ValueCastable):
         return self.dest
 
 
-class MockValueCastableChanges(ValueCastable):
-    def __init__(self, width=0):
-        self.width = width
-
-    def shape(self):
-        return unsigned(self.width)
-
-    with _ignore_deprecated():
-        @ValueCastable.lowermethod
-        def as_value(self):
-            return Signal(self.width)
-
-
 class MockValueCastableCustomGetattr(ValueCastable):
     def __init__(self):
         pass
@@ -1503,10 +1490,8 @@ class MockValueCastableCustomGetattr(ValueCastable):
     def shape(self):
         assert False
 
-    with _ignore_deprecated():
-        @ValueCastable.lowermethod
-        def as_value(self):
-            return Const(0)
+    def as_value(self):
+        return Const(0)
 
     def __getattr__(self, attr):
         assert False
@@ -1530,16 +1515,6 @@ class ValueCastableTestCase(FHDLTestCase):
 
                 def as_value(self):
                     return Signal()
-
-    def test_memoized(self):
-        vc = MockValueCastableChanges(1)
-        sig1 = vc.as_value()
-        vc.width = 2
-        sig2 = vc.as_value()
-        self.assertIs(sig1, sig2)
-        vc.width = 3
-        sig3 = Value.cast(vc)
-        self.assertIs(sig1, sig3)
 
     def test_custom_getattr(self):
         vc = MockValueCastableCustomGetattr()
