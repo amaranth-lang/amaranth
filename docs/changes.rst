@@ -9,6 +9,7 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.0 <https://amaranth-lang.org/docs/amaranth/v0.5.0/>`_
 * `Amaranth 0.4.5 <https://amaranth-lang.org/docs/amaranth/v0.4.5/>`_
 * `Amaranth 0.4.4 <https://amaranth-lang.org/docs/amaranth/v0.4.4/>`_
 * `Amaranth 0.4.3 <https://amaranth-lang.org/docs/amaranth/v0.4.3/>`_
@@ -16,6 +17,18 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
 * `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
+
+
+Version 0.6 (unreleased)
+========================
+
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Removed: (deprecated in 0.5) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
 Version 0.5
