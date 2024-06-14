@@ -55,6 +55,7 @@ Implemented RFCs
 .. _RFC 27: https://amaranth-lang.org/rfcs/0027-simulator-testbenches.html
 .. _RFC 30: https://amaranth-lang.org/rfcs/0030-component-metadata.html
 .. _RFC 36: https://amaranth-lang.org/rfcs/0036-async-testbench-functions.html
+.. _RFC 42: https://amaranth-lang.org/rfcs/0042-const-from-shape-castable.html
 .. _RFC 39: https://amaranth-lang.org/rfcs/0039-empty-case.html
 .. _RFC 43: https://amaranth-lang.org/rfcs/0043-rename-reset-to-init.html
 .. _RFC 45: https://amaranth-lang.org/rfcs/0045-lib-memory.html
@@ -75,6 +76,7 @@ Implemented RFCs
 * `RFC 30`_: Component metadata
 * `RFC 36`_: Async testbench functions
 * `RFC 39`_: Change semantics of no-argument ``m.Case()``
+* `RFC 42`_: ``Const`` from shape-castable
 * `RFC 43`_: Rename ``reset=`` to ``init=``
 * `RFC 45`_: Move ``hdl.Memory`` to ``lib.Memory``
 * `RFC 46`_: Change ``Shape.cast(range(1))`` to ``unsigned(0)``
@@ -105,6 +107,7 @@ Language changes
 * Changed: :py:`Value.matches()` with no patterns is :py:`Const(0)` instead of :py:`Const(1)`. (`RFC 39`_)
 * Changed: :py:`Signal(range(stop), init=stop)` warning has been changed into a hard error and made to trigger on any out-of range value.
 * Changed: :py:`Signal(range(0))` is now valid without a warning.
+* Changed: :py:`Const(value, shape)` now accepts shape-castable objects as :py:`shape`. (`RFC 42`_)
 * Changed: :py:`Shape.cast(range(1))` is now :py:`unsigned(0)`. (`RFC 46`_)
 * Changed: the :py:`reset=` argument of :class:`Signal`, :meth:`Signal.like`, :class:`amaranth.lib.wiring.Member`, :class:`amaranth.lib.cdc.FFSynchronizer`, and :py:`m.FSM()` has been renamed to :py:`init=`. (`RFC 43`_)
 * Changed: :class:`Shape` has been made immutable and hashable.
