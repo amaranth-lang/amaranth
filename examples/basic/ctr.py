@@ -1,11 +1,15 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class Counter(Elaboratable):
+class Counter(wiring.Component):
+    o: Out(1)
+
     def __init__(self, width):
+        super().__init__()
         self.v = Signal(width, init=2**width-1)
-        self.o = Signal()
 
     def elaborate(self, platform):
         m = Module()
@@ -16,4 +20,4 @@ class Counter(Elaboratable):
 
 ctr = Counter(width=16)
 if __name__ == "__main__":
-    main(ctr, ports=[ctr.o])
+    main(ctr)

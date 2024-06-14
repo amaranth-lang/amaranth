@@ -1,13 +1,14 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class System(Elaboratable):
-    def __init__(self):
-        self.adr   = Signal(16)
-        self.dat_r = Signal(8)
-        self.dat_w = Signal(8)
-        self.we    = Signal()
+class System(wiring.Component):
+    adr: In(16)
+    dat_r: In(8)
+    dat_w: Out(8)
+    we: In(1)
 
     def elaborate(self, platform):
         m = Module()
@@ -23,4 +24,4 @@ class System(Elaboratable):
 
 if __name__ == "__main__":
     sys = System()
-    main(sys, ports=[sys.adr, sys.dat_r, sys.dat_w, sys.we])
+    main(sys)

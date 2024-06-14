@@ -1,16 +1,19 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class UARTReceiver(Elaboratable):
-    def __init__(self, divisor):
-        self.divisor = divisor
+class UARTReceiver(wiring.Component):
+    i: In(1)
+    data: Out(8)
+    rdy: Out(1)
+    ack: In(1)
+    err: Out(1)
 
-        self.i    = Signal()
-        self.data = Signal(8)
-        self.rdy  = Signal()
-        self.ack  = Signal()
-        self.err  = Signal()
+    def __init__(self, divisor):
+        super().__init__()
+        self.divisor = divisor
 
     def elaborate(self, platform):
         m = Module()
@@ -61,4 +64,4 @@ class UARTReceiver(Elaboratable):
 
 if __name__ == "__main__":
     rx = UARTReceiver(20)
-    main(rx, ports=[rx.i, rx.data, rx.rdy, rx.ack, rx.err])
+    main(rx)

@@ -1,14 +1,18 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
 
-class ParMux(Elaboratable):
+class ParMux(wiring.Component):
     def __init__(self, width):
-        self.s = Signal(3)
-        self.a = Signal(width)
-        self.b = Signal(width)
-        self.c = Signal(width)
-        self.o = Signal(width)
+        super().__init__({
+            "s": In(3),
+            "a": In(width),
+            "b": In(width),
+            "c": In(width),
+            "o": Out(width),
+        })
 
     def elaborate(self, platform):
         m = Module()
@@ -26,4 +30,4 @@ class ParMux(Elaboratable):
 
 if __name__ == "__main__":
     pmux = ParMux(width=16)
-    main(pmux, ports=[pmux.s, pmux.a, pmux.b, pmux.c, pmux.o])
+    main(pmux)

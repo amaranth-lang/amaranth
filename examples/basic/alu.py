@@ -1,14 +1,17 @@
 from amaranth import *
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, Out
 from amaranth.cli import main
 
-
-class ALU(Elaboratable):
+class ALU(wiring.Component):
     def __init__(self, width):
-        self.sel = Signal(2)
-        self.a   = Signal(width)
-        self.b   = Signal(width)
-        self.o   = Signal(width)
-        self.co  = Signal()
+        super().__init__({
+            "sel": In(2),
+            "a": In(width),
+            "b": In(width),
+            "o": Out(width),
+            "co": Out(1),
+        })
 
     def elaborate(self, platform):
         m = Module()
@@ -25,4 +28,4 @@ class ALU(Elaboratable):
 
 if __name__ == "__main__":
     alu = ALU(width=16)
-    main(alu, ports=[alu.sel, alu.a, alu.b, alu.o, alu.co])
+    main(alu)
