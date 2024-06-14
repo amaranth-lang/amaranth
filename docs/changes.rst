@@ -18,8 +18,8 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
 
 
-Version 0.5 (unreleased)
-========================
+Version 0.5
+===========
 
 The Migen compatibility layer has been removed.
 
