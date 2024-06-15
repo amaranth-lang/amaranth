@@ -186,7 +186,7 @@ jobs:
           folder: docs/
           target-folder: docs/amaranth/latest/
       - name: Publish release documentation
-        if: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v') && !contains(github.event.ref, 'dev') }}
         uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
           repository-name: amaranth-lang/amaranth-lang.github.io
@@ -272,12 +272,12 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
     - name: Publish package to PyPI
-      if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/') }}
+      if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v') && !contains(github.event.ref, 'dev') }}
       uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-release:
     needs: publish-package
-    if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/') }}
+    if: ${{ github.repository == 'amaranth-lang/amaranth' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v') && !contains(github.event.ref, 'dev') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
