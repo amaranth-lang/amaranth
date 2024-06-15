@@ -783,7 +783,7 @@ The ``Mux(sel, val1, val0)`` choice expression (similar to the :ref:`conditional
 Arrays
 ======
 
-An *array* is a mutable collection that can be indexed not only with an :class:`int` or with a :ref:`value-like <lang-valuelike>` object. When indexed with an :class:`int`, it behaves like a :class:`list`. When indexed with a value-like object, it returns a proxy object containing the elements of the array that has three useful properties:
+An *array* is a mutable collection that can be indexed with an :class:`int` or with a :ref:`value-like <lang-valuelike>` object. When indexed with an :class:`int`, it behaves like a :class:`list`. When indexed with a value-like object, it returns a proxy object containing the elements of the array that has three useful properties:
 
 * The result of accessing an attribute of the proxy object or indexing it is another proxy object that contains the elements transformed in the same way.
 * When the proxy object is :ref:`cast to a value <lang-valuelike>`, all of its elements are also cast to a value, and an element is selected using the index originally used with the array.
