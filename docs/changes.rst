@@ -182,6 +182,7 @@ Toolchain changes
 * Changed: :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` always runs the simulation until the given deadline, even when no critical processes or testbenches are present.
 * Deprecated: :py:`Settle` simulation command. (`RFC 27`_)
 * Deprecated: :py:`Simulator.add_sync_process`. (`RFC 27`_)
+* Deprecated: generator-based simulation processes and testbenches. (`RFC 36`_)
 * Deprecated: the :py:`run_passive` argument to :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` has been deprecated, and does nothing.
 * Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
