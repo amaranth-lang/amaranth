@@ -82,7 +82,6 @@ class Fragment:
         self.generated = OrderedDict()
         self.src_loc = src_loc
         self.origins = None
-        self.domains_propagated_up = {}
         self.domain_renames = {}
 
     def add_domains(self, *domains):
@@ -127,67 +126,6 @@ class Fragment:
     def elaborate(self, platform):
         return self
 
-    def _propagate_domains_up(self, hierarchy=("top",)):
-        from ._xfrm import DomainRenamer
-
-        domain_subfrags = defaultdict(set)
-
-        # For each domain defined by a subfragment, determine which subfragments define it.
-        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
-            # First, recurse into subfragments and let them propagate domains up as well.
-            hier_name = name
-            if hier_name is None:
-                hier_name = f"<unnamed #{i}>"
-            subfrag._propagate_domains_up(hierarchy + (hier_name,))
-
-            # Second, classify subfragments by domains they define.
-            for domain_name, domain in subfrag.domains.items():
-                if domain.local:
-                    continue
-                domain_subfrags[domain_name].add((subfrag, name, src_loc, i))
-
-        # For each domain defined by more than one subfragment, rename the domain in each
-        # of the subfragments such that they no longer conflict.
-        for domain_name, subfrags in domain_subfrags.items():
-            if len(subfrags) == 1:
-                continue
-
-            names = [n for f, n, s, i in subfrags]
-            if not all(names):
-                names = sorted(f"<unnamed #{i}>" if n is None else f"'{n}'"
-                               for f, n, s, i in subfrags)
-                raise _cd.DomainError(
-                    "Domain '{}' is defined by subfragments {} of fragment '{}'; it is necessary "
-                    "to either rename subfragment domains explicitly, or give names to subfragments"
-                    .format(domain_name, ", ".join(names), ".".join(hierarchy)))
-
-            if len(names) != len(set(names)):
-                names = sorted(f"#{i}" for f, n, s, i in subfrags)
-                raise _cd.DomainError(
-                    "Domain '{}' is defined by subfragments {} of fragment '{}', some of which "
-                    "have identical names; it is necessary to either rename subfragment domains "
-                    "explicitly, or give distinct names to subfragments"
-                    .format(domain_name, ", ".join(names), ".".join(hierarchy)))
-
-            for subfrag, name, src_loc, i in subfrags:
-                domain_name_map = {domain_name: f"{name}_{domain_name}"}
-                self.subfragments[i] = (DomainRenamer(domain_name_map)(subfrag), name, src_loc)
-
-        # Finally, collect the (now unique) subfragment domains, and merge them into our domains.
-        for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
-            hier_name = name
-            if hier_name is None:
-                hier_name = f"<unnamed #{i}>"
-            for domain_name, domain in subfrag.domains.items():
-                if domain.local:
-                    continue
-                self.add_domains(domain)
-                if domain_name in subfrag.domains_propagated_up:
-                    _used_in, defined_in = subfrag.domains_propagated_up[domain_name]
-                else:
-                    defined_in = (*hierarchy, hier_name)
-                self.domains_propagated_up[domain_name] = (hierarchy, defined_in)
-
     def _propagate_domains_down(self, hierarchy=("top",)):
         # For each domain defined in this fragment, ensure it also exists in all subfragments.
         for i, (subfrag, name, src_loc) in enumerate(self.subfragments):
@@ -196,13 +134,8 @@ class Fragment:
                 hier_name = f"<unnamed #{i}>"
 
             for domain in self.iter_domains():
-                if domain in subfrag.domains:
-                    assert self.domains[domain] is subfrag.domains[domain]
-                else:
+                if domain not in subfrag.domains:
                     subfrag.add_domains(self.domains[domain])
-                    if domain in self.domains_propagated_up:
-                        _used_in, defined_in = self.domains_propagated_up[domain]
-                        subfrag.domains_propagated_up[domain] = (hierarchy + (hier_name,)), defined_in
 
             subfrag._propagate_domains_down(hierarchy + (hier_name,))
 
@@ -237,7 +170,6 @@ class Fragment:
         return new_domains
 
     def _propagate_domains(self, missing_domain, *, platform=None):
-        self._propagate_domains_up()
         self._propagate_domains_down()
         new_domains = self._create_missing_domains(missing_domain, platform=platform)
         self._propagate_domains_down()

@@ -1,3 +1,5 @@
+import warnings
+
 from .. import tracer
 from ._ast import Signal
 
@@ -27,9 +29,6 @@ class ClockDomain:
         If ``True``, the domain uses an asynchronous reset, and registers within this domain
         are initialized to their reset state when reset level changes. Otherwise, registers
         are initialized to reset state at the next clock cycle when reset is asserted.
-    local : bool
-        If ``True``, the domain will propagate only downwards in the design hierarchy. Otherwise,
-        the domain will propagate everywhere.
 
     Attributes
     ----------
@@ -48,7 +47,7 @@ class ClockDomain:
             return f"{domain_name}_{signal_name}"
 
     def __init__(self, name=None, *, clk_edge="pos", reset_less=False, async_reset=False,
-                 local=False):
+                 local=None):
         if name is None:
             try:
                 name = tracer.get_var_name()
@@ -75,7 +74,17 @@ class ClockDomain:
 
         self.async_reset = async_reset
 
-        self.local = local
+        # TODO(amaranth-0.7): remove
+        if local is not None:
+            warnings.warn(f"`local` is deprecated and has no effect",
+                          DeprecationWarning, stacklevel=2)
+
+    @property
+    def local(self):
+        # TODO(amaranth-0.7): remove
+        warnings.warn(f"`local` is deprecated and has no effect",
+                      DeprecationWarning, stacklevel=2)
+        return True
 
     def rename(self, new_name):
         self.name = new_name

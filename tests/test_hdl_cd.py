@@ -9,7 +9,6 @@ class ClockDomainTestCase(FHDLTestCase):
         self.assertEqual(sync.name, "sync")
         self.assertEqual(sync.clk.name, "clk")
         self.assertEqual(sync.rst.name, "rst")
-        self.assertEqual(sync.local, False)
         pix = ClockDomain()
         self.assertEqual(pix.name, "pix")
         self.assertEqual(pix.clk.name, "pix_clk")
@@ -21,8 +20,6 @@ class ClockDomainTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Clock domain name must be specified explicitly$"):
             ClockDomain()
-        cd_reset = ClockDomain(local=True)
-        self.assertEqual(cd_reset.local, True)
 
     def test_edge(self):
         sync = ClockDomain()
@@ -77,3 +74,11 @@ class ClockDomainTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 r"^Domain 'comb' may not be clocked$"):
             comb = ClockDomain()
+
+    def test_local(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`local` is deprecated and has no effect$"):
+            sync = ClockDomain(local=False)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^`local` is deprecated and has no effect$"):
+            self.assertTrue(sync.local)
