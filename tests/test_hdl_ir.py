@@ -456,99 +456,6 @@ class FragmentPortsTestCase(FHDLTestCase):
 
 
 class FragmentDomainsTestCase(FHDLTestCase):
-    def test_propagate_up(self):
-        cd = ClockDomain()
-
-        f1 = Fragment()
-        f2 = Fragment()
-        f1.add_subfragment(f2)
-        f2.add_domains(cd)
-
-        f1._propagate_domains_up()
-        self.assertEqual(f1.domains, {"cd": cd})
-
-    def test_propagate_up_local(self):
-        cd = ClockDomain(local=True)
-
-        f1 = Fragment()
-        f2 = Fragment()
-        f1.add_subfragment(f2)
-        f2.add_domains(cd)
-
-        f1._propagate_domains_up()
-        self.assertEqual(f1.domains, {})
-
-    def test_domain_conflict(self):
-        cda = ClockDomain("sync")
-        cdb = ClockDomain("sync")
-
-        fa = Fragment()
-        fa.add_domains(cda)
-        fb = Fragment()
-        fb.add_domains(cdb)
-        f = Fragment()
-        f.add_subfragment(fa, "a")
-        f.add_subfragment(fb, "b")
-
-        f._propagate_domains_up()
-        self.assertEqual(f.domains, {"a_sync": cda, "b_sync": cdb})
-        (fa, _, _), (fb, _, _) = f.subfragments
-        self.assertEqual(fa.domains, {"a_sync": cda})
-        self.assertEqual(fb.domains, {"b_sync": cdb})
-
-    def test_domain_conflict_anon(self):
-        cda = ClockDomain("sync")
-        cdb = ClockDomain("sync")
-
-        fa = Fragment()
-        fa.add_domains(cda)
-        fb = Fragment()
-        fb.add_domains(cdb)
-        f = Fragment()
-        f.add_subfragment(fa, "a")
-        f.add_subfragment(fb)
-
-        with self.assertRaisesRegex(DomainError,
-                (r"^Domain 'sync' is defined by subfragments 'a', <unnamed #1> of fragment "
-                    r"'top'; it is necessary to either rename subfragment domains explicitly, "
-                    r"or give names to subfragments$")):
-            f._propagate_domains_up()
-
-    def test_domain_conflict_name(self):
-        cda = ClockDomain("sync")
-        cdb = ClockDomain("sync")
-
-        fa = Fragment()
-        fa.add_domains(cda)
-        fb = Fragment()
-        fb.add_domains(cdb)
-        f = Fragment()
-        f.add_subfragment(fa, "x")
-        f.add_subfragment(fb, "x")
-
-        with self.assertRaisesRegex(DomainError,
-                (r"^Domain 'sync' is defined by subfragments #0, #1 of fragment 'top', some "
-                    r"of which have identical names; it is necessary to either rename subfragment "
-                    r"domains explicitly, or give distinct names to subfragments$")):
-            f._propagate_domains_up()
-
-    def test_domain_conflict_rename_drivers(self):
-        cda = ClockDomain("sync")
-        cdb = ClockDomain("sync")
-
-        fa = Fragment()
-        fa.add_domains(cda)
-        fb = Fragment()
-        fb.add_domains(cdb)
-        fb.add_statements("comb", ResetSignal("sync").eq(1))
-        f = Fragment()
-        f.add_subfragment(fa, "a")
-        f.add_subfragment(fb, "b")
-
-        f._propagate_domains_up()
-        fb_new, _, _ = f.subfragments[1]
-        self.assertRepr(fb_new.statements["comb"], "((eq (rst b_sync) (const 1'd1)))")
-
     def test_domain_conflict_rename_drivers_before_creating_missing(self):
         cda = ClockDomain("sync")
         cdb = ClockDomain("sync")
@@ -673,29 +580,15 @@ class FragmentDomainsTestCase(FHDLTestCase):
                     r"domain 'sync' \(defines 'foo'\)\.$")):
             f1._propagate_domains(missing_domain=lambda name: f2)
 
-    def test_propagate_up_use(self):
-        a = Signal()
-        m = Module()
-        m1 = Module()
-        m2 = Module()
-        m.submodules.m1 = m1
-        m.submodules.m2 = m2
-        m1.d.test += a.eq(1)
-        m2.domains.test = ClockDomain()
-        with self.assertWarnsRegex(DeprecationWarning,
-                r"^Domain 'test' is used in 'top.m1', but defined in 'top.m2', which will not be "
-                r"supported in Amaranth 0.6; define the domain in 'top' or one of its parents$"):
-            Fragment.get(m, None).prepare()
-
 
 class FragmentHierarchyConflictTestCase(FHDLTestCase):
     def test_no_conflict_local_domains(self):
         f1 = Fragment()
-        cd1 = ClockDomain("d", local=True)
+        cd1 = ClockDomain("d")
         f1.add_domains(cd1)
         f1.add_statements("comb", ClockSignal("d").eq(1))
         f2 = Fragment()
-        cd2 = ClockDomain("d", local=True)
+        cd2 = ClockDomain("d")
         f2.add_domains(cd2)
         f2.add_statements("comb", ClockSignal("d").eq(1))
         f3 = Fragment()
