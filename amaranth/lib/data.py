@@ -850,6 +850,12 @@ class View(ValueCastable):
                 f"may only be accessed by indexing")
         return item
 
+    def __len__(self):
+        if not isinstance(self.__layout, ArrayLayout):
+            raise TypeError(
+                f"`len()` can only be used on views of array layout, not {self.__layout!r}")
+        return self.__layout.length
+
     def __eq__(self, other):
         if isinstance(other, View) and self.__layout == other.__layout:
             return self.__target == other.__target
