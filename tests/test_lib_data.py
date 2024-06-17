@@ -763,6 +763,14 @@ class ViewTestCase(FHDLTestCase):
                 r"with the same layout, not .*$"):
             s1 != Const(0, 2)
 
+    def test_len(self):
+        s1 = Signal(data.StructLayout({"a": unsigned(2)}))
+        with self.assertRaisesRegex(TypeError,
+                r"^`len\(\)` can only be used on views of array layout, not StructLayout.*$"):
+            len(s1)
+        s2 = Signal(data.ArrayLayout(2, 3))
+        self.assertEqual(len(s2), 3)
+
     def test_operator(self):
         s1 = Signal(data.StructLayout({"a": unsigned(2)}))
         s2 = Signal(unsigned(2))
