@@ -856,6 +856,12 @@ class View(ValueCastable):
                 f"`len()` can only be used on views of array layout, not {self.__layout!r}")
         return self.__layout.length
 
+    def __iter__(self):
+        if not isinstance(self.__layout, ArrayLayout):
+            raise TypeError(
+                f"Only views of array layout can be iterated, not {self.__layout!r}")
+        return (self[i] for i in range(self.__layout.length))
+
     def __eq__(self, other):
         if isinstance(other, View) and self.__layout == other.__layout:
             return self.__target == other.__target
