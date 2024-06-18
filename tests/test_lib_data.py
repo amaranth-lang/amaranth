@@ -771,6 +771,14 @@ class ViewTestCase(FHDLTestCase):
         s2 = Signal(data.ArrayLayout(2, 3))
         self.assertEqual(len(s2), 3)
 
+    def test_iter(self):
+        s1 = Signal(data.StructLayout({"a": unsigned(2)}))
+        with self.assertRaisesRegex(TypeError,
+                r"^Only views of array layout can be iterated, not StructLayout.*$"):
+            iter(s1)
+        s2 = Signal(data.ArrayLayout(2, 3))
+        self.assertRepr(tuple(s2), "((slice (sig s2) 0:2), (slice (sig s2) 2:4), (slice (sig s2) 4:6))")
+
     def test_operator(self):
         s1 = Signal(data.StructLayout({"a": unsigned(2)}))
         s2 = Signal(unsigned(2))
