@@ -727,8 +727,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_add_process_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
-                    r"^Cannot add a process <.+?> because it is not an async function or "
-                    r"generator function$"):
+                    r"^Cannot add a process <.+?> because it is a generator object instead of "
+                    r"a function \(pass the function itself instead of calling it\)$"):
                 def process():
                     yield Delay()
                 sim.add_process(process())
@@ -743,11 +743,38 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_add_testbench_wrong_generator(self):
         with self.assertSimulation(Module()) as sim:
             with self.assertRaisesRegex(TypeError,
-                    r"^Cannot add a testbench <.+?> because it is not an async function or "
-                    r"generator function$"):
+                    r"^Cannot add a testbench <.+?> because it is a generator object instead of "
+                    r"a function \(pass the function itself instead of calling it\)$"):
                 def testbench():
                     yield Delay()
                 sim.add_testbench(testbench())
+
+    def test_add_testbench_wrong_coroutine(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a testbench <.+?> because it is a coroutine object instead of "
+                    r"a function \(pass the function itself instead of calling it\)$"):
+                async def testbench():
+                    pass
+                sim.add_testbench(testbench())
+
+    def test_add_testbench_wrong_async_generator(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a testbench <.+?> because it is a generator object instead of "
+                    r"a function \(pass the function itself instead of calling it\)$"):
+                async def testbench():
+                    yield Delay()
+                sim.add_testbench(testbench())
+
+    def test_add_testbench_wrong_async_generator_func(self):
+        with self.assertSimulation(Module()) as sim:
+            with self.assertRaisesRegex(TypeError,
+                    r"^Cannot add a testbench <.+?> because it is an async generator function "
+                    r"\(there is likely a stray `yield` in the function\)$"):
+                async def testbench():
+                    yield Delay()
+                sim.add_testbench(testbench)
 
     def test_add_clock_wrong_twice(self):
         m = Module()
@@ -2025,15 +2052,6 @@ class SimulatorRegressionTestCase(FHDLTestCase):
 
         self.assertTrue(reached_tb)
         self.assertTrue(reached_proc)
-
-    def test_bug_1363(self):
-        sim = Simulator(Module())
-        with self.assertRaisesRegex(TypeError,
-                r"^Cannot add a testbench <.+?> because it is not an async function or "
-                r"generator function$"):
-            async def testbench():
-                yield Delay()
-            sim.add_testbench(testbench())
 
     def test_issue_1368(self):
         sim = Simulator(Module())
