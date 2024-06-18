@@ -132,6 +132,18 @@ class Simulator:
 
     @staticmethod
     def _check_function(function, *, kind):
+        if inspect.isasyncgenfunction(function):
+            raise TypeError(
+                f"Cannot add a {kind} {function!r} because it is an async generator function "
+                f"(there is likely a stray `yield` in the function)")
+        if inspect.iscoroutine(function):
+            raise TypeError(
+                f"Cannot add a {kind} {function!r} because it is a coroutine object instead "
+                f"of a function (pass the function itself instead of calling it)")
+        if inspect.isgenerator(function) or inspect.isasyncgen(function):
+            raise TypeError(
+                f"Cannot add a {kind} {function!r} because it is a generator object instead "
+                f"of a function (pass the function itself instead of calling it)")
         if not (inspect.isgeneratorfunction(function) or inspect.iscoroutinefunction(function)):
             raise TypeError(
                 f"Cannot add a {kind} {function!r} because it is not an async function or "
