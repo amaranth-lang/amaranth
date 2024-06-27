@@ -1598,6 +1598,10 @@ class Const(Value, metaclass=_ConstMeta):
 
     def __init__(self, value, shape=None, *, src_loc_at=0):
         # We deliberately do not call Value.__init__ here.
+        if isinstance(value, Enum):
+            if shape is None:
+                shape = Shape.cast(type(value))
+            value = value.value
         value = int(operator.index(value))
         if shape is None:
             shape = Shape(bits_for(value), signed=value < 0)
