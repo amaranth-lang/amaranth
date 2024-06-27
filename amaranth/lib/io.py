@@ -203,10 +203,10 @@ class SingleEndedPort(PortLike):
                                direction=self._direction & other._direction)
 
     def __repr__(self):
-        if all(self._invert):
-            invert = True
-        elif not any(self._invert):
+        if not any(self._invert):
             invert = False
+        elif all(self._invert):
+            invert = True
         else:
             invert = self._invert
         return f"SingleEndedPort({self._io!r}, invert={invert!r}, direction={self._direction})"
