@@ -178,7 +178,7 @@ class EnumType(ShapeCastable, py_enum.EnumMeta):
     def format(cls, value, format_spec):
         if format_spec != "":
             raise ValueError(f"Format specifier {format_spec!r} is not supported for enums")
-        return Format.Enum(value, cls, name=cls.__name__)
+        return Format.Enum(value, cls, name=cls.__qualname__)
 
 
 # In 3.11, Python renamed EnumMeta to EnumType. Like Python itself, we support both for
@@ -310,7 +310,7 @@ class EnumView(ValueCastable):
         return self.target != other.target
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.enum.__name__}, {self.target!r})"
+        return f"{type(self).__qualname__}({self.enum.__qualname__}, {self.target!r})"
 
 
 class FlagView(EnumView):

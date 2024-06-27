@@ -96,7 +96,7 @@ class FFSynchronizer(Elaboratable):
         if self._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for FFSynchronizer"
-                                      .format(type(platform).__name__))
+                                      .format(type(platform).__qualname__))
 
         m = Module()
         flops = [Signal(self.i.shape(), name=f"stage{index}",
@@ -170,7 +170,7 @@ class AsyncFFSynchronizer(Elaboratable):
         if self._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for AsyncFFSynchronizer"
-                                      .format(type(platform).__name__))
+                                      .format(type(platform).__qualname__))
 
         m = Module()
         m.domains += ClockDomain("async_ff", async_reset=True, local=True)

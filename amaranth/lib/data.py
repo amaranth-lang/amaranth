@@ -911,7 +911,7 @@ class View(ValueCastable):
     __rxor__ = __and__
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
+        return f"{self.__class__.__qualname__}({self.__layout!r}, {self.__target!r})"
 
 
 class Const(ValueCastable):
@@ -1146,7 +1146,7 @@ class Const(ValueCastable):
     __rxor__ = __and__
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.__layout!r}, {self.__target!r})"
+        return f"{self.__class__.__qualname__}({self.__layout!r}, {self.__target!r})"
 
 
 class _AggregateMeta(ShapeCastable, type):

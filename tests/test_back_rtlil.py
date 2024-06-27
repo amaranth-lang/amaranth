@@ -2024,7 +2024,7 @@ class DetailTestCase(RTLILTestCase):
         attribute \generator "Amaranth"
         attribute \top 1
         module \top
-            attribute \enum_base_type "MyEnum"
+            attribute \enum_base_type "DetailTestCase.test_enum.<locals>.MyEnum"
             attribute \enum_value_00 "A"
             attribute \enum_value_01 "B"
             attribute \enum_value_10 "C"
@@ -2052,7 +2052,7 @@ class DetailTestCase(RTLILTestCase):
         attribute \top 1
         module \top
             wire width 13 input 0 \sig
-            attribute \enum_base_type "MyEnum"
+            attribute \enum_base_type "DetailTestCase.test_struct.<locals>.MyEnum"
             attribute \enum_value_00 "A"
             attribute \enum_value_01 "B"
             attribute \enum_value_10 "C"
