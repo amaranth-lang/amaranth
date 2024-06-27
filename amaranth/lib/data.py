@@ -1083,9 +1083,18 @@ class Const(ValueCastable):
         elif isinstance(other, Const) and self.__layout == other.__layout:
             return self.__target == other.__target
         else:
+            cause = None
+            if isinstance(other, (dict, list)):
+                try:
+                    other_as_const = self.__layout.const(other)
+                except (TypeError, ValueError) as exc:
+                    cause = exc
+                else:
+                    return self == other_as_const
             raise TypeError(
-                f"Constant with layout {self.__layout!r} can only be compared to another view or "
-                f"constant with the same layout, not {other!r}")
+                f"Constant with layout {self.__layout!r} can only be compared to another view, "
+                f"a constant with the same layout, or a dictionary or a list that can be converted "
+                f"to a constant with the same layout, not {other!r}") from cause
 
     def __ne__(self, other):
         if isinstance(other, View) and self.__layout == other._View__layout:
@@ -1093,9 +1102,18 @@ class Const(ValueCastable):
         elif isinstance(other, Const) and self.__layout == other.__layout:
             return self.__target != other.__target
         else:
+            cause = None
+            if isinstance(other, (dict, list)):
+                try:
+                    other_as_const = self.__layout.const(other)
+                except (TypeError, ValueError) as exc:
+                    cause = exc
+                else:
+                    return self != other_as_const
             raise TypeError(
-                f"Constant with layout {self.__layout!r} can only be compared to another view or "
-                f"constant with the same layout, not {other!r}")
+                f"Constant with layout {self.__layout!r} can only be compared to another view, "
+                f"a constant with the same layout, or a dictionary or a list that can be converted "
+                f"to a constant with the same layout, not {other!r}") from cause
 
     def __add__(self, other):
         raise TypeError("Cannot perform arithmetic operations on a lib.data.Const")
