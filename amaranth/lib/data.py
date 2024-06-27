@@ -219,12 +219,16 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
         elif isinstance(init, Sequence):
             iterator = enumerate(init)
         else:
-            raise TypeError("Layout constant initializer must be a mapping or a sequence, not {!r}"
-                            .format(init))
+            raise TypeError(f"Layout constant initializer must be a mapping or a sequence, not "
+                            f"{init!r}")
 
         int_value = 0
         for key, key_value in iterator:
-            field = self[key]
+            try:
+                field = self[key]
+            except KeyError:
+                raise ValueError(f"Layout constant initializer refers to key {key!r}, which is not "
+                                 f"a part of the layout")
             cast_field_shape = Shape.cast(field.shape)
             if isinstance(field.shape, ShapeCastable):
                 key_value = hdl.Const.cast(hdl.Const(key_value, field.shape))
