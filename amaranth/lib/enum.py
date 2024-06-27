@@ -1,8 +1,9 @@
+import builtins
 import enum as py_enum
 import warnings
 import operator
 
-from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning, Format
+from ..hdl import Value, ValueCastable, Shape, ShapeCastable, Const, SyntaxWarning, Format, Array
 
 
 __all__ = py_enum.__all__ + ["EnumView", "FlagView"]
@@ -312,6 +313,12 @@ class EnumView(ValueCastable):
             raise TypeError("an EnumView can only be compared to value or other EnumView of "
                             "the same enum type")
         return self.as_value() != other.as_value()
+
+    def __getattr__(self, name):
+        if (attr := getattr(self.enum, name, None)) and isinstance(attr, builtins.property):
+            return Array(attr.fget(self.enum(n))
+                         for n in range(max(e.value for e in self.enum) + 1))[self.target]
+        raise AttributeError(f"{self!r} has no attribute {name!r}")
 
     def __repr__(self):
         return f"{type(self).__qualname__}({self.__enum.__qualname__}, {self.__target!r})"
