@@ -244,16 +244,16 @@ class ShapeCastable:
 
     def __init_subclass__(cls, **kwargs):
         if cls.as_shape is ShapeCastable.as_shape:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' must override "
                             f"the 'as_shape' method")
         if cls.const is ShapeCastable.const:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' must override "
                             f"the 'const' method")
         if cls.__call__ is ShapeCastable.__call__:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' must override "
                             f"the '__call__' method")
         if cls.from_bits is ShapeCastable.from_bits:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ShapeCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' must override "
                             f"the 'from_bits' method")
 
     # The signatures and definitions of these methods are weird because they are present here for
@@ -1400,10 +1400,10 @@ class ValueCastable:
 
     def __init_subclass__(cls, **kwargs):
         if cls.as_value is ValueCastable.as_value:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ValueCastable' must override "
                             "the 'as_value' method")
         if cls.shape is ValueCastable.shape:
-            raise TypeError(f"Class '{cls.__name__}' deriving from 'ValueCastable' must override "
+            raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ValueCastable' must override "
                             "the 'shape' method")
 
     # The signatures and definitions of these methods are weird because they are present here for
@@ -2065,12 +2065,12 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
         if isinstance(orig_shape, ShapeCastable):
             self._format = orig_shape.format(orig_shape(self), "")
         elif isinstance(orig_shape, type) and issubclass(orig_shape, Enum):
-            self._format = Format.Enum(self, orig_shape, name=orig_shape.__name__)
+            self._format = Format.Enum(self, orig_shape, name=orig_shape.__qualname__)
         else:
             self._format = Format("{}", self)
 
         if isinstance(decoder, type) and issubclass(decoder, Enum):
-            self._format = Format.Enum(self, decoder, name=decoder.__name__)
+            self._format = Format.Enum(self, decoder, name=decoder.__qualname__)
 
         self._decoder = decoder
 
@@ -3185,7 +3185,7 @@ class _MappedKeyDict(MutableMapping, _MappedKeyCollection):
 
     def __repr__(self):
         pairs = [f"({k!r}, {v!r})" for k, v in self.items()]
-        return "{}.{}([{}])".format(type(self).__module__, type(self).__name__,
+        return "{}.{}([{}])".format(type(self).__module__, type(self).__qualname__,
                                     ", ".join(pairs))
 
 
@@ -3217,7 +3217,7 @@ class _MappedKeySet(MutableSet, _MappedKeyCollection):
         return len(self._storage)
 
     def __repr__(self):
-        return "{}.{}({})".format(type(self).__module__, type(self).__name__,
+        return "{}.{}({})".format(type(self).__module__, type(self).__qualname__,
                                   ", ".join(repr(x) for x in self))
 
 
@@ -3247,7 +3247,7 @@ class SignalKey:
         return self._intern < other._intern
 
     def __repr__(self):
-        return f"<{__name__}.SignalKey {self.signal!r}>"
+        return f"<{__qualname__}.SignalKey {self.signal!r}>"
 
 
 class SignalDict(_MappedKeyDict):

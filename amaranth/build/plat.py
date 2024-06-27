@@ -40,7 +40,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     def default_clk_constraint(self):
         if self.default_clk is None:
             raise AttributeError("Platform '{}' does not define a default clock"
-                                 .format(type(self).__name__))
+                                 .format(type(self).__qualname__))
         return self.lookup(self.default_clk).clock
 
     @property
@@ -48,7 +48,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         constraint = self.default_clk_constraint
         if constraint is None:
             raise AttributeError("Platform '{}' does not constrain its default clock"
-                                 .format(type(self).__name__))
+                                 .format(type(self).__qualname__))
         return constraint.frequency
 
     def add_file(self, filename, content):
@@ -173,7 +173,7 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         Extract bitstream for fragment ``name`` from ``products`` and download it to a target.
         """
         raise NotImplementedError("Platform '{}' does not support programming"
-                                  .format(type(self).__name__))
+                                  .format(type(self).__qualname__))
 
 
 class TemplatedPlatform(Platform):
@@ -244,7 +244,7 @@ class TemplatedPlatform(Platform):
                 if issubclass(expected_type, str) and not isinstance(kwarg, str) and isinstance(kwarg, Iterable):
                     kwarg = " ".join(kwarg)
                 if not isinstance(kwarg, expected_type) and not expected_type is None:
-                    raise TypeError(f"Override '{var}' must be a {expected_type.__name__}, not {kwarg!r}")
+                    raise TypeError(f"Override '{var}' must be a {expected_type.__qualname__}, not {kwarg!r}")
                 return kwarg
             else:
                 return jinja2.Undefined(name=var)
