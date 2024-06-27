@@ -477,6 +477,10 @@ class LayoutTestCase(FHDLTestCase):
                 r"^Layout constant initializer must be a mapping or a sequence, not "
                 r"<.+?object.+?>$"):
             sl.const(object())
+        with self.assertRaisesRegex(ValueError,
+                r"^Layout constant initializer refers to key 'g', which is not a part "
+                r"of the layout$"):
+            sl.const({"g": 1})
         sl2 = data.StructLayout({"f": unsigned(2)})
         with self.assertRaisesRegex(ValueError,
                 r"^Const layout StructLayout.* differs from shape layout StructLayout.*$"):
