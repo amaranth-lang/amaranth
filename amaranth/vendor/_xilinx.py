@@ -1255,7 +1255,7 @@ class XilinxPlatform(TemplatedPlatform):
         flops_d = Signal(async_ff_sync._stages, reset_less=True)
         flops_pre = Signal(reset_less=True)
         for i in range(async_ff_sync._stages):
-            flop = Instance("FDPE", p_INIT=1, o_Q=flops_q[i],
+            flop = Instance("FDPE", p_INIT=Const(1), o_Q=flops_q[i],
                             i_C=ClockSignal(async_ff_sync._o_domain),
                             i_CE=Const(1), i_PRE=flops_pre, i_D=flops_d[i],
                             a_ASYNC_REG="TRUE")
