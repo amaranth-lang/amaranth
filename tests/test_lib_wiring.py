@@ -635,7 +635,7 @@ class PureInterfaceTestCase(unittest.TestCase):
         class CustomInterface(PureInterface):
             pass
         intf = CustomInterface(Signature({}), path=())
-        self.assertRegex(repr(intf), r"^<CustomInterface: .+?>$")
+        self.assertRegex(repr(intf), r"^<.+\.CustomInterface: .+?>$")
 
 
 class FlippedInterfaceTestCase(unittest.TestCase):

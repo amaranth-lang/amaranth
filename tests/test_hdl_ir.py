@@ -3523,7 +3523,7 @@ class FieldsTestCase(FHDLTestCase):
         ])
         self.assertEqual(nl.signal_fields[s1.as_value()], {
             (): SignalField(nl.signals[s1.as_value()], signed=False),
-            ('a',): SignalField(nl.signals[s1.as_value()][0:2], signed=False, enum_name="MyEnum", enum_variants={
+            ('a',): SignalField(nl.signals[s1.as_value()][0:2], signed=False, enum_name=MyEnum.__qualname__, enum_variants={
                 0: "A",
                 1: "B",
                 2: "C",
@@ -3531,7 +3531,7 @@ class FieldsTestCase(FHDLTestCase):
             ('b',): SignalField(nl.signals[s1.as_value()][2:5], signed=True)
         })
         self.assertEqual(nl.signal_fields[s2.as_value()], {
-            (): SignalField(nl.signals[s2.as_value()], signed=False, enum_name="MyEnum", enum_variants={
+            (): SignalField(nl.signals[s2.as_value()], signed=False, enum_name=MyEnum.__qualname__, enum_variants={
                 0: "A",
                 1: "B",
                 2: "C",

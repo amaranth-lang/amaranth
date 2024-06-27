@@ -44,7 +44,7 @@ def union(i, start=None):
 def final(cls):
     def init_subclass():
         raise TypeError("Subclassing {}.{} is not supported"
-                        .format(cls.__module__, cls.__name__))
+                        .format(cls.__module__, cls.__qualname__))
     cls.__init_subclass__ = init_subclass
     return cls
 

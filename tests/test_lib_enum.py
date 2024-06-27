@@ -107,9 +107,9 @@ class EnumTestCase(FHDLTestCase):
         class EnumA(Enum, shape=8):
             Z = 0
             A = 10
-        self.assertRepr(EnumA.const(None), "EnumView(EnumA, (const 8'd0))")
-        self.assertRepr(EnumA.const(10), "EnumView(EnumA, (const 8'd10))")
-        self.assertRepr(EnumA.const(EnumA.A), "EnumView(EnumA, (const 8'd10))")
+        self.assertRepr(EnumA.const(None), f"EnumView({EnumA.__qualname__}, (const 8'd0))")
+        self.assertRepr(EnumA.const(10), f"EnumView({EnumA.__qualname__}, (const 8'd10))")
+        self.assertRepr(EnumA.const(EnumA.A), f"EnumView({EnumA.__qualname__}, (const 8'd10))")
 
     def test_from_bits(self):
         class EnumA(Enum, shape=2):
@@ -138,7 +138,7 @@ class EnumTestCase(FHDLTestCase):
             B = -3
         a = Signal(EnumA)
         self.assertRepr(a, "(sig a)")
-        self.assertRepr(a._format, "(format-enum (sig a) 'EnumA' (0 'A') (-3 'B'))")
+        self.assertRepr(a._format, f"(format-enum (sig a) '{EnumA.__qualname__}' (0 'A') (-3 'B'))")
 
     def test_enum_view(self):
         class EnumA(Enum, shape=signed(4)):
@@ -153,7 +153,7 @@ class EnumTestCase(FHDLTestCase):
         d = Signal(4)
         self.assertIsInstance(a, EnumView)
         self.assertIs(a.shape(), EnumA)
-        self.assertRepr(a, "EnumView(EnumA, (sig a))")
+        self.assertRepr(a, f"EnumView({EnumA.__qualname__}, (sig a))")
         self.assertRepr(a.as_value(), "(sig a)")
         self.assertRepr(a.eq(c), "(eq (sig a) (sig c))")
         for op in [
@@ -214,7 +214,7 @@ class EnumTestCase(FHDLTestCase):
         c = Signal(FlagA)
         d = Signal(4)
         self.assertIsInstance(a, FlagView)
-        self.assertRepr(a, "FlagView(FlagA, (sig a))")
+        self.assertRepr(a, f"FlagView({FlagA.__qualname__}, (sig a))")
         for op in [
             operator.__add__,
             operator.__sub__,
@@ -260,17 +260,17 @@ class EnumTestCase(FHDLTestCase):
         self.assertRepr(a == FlagA.B, "(== (sig a) (const 4'd4))")
         self.assertRepr(FlagA.B == a, "(== (sig a) (const 4'd4))")
         self.assertRepr(a != FlagA.B, "(!= (sig a) (const 4'd4))")
-        self.assertRepr(a | c, "FlagView(FlagA, (| (sig a) (sig c)))")
-        self.assertRepr(a & c, "FlagView(FlagA, (& (sig a) (sig c)))")
-        self.assertRepr(a ^ c, "FlagView(FlagA, (^ (sig a) (sig c)))")
-        self.assertRepr(~a, "FlagView(FlagA, (& (~ (sig a)) (const 3'd5)))")
-        self.assertRepr(a | FlagA.B, "FlagView(FlagA, (| (sig a) (const 4'd4)))")
+        self.assertRepr(a | c, f"FlagView({FlagA.__qualname__}, (| (sig a) (sig c)))")
+        self.assertRepr(a & c, f"FlagView({FlagA.__qualname__}, (& (sig a) (sig c)))")
+        self.assertRepr(a ^ c, f"FlagView({FlagA.__qualname__}, (^ (sig a) (sig c)))")
+        self.assertRepr(~a, f"FlagView({FlagA.__qualname__}, (& (~ (sig a)) (const 3'd5)))")
+        self.assertRepr(a | FlagA.B, f"FlagView({FlagA.__qualname__}, (| (sig a) (const 4'd4)))")
         if sys.version_info >= (3, 11):
             class FlagC(Flag, shape=unsigned(4), boundary=py_enum.KEEP):
                 A = 1
                 B = 4
             e = Signal(FlagC)
-            self.assertRepr(~e, "FlagView(FlagC, (~ (sig e)))")
+            self.assertRepr(~e, f"FlagView({FlagC.__qualname__}, (~ (sig e)))")
 
     def test_enum_view_wrong(self):
         class EnumA(Enum, shape=signed(4)):
@@ -327,6 +327,4 @@ class EnumTestCase(FHDLTestCase):
             B = 1
 
         sig = Signal(EnumA)
-        self.assertRepr(EnumA.format(sig, ""), """
-        (format-enum (sig sig) 'EnumA' (0 'A') (1 'B'))
-        """)
+        self.assertRepr(EnumA.format(sig, ""), f"(format-enum (sig sig) '{EnumA.__qualname__}' (0 'A') (1 'B'))")

@@ -144,9 +144,9 @@ class _ModuleBuilderRoot:
     def __getattr__(self, name):
         if name in ("comb", "sync"):
             raise AttributeError("'{}' object has no attribute '{}'; did you mean 'd.{}'?"
-                                 .format(type(self).__name__, name, name))
+                                 .format(type(self).__qualname__, name, name))
         raise AttributeError("'{}' object has no attribute '{}'"
-                             .format(type(self).__name__, name))
+                             .format(type(self).__qualname__, name))
 
 
 class _ModuleBuilderSubmodules:
