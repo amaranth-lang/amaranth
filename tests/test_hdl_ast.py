@@ -521,6 +521,20 @@ class ConstTestCase(FHDLTestCase):
         with self.assertRaises(TypeError):
             hash(Const(0))
 
+    def test_enum(self):
+        e1 = Const(UnsignedEnum.FOO)
+        self.assertIsInstance(e1, Const)
+        self.assertEqual(e1.shape(), unsigned(2))
+        e2 = Const(SignedEnum.FOO)
+        self.assertIsInstance(e2, Const)
+        self.assertEqual(e2.shape(), signed(2))
+        e3 = Const(TypedEnum.FOO)
+        self.assertIsInstance(e3, Const)
+        self.assertEqual(e3.shape(), unsigned(2))
+        e4 = Const(UnsignedEnum.FOO, 4)
+        self.assertIsInstance(e4, Const)
+        self.assertEqual(e4.shape(), unsigned(4))
+
     def test_shape_castable(self):
         class MockConstValue(ValueCastable):
             def __init__(self, value):
