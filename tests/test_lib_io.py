@@ -88,6 +88,12 @@ class SingleEndedPortTestCase(FHDLTestCase):
         iport = ~port
         self.assertRepr(iport, "SingleEndedPort((io-port io), invert=(False, True, False, True), direction=Direction.Output)")
 
+    def test_empty(self):
+        io = IOPort(1)
+        port = SingleEndedPort(io, invert=False)
+        eport = port[0:0]
+        self.assertRepr(eport, "SingleEndedPort((io-slice (io-port io) 0:0), invert=False, direction=Direction.Bidir)")
+
 
 class DifferentialPortTestCase(FHDLTestCase):
     def test_construct(self):
@@ -159,6 +165,13 @@ class DifferentialPortTestCase(FHDLTestCase):
         port = DifferentialPort(iop, ion, invert=[True, False, True, False], direction=Direction.Output)
         iport = ~port
         self.assertRepr(iport, "DifferentialPort((io-port iop), (io-port ion), invert=(False, True, False, True), direction=Direction.Output)")
+
+    def test_empty(self):
+        iop = IOPort(1)
+        ion = IOPort(1)
+        port = DifferentialPort(iop, ion, invert=False)
+        eport = port[0:0]
+        self.assertRepr(eport, "DifferentialPort((io-slice (io-port iop) 0:0), (io-slice (io-port ion) 0:0), invert=False, direction=Direction.Bidir)")
 
 
 class BufferTestCase(FHDLTestCase):
