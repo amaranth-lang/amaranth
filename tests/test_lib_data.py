@@ -744,7 +744,7 @@ class ViewTestCase(FHDLTestCase):
                 r"^View with an array layout does not have fields$"):
             Signal(data.ArrayLayout(unsigned(1), 1), init=[0]).init
 
-    def test_eq(self):
+    def test_compare(self):
         s1 = Signal(data.StructLayout({"a": unsigned(2)}))
         s2 = Signal(data.StructLayout({"a": unsigned(2)}))
         s3 = Signal(data.StructLayout({"a": unsigned(1), "b": unsigned(1)}))
@@ -973,11 +973,12 @@ class ConstTestCase(FHDLTestCase):
                 r"^Constant with an array layout does not have fields$"):
             data.Const(data.ArrayLayout(unsigned(1), 1), 0).init
 
-    def test_eq(self):
+    def test_compare(self):
         c1 = data.Const(data.StructLayout({"a": unsigned(2)}), 1)
         c2 = data.Const(data.StructLayout({"a": unsigned(2)}), 1)
         c3 = data.Const(data.StructLayout({"a": unsigned(2)}), 2)
         c4 = data.Const(data.StructLayout({"a": unsigned(1), "b": unsigned(1)}), 2)
+        c5 = data.Const(data.ArrayLayout(2, 4), 0b11100100)
         s1 = Signal(data.StructLayout({"a": unsigned(2)}))
         self.assertTrue(c1 == c2)
         self.assertFalse(c1 != c2)
@@ -987,13 +988,23 @@ class ConstTestCase(FHDLTestCase):
         self.assertRepr(c1 != s1, "(!= (const 2'd1) (sig s1))")
         self.assertRepr(s1 == c1, "(== (sig s1) (const 2'd1))")
         self.assertRepr(s1 != c1, "(!= (sig s1) (const 2'd1))")
+        self.assertTrue(c1 == {"a": 1})
+        self.assertFalse(c1 == {"a": 2})
+        self.assertFalse(c1 != {"a": 1})
+        self.assertTrue(c1 != {"a": 2})
+        self.assertTrue(c5 == [0,1,2,3])
+        self.assertFalse(c5 == [0,1,3,3])
+        self.assertFalse(c5 != [0,1,2,3])
+        self.assertTrue(c5 != [0,1,3,3])
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c1 == c4
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c1 != c4
         with self.assertRaisesRegex(TypeError,
                 r"^View with layout .* can only be compared to another view or constant with "
@@ -1004,21 +1015,45 @@ class ConstTestCase(FHDLTestCase):
                 r"the same layout, not .*$"):
             s1 != c4
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c4 == s1
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c4 != s1
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c1 == Const(0, 2)
         with self.assertRaisesRegex(TypeError,
-                r"^Constant with layout .* can only be compared to another view or constant with "
-                r"the same layout, not .*$"):
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
             c1 != Const(0, 2)
+        with self.assertRaisesRegex(TypeError,
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
+            c1 == {"b": 1}
+        with self.assertRaisesRegex(TypeError,
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
+            c1 != {"b": 1}
+        with self.assertRaisesRegex(TypeError,
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
+            c5 == [0,1,2,3,4]
+        with self.assertRaisesRegex(TypeError,
+                r"^Constant with layout .* can only be compared to another view, a constant "
+                r"with the same layout, or a dictionary or a list that can be converted to "
+                r"a constant with the same layout, not .*$"):
+            c5 != [0,1,2,3,4]
 
     def test_operator(self):
         s1 = data.Const(data.StructLayout({"a": unsigned(2)}), 2)
