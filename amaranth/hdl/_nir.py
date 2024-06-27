@@ -465,7 +465,7 @@ class Netlist:
                     elif isinstance(obj, Operator):
                         obj = f"operator {obj.operator}"
                     else:
-                        obj = f"cell {obj.__class__.__name__}"
+                        obj = f"cell {obj.__class__.__qualname__}"
                     src_loc = "<unknown>:0" if src_loc is None else f"{src_loc[0]}:{src_loc[1]}"
                     msg.append(f"  {src_loc}: {obj} bit {bit}\n")
                 raise CombinationalCycle("".join(msg))
@@ -656,7 +656,7 @@ class Operator(Cell):
 
     The ternary operators are:
 
-    - 'm': multiplexer, first input needs to have width of 1, second and third operand need to have 
+    - 'm': multiplexer, first input needs to have width of 1, second and third operand need to have
       the same width as output; implements arg0 ? arg1 : arg2
 
     Attributes

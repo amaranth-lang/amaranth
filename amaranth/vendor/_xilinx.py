@@ -1236,7 +1236,7 @@ class XilinxPlatform(TemplatedPlatform):
         elif ff_sync._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for FFSynchronizer"
-                                      .format(type(self).__name__))
+                                      .format(type(self).__qualname__))
         for i, o in zip((ff_sync.i, *flops), flops):
             m.d[ff_sync._o_domain] += o.eq(i)
         m.d.comb += ff_sync.o.eq(flops[-1])
@@ -1284,7 +1284,7 @@ class XilinxPlatform(TemplatedPlatform):
             elif async_ff_sync._max_input_delay is not None:
                 raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                           "for AsyncFFSynchronizer"
-                                          .format(type(self).__name__))
+                                          .format(type(self).__qualname__))
 
         for i, o in zip((0, *flops_q), flops_d):
             m.d.comb += o.eq(i)

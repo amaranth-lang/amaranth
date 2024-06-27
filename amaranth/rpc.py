@@ -76,7 +76,7 @@ def _serve_yosys(modules):
                 rtlil_text = rtlil.convert(elaboratable, name=module_name, ports=ports)
                 response = {"frontend": "ilang", "source": rtlil_text}
             except Exception as error:
-                response = {"error": f"{type(error).__name__}: {str(error)}"}
+                response = {"error": f"{type(error).__qualname__}: {str(error)}"}
 
         else:
             return {"error": "Unrecognized method {!r}".format(request["method"])}

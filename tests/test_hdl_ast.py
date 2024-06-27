@@ -185,7 +185,7 @@ class MockShapeCastable(ShapeCastable):
 class ShapeCastableTestCase(FHDLTestCase):
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockShapeCastableNoOverride' deriving from 'ShapeCastable' must "
+                r"^Class '.+\.MockShapeCastableNoOverride' deriving from 'ShapeCastable' must "
                 r"override the 'as_shape' method$"):
             class MockShapeCastableNoOverride(ShapeCastable):
                 def __init__(self):
@@ -509,7 +509,7 @@ class ConstTestCase(FHDLTestCase):
 
             def shape(self):
                 return MockConstShape()
-            
+
             def as_value(self):
                 return Const(self.value, 8)
 
@@ -1308,7 +1308,7 @@ class SignalTestCase(FHDLTestCase):
             BLUE = 2
         s = Signal(decoder=Color)
         self.assertEqual(s.decoder, Color)
-        self.assertRepr(s._format, "(format-enum (sig s) 'Color' (1 'RED') (2 'BLUE'))")
+        self.assertRepr(s._format, f"(format-enum (sig s) '{Color.__qualname__}' (1 'RED') (2 'BLUE'))")
 
     def test_enum(self):
         s1 = Signal(UnsignedEnum)
@@ -1481,14 +1481,14 @@ class MockValueCastableCustomGetattr(ValueCastable):
 class ValueCastableTestCase(FHDLTestCase):
     def test_no_override(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideAsValue' deriving from 'ValueCastable' must "
+                r"^Class '.+\.MockValueCastableNoOverrideAsValue' deriving from 'ValueCastable' must "
                 r"override the 'as_value' method$"):
             class MockValueCastableNoOverrideAsValue(ValueCastable):
                 def __init__(self):
                     pass
 
         with self.assertRaisesRegex(TypeError,
-                r"^Class 'MockValueCastableNoOverrideShapec' deriving from 'ValueCastable' must "
+                r"^Class '.+\.MockValueCastableNoOverrideShapec' deriving from 'ValueCastable' must "
                 r"override the 'shape' method$"):
             class MockValueCastableNoOverrideShapec(ValueCastable):
                 def __init__(self):
