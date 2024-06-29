@@ -1045,6 +1045,15 @@ class ConnectTestCase(unittest.TestCase):
                      a=Signal(),
                      b=Signal()))
 
+    def test_bug_1435_missing_module(self):
+        sig = Signature({"a": Out(1)})
+        p = sig.create()
+        q = sig.flip().create()
+
+        with self.assertRaisesRegex(TypeError,
+                r"^The initial argument must be a module, not <PureInterface: .+>$"):
+            connect(p, q)
+
 
 class ComponentTestCase(unittest.TestCase):
     def test_basic(self):

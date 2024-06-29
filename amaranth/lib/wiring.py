@@ -5,6 +5,7 @@ import warnings
 
 from .. import tracer
 from ..hdl._ast import Shape, ShapeCastable, Const, Signal, Value, ValueCastable
+from ..hdl._dsl import Module
 from ..hdl._ir import Elaboratable
 from .._utils import final
 from .meta import Annotation, InvalidAnnotation
@@ -1400,6 +1401,9 @@ def connect(m, *args, **kwargs):
     arguments serve only a documentation purpose: they clarify the diagnostic messages when
     a connection cannot be made.
     """
+
+    if not isinstance(m, Module):
+        raise TypeError(f"The initial argument must be a module, not {m!r}")
 
     objects = {
         **{index:   arg for index,   arg in enumerate(args)},
