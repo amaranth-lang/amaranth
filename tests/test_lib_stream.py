@@ -108,6 +108,11 @@ class StreamTestCase(FHDLTestCase):
         self.assertNotEqual(sig_av_ar,   sig_nav_nar)
         self.assertNotEqual(sig_av_ar,   sig_av_ar2)
 
+    def test_payload_init(self):
+        sig = stream.Signature(2, payload_init=0b10)
+        intf = sig.create()
+        self.assertEqual(intf.payload.init, 0b10)
+
     def test_interface_create_bad(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Signature of stream\.Interface must be a stream\.Signature, not "
