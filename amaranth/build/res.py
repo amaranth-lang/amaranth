@@ -109,8 +109,9 @@ class ResourceManager:
 
         # List of (pin, port, buffer) pairs for non-dir="-" requests.
         self._pins      = []
-        # Constraint list
+        # Constraint lists
         self._clocks    = SignalDict()
+        self._io_clocks = {}
 
         self.add_resources(resources)
         self.add_connectors(connectors)
@@ -219,6 +220,8 @@ class ResourceManager:
                         for name in phys_names
                     ])
                     port = io.SingleEndedPort(iop, invert=phys.invert, direction=direction)
+                    if resource.clock is not None:
+                        self.add_clock_constraint(iop, resource.clock.frequency)
                 if isinstance(phys, DiffPairs):
                     phys_names_p = phys.p.map_names(self._conn_pins, resource)
                     phys_names_n = phys.n.map_names(self._conn_pins, resource)
@@ -232,7 +235,8 @@ class ResourceManager:
                         for name in phys_names_n
                     ])
                     port = io.DifferentialPort(p, n, invert=phys.invert, direction=direction)
-
+                    if resource.clock is not None:
+                        self.add_clock_constraint(p, resource.clock.frequency)
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
                         raise ResourceError("Resource component {} uses physical pin {}, but it "
@@ -253,8 +257,6 @@ class ResourceManager:
                     buffer = PinBuffer(pin, port)
                     self._pins.append((pin, port, buffer))
 
-                    if resource.clock is not None:
-                        self.add_clock_constraint(pin.i, resource.clock.frequency)
                     return pin
 
             else:
@@ -275,38 +277,28 @@ class ResourceManager:
             raise TypeError(f"A clock constraint can only be applied to a Signal, but a "
                             f"ClockSignal is provided; assign the ClockSignal to an "
                             f"intermediate signal and constrain the latter instead.")
-        elif not isinstance(clock, Signal):
-            raise TypeError(f"Object {clock!r} is not a Signal")
+        elif not isinstance(clock, (Signal, IOPort)):
+            raise TypeError(f"Object {clock!r} is not a Signal or IOPort")
         if not isinstance(frequency, (int, float)):
             raise TypeError(f"Frequency must be a number, not {frequency!r}")
 
-        if clock in self._clocks:
+        if isinstance(clock, IOPort):
+            clocks = self._io_clocks
+        else:
+            clocks = self._clocks
+
+        frequency = float(frequency)
+        if clock in clocks and clocks[clock] != frequency:
             raise ValueError("Cannot add clock constraint on {!r}, which is already constrained "
                              "to {} Hz"
-                             .format(clock, self._clocks[clock]))
+                             .format(clock, clocks[clock]))
         else:
-            self._clocks[clock] = float(frequency)
+            clocks[clock] = frequency
 
-    def iter_clock_constraints(self):
-        # Back-propagate constraints through the input buffer. For clock constraints on pins
-        # (the majority of cases), toolchains work better if the constraint is defined on the pin
-        # and not on the buffered internal net; and if the toolchain is advanced enough that
-        # it considers clock phase and delay of the input buffer, it is *necessary* to define
-        # the constraint on the pin to match the designer's expectation of phase being referenced
-        # to the pin.
-        #
-        # Constraints on nets with no corresponding input pin (e.g. PLL or SERDES outputs) are not
-        # affected.
-        pin_i_to_port = SignalDict()
-        for pin, port, _fragment in self._pins:
-            if hasattr(pin, "i"):
-                if isinstance(port, io.SingleEndedPort):
-                    pin_i_to_port[pin.i] = port.io
-                elif isinstance(port, io.DifferentialPort):
-                    pin_i_to_port[pin.i] = port.p
-                else:
-                    assert False
+    def iter_signal_clock_constraints(self):
+        for signal, frequency in self._clocks.items():
+            yield signal, frequency
 
-        for net_signal, frequency in self._clocks.items():
-            port_signal = pin_i_to_port.get(net_signal)
-            yield net_signal, port_signal, frequency
+    def iter_port_clock_constraints(self):
+        for port, frequency in self._io_clocks.items():
+            yield port, frequency

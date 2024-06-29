@@ -198,14 +198,14 @@ class TemplatedPlatform(Platform):
         """,
     }
 
-    def iter_clock_constraints(self):
-        for net_signal, port_signal, frequency in super().iter_clock_constraints():
+    def iter_signal_clock_constraints(self):
+        for signal, frequency in super().iter_signal_clock_constraints():
             # Skip any clock constraints placed on signals that are never used in the design.
             # Otherwise, it will cause a crash in the vendor platform if it supports clock
             # constraints on non-port nets.
-            if net_signal not in self._name_map:
+            if signal not in self._name_map:
                 continue
-            yield net_signal, port_signal, frequency
+            yield signal, frequency
 
     def toolchain_prepare(self, fragment, name, *, emit_src=True, **kwargs):
         # Restrict the name of the design to a strict alphanumeric character set. Platforms will
@@ -327,8 +327,11 @@ class TemplatedPlatform(Platform):
             else:
                 return " ".join(opts)
 
-        def hierarchy(signal, separator):
-            return separator.join(self._name_map[signal][1:])
+        def hierarchy(net, separator):
+            if isinstance(net, IOPort):
+                return net.name
+            else:
+                return separator.join(self._name_map[net][1:])
 
         def ascii_escape(string):
             def escape_one(match):

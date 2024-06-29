@@ -226,17 +226,17 @@ class ResourceManagerTestCase(FHDLTestCase):
         ) = self.cm.iter_pins()
         clk100_buffer._MustUse__silence = True
         clk50_buffer._MustUse__silence = True
-        self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (clk100.i, clk100_port.p, 100e6),
-            (clk50.i, clk50_port.io, 50e6)
+        self.assertEqual(list(self.cm.iter_port_clock_constraints()), [
+            (clk100_port.p, 100e6),
+            (clk50_port.io, 50e6)
         ])
 
     def test_add_clock(self):
         with _ignore_deprecated():
             i2c = self.cm.request("i2c")
         self.cm.add_clock_constraint(i2c.scl.o, 100e3)
-        self.assertEqual(list(self.cm.iter_clock_constraints()), [
-            (i2c.scl.o, None, 100e3)
+        self.assertEqual(list(self.cm.iter_signal_clock_constraints()), [
+            (i2c.scl.o, 100e3)
         ])
         ((_, _, scl_buffer), (_, _, sda_buffer)) = self.cm.iter_pins()
         scl_buffer._MustUse__silence = True
@@ -269,7 +269,7 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_wrong_clock_signal(self):
         with self.assertRaisesRegex(TypeError,
-                r"^Object None is not a Signal$"):
+                r"^Object None is not a Signal or IOPort$"):
             self.cm.add_clock_constraint(None, 10e6)
 
     def test_wrong_clock_frequency(self):
@@ -335,10 +335,8 @@ class ResourceManagerTestCase(FHDLTestCase):
 
     def test_wrong_clock_constraint_twice(self):
         with _ignore_deprecated():
-            clk100 = self.cm.request("clk100")
-        (pin, port, buffer), = self.cm.iter_pins()
-        buffer._MustUse__silence = True
+            clk100 = self.cm.request("clk100", dir="-")
         with self.assertRaisesRegex(ValueError,
-                (r"^Cannot add clock constraint on \(sig clk100_0__i\), which is already "
+                (r"^Cannot add clock constraint on \(io-port clk100_0__p\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
-            self.cm.add_clock_constraint(clk100.i, 1e6)
+            self.cm.add_clock_constraint(clk100.p, 1e6)
