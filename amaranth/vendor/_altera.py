@@ -310,12 +310,11 @@ class AlteraPlatform(TemplatedPlatform):
             {{get_override("add_settings")|default("# (add_settings placeholder)")}}
         """,
         "{{name}}.sdc": r"""
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-                {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_quote}}]
-                {% else -%}
-                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("|")|tcl_quote}}]
-                {% endif %}
+            {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
+                create_clock -name {{signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("|")|tcl_quote}}]
+            {% endfor %}
+            {% for port, frequency in platform.iter_port_clock_constraints() -%}
+                create_clock -name {{port.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port.name|tcl_quote}}]
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
