@@ -614,9 +614,51 @@ class ViewTestCase(FHDLTestCase):
         self.assertEqual(v["q"].shape(), signed(1))
         self.assertRepr(v["r"][0], "(slice (slice (sig v) 0:4) 0:2)")
         self.assertRepr(v["r"][1], "(slice (slice (sig v) 0:4) 2:4)")
+        self.assertRepr(v["r"][-2], "(slice (slice (sig v) 0:4) 0:2)")
+        self.assertRepr(v["r"][-1], "(slice (slice (sig v) 0:4) 2:4)")
         self.assertRepr(v["r"][i], "(part (slice (sig v) 0:4) (sig i) 2 2)")
         self.assertRepr(v["t"][0]["u"], "(slice (slice (slice (sig v) 0:4) 0:2) 0:1)")
         self.assertRepr(v["t"][1]["v"], "(slice (slice (slice (sig v) 0:4) 2:4) 1:2)")
+
+    def test_getitem_slice(self):
+        a = Signal(data.ArrayLayout(unsigned(2), 5))
+        self.assertEqual(a[1:3].shape(), data.ArrayLayout(unsigned(2), 2))
+        self.assertRepr(a[1:3].as_value(), "(slice (sig a) 2:6)")
+        self.assertRepr(a[2:].as_value(), "(slice (sig a) 4:10)")
+        self.assertRepr(a[:-2].as_value(), "(slice (sig a) 0:6)")
+        self.assertRepr(a[-1:].as_value(), "(slice (sig a) 8:10)")
+        self.assertRepr(a[::-1].as_value(), """
+            (cat
+                (slice (sig a) 8:10)
+                (slice (sig a) 6:8)
+                (slice (sig a) 4:6)
+                (slice (sig a) 2:4)
+                (slice (sig a) 0:2)
+            )
+        """)
+        self.assertRepr(a[::2].as_value(), """
+            (cat
+                (slice (sig a) 0:2)
+                (slice (sig a) 4:6)
+                (slice (sig a) 8:10)
+            )
+        """)
+        self.assertRepr(a[1::2].as_value(), """
+            (cat
+                (slice (sig a) 2:4)
+                (slice (sig a) 6:8)
+            )
+        """)
+
+    def test_array_iter(self):
+        a = Signal(data.ArrayLayout(unsigned(2), 5))
+        l = list(a)
+        self.assertEqual(len(l), 5)
+        self.assertRepr(l[0], "(slice (sig a) 0:2)")
+        self.assertRepr(l[1], "(slice (sig a) 2:4)")
+        self.assertRepr(l[2], "(slice (sig a) 4:6)")
+        self.assertRepr(l[3], "(slice (sig a) 6:8)")
+        self.assertRepr(l[4], "(slice (sig a) 8:10)")
 
     def test_getitem_custom_call(self):
         class Reverser(ShapeCastable):
@@ -674,9 +716,17 @@ class ViewTestCase(FHDLTestCase):
                 r"with a value$"):
             Signal(data.StructLayout({}))[Signal(1)]
 
+    def test_index_wrong_oob(self):
+        with self.assertRaisesRegex(IndexError,
+                r"^Index 2 is out of range for array layout of length 2$"):
+            Signal(data.ArrayLayout(unsigned(2), 2))[2]
+        with self.assertRaisesRegex(IndexError,
+                r"^Index -3 is out of range for array layout of length 2$"):
+            Signal(data.ArrayLayout(unsigned(2), 2))[-3]
+
     def test_index_wrong_slice(self):
         with self.assertRaisesRegex(TypeError,
-                r"^View cannot be indexed with a slice; did you mean to call `.as_value\(\)` "
+                r"^Non-array view cannot be indexed with a slice; did you mean to call `.as_value\(\)` "
                 r"first\?$"):
             Signal(data.StructLayout({}))[0:1]
 

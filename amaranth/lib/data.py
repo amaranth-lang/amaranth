@@ -796,17 +796,36 @@ class View(ValueCastable):
         :exc:`TypeError`
             If :meth:`.ShapeCastable.__call__` does not return a value or a value-castable object.
         """
-        if isinstance(key, slice):
-            raise TypeError(
-                "View cannot be indexed with a slice; did you mean to call `.as_value()` first?")
         if isinstance(self.__layout, ArrayLayout):
-            if not isinstance(key, (int, Value, ValueCastable)):
+            elem_width = Shape.cast(self.__layout.elem_shape).width
+            if isinstance(key, slice):
+                start, stop, stride = key.indices(self.__layout.length)
+                shape = ArrayLayout(self.__layout.elem_shape, len(range(start, stop, stride)))
+                if stride == 1:
+                    value = self.__target[start * elem_width:stop * elem_width]
+                else:
+                    value = Cat(self.__target[index * elem_width:(index + 1) * elem_width]
+                                for index in range(start, stop, stride))
+            elif isinstance(key, int):
+                if key not in range(-self.__layout.length, self.__layout.length):
+                    raise IndexError(f"Index {key} is out of range for array layout of length "
+                                     f"{self.__layout.length}")
+                if key < 0:
+                    key += self.__layout.length
+                shape = self.__layout.elem_shape
+                value = self.__target[key * elem_width:(key + 1) * elem_width]
+            elif isinstance(key, (int, Value, ValueCastable)):
+                shape = self.__layout.elem_shape
+                value = self.__target.word_select(key, elem_width)
+            else:
                 raise TypeError(
                     f"View with array layout may only be indexed with an integer or a value, "
                     f"not {key!r}")
-            shape = self.__layout.elem_shape
-            value = self.__target.word_select(key, Shape.cast(self.__layout.elem_shape).width)
         else:
+            if isinstance(key, slice):
+                raise TypeError(
+                    "Non-array view cannot be indexed with a slice; did you mean to call "
+                    "`.as_value()` first?")
             if isinstance(key, (Value, ValueCastable)):
                 raise TypeError(
                     f"Only views with array layout, not {self.__layout!r}, may be indexed with "
