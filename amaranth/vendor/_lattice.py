@@ -497,12 +497,11 @@ class LatticePlatform(TemplatedPlatform):
                     {%- for key, value in attrs.items() %} {{key}}={{value}}{% endfor %};
                 {% endif %}
             {% endfor %}
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-                {% if port_signal is not none -%}
-                    FREQUENCY PORT "{{port_signal.name}}" {{frequency}} HZ;
-                {% else -%}
-                    FREQUENCY NET "{{net_signal|hierarchy(".")}}" {{frequency}} HZ;
-                {% endif %}
+            {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
+                FREQUENCY NET "{{signals|hierarchy(".")}}" {{frequency}} HZ;
+            {% endfor %}
+            {% for port, frequency in platform.iter_port_clock_constraints() -%}
+                FREQUENCY PORT "{{port.name}}" {{frequency}} HZ;
             {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """
@@ -584,12 +583,11 @@ class LatticePlatform(TemplatedPlatform):
                 ldc_set_port -iobuf {{ '{' }}{%- for key, value in attrs.items() %}{{key}}={{value}} {% endfor %}{{ '}' }} {{'['}}get_ports {{port_name}}{{']'}}
                 {% endif %}
             {% endfor %}
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-                {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_quote}}]
-                {% else -%}
-                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|tcl_quote}}]
-                {% endif %}
+            {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
+                create_clock -name {{signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")|tcl_quote}}]
+            {% endfor %}
+            {% for port, frequency in platform.iter_port_clock_constraints() -%}
+                create_clock -name {{port.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port.name|tcl_quote}}]
             {% endfor %}
             {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """
@@ -684,12 +682,11 @@ class LatticePlatform(TemplatedPlatform):
         """,
         "{{name}}.sdc": r"""
             set_hierarchy_separator {/}
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-                {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_ports {{port_signal.name|tcl_quote("Diamond")}}]
-                {% else -%}
-                    create_clock -name {{net_signal.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")|tcl_quote("Diamond")}}]
-                {% endif %}
+            {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
+                create_clock -name {{signal.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")|tcl_quote("Diamond")}}]
+            {% endfor %}
+            {% for port, frequency in platform.iter_port_clock_constraints() -%}
+                create_clock -name {{port.name|tcl_quote("Diamond")}} -period {{1000000000/frequency}} [get_ports {{port.name|tcl_quote("Diamond")}}]
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
@@ -782,12 +779,11 @@ class LatticePlatform(TemplatedPlatform):
         """,
         # Pre-synthesis SDC constraints
         "{{name}}.sdc": r"""
-            {% for net_signal, port_signal, frequency in platform.iter_clock_constraints() -%}
-                {% if port_signal is not none -%}
-                    create_clock -name {{port_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port_signal.name}}]
-                {% else -%}
-                    create_clock -name {{net_signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{net_signal|hierarchy("/")}}]
-                {% endif %}
+            {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
+                create_clock -name {{signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")|tcl_quote}}]
+            {% endfor %}
+            {% for port, frequency in platform.iter_port_clock_constraints() -%}
+                create_clock -name {{port.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port.name|tcl_quote}}]
             {% endfor %}
             {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
         """,
