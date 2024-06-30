@@ -1144,11 +1144,16 @@ class XilinxPlatform(TemplatedPlatform):
             return super().create_missing_domain(name)
 
         if name == "sync" and self.default_clk is not None:
-            clk_i = self.request(self.default_clk).i
-            if self.default_rst is not None:
-                rst_i = self.request(self.default_rst).i
-
             m = Module()
+
+            clk_io = self.request(self.default_clk, dir="-")
+            m.submodules.clk_buf = clk_buf = io.Buffer("i", clk_io)
+            clk_i = clk_buf.i
+            if self.default_rst is not None:
+                rst_io = self.request(self.default_rst, dir="-")
+                m.submodules.rst_buf = rst_buf = io.Buffer("i", rst_io)
+                rst_i = rst_buf.i
+
             ready = Signal()
             m.submodules += Instance(STARTUP_PRIMITIVE[self.family], o_EOS=ready)
             m.domains += ClockDomain("sync", reset_less=self.default_rst is None)
