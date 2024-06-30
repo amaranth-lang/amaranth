@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from ..hdl import *
+from ..lib import io
 from ..lib.cdc import ResetSynchronizer
 from ..build import *
 
@@ -172,10 +173,14 @@ class QuicklogicPlatform(TemplatedPlatform):
                                          o_A=sys_clk0,
                                          o_Z=clk_i)
             else:
-                clk_i = self.request(self.default_clk).i
+                clk_io = self.request(self.default_clk, dir="-")
+                m.submodules.clk_buf = clk_buf = io.Buffer("i", clk_io)
+                clk_i = clk_buf.i
 
             if self.default_rst is not None:
-                rst_i = self.request(self.default_rst).i
+                rst_io = self.request(self.default_rst, dir="-")
+                m.submodules.rst_buf = rst_buf = io.Buffer("i", rst_io)
+                rst_i = rst_buf.i
             else:
                 rst_i = Const(0)
 

@@ -120,16 +120,22 @@ class Platform(ResourceManager, metaclass=ABCMeta):
         # Many device families provide advanced primitives for tackling reset. If these exist,
         # they should be used instead.
         if name == "sync" and self.default_clk is not None:
-            clk_i = self.request(self.default_clk).i
+            m = Module()
+
+            clk_io = self.request(self.default_clk, dir="-")
+            m.submodules.clk_buf = clk_buf = io.Buffer("i", clk_io)
+
             if self.default_rst is not None:
-                rst_i = self.request(self.default_rst).i
+                rst_io = self.request(self.default_rst, dir="-")
+                m.submodules.rst_buf = rst_buf = io.Buffer("i", rst_io)
+                rst_i = rst_buf.i
             else:
                 rst_i = Const(0)
 
-            m = Module()
             m.domains += ClockDomain("sync")
-            m.d.comb += ClockSignal("sync").eq(clk_i)
+            m.d.comb += ClockSignal("sync").eq(clk_buf.i)
             m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
+
             return m
 
     def prepare(self, elaboratable, name="top", **kwargs):
