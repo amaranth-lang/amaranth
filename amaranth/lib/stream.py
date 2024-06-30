@@ -35,14 +35,15 @@ class Signature(wiring.Signature):
     ready : :py:`In(1)`
         Whether a payload is accepted. If the stream is :py:`always_ready`, :py:`Const(1)`.
     """
-    def __init__(self, payload_shape: ShapeLike, *, always_valid=False, always_ready=False):
+    def __init__(self, payload_shape: ShapeLike, *, payload_init=None,
+                 always_valid=False, always_ready=False):
         Shape.cast(payload_shape)
         self._payload_shape = payload_shape
         self._always_valid = bool(always_valid)
         self._always_ready = bool(always_ready)
 
         super().__init__({
-            "payload": Out(payload_shape),
+            "payload": Out(payload_shape, init=payload_init),
             "valid": Out(1),
             "ready": In(1)
         })
