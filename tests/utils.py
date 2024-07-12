@@ -16,15 +16,57 @@ __all__ = ["FHDLTestCase"]
 
 
 class FHDLTestCase(unittest.TestCase):
+    maxDiff = None
+
     def assertRepr(self, obj, repr_str):
         if isinstance(obj, list):
             obj = Statement.cast(obj)
-        def prepare_repr(repr_str):
+        def squish_repr(repr_str):
             repr_str = re.sub(r"\s+",   " ",  repr_str)
             repr_str = re.sub(r"\( (?=\()", "(", repr_str)
             repr_str = re.sub(r"\) (?=\))", ")", repr_str)
             return repr_str.strip()
-        self.assertEqual(prepare_repr(repr(obj)), prepare_repr(repr_str))
+        def format_repr(input_repr, *, indent="    "):
+            output_repr = []
+            prefix = "\n"
+            name = None
+            index = 0
+            stack = []
+            current = ""
+            for char in input_repr:
+                if char == "(":
+                    stack.append((prefix, name, index))
+                    name, index = None, 0
+                    output_repr.append(char)
+                    if len(stack) == 1:
+                        prefix += indent
+                        output_repr.append(prefix)
+                elif char == ")":
+                    indented = (len(stack) == 1 or name in ("module", "top"))
+                    prefix, name, index = stack.pop()
+                    if indented:
+                        output_repr.append(prefix)
+                    output_repr.append(char)
+                elif char == " ":
+                    if name is None:
+                        name = current
+                        if name in ("module", "top"):
+                            prefix += indent
+                    else:
+                        index += 1
+                    current = ""
+                    if len(stack) == 1 or name == "module" and index >= 3 or name == "top":
+                        output_repr.append(prefix)
+                    else:
+                        output_repr.append(char)
+                elif name is None:
+                    current += char
+                    output_repr.append(char)
+                else:
+                    output_repr.append(char)
+            return "".join(output_repr)
+        # print("\n" + format_repr(squish_repr(repr(obj))))
+        self.assertEqual(format_repr(squish_repr(repr(obj))), format_repr(squish_repr(repr_str)))
 
     def assertFormal(self, spec, ports=None, mode="bmc", depth=1):
         stack = traceback.extract_stack()

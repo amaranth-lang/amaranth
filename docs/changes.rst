@@ -1,7 +1,7 @@
 Changelog
 #########
 
-This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes.
+This document describes changes to the public interfaces in the Amaranth language and standard library. It does not include most bug fixes or implementation changes; versions which do not include notable changes are not listed here.
 
 
 Documentation for past releases
@@ -19,8 +19,8 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
 
 
-Version 0.6 (unreleased)
-========================
+Version 0.6.0 (unreleased)
+==========================
 
 
 Language changes
@@ -30,12 +30,12 @@ Language changes
 
 * Changed: overriding :meth:`ValueCastable.from_bits` is now mandatory. (`RFC 51`_)
 * Deprecated: the :py:`local=` argument to :class:`ClockDomain`. (`RFC 59`_)
-* Removed: (deprecated in 0.4) :class:`Record`.
-* Removed: (deprecated in 0.5) :class:`Memory` (`RFC 45`_)
-* Removed: (deprecated in 0.5) public submodules of :mod:`amaranth.hdl`.
-* Removed: (deprecated in 0.5) :meth:`Value.implies`.
-* Removed: (deprecated in 0.5) :meth:`Const.width`, :meth:`Const.signed`, :meth:`Signal.width`, :meth:`Signal.signed`.
-* Removed: (deprecated in 0.5) upwards propagation of clock domains. (`RFC 59`_)
+* Removed: (deprecated in 0.4.0) :class:`Record`.
+* Removed: (deprecated in 0.5.0) :class:`Memory` (`RFC 45`_)
+* Removed: (deprecated in 0.5.0) public submodules of :mod:`amaranth.hdl`.
+* Removed: (deprecated in 0.5.0) :meth:`Value.implies`.
+* Removed: (deprecated in 0.5.0) :meth:`Const.width`, :meth:`Const.signed`, :meth:`Signal.width`, :meth:`Signal.signed`.
+* Removed: (deprecated in 0.5.0) upwards propagation of clock domains. (`RFC 59`_)
 
 
 Standard library changes
@@ -44,11 +44,20 @@ Standard library changes
 .. currentmodule:: amaranth.lib
 
 * Added: :py:`payload_init=` argument in :class:`amaranth.lib.stream.Signature`.
-* Removed: (deprecated in 0.5) :mod:`amaranth.lib.coding`. (`RFC 63`_)
+* Changed: (deprecated in 0.5.1) providing :meth:`io.PortLike.__add__` is now mandatory. (`RFC 69`_)
+* Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
 Version 0.5.1
 =============
+
+
+Implemented RFCs
+----------------
+
+.. _RFC 69: https://amaranth-lang.org/rfcs/0069-simulation-port.html
+
+* `RFC 69`_: Add a ``lib.io.PortLike`` object usable in simulation
 
 
 Standard library changes
@@ -59,10 +68,11 @@ Standard library changes
 * Added: views of :class:`amaranth.lib.data.ArrayLayout` can be indexed with negative integers or slices.
 * Added: :py:`len()` works on views of :class:`amaranth.lib.data.ArrayLayout`.
 * Added: views of :class:`amaranth.lib.data.ArrayLayout` are iterable.
+* Added: :class:`io.SimulationPort`. (`RFC 69`_)
 
 
-Version 0.5
-===========
+Version 0.5.0
+=============
 
 The Migen compatibility layer has been removed.
 
@@ -161,9 +171,9 @@ Language changes
 * Deprecated: :class:`amaranth.hdl.Memory`. (`RFC 45`_)
 * Deprecated: upwards propagation of clock domains. (`RFC 59`_)
 * Deprecated: :meth:`Value.implies`.
-* Removed: (deprecated in 0.4) :meth:`Const.normalize`. (`RFC 5`_)
-* Removed: (deprecated in 0.4) :class:`Repl`. (`RFC 10`_)
-* Removed: (deprecated in 0.4) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
+* Removed: (deprecated in 0.4.0) :meth:`Const.normalize`. (`RFC 5`_)
+* Removed: (deprecated in 0.4.0) :class:`Repl`. (`RFC 10`_)
+* Removed: (deprecated in 0.4.0) :class:`ast.Sample`, :class:`ast.Past`, :class:`ast.Stable`, :class:`ast.Rose`, :class:`ast.Fell`.
 * Removed: assertion names in :class:`Assert`, :class:`Assume` and :class:`Cover`. (`RFC 50`_)
 * Removed: accepting non-subclasses of :class:`Elaboratable` as elaboratables.
 
@@ -182,9 +192,9 @@ Standard library changes
 * Added: :mod:`amaranth.lib.meta`, :class:`amaranth.lib.wiring.ComponentMetadata`. (`RFC 30`_)
 * Added: :mod:`amaranth.lib.stream`. (`RFC 61`_)
 * Deprecated: :mod:`amaranth.lib.coding`. (`RFC 63`_)
-* Removed: (deprecated in 0.4) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
-* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.FIFOInterface` with :py:`fwft=False`. (`RFC 20`_)
-* Removed: (deprecated in 0.4) :class:`amaranth.lib.fifo.SyncFIFO` with :py:`fwft=False`. (`RFC 20`_)
+* Removed: (deprecated in 0.4.0) :mod:`amaranth.lib.scheduler`. (`RFC 19`_)
+* Removed: (deprecated in 0.4.0) :class:`amaranth.lib.fifo.FIFOInterface` with :py:`fwft=False`. (`RFC 20`_)
+* Removed: (deprecated in 0.4.0) :class:`amaranth.lib.fifo.SyncFIFO` with :py:`fwft=False`. (`RFC 20`_)
 
 
 Toolchain changes
@@ -199,7 +209,7 @@ Toolchain changes
 * Deprecated: :py:`Simulator.add_sync_process`. (`RFC 27`_)
 * Deprecated: generator-based simulation processes and testbenches. (`RFC 36`_)
 * Deprecated: the :py:`run_passive` argument to :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` has been deprecated, and does nothing.
-* Removed: (deprecated in 0.4) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
+* Removed: (deprecated in 0.4.0) use of mixed-case toolchain environment variable names, such as ``NMIGEN_ENV_Diamond`` or ``AMARANTH_ENV_Diamond``; use upper-case environment variable names, such as ``AMARANTH_ENV_DIAMOND``.
 
 
 Platform integration changes
@@ -212,11 +222,11 @@ Platform integration changes
 * Added: ``build.sh``  begins with ``#!/bin/sh``.
 * Changed: ``IntelPlatform`` renamed to ``AlteraPlatform``.
 * Deprecated: argument :py:`run_script=` in :meth:`BuildPlan.execute_local`.
-* Removed: (deprecated in 0.4) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
+* Removed: (deprecated in 0.4.0) :mod:`vendor.intel`, :mod:`vendor.lattice_ecp5`, :mod:`vendor.lattice_ice40`, :mod:`vendor.lattice_machxo2_3l`, :mod:`vendor.quicklogic`, :mod:`vendor.xilinx`. (`RFC 18`_)
 
 
-Version 0.4
-===========
+Version 0.4.0
+=============
 
 Support has been added for a new and improved way of defining data structures in :mod:`amaranth.lib.data` and component interfaces in :mod:`amaranth.lib.wiring`, as defined in `RFC 1`_ and `RFC 2`_. :class:`Record` has been deprecated. In a departure from the usual policy, to give designers additional time to migrate, :class:`Record` will be removed in Amaranth 0.6 (one release later than normal).
 
