@@ -43,6 +43,7 @@ Standard library changes
 
 .. currentmodule:: amaranth.lib
 
+* Added: :py:`payload_init=` argument in :class:`amaranth.lib.stream.Signature`.
 * Removed: (deprecated in 0.5) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
