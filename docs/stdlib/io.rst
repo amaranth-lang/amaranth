@@ -60,7 +60,8 @@ All of the following examples assume that one of the built-in FPGA platforms is 
 
 .. testcode::
 
-    from amaranth.lib import io, wiring
+    from amaranth.sim import Simulator
+    from amaranth.lib import io, wiring, stream
     from amaranth.lib.wiring import In, Out
 
 
@@ -191,6 +192,74 @@ In this example of a `source-synchronous interface <https://en.wikipedia.org/wik
 This component transmits :py:`dout` on each cycle as two halves: the low 8 bits on the rising edge of the data clock, and the high 8 bits on the falling edge of the data clock. The transmission is *edge-aligned*, meaning that the data edges exactly coincide with the clock edges.
 
 
+Simulation
+----------
+
+The Amaranth simulator, :mod:`amaranth.sim`, cannot simulate :ref:`core I/O values <lang-iovalues>` or :ref:`I/O buffer instances <lang-iobufferinstance>` as it only operates on unidirectionally driven two-state wires. This module provides a simulation-only library I/O port, :class:`SimulationPort`, so that components that use library I/O buffers can be tested.
+
+A component that is designed for testing should accept the library I/O ports it will drive as constructor parameters rather than requesting them from the platform directly. Synthesizable designs will instantiate the component with a :class:`SingleEndedPort`, :class:`DifferentialPort`, or a platform-specific library I/O port, while tests will instantiate the component with a :class:`SimulationPort`. Tests are able to inject inputs into the component using :py:`sim_port.i`, capture the outputs of the component via :py:`sim_port.o`, and ensure that the component is driving the outputs at the appropriate times using :py:`sim_port.oe`.
+
+For example, consider a simple serializer that accepts a stream of multi-bit data words and outputs them bit by bit. It can be tested as follows:
+
+.. testcode::
+
+    class OutputSerializer(wiring.Component):
+        data: In(stream.Signature(8))
+
+        def __init__(self, dclk_port, dout_port):
+            self.dclk_port = dclk_port
+            self.dout_port = dout_port
+
+            super().__init__()
+
+        def elaborate(self, platform):
+            m = Module()
+
+            m.submodules.dclk = dclk = io.Buffer("o", self.dclk_port)
+            m.submodules.dout = dout = io.Buffer("o", self.dout_port)
+
+            index = Signal(range(8))
+            m.d.comb += dout.o.eq(self.data.payload.bit_select(index, 1))
+
+            with m.If(self.data.valid):
+                m.d.sync += dclk.o.eq(~dclk.o)
+                with m.If(dclk.o):
+                    m.d.sync += index.eq(index + 1)
+                    with m.If(index == 7):
+                        m.d.comb += self.data.ready.eq(1)
+
+            return m
+
+    def test_output_serializer():
+        dclk_port = io.SimulationPort("o", 1)
+        dout_port = io.SimulationPort("o", 1)
+
+        dut = OutputSerializer(dclk_port, dout_port)
+
+        async def testbench_write_data(ctx):
+            ctx.set(dut.data.payload, 0xA1)
+            ctx.set(dut.data.valid, 1)
+            await ctx.tick().until(dut.data.ready)
+            ctx.set(dut.data.valid, 0)
+
+        async def testbench_sample_output(ctx):
+            for bit in [1,0,0,0,0,1,0,1]:
+                _, dout_value = await ctx.posedge(dut.dclk_port.o).sample(dut.dout_port.o)
+                assert ctx.get(dut.dout_port.oe) == 1, "DUT is not driving the data output"
+                assert dout_value == bit, "DUT drives the wrong value on data output"
+
+        sim = Simulator(dut)
+        sim.add_clock(1e-6)
+        sim.add_testbench(testbench_write_data)
+        sim.add_testbench(testbench_sample_output)
+        sim.run()
+
+.. testcode::
+    :hide:
+
+    test_output_serializer()
+
+
 Ports
 -----
 
@@ -199,6 +268,7 @@ Ports
 .. autoclass:: PortLike
 .. autoclass:: SingleEndedPort
 .. autoclass:: DifferentialPort
+.. autoclass:: SimulationPort
 
 
 Buffers

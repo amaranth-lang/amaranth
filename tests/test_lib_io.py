@@ -30,6 +30,14 @@ class DirectionTestCase(FHDLTestCase):
             Direction.Bidir & 3
 
 
+class PortLikeTestCase(FHDLTestCase):
+    def test_warn___add__(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"WrongPortLike must override the `__add__` method$"):
+            class WrongPortLike(PortLike):
+                pass
+
+
 class SingleEndedPortTestCase(FHDLTestCase):
     def test_construct(self):
         io = IOPort(4)
@@ -159,6 +167,123 @@ class DifferentialPortTestCase(FHDLTestCase):
         port = DifferentialPort(iop, ion, invert=[True, False, True, False], direction=Direction.Output)
         iport = ~port
         self.assertRepr(iport, "DifferentialPort((io-port iop), (io-port ion), invert=(False, True, False, True), direction=Direction.Output)")
+
+
+class SimulationPortTestCase(FHDLTestCase):
+    def test_construct(self):
+        port_io = SimulationPort("io", 2)
+        self.assertEqual(port_io.direction, Direction.Bidir)
+        self.assertEqual(len(port_io), 2)
+        self.assertEqual(port_io.invert, (False, False))
+        self.assertIsInstance(port_io.i, Signal)
+        self.assertEqual(port_io.i.shape(), unsigned(2))
+        self.assertIsInstance(port_io.o, Signal)
+        self.assertEqual(port_io.o.shape(), unsigned(2))
+        self.assertEqual(port_io.o.init, 0)
+        self.assertIsInstance(port_io.oe, Signal)
+        self.assertEqual(port_io.oe.shape(), unsigned(2))
+        self.assertEqual(port_io.oe.init, 0)
+        self.assertRepr(port_io, "SimulationPort(i=(sig port_io__i), o=(sig port_io__o), oe=(sig port_io__oe), invert=False, direction=Direction.Bidir)")
+
+        port_i = SimulationPort("i", 3, invert=True)
+        self.assertEqual(port_i.direction, Direction.Input)
+        self.assertEqual(len(port_i), 3)
+        self.assertEqual(port_i.invert, (True, True, True))
+        self.assertIsInstance(port_i.i, Signal)
+        self.assertEqual(port_i.i.shape(), unsigned(3))
+        with self.assertRaisesRegex(AttributeError,
+                r"^Simulation port with input direction does not have an output signal$"):
+            port_i.o
+        with self.assertRaisesRegex(AttributeError,
+                r"^Simulation port with input direction does not have an output enable signal$"):
+            port_i.oe
+        self.assertRepr(port_i, "SimulationPort(i=(sig port_i__i), invert=True, direction=Direction.Input)")
+
+        port_o = SimulationPort("o", 2, invert=(True, False))
+        self.assertEqual(port_o.direction, Direction.Output)
+        self.assertEqual(len(port_o), 2)
+        self.assertEqual(port_o.invert, (True, False))
+        with self.assertRaisesRegex(AttributeError,
+                r"^Simulation port with output direction does not have an input signal$"):
+            port_o.i
+        self.assertIsInstance(port_o.o, Signal)
+        self.assertEqual(port_o.o.shape(), unsigned(2))
+        self.assertEqual(port_o.o.init, 0)
+        self.assertIsInstance(port_o.oe, Signal)
+        self.assertEqual(port_o.oe.shape(), unsigned(2))
+        self.assertEqual(port_o.oe.init, 0b11)
+        self.assertRepr(port_o, "SimulationPort(o=(sig port_o__o), oe=(sig port_o__oe), invert=(True, False), direction=Direction.Output)")
+
+    def test_construct_empty(self):
+        port_i = SimulationPort("i", 0, invert=True)
+        self.assertEqual(port_i.direction, Direction.Input)
+        self.assertEqual(len(port_i), 0)
+        self.assertEqual(port_i.invert, ())
+        self.assertIsInstance(port_i.i, Signal)
+        self.assertEqual(port_i.i.shape(), unsigned(0))
+        self.assertRepr(port_i, "SimulationPort(i=(sig port_i__i), invert=False, direction=Direction.Input)")
+
+    def test_name(self):
+        port = SimulationPort("io", 2, name="nyaa")
+        self.assertRepr(port, "SimulationPort(i=(sig nyaa__i), o=(sig nyaa__o), oe=(sig nyaa__oe), invert=False, direction=Direction.Bidir)")
+
+    def test_name_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Name must be a string, not 1$"):
+            SimulationPort("io", 1, name=1)
+
+    def test_construct_wrong(self):
+        with self.assertRaisesRegex(TypeError,
+                r"^Width must be a non-negative integer, not 'a'$"):
+            SimulationPort("io", "a")
+        with self.assertRaisesRegex(TypeError,
+                r"^Width must be a non-negative integer, not -1$"):
+            SimulationPort("io", -1)
+        with self.assertRaisesRegex(TypeError,
+                r"^'invert' must be a bool or iterable of bool, not 3$"):
+            SimulationPort("io", 1, invert=3)
+        with self.assertRaisesRegex(TypeError,
+                r"^'invert' must be a bool or iterable of bool, not \[1, 2\]$"):
+            SimulationPort("io", 2, invert=[1, 2])
+        with self.assertRaisesRegex(ValueError,
+                r"^Length of 'invert' \(2\) doesn't match port width \(1\)$"):
+            SimulationPort("io", 1, invert=(False, True))
+
+    def test_slice(self):
+        port_io = SimulationPort("io", 2)
+        self.assertRepr(port_io[0], "SimulationPort(i=(slice (sig port_io__i) 0:1), o=(slice (sig port_io__o) 0:1), oe=(slice (sig port_io__oe) 0:1), invert=False, direction=Direction.Bidir)")
+
+        port_i = SimulationPort("i", 3, invert=True)
+        self.assertRepr(port_i[1:3], "SimulationPort(i=(slice (sig port_i__i) 1:3), invert=True, direction=Direction.Input)")
+
+        port_o = SimulationPort("o", 2, invert=(True, False))
+        self.assertRepr(port_o[1], "SimulationPort(o=(slice (sig port_o__o) 1:2), oe=(slice (sig port_o__oe) 1:2), invert=False, direction=Direction.Output)")
+
+    def test_invert(self):
+        port_io = SimulationPort("io", 2)
+        self.assertRepr(~port_io, "SimulationPort(i=(sig port_io__i), o=(sig port_io__o), oe=(sig port_io__oe), invert=True, direction=Direction.Bidir)")
+
+        port_i = SimulationPort("i", 3, invert=True)
+        self.assertRepr(~port_i, "SimulationPort(i=(sig port_i__i), invert=False, direction=Direction.Input)")
+
+        port_o = SimulationPort("o", 2, invert=(True, False))
+        self.assertRepr(~port_o, "SimulationPort(o=(sig port_o__o), oe=(sig port_o__oe), invert=(False, True), direction=Direction.Output)")
+
+    def test_add(self):
+        port_io = SimulationPort("io", 2)
+        port_io2 = SimulationPort("io", 2)
+        port_i = SimulationPort("i", 3, invert=True)
+        port_o = SimulationPort("o", 2, invert=(True, False))
+
+        self.assertRepr(port_io + port_io2, "SimulationPort(i=(cat (sig port_io__i) (sig port_io2__i)), o=(cat (sig port_io__o) (sig port_io2__o)), oe=(cat (sig port_io__oe) (sig port_io2__oe)), invert=False, direction=Direction.Bidir)")
+        self.assertRepr(port_io + port_i, "SimulationPort(i=(cat (sig port_io__i) (sig port_i__i)), invert=(False, False, True, True, True), direction=Direction.Input)")
+        self.assertRepr(port_io + port_o, "SimulationPort(o=(cat (sig port_io__o) (sig port_o__o)), oe=(cat (sig port_io__oe) (sig port_o__oe)), invert=(False, False, True, False), direction=Direction.Output)")
+
+    def test_add_wrong(self):
+        io = IOPort(1)
+        with self.assertRaisesRegex(TypeError,
+                r"^unsupported operand type\(s\) for \+: 'SimulationPort' and 'SingleEndedPort'$"):
+            SimulationPort("io", 2) + SingleEndedPort(io)
 
 
 class BufferTestCase(FHDLTestCase):
@@ -375,6 +500,121 @@ class BufferTestCase(FHDLTestCase):
             (cell 2 0 (iob output 0.0:4 1.0:4 0.6))
             (cell 3 0 (~ 1.0:4))
             (cell 4 0 (iob output 1.0:4 3.0:4 0.6))
+        )
+        """)
+
+    def test_elaborate_sim(self):
+        port = SimulationPort("io", 4)
+        buf = Buffer("io", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, buf.o, buf.oe, port.i, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (input 'port__i' 0.7:11)
+                (output 'i' 5.0:4)
+                (output 'port__o' 0.2:6)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (input 'port__i' 7:11)
+                (output 'i' 5.0:4)
+                (output 'port__o' 0.2:6)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            ))
+            (cell 1 0 (m 0.6 0.2 0.7))
+            (cell 2 0 (m 0.6 0.3 0.8))
+            (cell 3 0 (m 0.6 0.4 0.9))
+            (cell 4 0 (m 0.6 0.5 0.10))
+            (cell 5 0 (assignment_list 4'd0 (1 0:1 1.0) (1 1:2 2.0) (1 2:3 3.0) (1 3:4 4.0)))
+        )
+        """)
+
+        port = SimulationPort("io", 4, invert=[False, True, False, True])
+        buf = Buffer("io", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, buf.o, buf.oe, port.i, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (input 'port__i' 0.7:11)
+                (output 'i' 2.0:4)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (input 'port__i' 7:11)
+                (output 'i' 2.0:4)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            ))
+            (cell 1 0 (^ 0.2:6 4'd10))
+            (cell 2 0 (^ 7.0:4 4'd10))
+            (cell 3 0 (m 0.6 1.0 0.7))
+            (cell 4 0 (m 0.6 1.1 0.8))
+            (cell 5 0 (m 0.6 1.2 0.9))
+            (cell 6 0 (m 0.6 1.3 0.10))
+            (cell 7 0 (assignment_list 4'd0 (1 0:1 3.0) (1 1:2 4.0) (1 2:3 5.0) (1 3:4 6.0)))
+        )
+        """)
+
+        buf = Buffer("i", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, port.i])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'port__i' 0.2:6)
+                (output 'i' 1.0:4)
+            )
+            (cell 0 0 (top
+                (input 'port__i' 2:6)
+                (output 'i' 1.0:4)
+            ))
+            (cell 1 0 (^ 0.2:6 4'd10))
+        )
+        """)
+
+        buf = Buffer("o", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.o, buf.oe, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 0.6 0.6 0.6 0.6))
+            ))
+            (cell 1 0 (^ 0.2:6 4'd10))
+        )
+        """)
+
+        # check that a port without `port.o`/`port.oe` works
+        port = SimulationPort("i", 4, invert=[False, True, False, True])
+        buf = Buffer("i", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, port.i])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'port__i' 0.2:6)
+                (output 'i' 1.0:4)
+            )
+            (cell 0 0 (top
+                (input 'port__i' 2:6)
+                (output 'i' 1.0:4)
+            ))
+            (cell 1 0 (^ 0.2:6 4'd10))
         )
         """)
 
@@ -613,6 +853,150 @@ class FFBufferTestCase(FHDLTestCase):
             (cell 2 1 (iob output 0.0:4 1.0:4 4.0))
             (cell 3 0 (flipflop 0.2:6 0 pos 0.7 0))
             (cell 4 0 (flipflop 0.6 0 pos 0.7 0))
+        )
+        """)
+
+    def test_elaborate_sim(self):
+        port = SimulationPort("io", 4)
+        buf = FFBuffer("io", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, buf.o, buf.oe, port.i, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (input 'port__i' 0.7:11)
+                (input 'clk' 0.11)
+                (input 'rst' 0.12)
+                (output 'i' 5.0:4)
+                (output 'port__o' 6.0:4)
+                (output 'port__oe' (cat 7.0 7.0 7.0 7.0))
+            )
+            (module 1 0 ('top' 'io_buffer')
+                (input 'port__i' 0.7:11)
+                (input 'port__o' 6.0:4)
+                (input 'oe' 7.0)
+                (output 'i' 8.0:4)
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (input 'port__i' 7:11)
+                (input 'clk' 11:12)
+                (input 'rst' 12:13)
+                (output 'i' 5.0:4)
+                (output 'port__o' 6.0:4)
+                (output 'port__oe' (cat 7.0 7.0 7.0 7.0))
+            ))
+            (cell 1 1 (m 7.0 6.0 0.7))
+            (cell 2 1 (m 7.0 6.1 0.8))
+            (cell 3 1 (m 7.0 6.2 0.9))
+            (cell 4 1 (m 7.0 6.3 0.10))
+            (cell 5 0 (flipflop 8.0:4 0 pos 0.11 0))
+            (cell 6 0 (flipflop 0.2:6 0 pos 0.11 0))
+            (cell 7 0 (flipflop 0.6 0 pos 0.11 0))
+            (cell 8 1 (assignment_list 4'd0 (1 0:1 1.0) (1 1:2 2.0) (1 2:3 3.0) (1 3:4 4.0)))
+        )
+        """)
+
+        port = SimulationPort("io", 4, invert=[False, True, False, True])
+        buf = FFBuffer("io", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, buf.o, buf.oe, port.i, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (input 'port__i' 0.7:11)
+                (input 'clk' 0.11)
+                (input 'rst' 0.12)
+                (output 'i' 7.0:4)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 9.0 9.0 9.0 9.0))
+            )
+            (module 1 0 ('top' 'io_buffer')
+                (input 'port__i' 0.7:11)
+                (output 'o_inv' 1.0:4)
+                (output 'i' 2.0:4)
+                (input 'o' 8.0:4)
+                (input 'oe' 9.0)
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (input 'port__i' 7:11)
+                (input 'clk' 11:12)
+                (input 'rst' 12:13)
+                (output 'i' 7.0:4)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 9.0 9.0 9.0 9.0))
+            ))
+            (cell 1 1 (^ 8.0:4 4'd10))
+            (cell 2 1 (^ 10.0:4 4'd10))
+            (cell 3 1 (m 9.0 1.0 0.7))
+            (cell 4 1 (m 9.0 1.1 0.8))
+            (cell 5 1 (m 9.0 1.2 0.9))
+            (cell 6 1 (m 9.0 1.3 0.10))
+            (cell 7 0 (flipflop 2.0:4 0 pos 0.11 0))
+            (cell 8 0 (flipflop 0.2:6 0 pos 0.11 0))
+            (cell 9 0 (flipflop 0.6 0 pos 0.11 0))
+            (cell 10 1 (assignment_list 4'd0 (1 0:1 3.0) (1 1:2 4.0) (1 2:3 5.0) (1 3:4 6.0)))
+        )
+        """)
+
+        buf = FFBuffer("i", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.i, port.i])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'port__i' 0.2:6)
+                (input 'clk' 0.6)
+                (input 'rst' 0.7)
+                (output 'i' 2.0:4)
+            )
+            (module 1 0 ('top' 'io_buffer')
+                (input 'i_inv' 0.2:6)
+                (output 'i' 1.0:4)
+            )
+            (cell 0 0 (top
+                (input 'port__i' 2:6)
+                (input 'clk' 6:7)
+                (input 'rst' 7:8)
+                (output 'i' 2.0:4)
+            ))
+            (cell 1 1 (^ 0.2:6 4'd10))
+            (cell 2 0 (flipflop 1.0:4 0 pos 0.6 0))
+        )
+        """)
+
+        buf = FFBuffer("o", port)
+        nl = build_netlist(Fragment.get(buf, None), [buf.o, buf.oe, port.o, port.oe])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'o' 0.2:6)
+                (input 'oe' 0.6)
+                (input 'clk' 0.7)
+                (input 'rst' 0.8)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 3.0 3.0 3.0 3.0))
+            )
+            (module 1 0 ('top' 'io_buffer')
+                (output 'o_inv' 1.0:4)
+                (input 'o' 2.0:4)
+                (input 'oe' 3.0)
+            )
+            (cell 0 0 (top
+                (input 'o' 2:6)
+                (input 'oe' 6:7)
+                (input 'clk' 7:8)
+                (input 'rst' 8:9)
+                (output 'port__o' 1.0:4)
+                (output 'port__oe' (cat 3.0 3.0 3.0 3.0))
+            ))
+            (cell 1 1 (^ 2.0:4 4'd10))
+            (cell 2 0 (flipflop 0.2:6 0 pos 0.7 0))
+            (cell 3 0 (flipflop 0.6 0 pos 0.7 0))
         )
         """)
 
