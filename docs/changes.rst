@@ -47,6 +47,20 @@ Standard library changes
 * Removed: (deprecated in 0.5) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
+Version 0.5.1
+=============
+
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Added: views of :class:`amaranth.lib.data.ArrayLayout` can be indexed with negative integers or slices.
+* Added: :py:`len()` works on views of :class:`amaranth.lib.data.ArrayLayout`.
+* Added: views of :class:`amaranth.lib.data.ArrayLayout` are iterable.
+
+
 Version 0.5
 ===========
 
