@@ -2082,7 +2082,7 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                             .format(orig_init, shape),
                     category=SyntaxWarning,
                     stacklevel=2)
-        self._init = init.value
+        self._init = Const(init.value, shape).value
         self._reset_less = bool(reset_less)
 
         if isinstance(orig_shape, range) and orig_init is not None and orig_init not in orig_shape:
