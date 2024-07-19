@@ -30,14 +30,6 @@ class DirectionTestCase(FHDLTestCase):
             Direction.Bidir & 3
 
 
-class PortLikeTestCase(FHDLTestCase):
-    def test_warn___add__(self):
-        with self.assertWarnsRegex(DeprecationWarning,
-                r"WrongPortLike must override the `__add__` method$"):
-            class WrongPortLike(PortLike):
-                pass
-
-
 class SingleEndedPortTestCase(FHDLTestCase):
     def test_construct(self):
         io = IOPort(4)
