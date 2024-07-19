@@ -1,6 +1,5 @@
 import enum
 import operator
-import warnings
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 
@@ -58,12 +57,6 @@ class PortLike(metaclass=ABCMeta):
         :class:`amaranth.hdl.IOPort` is not an instance of :class:`amaranth.lib.io.PortLike`.
     """
 
-    # TODO(amaranth-0.6): remove
-    def __init_subclass__(cls):
-        if cls.__add__ is PortLike.__add__:
-            warnings.warn(f"{cls.__module__}.{cls.__qualname__} must override the `__add__` method",
-                          DeprecationWarning, stacklevel=2)
-
     @property
     @abstractmethod
     def direction(self):
@@ -115,8 +108,7 @@ class PortLike(metaclass=ABCMeta):
         """
         raise NotImplementedError # :nocov:
 
-    # TODO(amaranth-0.6): make abstract
-    # @abstractmethod
+    @abstractmethod
     def __add__(self, other):
         """Concatenates two library I/O ports of the same type.
 
