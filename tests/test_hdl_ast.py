@@ -1245,6 +1245,14 @@ class SignalTestCase(FHDLTestCase):
                 r"^Initial value -2 will be truncated to the signal shape signed\(1\)$"):
             Signal(signed(1), init=-2)
 
+    def test_init_truncated(self):
+        s1 = Signal(unsigned(2), init=-1)
+        self.assertEqual(s1.init, 0b11)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=SyntaxWarning)
+            s2 = Signal(signed(2), init=-33)
+            self.assertEqual(s2.init, -1)
+
     def test_init_wrong_fencepost(self):
         with self.assertRaisesRegex(SyntaxError,
                 r"^Initial value 10 equals the non-inclusive end of the signal shape "
