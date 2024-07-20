@@ -443,9 +443,10 @@ class GowinPlatform(TemplatedPlatform):
             create_clock -name {{signal.name|tcl_quote}} -period {{1000000000/frequency}} [get_nets {{signal|hierarchy("/")|tcl_quote}}]
         {% endfor %}
         {% for port, frequency in platform.iter_port_clock_constraints() -%}
-            create_clock -name {{port.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports {{port.name|tcl_quote}}]
+            create_clock -name {{port.name|tcl_quote}} -period {{1000000000/frequency}} [get_ports
+            {{ "{" }}{{port.name}}{{ "}" }}]
         {% endfor %}
-        {{get_override("add_constraints")|default("# (add_constraints placeholder)")}}
+        {{get_override("add_constraints")|default("// (add_constraints placeholder)")}}
         """,
     }
     _gowin_command_templates = [
