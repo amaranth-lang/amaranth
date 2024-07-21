@@ -5,7 +5,7 @@ import sys
 
 from ..hdl import *
 from ..hdl._ast import SignalSet, _StatementList, Property
-from ..hdl._xfrm import ValueVisitor, StatementVisitor
+from ..hdl._xfrm import ValueVisitor, StatementVisitor, LHSMaskCollector
 from ..hdl._mem import MemoryInstance
 from ._base import BaseProcess
 from ._pyeval import value_to_string
@@ -487,19 +487,20 @@ class _FragmentCompiler:
         for domain_name in domains:
             domain_stmts = fragment.statements.get(domain_name, _StatementList())
             domain_process = PyRTLProcess(is_comb=domain_name == "comb")
-            domain_signals = domain_stmts._lhs_signals()
+            lhs_masks = LHSMaskCollector()
+            lhs_masks.visit_stmt(domain_stmts)
 
             if isinstance(fragment, MemoryInstance):
                 for port in fragment._read_ports:
                     if port._domain == domain_name:
-                        domain_signals.update(port._data._lhs_signals())
+                        lhs_masks.visit_value(port._data, ~0)
 
             emitter = _PythonEmitter()
             emitter.append(f"def run():")
             emitter._level += 1
 
             if domain_name == "comb":
-                for signal in domain_signals:
+                for (signal, _) in lhs_masks.masks():
                     signal_index = self.state.get_signal(signal)
                     self.state.slots[signal_index].is_comb = True
                     emitter.append(f"next_{signal_index} = {signal.init}")
@@ -533,7 +534,7 @@ class _FragmentCompiler:
                 if domain.async_reset and domain.rst is not None:
                     self.state.add_signal_waker(domain.rst, edge_waker(domain_process, 1))
 
-                for signal in domain_signals:
+                for (signal, _) in lhs_masks.masks():
                     signal_index = self.state.get_signal(signal)
                     emitter.append(f"next_{signal_index} = slots[{signal_index}].next")
 
@@ -546,7 +547,7 @@ class _FragmentCompiler:
                     emitter.append(f"if {rst}:")
                     with emitter.indent():
                         emitter.append("pass")
-                        for signal in domain_signals:
+                        for (signal, _) in lhs_masks.masks():
                             if not signal.reset_less:
                                 signal_index = self.state.get_signal(signal)
                                 emitter.append(f"next_{signal_index} = {signal.init}")
@@ -592,9 +593,11 @@ class _FragmentCompiler:
 
                             lhs(port._data)(data)
 
-            for signal in domain_signals:
+            for (signal, mask) in lhs_masks.masks():
+                if signal.shape().signed and (mask & 1 << (len(signal) - 1)):
+                    mask |= -1 << len(signal)
                 signal_index = self.state.get_signal(signal)
-                emitter.append(f"slots[{signal_index}].update(next_{signal_index})")
+                emitter.append(f"slots[{signal_index}].update(next_{signal_index}, {mask})")
 
             # There shouldn't be any exceptions raised by the generated code, but if there are
             # (almost certainly due to a bug in the code generator), use this environment variable

@@ -227,6 +227,7 @@ class ResetInserterTestCase(FHDLTestCase):
         self.s1 = Signal()
         self.s2 = Signal(init=1)
         self.s3 = Signal(init=1, reset_less=True)
+        self.s4 = Signal(8, init=0x3a)
         self.c1 = Signal()
 
     def test_reset_default(self):
@@ -277,6 +278,40 @@ class ResetInserterTestCase(FHDLTestCase):
             (eq (sig s2) (const 1'd0))
             (switch (sig c1)
                 (case 1 (eq (sig s2) (const 1'd1)))
+            )
+        )
+        """)
+
+    def test_reset_mask(self):
+        f = Fragment()
+        f.add_statements("sync", self.s4[2:4].eq(0))
+
+        f = ResetInserter(self.c1)(f)
+        self.assertRepr(f.statements["sync"], """
+        (
+            (eq (slice (sig s4) 2:4) (const 1'd0))
+            (switch (sig c1)
+                (case 1 (eq (slice (sig s4) 2:4) (slice (const 8'd58) 2:4)))
+            )
+        )
+        """)
+
+        f = Fragment()
+        f.add_statements("sync", self.s4[2:4].eq(0))
+        f.add_statements("sync", self.s4[3:5].eq(0))
+        f.add_statements("sync", self.s4[6:10].eq(0))
+
+        f = ResetInserter(self.c1)(f)
+        self.assertRepr(f.statements["sync"], """
+        (
+            (eq (slice (sig s4) 2:4) (const 1'd0))
+            (eq (slice (sig s4) 3:5) (const 1'd0))
+            (eq (slice (sig s4) 6:8) (const 1'd0))
+            (switch (sig c1)
+                (case 1 
+                    (eq (slice (sig s4) 2:5) (slice (const 8'd58) 2:5))
+                    (eq (slice (sig s4) 6:8) (slice (const 8'd58) 6:8))
+                )
             )
         )
         """)
@@ -423,3 +458,31 @@ class TransformedElaboratableTestCase(FHDLTestCase):
             )
         )
         """)
+
+class LHSMaskCollectorTestCase(FHDLTestCase):
+    def test_slice(self):
+        s = Signal(8)
+        lhs = LHSMaskCollector()
+        lhs.visit_value(s[2:5], ~0)
+        self.assertEqual(lhs.lhs[s], 0x1c)
+
+    def test_slice_slice(self):
+        s = Signal(8)
+        lhs = LHSMaskCollector()
+        lhs.visit_value(s[2:7][1:3], ~0)
+        self.assertEqual(lhs.lhs[s], 0x18)
+
+    def test_slice_concat(self):
+        s1 = Signal(8)
+        s2 = Signal(8)
+        lhs = LHSMaskCollector()
+        lhs.visit_value(Cat(s1, s2)[4:11], ~0)
+        self.assertEqual(lhs.lhs[s1], 0xf0)
+        self.assertEqual(lhs.lhs[s2], 0x07)
+
+    def test_slice_part(self):
+        s = Signal(8)
+        idx = Signal(8)
+        lhs = LHSMaskCollector()
+        lhs.visit_value(s.bit_select(idx, 5)[1:3], ~0)
+        self.assertEqual(lhs.lhs[s], 0xff)
