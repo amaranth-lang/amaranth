@@ -17,6 +17,7 @@ __all__ = ["ValueVisitor", "ValueTransformer",
            "FragmentTransformer",
            "TransformedElaboratable",
            "DomainCollector", "DomainRenamer", "DomainLowerer",
+           "LHSMaskCollector",
            "ResetInserter", "EnableInserter"]
 
 
@@ -601,6 +602,71 @@ class DomainLowerer(FragmentTransformer, ValueTransformer, StatementTransformer)
         return super().on_fragment(fragment)
 
 
+class LHSMaskCollector:
+    def __init__(self):
+        self.lhs = SignalDict()
+
+    def visit_stmt(self, stmt):
+        if type(stmt) is Assign:
+            self.visit_value(stmt.lhs, ~0)
+        elif type(stmt) is Switch:
+            for (_, substmt, _) in stmt.cases:
+                self.visit_stmt(substmt)
+        elif type(stmt) in (Property, Print):
+            pass
+        elif isinstance(stmt, Iterable):
+            for substmt in stmt:
+                self.visit_stmt(substmt)
+        else:
+            assert False # :nocov:
+
+    def visit_value(self, value, mask):
+        if type(value) in (Signal, ClockSignal, ResetSignal):
+            mask &= (1 << len(value)) - 1
+            self.lhs.setdefault(value, 0)
+            self.lhs[value] |= mask
+        elif type(value) is Operator:
+            assert value.operator in ("s", "u")
+            self.visit_value(value.operands[0], mask)
+        elif type(value) is Slice:
+            slice_mask = (1 << value.stop) - (1 << value.start)
+            mask <<= value.start
+            mask &= slice_mask
+            self.visit_value(value.value, mask)
+        elif type(value) is Part:
+            # Could be more accurate, but if you're relying on such details, you're not seeing
+            # the Light of Heaven.
+            self.visit_value(value.value, ~0)
+        elif type(value) is Concat:
+            for part in value.parts:
+                self.visit_value(part, mask)
+                mask >>= len(part)
+        elif type(value) is SwitchValue:
+            for (_, subvalue) in value.cases:
+                self.visit_value(subvalue, mask)
+        else:
+            assert False # :nocov:
+
+    def chunks(self):
+        for signal, mask in self.lhs.items():
+            if mask == (1 << len(signal)) - 1:
+                yield signal, 0, None
+            else:
+                start = 0
+                while start < len(signal):
+                    if ((mask >> start) & 1) == 0:
+                        start += 1
+                    else:
+                        stop = start
+                        while stop < len(signal) and ((mask >> stop) & 1) == 1:
+                            stop += 1
+                        yield (signal, start, stop)
+                        start = stop
+
+    def masks(self):
+        yield from self.lhs.items()
+
+
 class _ControlInserter(FragmentTransformer):
     def __init__(self, controls):
         self.src_loc = None
@@ -615,10 +681,9 @@ class _ControlInserter(FragmentTransformer):
         for domain, statements in fragment.statements.items():
             if domain == "comb" or domain not in self.controls:
                 continue
-            signals = SignalSet()
-            for stmt in statements:
-                signals |= stmt._lhs_signals()
-            self._insert_control(new_fragment, domain, signals)
+            lhs_masks = LHSMaskCollector()
+            lhs_masks.visit_stmt(statements)
+            self._insert_control(new_fragment, domain, lhs_masks)
         return new_fragment
 
     def _insert_control(self, fragment, domain, signals):
@@ -630,13 +695,20 @@ class _ControlInserter(FragmentTransformer):
 
 
 class ResetInserter(_ControlInserter):
-    def _insert_control(self, fragment, domain, signals):
-        stmts = [s.eq(Const(s.init, s.shape())) for s in signals if not s.reset_less]
+    def _insert_control(self, fragment, domain, lhs_masks):
+        stmts = []
+        for signal, start, stop in lhs_masks.chunks():
+            if signal.reset_less:
+                continue
+            if start == 0 and stop is None:
+                stmts.append(signal.eq(Const(signal.init, signal.shape())))
+            else:
+                stmts.append(signal[start:stop].eq(Const(signal.init, signal.shape())[start:stop]))
         fragment.add_statements(domain, Switch(self.controls[domain], [(1, stmts, None)], src_loc=self.src_loc))
 
 
 class EnableInserter(_ControlInserter):
-    def _insert_control(self, fragment, domain, signals):
+    def _insert_control(self, fragment, domain, _lhs_masks):
         if domain in fragment.statements:
             fragment.statements[domain] = _StatementList([Switch(
                 self.controls[domain],
