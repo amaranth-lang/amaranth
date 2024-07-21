@@ -23,7 +23,7 @@ class BaseSignalState:
     curr = NotImplemented
     next = NotImplemented
 
-    def update(self, value):
+    def update(self, value, mask=~0):
         raise NotImplementedError # :nocov:
 
 
