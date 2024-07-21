@@ -369,7 +369,8 @@ class _PySignalState(BaseSignalState):
         assert waker not in self.wakers
         self.wakers.append(waker)
 
-    def update(self, value):
+    def update(self, value, mask=~0):
+        value = (self.next & ~mask) | (value & mask)
         if self.next != value:
             self.next = value
             self.pending.add(self)

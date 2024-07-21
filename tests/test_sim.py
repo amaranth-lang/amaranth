@@ -1402,6 +1402,28 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertSimulation(Module(), traces=[mem1, mem2, mem3]) as sim:
             sim.add_testbench(testbench)
 
+    def test_multiple_modules(self):
+        m = Module()
+        m.submodules.m1 = m1 = Module()
+        m.submodules.m2 = m2 = Module()
+        a = Signal(8)
+        b = Signal(8)
+        m1.d.comb += b[0:2].eq(a[0:2])
+        m1.d.comb += b[4:6].eq(a[4:6])
+        m2.d.comb += b[2:4].eq(a[2:4])
+        m2.d.comb += b[6:8].eq(a[6:8])
+        with self.assertSimulation(m) as sim:
+            async def testbench(ctx):
+                ctx.set(a, 0)
+                self.assertEqual(ctx.get(b), 0)
+                ctx.set(a, 0x12)
+                self.assertEqual(ctx.get(b), 0x12)
+                ctx.set(a, 0x34)
+                self.assertEqual(ctx.get(b), 0x34)
+                ctx.set(a, 0xdb)
+                self.assertEqual(ctx.get(b), 0xdb)
+            sim.add_testbench(testbench)
+
 
 class SimulatorTracesTestCase(FHDLTestCase):
     def assertDef(self, traces, flat_traces):
