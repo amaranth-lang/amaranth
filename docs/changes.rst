@@ -36,6 +36,7 @@ Language changes
 * Removed: (deprecated in 0.5.0) :meth:`Value.implies`.
 * Removed: (deprecated in 0.5.0) :meth:`Const.width`, :meth:`Const.signed`, :meth:`Signal.width`, :meth:`Signal.signed`.
 * Removed: (deprecated in 0.5.0) upwards propagation of clock domains. (`RFC 59`_)
+* Removed: (deprecated in 0.5.0) :func:`amaranth.utils.log2_int`. (`RFC 17`_)
 
 
 Standard library changes
