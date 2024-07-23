@@ -83,7 +83,7 @@ class GateMatePlatform(TemplatedPlatform):
         r"""
 
         {{invoke_tool("p_r")}}
-            -v
+            {{verbose("-v")}}
             -i net/{{name}}_synth.v
             -o {{name}}
             -ccf {{name}}.ccf
