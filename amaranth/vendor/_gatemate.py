@@ -4,11 +4,17 @@ from amaranth.build import *
 from amaranth.lib.cdc import ResetSynchronizer
 
 
+<<<<<<< HEAD
 
 __all__ = ["GateMatePlatform"]
 
 
 
+=======
+__all__ = ["GateMatePlatform"]
+
+
+>>>>>>> 0580d1ab82319a37c4f787d360bd3e334ab7f0b2
 class GateMatePlatform(TemplatedPlatform):
     """
 
