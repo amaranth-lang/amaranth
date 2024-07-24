@@ -4,14 +4,11 @@ from amaranth.build import *
 from amaranth.lib.cdc import ResetSynchronizer
 
 
-
 __all__ = ["GateMatePlatform"]
-
 
 
 class GateMatePlatform(TemplatedPlatform):
     """
-
     Required tools:
         * ``yosys``
         * ``p_r``
@@ -84,7 +81,6 @@ class GateMatePlatform(TemplatedPlatform):
             {{name}}.ys
         """,
         r"""
-
         {{invoke_tool("p_r")}}
             {{verbose("-v")}}
             -i {{name}}_synth.v
@@ -99,4 +95,3 @@ class GateMatePlatform(TemplatedPlatform):
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "TRUE"
-
