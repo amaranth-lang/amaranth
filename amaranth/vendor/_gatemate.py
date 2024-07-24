@@ -16,7 +16,8 @@ class GateMatePlatform(TemplatedPlatform):
         * ``yosys``
         * ``p_r``
 
-    The environment is populated by setting the ``AMARANTH_ENV_GATEMATE`` environment variable to point to the toolchain directory.
+    The environment is populated by running the script specified in the environment variable
+    ``AMARANTH_ENV_GATEMATE``, if present.    
     """
 
     device = property(abstractmethod(lambda: None))
@@ -88,42 +89,7 @@ class GateMatePlatform(TemplatedPlatform):
 
     # Common logic
 
-    @property
-    def default_clk_constraint(self):
-        if self.default_clk == "sys_clk0":
-            return Clock(self.osc_freq / self.osc_div)
-        return super().default_clk_constraint
-
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
         clock.attrs["keep"] = "TRUE"
-
-    def create_missing_domain(self, name):
-        if name == "sync" and self.default_clk is not None:
-            m = Module()
-            if self.default_clk == "sys_clk0":
-                if not hasattr(self, "osc_div"):
-                    raise ValueError("OSC divider (osc_div) must be an integer between 2 and 512")
-                if not isinstance(self.osc_div, int) or self.osc_div < 2 or self.osc_div > 512:
-                    raise ValueError("OSC divider (osc_div) must be an integer between 2 and 512, not {!r}".format(self.osc_div))
-                if not hasattr(self, "osc_freq"):
-                    raise ValueError("OSC frequency (osc_freq) must be an integer between 2100000 and 80000000")
-                if not isinstance(self.osc_freq, int) or self.osc_freq < 2100000 or self.osc_freq > 80000000:
-                    raise ValueError("OSC frequency (osc_freq) must be an integer between 2100000 and 80000000, not {!r}".format(self.osc_freq))
-                clk_i = Signal()
-                sys_clk0 = Signal()
-                m.submodules += Instance("qlal4s3b_cell_macro", o_Sys_Clk0=sys_clk0)
-                m.submodules += Instance("gclkbuff", o_A=sys_clk0, o_Z=clk_i)
-            else:
-                clk_i = self.request(self.default_clk).i
-
-            if self.default_rst is not None:
-                rst_i = self.request(self.default_rst).i
-            else:
-                rst_i = Const(0)
-
-            m.domains += ClockDomain("sync")
-            m.d.comb += ClockSignal("sync").eq(clk_i)
-            m.submodules.reset_sync = ResetSynchronizer(rst_i, domain="sync")
-            return m
-
+        
