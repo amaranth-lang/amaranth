@@ -42,7 +42,8 @@ Amaranth can be used to target any FPGA or ASIC process that accepts behavioral 
   * AMD 7-series (toolchains: Vivado, ISE);
   * AMD UltraScale, UltraScale+ (toolchains: Vivado);
   * Altera (toolchains: Quartus);
-  * Quicklogic EOS S3 (toolchains: **Yosys+VPR**).
+  * Quicklogic EOS S3 (toolchains: **Yosys+VPR**);
+  * GateMate (toolchains: **Yosys**+GateMate p_r).
 
 FOSS toolchains are listed in **bold**.
 
