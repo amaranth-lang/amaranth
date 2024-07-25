@@ -84,4 +84,4 @@ class GateMatePlatform(TemplatedPlatform):
 
     def add_clock_constraint(self, clock, frequency):
         super().add_clock_constraint(clock, frequency)
-        clock.attrs["keep"] = "TRUE"
+        clock.attrs["keep"] = True
