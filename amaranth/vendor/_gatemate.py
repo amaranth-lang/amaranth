@@ -17,9 +17,6 @@ class GateMatePlatform(TemplatedPlatform):
     ``AMARANTH_ENV_GATEMATE``, if present.    
     """
 
-    device = property(abstractmethod(lambda: None))
-    package = property(abstractmethod(lambda: None))
-
     toolchain = "GateMate"
 
     required_tools = [
