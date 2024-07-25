@@ -17,6 +17,7 @@ class GateMatePlatform(TemplatedPlatform):
     ``AMARANTH_ENV_GATEMATE``, if present.    
     """
 
+
     toolchain = "GateMate"
 
     required_tools = [
