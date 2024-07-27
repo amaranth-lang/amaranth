@@ -3307,7 +3307,7 @@ class SignalKey:
         return self._intern < other._intern
 
     def __repr__(self):
-        return f"<{__qualname__}.SignalKey {self.signal!r}>"
+        return f"<{type(self).__qualname__} {self.signal!r}>"
 
 
 class SignalDict(_MappedKeyDict):
