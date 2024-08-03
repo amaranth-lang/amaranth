@@ -155,7 +155,7 @@ In case the data has related operations or transformations, :class:`View` can be
         def brightness(self):
             return (self.red + self.green + self.blue)[-8:]
 
-Here, the :py:`RGBLayout` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an :py:`RGBView`:
+Here, an instance of the :py:`RGBLayout` class itself is :ref:`shape-like <lang-shapelike>` and can be used anywhere a shape is accepted. When a :class:`Signal` is constructed with this layout, the returned value is wrapped in an :py:`RGBView`:
 
 .. doctest::
 
