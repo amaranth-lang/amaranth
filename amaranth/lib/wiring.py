@@ -1363,23 +1363,25 @@ def connect(m, *args, **kwargs):
 
     The connections can be made only if all of the objects satisfy a number of requirements:
 
-    * Every interface object must have the same set of port members, and they must have the same
-      :meth:`dimensions <Member.dimensions>`.
+    * Every interface object must have the same set of port members.
+    * For a given path, if one of the interface objects has an output port member, then all
+      interface objects must have the same :meth:`dimensions <Member.dimensions>`.
     * For each path, the port members of every interface object must have the same width and initial
-      value (for port members corresponding to signals) or constant value (for port members
-      corresponding to constants). Signedness may differ.
-    * For each path, at most one interface object must have the corresponding port member be
+      value. Signedness may differ.
+    * For each path, at most one interface object can have the corresponding port member be
       an output.
-    * For a given path, if any of the interface objects has an input port member corresponding
-      to a constant value, then the rest of the interface objects must have output port members
-      corresponding to the same constant value.
+    * For a given path, if any of the interface objects have an input port member corresponding
+      to a constant value, and one of the interface objects has an output port member, then the
+      output port member must correspond to the same constant value.
     * When connecting multiple interface objects, at least one connection must be made.
 
     For example, if :py:`obj1` is being connected to :py:`obj2` and :py:`obj3`, and :py:`obj1.a.b`
-    is an output, then :py:`obj2.a.b` and :py:`obj2.a.b` must exist and be inputs. If :py:`obj2.c`
-    is an input and its value is :py:`Const(1)`, then :py:`obj1.c` and :py:`obj3.c` must be outputs
-    whose value is also :py:`Const(1)`. If no ports besides :py:`obj1.a.b` and :py:`obj1.c` exist,
-    then no ports except for those two must exist on :py:`obj2` and :py:`obj3` either.
+    is an output, then :py:`obj2.a.b` and :py:`obj3.a.b` must exist and be inputs. If :py:`obj2.c`
+    is an input and its value is :py:`Const(1)`, and :py:`obj1.c` in an output, then the value of
+    :py:`obj1.c` must also be :py:`Const(1)`. Also :py:`obj3.c` may be a non-constant input, or it
+    may be an input with a value of :py:`Const(1)`. If no ports besides :py:`obj1.a.b` and
+    :py:`obj1.c` exist, then no ports except for those two must exist on :py:`obj2` and :py:`obj3`
+    either.
 
     Once it is determined that the interface objects can be connected, this function performs
     an equivalent of:
