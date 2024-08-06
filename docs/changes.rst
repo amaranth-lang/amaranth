@@ -23,6 +23,14 @@ Version 0.6.0 (unreleased)
 ==========================
 
 
+Implemented RFCs
+----------------
+
+.. _RFC 71: https://amaranth-lang.org/rfcs/0071-enumview-matches.html
+
+* `RFC 71`_: ``EnumView.matches``
+
+
 Language changes
 ----------------
 
@@ -45,6 +53,7 @@ Standard library changes
 .. currentmodule:: amaranth.lib
 
 * Added: :py:`payload_init=` argument in :class:`amaranth.lib.stream.Signature`.
+* Added: :meth:`enum.EnumView.matches`. (`RFC 71`_)
 * Changed: (deprecated in 0.5.1) providing :meth:`io.PortLike.__add__` is now mandatory. (`RFC 69`_)
 * Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 

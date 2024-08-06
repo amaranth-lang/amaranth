@@ -147,6 +147,7 @@ class EnumTestCase(FHDLTestCase):
         class EnumB(Enum, shape=signed(4)):
             C = 0
             D = 5
+            E = 7
         a = Signal(EnumA)
         b = Signal(EnumB)
         c = Signal(EnumA)
@@ -201,6 +202,16 @@ class EnumTestCase(FHDLTestCase):
         self.assertRepr(a == EnumA.B, "(== (sig a) (const 4'sd-3))")
         self.assertRepr(EnumA.B == a, "(== (sig a) (const 4'sd-3))")
         self.assertRepr(a != EnumA.B, "(!= (sig a) (const 4'sd-3))")
+        self.assertRepr(b.matches(EnumB.C, EnumB.D), """
+            (r| (cat
+                (== (sig b) (const 1'd0))
+                (== (sig b) (const 3'd5))
+            ))
+        """)
+        with self.assertRaisesRegex(TypeError,
+                r"^a pattern must be an enum value of the same type as the EnumView \(.*EnumB\), "
+                r"not .*$"):
+            b.matches(EnumA.A)
 
     def test_flag_view(self):
         class FlagA(Flag, shape=unsigned(4)):
