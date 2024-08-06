@@ -313,6 +313,22 @@ class EnumView(ValueCastable):
                             "the same enum type")
         return self.as_value() != other.as_value()
 
+    def matches(self, *patterns):
+        """Pattern matching.
+
+        Matches against a set of patterns, which must be values of the same enum as the view.
+
+        Returns
+        -------
+        :class:`Value`, :py:`unsigned(1)`
+        """
+        patterns = tuple(patterns)
+        for pattern in patterns:
+            if not isinstance(pattern, self.__enum):
+                raise TypeError(f"a pattern must be an enum value of the same type as the "
+                                f"EnumView ({self.__enum.__qualname__}), not {pattern!r}")
+        return self.__target.matches(*patterns)
+
     def __repr__(self):
         return f"{type(self).__qualname__}({self.__enum.__qualname__}, {self.__target!r})"
 
