@@ -2556,7 +2556,7 @@ class _FormatLike:
 @final
 class Format(_FormatLike):
     def __init__(self, format, *args, **kwargs):
-        fmt = string.Formatter()
+        fmtter = string.Formatter()
         chunks = []
         used_args = set()
         auto_arg_index = 0
@@ -2577,29 +2577,29 @@ class Format(_FormatLike):
                                         "specification")
                 auto_arg_index = None
 
-            obj, arg_used = fmt.get_field(field_name, args, kwargs)
+            obj, arg_used = fmtter.get_field(field_name, args, kwargs)
             used_args.add(arg_used)
             return obj
 
         def subformat(sub_string):
             result = []
-            for literal, field_name, format_spec, conversion in fmt.parse(sub_string):
+            for literal, field_name, format_spec, conversion in fmtter.parse(sub_string):
                 result.append(literal)
                 if field_name is not None:
                     obj = get_field(field_name)
-                    obj = fmt.convert_field(obj, conversion)
+                    obj = fmtter.convert_field(obj, conversion)
                     format_spec = subformat(format_spec)
-                    result.append(fmt.format_field(obj, format_spec))
+                    result.append(fmtter.format_field(obj, format_spec))
             return "".join(result)
 
-        for literal, field_name, format_spec, conversion in fmt.parse(format):
+        for literal, field_name, format_spec, conversion in fmtter.parse(format):
             chunks.append(literal)
             if field_name is not None:
                 obj = get_field(field_name)
                 if conversion == "v":
                     obj = Value.cast(obj)
                 else:
-                    obj = fmt.convert_field(obj, conversion)
+                    obj = fmtter.convert_field(obj, conversion)
                 format_spec = subformat(format_spec)
                 if isinstance(obj, Value):
                     # Perform validation.
@@ -2621,7 +2621,7 @@ class Format(_FormatLike):
                         raise ValueError(f"Format specifiers ({format_spec!r}) cannot be used for 'Format' objects")
                     chunks += obj._as_format()._chunks
                 else:
-                    chunks.append(fmt.format_field(obj, format_spec))
+                    chunks.append(fmtter.format_field(obj, format_spec))
 
         for i in range(len(args)):
             if i not in used_args:
