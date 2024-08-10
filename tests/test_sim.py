@@ -1263,6 +1263,33 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
             [unknown]
         """))
 
+    def test_print_enum_followed_by(self):
+        class MyEnum(enum.Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+            CDE = 2
+
+        sig = Signal(MyEnum)
+        ctr = Signal(2)
+        m = Module()
+        m.d.comb += sig.eq(ctr)
+        m.d.sync += [
+            Print(Format("{} {}", sig, ctr)),
+            ctr.eq(ctr + 1),
+        ]
+        output = StringIO()
+        with redirect_stdout(output):
+            with self.assertSimulation(m) as sim:
+                sim.add_clock(1e-6, domain="sync")
+                async def testbench(ctx):
+                    await ctx.tick().repeat(4)
+                sim.add_testbench(testbench)
+        self.assertEqual(output.getvalue(), dedent("""\
+            A 0
+            B 1
+            CDE 2
+            [unknown] 3
+        """))
 
     def test_assert(self):
         m = Module()
