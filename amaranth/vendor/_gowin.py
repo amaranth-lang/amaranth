@@ -169,7 +169,7 @@ class GowinPlatform(TemplatedPlatform):
 
     Required tools:
         * ``yosys``
-        * ``nextpnr-gowin``
+        * ``nextpnr-himbaechel`` with Gowin uarch
         * ``gowin_pack``
 
     The environment is populated by running the script specified in the environment variable
@@ -353,7 +353,7 @@ class GowinPlatform(TemplatedPlatform):
 
     _apicula_required_tools = [
         "yosys",
-        "nextpnr-gowin",
+        "nextpnr-himbaechel",
         "gowin_pack"
     ]
     _apicula_file_templates = {
@@ -393,14 +393,14 @@ class GowinPlatform(TemplatedPlatform):
             {{name}}.ys
         """,
         r"""
-        {{invoke_tool("nextpnr-gowin")}}
+        {{invoke_tool("nextpnr-himbaechel")}}
             {{quiet("--quiet")}}
             {{get_override("nextpnr_opts")|options}}
             --log {{name}}.tim
             --device {{platform.part}}
-            --family {{platform._chipdb_device}}
+            --vopt family={{platform._chipdb_device}}
             --json {{name}}.syn.json
-            --cst {{name}}.cst
+            --vopt cst={{name}}.cst
             --write {{name}}.pnr.json
         """,
         r"""
