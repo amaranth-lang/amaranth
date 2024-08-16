@@ -58,6 +58,14 @@ Standard library changes
 * Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
+Platform integration changes
+----------------------------
+
+.. currentmodule:: amaranth.vendor
+
+* Changed: the Gowin platform now uses ``nextpnr-himbaechel`` rather than ``nextpnr-gowin``.
+
+
 Version 0.5.1
 =============
 
