@@ -1372,14 +1372,14 @@ A new synchronous :ref:`control domain <lang-domains>`, which is more often call
 
 .. testcode::
 
-    m.domains.video = cd_video = ClockDomain(local=True)
+    m.domains.video = cd_video = ClockDomain()
 
 If the name of the domain is not known upfront, another, less concise, syntax can be used instead:
 
 .. testcode::
 
     def add_video_domain(n):
-        cd = ClockDomain(f"video_{n}", local=True)
+        cd = ClockDomain(f"video_{n}")
         m.domains += cd
         return cd
 
@@ -1393,21 +1393,17 @@ A clock domain always has a clock signal, which can be accessed through the :att
 
 .. testcode::
 
-    m.domains.jtag = ClockDomain(clk_edge="neg", local=True)
+    m.domains.jtag = ClockDomain(clk_edge="neg")
 
 A clock domain also has a reset signal, which can be accessed through the :attr:`cd.rst <ClockDomain.rst>` attribute. The reset signal is always active-high: the signals in the clock domain are reset if the value of the reset signal is 1. The :ref:`initial value <lang-initial>` of this signal is 0, so if the reset signal is never assigned, the signals in the clock domain are never explicitly reset (they are still :ref:`reset at power-on <lang-initial>`). Nevertheless, if its existence is undesirable, the clock domain can be configured to omit it:
 
 .. testcode::
 
-    m.domains.startup = ClockDomain(reset_less=True, local=True)
+    m.domains.startup = ClockDomain(reset_less=True)
 
 Signals in a reset-less clock domain can still be explicitly reset using the :class:`ResetInserter` :ref:`control flow modifier <lang-controlinserter>`.
 
 If a clock domain is defined in a module, all of its :ref:`submodules <lang-submodules>` can refer to that domain under the same name.
-
-.. warning::
-
-    Always provide the :py:`local=True` keyword argument when defining a clock domain. The behavior of clock domains defined without this keyword argument is subject to change in near future, and is intentionally left undocumented.
 
 .. warning::
 
@@ -1447,7 +1443,7 @@ In this example, once the design is processed, the clock signal of the clock dom
 
 .. testcode::
 
-    m.domains.sync = cd_sync = ClockDomain(local=True)
+    m.domains.sync = cd_sync = ClockDomain()
     m.d.comb += [
         cd_sync.clk.eq(bus_clk),
         cd_sync.rst.eq(~bus_rstn),
