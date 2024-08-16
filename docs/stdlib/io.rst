@@ -106,7 +106,7 @@ In this example, a clock domain is created and driven from an external clock sou
         def elaborate(self, platform):
             m = Module()
 
-            m.domains.sync = cd_sync = ClockDomain(local=True)
+            m.domains.sync = cd_sync = ClockDomain()
 
             m.submodules.clk24 = clk24 = io.Buffer("i", platform.request("clk24", dir="-"))
             m.d.comb += cd_sync.clk.eq(clk24.i)
