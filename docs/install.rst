@@ -106,16 +106,6 @@ Installing prerequisites
 
          $ pip3 install --user --upgrade pip
 
-   .. platform-choice:: arch
-      :altname: linux
-      :title: Arch Linux
-
-      Install Python and pip by running:
-
-      .. code-block:: console
-
-         $ sudo pacman -S python python-pip
-
    .. platform-choice:: linux
       :title: Other Linux
 
@@ -183,16 +173,6 @@ Latest release
       .. code-block:: console
 
          $ pip3 install --user --upgrade amaranth
-
-   .. platform-choice:: arch
-      :altname: linux
-      :title: Arch Linux
-
-      |release:install|
-
-      .. code-block:: console
-
-         $ sudo pacman -S python-amaranth
 
 
 .. _install-snapshot:
