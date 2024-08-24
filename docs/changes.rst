@@ -66,6 +66,20 @@ Platform integration changes
 * Changed: the Gowin platform now uses ``nextpnr-himbaechel`` rather than ``nextpnr-gowin``.
 
 
+Version 0.5.2 (unreleased)
+==========================
+
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Added: constants of :class:`amaranth.lib.data.ArrayLayout` can be indexed with negative integers or slices.
+* Added: :py:`len()` works on constants of :class:`amaranth.lib.data.ArrayLayout`.
+* Added: constants of :class:`amaranth.lib.data.ArrayLayout` are iterable.
+
+
 Version 0.5.1
 =============
 

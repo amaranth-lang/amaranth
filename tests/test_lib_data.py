@@ -939,11 +939,27 @@ class ConstTestCase(FHDLTestCase):
         self.assertEqual(v["q"], -1)
         self.assertEqual(v["r"][0], 3)
         self.assertEqual(v["r"][1], 2)
+        self.assertEqual(v["r"][-2], 3)
+        self.assertEqual(v["r"][-1], 2)
         self.assertRepr(v["r"][i], "(part (const 4'd11) (sig i) 2 2)")
         self.assertEqual(v["t"][0], data.Const(l, 2))
         self.assertEqual(v["t"][1], data.Const(l, 2))
         self.assertEqual(v["t"][0]["u"], 0)
         self.assertEqual(v["t"][1]["v"], 1)
+
+    def test_getitem_slice(self):
+        def A(n):
+            return data.ArrayLayout(unsigned(4), n)
+        v = data.Const(data.ArrayLayout(unsigned(4), 5), 0xabcde)
+        self.assertEqual(v[1:3], data.Const(A(2), 0xcd))
+        self.assertEqual(v[2:], data.Const(A(3), 0xabc))
+        self.assertEqual(v[:-2], data.Const(A(3), 0xcde))
+        self.assertEqual(v[-1:], data.Const(A(1), 0xa))
+        self.assertEqual(v[::-1], data.Const(A(5), 0xedcba))
+
+    def test_array_iter(self):
+        v = data.Const(data.ArrayLayout(unsigned(4), 5), 0xabcde)
+        self.assertEqual(list(v), [0xe, 0xd, 0xc, 0xb, 0xa])
 
     def test_getitem_custom_call(self):
         class Reverser(ShapeCastable):
@@ -1104,6 +1120,14 @@ class ConstTestCase(FHDLTestCase):
                 r"with the same layout, or a dictionary or a list that can be converted to "
                 r"a constant with the same layout, not .*$"):
             c5 != [0,1,2,3,4]
+
+    def test_len(self):
+        c1 = data.Const(data.StructLayout({"a": unsigned(2)}), 2)
+        with self.assertRaisesRegex(TypeError,
+                r"^`len\(\)` can only be used on constants of array layout, not StructLayout.*$"):
+            len(c1)
+        c2 = data.Const(data.ArrayLayout(2, 3), 0x12)
+        self.assertEqual(len(c2), 3)
 
     def test_operator(self):
         s1 = data.Const(data.StructLayout({"a": unsigned(2)}), 2)
