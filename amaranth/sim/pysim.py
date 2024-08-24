@@ -269,24 +269,22 @@ class _VCDWriter:
             self.gtkw_save.treeopen("top")
 
             def traverse_traces(traces):
-                if isinstance(traces, Signal):
-                    for name in self.gtkw_signal_names[traces]:
-                        self.gtkw_save.trace(name)
-                elif isinstance(traces, data.View):
+                if isinstance(traces, data.View):
                     with self.gtkw_save.group("view"):
-                        trace = Value.cast(traces)
+                        traverse_traces(Value.cast(traces))
+                elif isinstance(traces, ValueLike):
+                    trace = Value.cast(traces)
+                    if isinstance(traces, MemoryData._Row):
+                        for name in self.gtkw_memory_names[traces._memory][traces._index]:
+                            self.gtkw_save.trace(name)
+                    else:
                         for trace_signal in trace._rhs_signals():
                             for name in self.gtkw_signal_names[trace_signal]:
                                 self.gtkw_save.trace(name)
-                elif isinstance(traces, ValueLike):
-                    traverse_traces(Value.cast(traces))
                 elif isinstance(traces, MemoryData):
                     for row_names in self.gtkw_memory_names[traces]:
                         for name in row_names:
                             self.gtkw_save.trace(name)
-                elif isinstance(traces, MemoryData._Row):
-                    for name in self.gtkw_memory_names[traces._memory][traces._index]:
-                        self.gtkw_save.trace(name)
                 elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
                     with self.gtkw_save.group("interface"):
                         for _, _, member in traces.signature.flatten(traces):
