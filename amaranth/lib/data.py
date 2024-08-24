@@ -814,7 +814,7 @@ class View(ValueCastable):
                     key += self.__layout.length
                 shape = self.__layout.elem_shape
                 value = self.__target[key * elem_width:(key + 1) * elem_width]
-            elif isinstance(key, (int, Value, ValueCastable)):
+            elif isinstance(key, (Value, ValueCastable)):
                 shape = self.__layout.elem_shape
                 value = self.__target.word_select(key, elem_width)
             else:
@@ -1044,16 +1044,38 @@ class Const(ValueCastable):
             :meth:`.ShapeCastable.from_bits`. Usually this will be a :exc:`ValueError`.
         """
         if isinstance(self.__layout, ArrayLayout):
-            if isinstance(key, (Value, ValueCastable)):
+            elem_width = Shape.cast(self.__layout.elem_shape).width
+            if isinstance(key, slice):
+                start, stop, stride = key.indices(self.__layout.length)
+                shape = ArrayLayout(self.__layout.elem_shape, len(range(start, stop, stride)))
+                if stride == 1:
+                    value = (self.__target >> start * elem_width) & ((1 << elem_width * (stop - start)) - 1)
+                else:
+                    value = 0
+                    pos = 0
+                    for index in range(start, stop, stride):
+                        elem_value = (self.__target >> index * elem_width) & ((1 << elem_width) - 1)
+                        value |= elem_value << pos
+                        pos += elem_width
+            elif isinstance(key, int):
+                if key not in range(-self.__layout.length, self.__layout.length):
+                    raise IndexError(f"Index {key} is out of range for array layout of length "
+                                     f"{self.__layout.length}")
+                if key < 0:
+                    key += self.__layout.length
+                shape = self.__layout.elem_shape
+                value = (self.__target >> key * elem_width) & ((1 << elem_width) - 1)
+            elif isinstance(key, (Value, ValueCastable)):
                 return View(self.__layout, self.as_value())[key]
-            if not isinstance(key, int):
+            else:
                 raise TypeError(
                     f"Constant with array layout may only be indexed with an integer or a value, "
                     f"not {key!r}")
-            shape = self.__layout.elem_shape
-            elem_width = Shape.cast(self.__layout.elem_shape).width
-            value = (self.__target >> key * elem_width) & ((1 << elem_width) - 1)
         else:
+            if isinstance(key, slice):
+                raise TypeError(
+                    "Non-array constant cannot be indexed with a slice; did you mean to call "
+                    "`.as_value()` first?")
             if isinstance(key, (Value, ValueCastable)):
                 raise TypeError(
                     f"Only constants with array layout, not {self.__layout!r}, may be indexed with "
@@ -1095,6 +1117,12 @@ class Const(ValueCastable):
                 f"Field {name!r} of constant with layout {self.__layout!r} has a reserved name and "
                 f"may only be accessed by indexing")
         return item
+
+    def __len__(self):
+        if not isinstance(self.__layout, ArrayLayout):
+            raise TypeError(
+                f"`len()` can only be used on constants of array layout, not {self.__layout!r}")
+        return self.__layout.length
 
     def __eq__(self, other):
         if isinstance(other, View) and self.__layout == other._View__layout:

@@ -19,6 +19,20 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
 
 
+Version 0.5.2 (unreleased)
+==========================
+
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Added: constants of :class:`amaranth.lib.data.ArrayLayout` can be indexed with negative integers or slices.
+* Added: :py:`len()` works on constants of :class:`amaranth.lib.data.ArrayLayout`.
+* Added: constants of :class:`amaranth.lib.data.ArrayLayout` are iterable.
+
+
 Version 0.5.1
 =============
 
