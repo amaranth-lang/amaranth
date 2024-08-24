@@ -1479,6 +1479,10 @@ class SimulatorTracesTestCase(FHDLTestCase):
         a = Signal()
         self.assertDef(a, [a])
 
+    def test_expr(self):
+        a = Signal()
+        self.assertDef(a + 3, [a])
+
     def test_list(self):
         a = Signal()
         self.assertDef([a], [a])
