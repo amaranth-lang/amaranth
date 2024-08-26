@@ -329,7 +329,7 @@ class MemoryTestCase(FHDLTestCase):
             memory.Memory(shape="a", depth=3, init=[])
         with self.assertRaisesRegex(TypeError,
                 (r"^Memory initialization value at address 1: "
-                    r"'str' object cannot be interpreted as an integer$")):
+                    r"Initial value must be a constant-castable expression, not '0'$")):
             memory.Memory(shape=8, depth=4, init=[1, "0"])
         with self.assertRaisesRegex(ValueError,
                 r"^Either 'data' or 'shape' needs to be given$"):
@@ -373,7 +373,7 @@ class MemoryTestCase(FHDLTestCase):
     def test_init_set_wrong(self):
         m = memory.Memory(shape=8, depth=4, init=[])
         with self.assertRaisesRegex(TypeError,
-                r"^'str' object cannot be interpreted as an integer$"):
+                r"^Initial value must be a constant-castable expression, not 'a'$"):
             m.init[0] = "a"
         m = memory.Memory(shape=MyStruct, depth=4, init=[])
         # underlying TypeError message differs between PyPy and CPython

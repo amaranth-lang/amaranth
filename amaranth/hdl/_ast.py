@@ -1946,6 +1946,57 @@ class _SignalMeta(ABCMeta):
         return signal
 
 
+# also used for MemoryData.Init
+def _get_init_value(init, shape, what="signal"):
+    orig_init = init
+    orig_shape = shape
+    shape = Shape.cast(shape)
+    if isinstance(orig_shape, ShapeCastable):
+        try:
+            init = Const.cast(orig_shape.const(init))
+        except Exception:
+            raise TypeError(f"Initial value must be a constant initializer of {orig_shape!r}")
+        if init.shape() != Shape.cast(shape):
+            raise ValueError(f"Constant returned by {orig_shape!r}.const() must have the shape "
+                             f"that it casts to, {shape!r}, and not {init.shape()!r}")
+        return init.value
+    else:
+        if init is None:
+            init = 0
+        try:
+            init = Const.cast(init)
+        except TypeError:
+            raise TypeError("Initial value must be a constant-castable expression, not {!r}"
+                            .format(orig_init))
+        # Avoid false positives for all-zeroes and all-ones
+        if orig_init is not None and not (isinstance(orig_init, int) and orig_init in (0, -1)):
+            if init.shape().signed and not shape.signed:
+                warnings.warn(
+                    message=f"Initial value {orig_init!r} is signed, "
+                            f"but the {what} shape is {shape!r}",
+                    category=SyntaxWarning,
+                    stacklevel=2)
+            elif (init.shape().width > shape.width or
+                  init.shape().width == shape.width and
+                    shape.signed and not init.shape().signed):
+                warnings.warn(
+                    message=f"Initial value {orig_init!r} will be truncated to "
+                            f"the {what} shape {shape!r}",
+                    category=SyntaxWarning,
+                    stacklevel=2)
+
+        if isinstance(orig_shape, range) and orig_init is not None and orig_init not in orig_shape:
+            if orig_init == orig_shape.stop:
+                raise SyntaxError(
+                    f"Initial value {orig_init!r} equals the non-inclusive end of the {what} "
+                    f"shape {orig_shape!r}; this is likely an off-by-one error")
+            else:
+                raise SyntaxError(
+                    f"Initial value {orig_init!r} is not within the {what} shape {orig_shape!r}")
+
+        return Const(init.value, shape).value
+
+
 @final
 class Signal(Value, DUID, metaclass=_SignalMeta):
     """A varying integer value.
@@ -2016,53 +2067,8 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
                           DeprecationWarning, stacklevel=2)
             init = reset
 
-        orig_init = init
-        if isinstance(orig_shape, ShapeCastable):
-            try:
-                init = Const.cast(orig_shape.const(init))
-            except Exception:
-                raise TypeError("Initial value must be a constant initializer of {!r}"
-                                .format(orig_shape))
-            if init.shape() != Shape.cast(orig_shape):
-                raise ValueError("Constant returned by {!r}.const() must have the shape that "
-                                 "it casts to, {!r}, and not {!r}"
-                                 .format(orig_shape, Shape.cast(orig_shape),
-                                         init.shape()))
-        else:
-            if init is None:
-                init = 0
-            try:
-                init = Const.cast(init)
-            except TypeError:
-                raise TypeError("Initial value must be a constant-castable expression, not {!r}"
-                                .format(orig_init))
-        # Avoid false positives for all-zeroes and all-ones
-        if orig_init is not None and not (isinstance(orig_init, int) and orig_init in (0, -1)):
-            if init.shape().signed and not self._signed:
-                warnings.warn(
-                    message="Initial value {!r} is signed, but the signal shape is {!r}"
-                            .format(orig_init, shape),
-                    category=SyntaxWarning,
-                    stacklevel=2)
-            elif (init.shape().width > self._width or
-                  init.shape().width == self._width and
-                    self._signed and not init.shape().signed):
-                warnings.warn(
-                    message="Initial value {!r} will be truncated to the signal shape {!r}"
-                            .format(orig_init, shape),
-                    category=SyntaxWarning,
-                    stacklevel=2)
-        self._init = Const(init.value, shape).value
+        self._init = _get_init_value(init, unsigned(1) if orig_shape is None else orig_shape)
         self._reset_less = bool(reset_less)
-
-        if isinstance(orig_shape, range) and orig_init is not None and orig_init not in orig_shape:
-            if orig_init == orig_shape.stop:
-                raise SyntaxError(
-                    f"Initial value {orig_init!r} equals the non-inclusive end of the signal "
-                    f"shape {orig_shape!r}; this is likely an off-by-one error")
-            else:
-                raise SyntaxError(
-                    f"Initial value {orig_init!r} is not within the signal shape {orig_shape!r}")
 
         self._attrs = OrderedDict(() if attrs is None else attrs)
 
