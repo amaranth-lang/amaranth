@@ -3,6 +3,7 @@ from collections.abc import MutableSequence
 
 from .. import tracer
 from ._ast import *
+from ._ast import _get_init_value
 from ._ir import Fragment, AlreadyElaborated
 from ..utils import ceil_log2
 from .._utils import final
@@ -105,10 +106,11 @@ class MemoryData:
                 for actual_index, actual_value in zip(indices, value):
                     self[actual_index] = actual_value
             else:
+                raw = _get_init_value(value, self._shape, "memory")
                 if isinstance(self._shape, ShapeCastable):
-                    self._raw[index] = Const.cast(Const(value, self._shape)).value
+                    self._raw[index] = raw
                 else:
-                    value = operator.index(value)
+                    value = raw
                     # self._raw[index] assigned by the following line
                 self._elems[index] = value
 
