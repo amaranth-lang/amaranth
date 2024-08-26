@@ -1418,15 +1418,20 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         mem1 = MemoryData(shape=8, depth=4, init=[1, 2, 3])
         mem2 = MemoryData(shape=MyEnum, depth=4, init=[MyEnum.A, MyEnum.B, MyEnum.C])
         mem3 = MemoryData(shape=data.StructLayout({"a": signed(3), "b": 2}), depth=4, init=[{"a": 2, "b": 1}])
+        mem4 = MemoryData(shape=signed(8), depth=4, init=[1, -2, 3])
 
         async def testbench(ctx):
             await ctx.delay(1e-6)
             ctx.set(mem1[0], 4)
             ctx.set(mem2[3], MyEnum.C)
             ctx.set(mem3[2], {"a": -1, "b": 2})
+            ctx.set(mem4[1][4:], 0)
+            ctx.set(mem4[3][7], 1)
             await ctx.delay(1e-6)
+            self.assertEqual(ctx.get(mem4[1]), 0xe)
+            self.assertEqual(ctx.get(mem4[3]), -128)
 
-        with self.assertSimulation(Module(), traces=[mem1, mem2, mem3]) as sim:
+        with self.assertSimulation(Module(), traces=[mem1, mem2, mem3, mem4]) as sim:
             sim.add_testbench(testbench)
 
     def test_multiple_modules(self):
