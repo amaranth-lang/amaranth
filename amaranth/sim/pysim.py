@@ -392,10 +392,11 @@ class _PyMemoryChange:
 
 
 class _PyMemoryState(BaseMemoryState):
-    __slots__ = ("memory", "data", "write_queue", "wakers", "pending")
+    __slots__ = ("memory", "shape", "data", "write_queue", "wakers", "pending")
 
     def __init__(self, memory, pending):
         self.memory  = memory
+        self.shape   = Shape.cast(memory.shape)
         self.pending = pending
         self.wakers  = list()
         self.reset()
@@ -419,6 +420,11 @@ class _PyMemoryState(BaseMemoryState):
                 self.write_queue[addr] = self.data[addr]
             if mask is not None:
                 value = (value & mask) | (self.write_queue[addr] & ~mask)
+            if self.shape.signed:
+                if value & (1 << (self.shape.width - 1)):
+                    value |= -1 << (self.shape.width)
+                else:
+                    value &= (1 << (self.shape.width)) - 1
             self.write_queue[addr] = value
             self.pending.add(self)
 
