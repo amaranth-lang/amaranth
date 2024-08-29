@@ -84,6 +84,12 @@ class ResourceManagerTestCase(FHDLTestCase):
         scl_buffer._MustUse__silence = True
         sda_buffer._MustUse__silence = True
 
+    def test_request_subsignal_dash(self):
+        with _ignore_deprecated():
+            i2c = self.cm.request("i2c", 0, dir="-")
+        self.assertIsInstance(i2c.sda, SingleEndedPort)
+        self.assertIsInstance(i2c.scl, SingleEndedPort)
+
     def test_request_tristate(self):
         with _ignore_deprecated():
             i2c = self.cm.request("i2c", 0)
