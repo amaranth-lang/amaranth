@@ -152,7 +152,8 @@ class ResourceManager:
 
         def merge_options(subsignal, dir, xdr):
             if isinstance(subsignal.ios[0], Subsignal):
-                if dir is None:
+                orig_dir = dir
+                if dir is None or dir == "-":
                     dir = dict()
                 if xdr is None:
                     xdr = dict()
@@ -165,7 +166,7 @@ class ResourceManager:
                                     "has subsignals"
                                     .format(xdr, subsignal))
                 for sub in subsignal.ios:
-                    sub_dir = dir.get(sub.name, None)
+                    sub_dir = "-" if orig_dir == "-" else dir.get(sub.name, None)
                     sub_xdr = xdr.get(sub.name, None)
                     dir[sub.name], xdr[sub.name] = merge_options(sub, sub_dir, sub_xdr)
             else:
