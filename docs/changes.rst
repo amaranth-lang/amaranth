@@ -80,6 +80,14 @@ Standard library changes
 * Added: constants of :class:`amaranth.lib.data.ArrayLayout` are iterable.
 
 
+Platform integration changes
+----------------------------
+
+.. currentmodule:: amaranth.vendor
+
+* Added: :meth:`Platform.request` accepts :py:`dir="-"` for resources with subsignals.
+
+
 Version 0.5.1
 =============
 
