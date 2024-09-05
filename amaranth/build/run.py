@@ -93,7 +93,7 @@ class BuildPlan:
         finally:
             os.chdir(cwd)
 
-    def execute_local(self, root="build", *, run_script=None, env=None):
+    def execute_local(self, root="build", *, env=None):
         """
         Execute build plan using the local strategy. Files from the build plan are placed in
         the build root directory ``root``, and, if ``run_script`` is ``True``, the script
@@ -107,24 +107,16 @@ class BuildPlan:
         Returns :class:`LocalBuildProducts`.
         """
         build_dir = self.extract(root)
-        if run_script is None or run_script:
-            if sys.platform.startswith("win32"):
-                # Without "call", "cmd /c {}.bat" will return 0.
-                # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
-                # Running the script manually from a command prompt is unaffected.
-                subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
-                                      cwd=build_dir, env=os.environ if env is None else env)
-            else:
-                subprocess.check_call(["sh", f"{self.script}.sh"],
-                                      cwd=build_dir, env=os.environ if env is None else env)
-        # TODO(amaranth-0.6): remove
-        if run_script is not None:
-            warnings.warn("The `run_script` argument is deprecated. If you only want to "
-                            "extract the files from the BuildPlan, use the .extract() method",
-                            DeprecationWarning, stacklevel=2)
-
+        if sys.platform.startswith("win32"):
+            # Without "call", "cmd /c {}.bat" will return 0.
+            # See https://stackoverflow.com/a/30736987 for a detailed explanation of why.
+            # Running the script manually from a command prompt is unaffected.
+            subprocess.check_call(["cmd", "/c", f"call {self.script}.bat"],
+                                    cwd=build_dir, env=os.environ if env is None else env)
+        else:
+            subprocess.check_call(["sh", f"{self.script}.sh"],
+                                    cwd=build_dir, env=os.environ if env is None else env)
         return LocalBuildProducts(build_dir)
-
 
     def execute_local_docker(self, image, *, root="build", docker_args=[]):
         """
