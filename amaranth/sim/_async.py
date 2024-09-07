@@ -105,7 +105,7 @@ class TriggerCombination:
     combination, usually using the :py:`async for` loop: ::
 
         async def testbench(ctx):
-            async a_value, b_value in ctx.changed(dut.a, dut.b):
+            async for a_value, b_value in ctx.changed(dut.a, dut.b):
                 ...
 
     Both one-shot and multi-shot waits return the same :class:`tuple` of return values, the elements
