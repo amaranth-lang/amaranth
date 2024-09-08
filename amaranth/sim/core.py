@@ -17,10 +17,6 @@ __all__ = [
 ]
 
 
-def _seconds_to_femtos(delay: float):
-    return int(delay * 1e15) # seconds to femtoseconds
-
-
 class Simulator:
     # Simulator engines aren't yet a part of the public API.
     """Simulator(toplevel)
