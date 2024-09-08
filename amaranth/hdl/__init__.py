@@ -10,6 +10,7 @@ from ._ir import AlreadyElaborated, UnusedElaboratable, Elaboratable, DriverConf
 from ._ir import Instance, IOBufferInstance
 from ._mem import MemoryData, MemoryInstance
 from ._nir import CombinationalCycle
+from ._time import Period
 from ._xfrm import DomainRenamer, ResetInserter, EnableInserter
 
 
@@ -32,6 +33,8 @@ __all__ = [
     "CombinationalCycle",
     # _mem
     "MemoryData", "MemoryInstance",
+    # _time
+    "Period",
     # _xfrm
     "DomainRenamer", "ResetInserter", "EnableInserter",
 ]
