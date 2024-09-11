@@ -940,7 +940,7 @@ If the name of a domain is not known upfront, the ``m.d["<domain>"] += ...`` syn
 
 .. _lang-signalgranularity:
 
-Every signal included in the target of an assignment becomes a part of the domain, or equivalently, *driven* by that domain. A signal can be either undriven or driven by exactly one domain; it is an error to add two assignments to the same signal to two different domains:
+Every signal bit included in the target of an assignment becomes a part of the domain, or equivalently, *driven* by that domain. A signal bit can be either undriven or driven by exactly one domain; it is an error to add two assignments to the same signal bit to two different domains:
 
 .. doctest::
 
@@ -949,19 +949,15 @@ Every signal included in the target of an assignment becomes a part of the domai
    >>> m.d.sync += d.eq(0)
    Traceback (most recent call last):
      ...
-   amaranth.hdl.dsl.SyntaxError: Driver-driver conflict: trying to drive (sig d) from d.sync, but it is already driven from d.comb
+   amaranth.hdl.dsl.SyntaxError: Driver-driver conflict: trying to drive (sig d) bit 0 from d.sync, but it is already driven from d.comb
 
-.. note::
+However, two different bits of a signal can be driven from two different domains without an issue:
 
-   Clearly, Amaranth code that drives a single bit of a signal from two different domains does not describe a meaningful circuit. However, driving two different bits of a signal from two different domains does not inherently cause such a conflict. Would Amaranth accept the following code?
+.. testcode::
 
-   .. code-block::
-
-      e = Signal(2)
-      m.d.comb += e[0].eq(0)
-      m.d.sync += e[1].eq(1)
-
-   The answer is no. While this kind of code is occasionally useful, rejecting it greatly simplifies backends, simulators, and analyzers.
+   e = Signal(2)
+   m.d.comb += e[0].eq(1)
+   m.d.sync += e[1].eq(0)
 
 In addition to assignments, :ref:`assertions <lang-assert>` and :ref:`debug prints <lang-print>` can be added using the same syntax.
 
