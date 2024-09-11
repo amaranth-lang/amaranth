@@ -34,7 +34,6 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.d.comb += self.c1.eq(1)
         m._flush()
-        self.assertEqual(m._driving[self.c1], "comb")
         self.assertRepr(m._statements["comb"], """(
             (eq (sig c1) (const 1'd1))
         )""")
@@ -43,7 +42,6 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.d.sync += self.c1.eq(1)
         m._flush()
-        self.assertEqual(m._driving[self.c1], "sync")
         self.assertRepr(m._statements["sync"], """(
             (eq (sig c1) (const 1'd1))
         )""")
@@ -52,7 +50,6 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.d.pix += self.c1.eq(1)
         m._flush()
-        self.assertEqual(m._driving[self.c1], "pix")
         self.assertRepr(m._statements["pix"], """(
             (eq (sig c1) (const 1'd1))
         )""")
@@ -61,7 +58,6 @@ class DSLTestCase(FHDLTestCase):
         m = Module()
         m.d["pix"] += self.c1.eq(1)
         m._flush()
-        self.assertEqual(m._driving[self.c1], "pix")
         self.assertRepr(m._statements["pix"], """(
             (eq (sig c1) (const 1'd1))
         )""")
@@ -74,7 +70,7 @@ class DSLTestCase(FHDLTestCase):
     def test_d_conflict(self):
         m = Module()
         with self.assertRaisesRegex(SyntaxError,
-                (r"^Driver-driver conflict: trying to drive \(sig c1\) from d\.sync, but it "
+                (r"^Driver-driver conflict: trying to drive \(sig c1\) bit 0 from d\.sync, but it "
                     r"is already driven from d\.comb$")):
             m.d.comb += self.c1.eq(1)
             m.d.sync += self.c1.eq(1)
