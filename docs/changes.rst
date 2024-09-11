@@ -66,8 +66,18 @@ Platform integration changes
 * Changed: the Gowin platform now uses ``nextpnr-himbaechel`` rather than ``nextpnr-gowin``.
 
 
-Version 0.5.2 (unreleased)
+Version 0.5.3 (unreleased)
 ==========================
+
+
+Language changes
+----------------
+
+* Added: individual bits of the same signal can now be assigned from different modules or domains.
+
+
+Version 0.5.2
+=============
 
 
 Standard library changes

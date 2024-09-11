@@ -660,17 +660,40 @@ class NetlistDriver:
         self.src_loc = src_loc
         self.assignments = []
 
-    def emit_value(self, builder):
+    def emit_value(self, builder, chunk_start, chunk_end):
+        chunk_len = chunk_end - chunk_start
         if self.domain is None:
             init = _ast.Const(self.signal.init, len(self.signal))
             default, _signed = builder.emit_rhs(self.module_idx, init)
         else:
             default = builder.emit_signal(self.signal)
-        if len(self.assignments) == 1:
-            assign, = self.assignments
-            if assign.cond == 1 and assign.start == 0 and len(assign.value) == len(default):
-                return assign.value
-        cell = _nir.AssignmentList(self.module_idx, default=default, assignments=self.assignments,
+        default = default[chunk_start:chunk_end]
+        assignments = []
+        for assign in self.assignments:
+            if assign.start >= chunk_end:
+                continue
+            if assign.start + len(assign.value) <= chunk_start:
+                continue
+            if assign.cond == 1 and assign.start == chunk_start and len(assign.value) == chunk_len and len(assignments) == 0:
+                default = assign.value
+            else:
+                if assign.start < chunk_start:
+                    start = 0
+                    value = assign.value[chunk_start - assign.start:]
+                else:
+                    start = assign.start - chunk_start
+                    value = assign.value
+                if start + len(value) > chunk_len:
+                    value = value[:chunk_len - start]
+                assignments.append(_nir.Assignment(
+                    cond=assign.cond,
+                    start=start,
+                    value=value,
+                    src_loc=assign.src_loc
+                ))
+        if len(assignments) == 0:
+            return default
+        cell = _nir.AssignmentList(self.module_idx, default=default, assignments=assignments,
                                    src_loc=self.signal.src_loc)
         return builder.netlist.add_value_cell(len(default), cell)
 
@@ -680,6 +703,7 @@ class NetlistEmitter:
         self.netlist = netlist
         self.design = design
         self.all_undef_to_ff = all_undef_to_ff
+        # SignalDict from Signal to dict from (module index, ClockDomain | None) to NetlistDriver
         self.drivers = _ast.SignalDict()
         self.io_ports: dict[_ast.IOPort, int] = {}
         self.rhs_cache: dict[int, Tuple[_nir.Value, bool, _ast.Value]] = {}
@@ -996,24 +1020,13 @@ class NetlistEmitter:
     def emit_assign(self, module_idx: int, cd: "_cd.ClockDomain | None", lhs: _ast.Value, lhs_start: int, rhs: _nir.Value, cond: _nir.Net, *, src_loc):
         # Assign rhs to lhs[lhs_start:lhs_start+len(rhs)]
         if isinstance(lhs, _ast.Signal):
-            if lhs in self.drivers:
-                driver = self.drivers[lhs]
-                if driver.domain is not cd:
-                    domain_name = cd.name if cd is not None else "comb"
-                    other_domain_name = driver.domain.name if driver.domain is not None else "comb"
-                    raise _ir.DriverConflict(
-                        f"Signal {lhs!r} driven from domain {domain_name} at {src_loc[0]}:{src_loc[1]} and domain "
-                        f"{other_domain_name} at {driver.src_loc[0]}:{driver.src_loc[1]}")
-                if driver.module_idx != module_idx:
-                    mod_name = ".".join(self.netlist.modules[module_idx].name or ("<toplevel>",))
-                    other_mod_name = \
-                        ".".join(self.netlist.modules[driver.module_idx].name or ("<toplevel>",))
-                    raise _ir.DriverConflict(
-                        f"Signal {lhs!r} driven from module {mod_name} at {src_loc[0]}:{src_loc[1]} and "
-                        f"module {other_mod_name} at {driver.src_loc[0]}:{driver.src_loc[1]}")
+            sig_drivers = self.drivers.setdefault(lhs, {})
+            key = (module_idx, cd)
+            if key in sig_drivers:
+                driver = sig_drivers[key]
             else:
                 driver = NetlistDriver(module_idx, lhs, domain=cd, src_loc=src_loc)
-                self.drivers[lhs] = driver
+                sig_drivers[key] = driver
             driver.assignments.append(_nir.Assignment(cond=cond, start=lhs_start, value=rhs,
                                                       src_loc=src_loc))
         elif isinstance(lhs, _ast.Slice):
@@ -1357,43 +1370,104 @@ class NetlistEmitter:
             self.netlist.signal_fields[signal] = fields
 
     def emit_drivers(self):
-        for driver in self.drivers.values():
-            if (driver.domain is not None and
-                    driver.domain.rst is not None and
-                    not driver.domain.async_reset and
-                    not driver.signal.reset_less):
-                cond = self.emit_matches(driver.module_idx,
-                                         self.emit_signal(driver.domain.rst),
-                                         ("1",),
-                                         src_loc=driver.domain.rst.src_loc)
-                cond, = self.emit_priority_match(driver.module_idx, _nir.Net.from_const(1),
-                                                 _nir.Value(cond),
-                                                 src_loc=driver.domain.rst.src_loc)
-                init = _nir.Value.from_const(driver.signal.init, len(driver.signal))
-                driver.assignments.append(_nir.Assignment(cond=cond, start=0,
-                                                         value=init, src_loc=driver.signal.src_loc))
-            value = driver.emit_value(self)
-            if driver.domain is not None:
-                clk, = self.emit_signal(driver.domain.clk)
-                if driver.domain.rst is not None and driver.domain.async_reset and not driver.signal.reset_less:
-                    arst, = self.emit_signal(driver.domain.rst)
+        for sig, sig_drivers in self.drivers.items():
+            driven_bits = [None] * len(sig)
+            for driver in sig_drivers.values():
+                lhs = self.emit_signal(driver.signal)
+                if len(sig_drivers) == 1 and all(net not in self.netlist.connections for net in lhs):
+                    # If the signal is only assigned from one (module, clock domain) pair, and is
+                    # also not driven by any instance, extend this driver to cover all bits of
+                    # the signal for nicer netlist output.
+                    driver_mask = (1 << len(sig)) - 1
+                    driver_bit_start = 0
+                    driver_bit_stop = len(sig)
                 else:
-                    arst = _nir.Net.from_const(0)
-                cell = _nir.FlipFlop(driver.module_idx,
-                    data=value,
-                    init=driver.signal.init,
-                    clk=clk,
-                    clk_edge=driver.domain.clk_edge,
-                    arst=arst,
-                    attributes=driver.signal.attrs,
-                    src_loc=driver.signal.src_loc,
-                )
-                value = self.netlist.add_value_cell(len(value), cell)
-            if driver.assignments:
-                src_loc = driver.assignments[0].src_loc
-            else:
-                src_loc = driver.signal.src_loc
-            self.connect(self.emit_signal(driver.signal), value, src_loc=src_loc)
+                    # Otherwise, per-bit assignment it is.
+                    driver_mask = 0
+                    driver_bit_start = len(sig)
+                    driver_bit_stop = 0
+                    for assign in driver.assignments:
+                        for bit in range(assign.start, assign.start + len(assign.value)):
+                            driver_mask |= 1 << bit
+                            # The conflict would be caught by connect anyway, but we can have
+                            # a slightly better error message this way (showing the exact colliding
+                            # domains)
+                            if driven_bits[bit] is not None:
+                                other_module_idx, other_domain, other_src_loc = driven_bits[bit]
+                                if other_domain != driver.domain:
+                                    domain_name = driver.domain.name if driver.domain is not None else "comb"
+                                    other_domain_name = other_domain.name if other_domain is not None else "comb"
+                                    raise _ir.DriverConflict(
+                                        f"Signal {sig!r} bit {bit} driven from domain {domain_name} at "
+                                        f"{assign.src_loc[0]}:{assign.src_loc[1]} and domain "
+                                        f"{other_domain_name} at {other_src_loc[0]}:{other_src_loc[1]}")
+                                if other_module_idx != driver.module_idx:
+                                    mod_name = ".".join(self.netlist.modules[driver.module_idx].name or ("<toplevel>",))
+                                    other_mod_name = \
+                                        ".".join(self.netlist.modules[other_module_idx].name or ("<toplevel>",))
+                                    raise _ir.DriverConflict(
+                                        f"Signal {sig!r} bit {bit} driven from module {mod_name} at "
+                                        f"{assign.src_loc[0]}:{assign.src_loc[1]} and "
+                                        f"module {other_mod_name} at "
+                                        f"{other_src_loc[0]}:{other_src_loc[1]}")
+                            else:
+                                driven_bits[bit] = (driver.module_idx, driver.domain, assign.src_loc)
+
+                driver_chunks = []
+                pos = 0
+                while pos < len(sig):
+                    if driver_mask & 1 << pos:
+                        end_pos = pos
+                        while driver_mask & 1 << end_pos:
+                            end_pos += 1
+                        driver_chunks.append((pos, end_pos))
+                        pos = end_pos
+                    else:
+                        pos += 1
+
+
+                if (driver.domain is not None and
+                        driver.domain.rst is not None and
+                        not driver.domain.async_reset and
+                        not driver.signal.reset_less):
+                    cond = self.emit_matches(driver.module_idx,
+                                            self.emit_signal(driver.domain.rst),
+                                            ("1",),
+                                            src_loc=driver.domain.rst.src_loc)
+                    cond, = self.emit_priority_match(driver.module_idx, _nir.Net.from_const(1),
+                                                    _nir.Value(cond),
+                                                    src_loc=driver.domain.rst.src_loc)
+                    init = _nir.Value.from_const(driver.signal.init, len(driver.signal))
+                    driver.assignments.append(_nir.Assignment(cond=cond, start=0,
+                                                            value=init, src_loc=driver.signal.src_loc))
+
+                for chunk_start, chunk_end in driver_chunks:
+                    chunk_len = chunk_end - chunk_start
+                    chunk_mask = (1 << chunk_len) - 1
+
+                    value = driver.emit_value(self, chunk_start, chunk_end)
+                    if driver.domain is not None:
+                        clk, = self.emit_signal(driver.domain.clk)
+                        if driver.domain.rst is not None and driver.domain.async_reset and not driver.signal.reset_less:
+                            arst, = self.emit_signal(driver.domain.rst)
+                        else:
+                            arst = _nir.Net.from_const(0)
+                        cell = _nir.FlipFlop(driver.module_idx,
+                            data=value,
+                            init=(driver.signal.init >> chunk_start) & chunk_mask,
+                            clk=clk,
+                            clk_edge=driver.domain.clk_edge,
+                            arst=arst,
+                            attributes=driver.signal.attrs,
+                            src_loc=driver.signal.src_loc,
+                        )
+                        value = self.netlist.add_value_cell(len(value), cell)
+                    if driver.assignments:
+                        src_loc = driver.assignments[0].src_loc
+                    else:
+                        src_loc = driver.signal.src_loc
+
+                    self.connect(lhs[chunk_start:chunk_end], value, src_loc=src_loc)
 
     def emit_undef_ff(self):
         # Connect all completely undriven signals to flip-flops with const-0 clock. This is used
