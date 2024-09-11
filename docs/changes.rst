@@ -9,6 +9,8 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.2 <https://amaranth-lang.org/docs/amaranth/v0.5.2/>`_
+* `Amaranth 0.5.1 <https://amaranth-lang.org/docs/amaranth/v0.5.1/>`_
 * `Amaranth 0.5.0 <https://amaranth-lang.org/docs/amaranth/v0.5.0/>`_
 * `Amaranth 0.4.5 <https://amaranth-lang.org/docs/amaranth/v0.4.5/>`_
 * `Amaranth 0.4.4 <https://amaranth-lang.org/docs/amaranth/v0.4.4/>`_
@@ -19,8 +21,18 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
 
 
-Version 0.5.2 (unreleased)
+Version 0.5.3 (unreleased)
 ==========================
+
+
+Language changes
+----------------
+
+* Added: individual bits of the same signal can now be assigned from different modules or domains.
+
+
+Version 0.5.2
+=============
 
 
 Standard library changes

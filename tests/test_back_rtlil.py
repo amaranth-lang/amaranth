@@ -1214,7 +1214,6 @@ class FlopTestCase(RTLILTestCase):
             wire width 8 output 3 \o
             wire width 8 $1
             process $2
-                assign $1 [7:0] \o [7:0]
                 assign $1 [7:0] \i [7:0]
                 switch \rst [0]
                     case 1'1

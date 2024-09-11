@@ -265,7 +265,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             (cell 1 0 (+ (cat 5.0:4 1'd0) 5'd1))
             (cell 2 0 (matches 0.3 1))
             (cell 3 0 (priority_match 1 2.0))
-            (cell 4 0 (assignment_list 5.0:4 (1 0:4 1.0:4) (3.0 0:4 4'd0)))
+            (cell 4 0 (assignment_list 1.0:4 (3.0 0:4 4'd0)))
             (cell 5 0 (flipflop 4.0:4 0 pos 0.2 0))
         )
         """)
@@ -282,7 +282,7 @@ class FragmentPortsTestCase(FHDLTestCase):
             (cell 1 0 (+ (cat 5.0:4 1'd0) 5'd1))
             (cell 2 0 (matches 0.3 1))
             (cell 3 0 (priority_match 1 2.0))
-            (cell 4 0 (assignment_list 5.0:4 (1 0:4 1.0:4) (3.0 0:4 4'd0)))
+            (cell 4 0 (assignment_list 1.0:4 (3.0 0:4 4'd0)))
             (cell 5 0 (flipflop 4.0:4 0 pos 0.2 0))
         )
         """)
@@ -3411,6 +3411,121 @@ class SwitchTestCase(FHDLTestCase):
         """)
 
 
+class SplitDriverTestCase(FHDLTestCase):
+    def test_split_domain(self):
+        m = Module()
+        o = Signal(10, init=0x123)
+        i1 = Signal(2)
+        i2 = Signal(2)
+        i3 = Signal(2)
+        i4 = Signal(2)
+        cond = Signal()
+        m.domains.a = ClockDomain()
+        m.domains.b = ClockDomain()
+        m.d.a += o[:2].eq(i1)
+        m.d.b += o[2:4].eq(i2)
+        with m.If(cond):
+            m.d.a += o[4:6].eq(i3)
+            m.d.comb += o[8:10].eq(i4)
+        nl = build_netlist(Fragment.get(m, None), [
+            o, i1, i2, i3, i4, cond,
+            ClockSignal("a"), ResetSignal("a"),
+            ClockSignal("b"), ResetSignal("b"),
+        ])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'i1' 0.2:4)
+                (input 'i2' 0.4:6)
+                (input 'i3' 0.6:8)
+                (input 'i4' 0.8:10)
+                (input 'cond' 0.10)
+                (input 'a_clk' 0.11)
+                (input 'a_rst' 0.12)
+                (input 'b_clk' 0.13)
+                (input 'b_rst' 0.14)
+                (output 'o' (cat 6.0:2 12.0:2 8.0:2 2'd0 13.0:2))
+            )
+            (cell 0 0 (top
+                (input 'i1' 2:4)
+                (input 'i2' 4:6)
+                (input 'i3' 6:8)
+                (input 'i4' 8:10)
+                (input 'cond' 10:11)
+                (input 'a_clk' 11:12)
+                (input 'a_rst' 12:13)
+                (input 'b_clk' 13:14)
+                (input 'b_rst' 14:15)
+                (output 'o' (cat 6.0:2 12.0:2 8.0:2 2'd0 13.0:2))
+            ))
+            (cell 1 0 (matches 0.10 1))
+            (cell 2 0 (priority_match 1 1.0))
+            (cell 3 0 (matches 0.12 1))
+            (cell 4 0 (priority_match 1 3.0))
+            (cell 5 0 (assignment_list 0.2:4 (4.0 0:2 2'd3)))
+            (cell 6 0 (flipflop 5.0:2 3 pos 0.11 0))
+            (cell 7 0 (assignment_list 8.0:2 (2.0 0:2 0.6:8) (4.0 0:2 2'd2)))
+            (cell 8 0 (flipflop 7.0:2 2 pos 0.11 0))
+            (cell 9 0 (matches 0.14 1))
+            (cell 10 0 (priority_match 1 9.0))
+            (cell 11 0 (assignment_list 0.4:6 (10.0 0:2 2'd0)))
+            (cell 12 0 (flipflop 11.0:2 0 pos 0.13 0))
+            (cell 13 0 (assignment_list 2'd1 (2.0 0:2 0.8:10)))
+        )
+        """)
+
+    def test_split_module(self):
+        m = Module()
+        m.submodules.m1 = m1 = Module()
+        m.submodules.m2 = m2 = Module()
+
+        i1 = Signal(4)
+        i2 = Signal(4)
+        i3 = Signal(2)
+        cond = Signal()
+        o = Signal(8)
+        m1.d.comb += o[:4].eq(i1)
+        m2.d.comb += o[4:].eq(i2)
+        with m2.If(cond):
+            m2.d.comb += o[5:7].eq(i3)
+
+        nl = build_netlist(Fragment.get(m, None), [
+            o, i1, i2, i3, cond,
+        ])
+        self.assertRepr(nl, """
+        (
+            (module 0 None ('top')
+                (input 'i1' 0.2:6)
+                (input 'i2' 0.6:10)
+                (input 'i3' 0.10:12)
+                (input 'cond' 0.12)
+                (output 'o' (cat 0.2:6 3.0:4))
+            )
+            (module 1 0 ('top' 'm1')
+                (input 'i1' 0.2:6)
+                (input 'port$3$0' 3.0:4)
+            )
+            (module 2 0 ('top' 'm2')
+                (input 'port$0$2' 0.2:6)
+                (input 'i2' 0.6:10)
+                (input 'i3' 0.10:12)
+                (input 'cond' 0.12)
+                (output 'port$3$0' 3.0:4)
+            )
+            (cell 0 0 (top
+                (input 'i1' 2:6)
+                (input 'i2' 6:10)
+                (input 'i3' 10:12)
+                (input 'cond' 12:13)
+                (output 'o' (cat 0.2:6 3.0:4))
+            ))
+            (cell 1 2 (matches 0.12 1))
+            (cell 2 2 (priority_match 1 1.0))
+            (cell 3 2 (assignment_list 0.6:10 (2.0 1:3 0.10:12)))
+        )
+        """)
+
+
 class ConflictTestCase(FHDLTestCase):
     def test_domain_conflict(self):
         s = Signal()
@@ -3420,7 +3535,7 @@ class ConflictTestCase(FHDLTestCase):
         m1.d.comb += s.eq(2)
         m.submodules.m1 = m1
         with self.assertRaisesRegex(DriverConflict,
-                r"^Signal \(sig s\) driven from domain comb at "
+                r"^Signal \(sig s\) bit 0 driven from domain comb at "
                 r".*test_hdl_ir.py:\d+ and domain sync at "
                 r".*test_hdl_ir.py:\d+$"):
             build_netlist(Fragment.get(m, None), [])
@@ -3433,7 +3548,7 @@ class ConflictTestCase(FHDLTestCase):
         m1.d.sync += s.eq(2)
         m.submodules.m1 = m1
         with self.assertRaisesRegex(DriverConflict,
-                r"^Signal \(sig s\) driven from module top\.m1 at "
+                r"^Signal \(sig s\) bit 0 driven from module top\.m1 at "
                 r".*test_hdl_ir.py:\d+ and module top at "
                 r".*test_hdl_ir.py:\d+$"):
             build_netlist(Fragment.get(m, None), [])
