@@ -826,8 +826,8 @@ class Signature(metaclass=SignatureMeta):
             satisfying the requirements below;
           * for port members, is a :ref:`value-like <lang-valuelike>` object casting to
             a :class:`Signal` or a :class:`Const` whose width and signedness is the same as that
-            of the member, and (in case of a :class:`Signal`) which is not reset-less and whose
-            initial value is that of the member;
+            of the member, and (in case of a :class:`Signal`) whose initial value is that of the
+            member;
           * for signature members, matches the description in the signature as verified by
             :meth:`Signature.is_compliant`.
 
