@@ -143,8 +143,9 @@ class QuicklogicPlatform(TemplatedPlatform):
             return Clock(Period(Hz=self.osc_freq / self.osc_div))
         return super().default_clk_constraint
 
-    def add_clock_constraint(self, clock, frequency):
-        super().add_clock_constraint(clock, frequency)
+    def add_clock_constraint(self, clock, period=None, frequency=None):
+        # TODO(amaranth-0.7): remove frequency argument
+        super().add_clock_constraint(clock, period, frequency)
         clock.attrs["keep"] = "TRUE"
 
     def create_missing_domain(self, name):

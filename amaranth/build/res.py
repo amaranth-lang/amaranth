@@ -222,7 +222,7 @@ class ResourceManager:
                     ])
                     port = io.SingleEndedPort(iop, invert=phys.invert, direction=direction)
                     if resource.clock is not None:
-                        self.add_clock_constraint(iop, resource.clock.period.hertz)
+                        self.add_clock_constraint(iop, resource.clock.period)
                 if isinstance(phys, DiffPairs):
                     phys_names_p = phys.p.map_names(self._conn_pins, resource)
                     phys_names_n = phys.n.map_names(self._conn_pins, resource)
@@ -237,7 +237,7 @@ class ResourceManager:
                     ])
                     port = io.DifferentialPort(p, n, invert=phys.invert, direction=direction)
                     if resource.clock is not None:
-                        self.add_clock_constraint(p, resource.clock.period.hertz)
+                        self.add_clock_constraint(p, resource.clock.period)
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
                         raise ResourceError("Resource component {} uses physical pin {}, but it "
@@ -273,22 +273,36 @@ class ResourceManager:
     def iter_pins(self):
         yield from self._pins
 
-    def add_clock_constraint(self, clock, frequency):
+    def add_clock_constraint(self, clock, period=None, frequency=None):
+        # TODO(amaranth-0.7): remove
+        if (period is None) == (frequency is None):
+            raise TypeError("Exactly one of the `period` or `frequency` arguments must be specified.")
+        
+        if frequency is not None:
+            warnings.warn(
+                f"`frequency=` is deprecated, use `period=` instead",
+                DeprecationWarning, stacklevel=1)
+            period = Period(Hz=frequency)
+
+        if not isinstance(period, Period):
+            warnings.warn(
+                f"Per RFC 66, `add_clock_constraint()` will only accept a `Period` in the future.",
+                DeprecationWarning, stacklevel=1)
+            period = Period(Hz=period)
+
         if isinstance(clock, ClockSignal):
             raise TypeError(f"A clock constraint can only be applied to a Signal, but a "
                             f"ClockSignal is provided; assign the ClockSignal to an "
                             f"intermediate signal and constrain the latter instead.")
         elif not isinstance(clock, (Signal, IOPort)):
             raise TypeError(f"Object {clock!r} is not a Signal or IOPort")
-        if not isinstance(frequency, (int, float)):
-            raise TypeError(f"Frequency must be a number, not {frequency!r}")
 
         if isinstance(clock, IOPort):
             clocks = self._io_clocks
         else:
             clocks = self._clocks
 
-        frequency = float(frequency)
+        frequency = period.hertz
         if clock in clocks and clocks[clock] != frequency:
             raise ValueError("Cannot add clock constraint on {!r}, which is already constrained "
                              "to {} Hz"
