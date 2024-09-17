@@ -240,7 +240,7 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_add_clock(self):
         with _ignore_deprecated():
             i2c = self.cm.request("i2c")
-        self.cm.add_clock_constraint(i2c.scl.o, 100e3)
+        self.cm.add_clock_constraint(i2c.scl.o, Period(kHz=100))
         self.assertEqual(list(self.cm.iter_signal_clock_constraints()), [
             (i2c.scl.o, 100e3)
         ])
@@ -276,12 +276,16 @@ class ResourceManagerTestCase(FHDLTestCase):
     def test_wrong_clock_signal(self):
         with self.assertRaisesRegex(TypeError,
                 r"^Object None is not a Signal or IOPort$"):
-            self.cm.add_clock_constraint(None, 10e6)
+            self.cm.add_clock_constraint(None, Period(MHz=10))
 
-    def test_wrong_clock_frequency(self):
-        with self.assertRaisesRegex(TypeError,
-                r"^Frequency must be a number, not None$"):
-            self.cm.add_clock_constraint(Signal(), None)
+    def test_deprecated_clock_frequency(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"Per RFC 66, `add_clock_constraint\(\)` will only accept a `Period` in the future."):
+            self.cm.add_clock_constraint(Signal(), 1e6)
+
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"`frequency=` is deprecated, use `period=` instead"):
+            self.cm.add_clock_constraint(Signal(), frequency=1e6)
 
     def test_wrong_request_duplicate(self):
         with _ignore_deprecated():
@@ -345,4 +349,4 @@ class ResourceManagerTestCase(FHDLTestCase):
         with self.assertRaisesRegex(ValueError,
                 (r"^Cannot add clock constraint on \(io-port clk100_0__p\), which is already "
                     r"constrained to 100000000\.0 Hz$")):
-            self.cm.add_clock_constraint(clk100.p, 1e6)
+            self.cm.add_clock_constraint(clk100.p, Period(MHz=1))

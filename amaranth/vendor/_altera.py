@@ -444,8 +444,9 @@ class AlteraPlatform(TemplatedPlatform):
             return self.mistral_command_templates
         assert False
 
-    def add_clock_constraint(self, clock, frequency):
-        super().add_clock_constraint(clock, frequency)
+    def add_clock_constraint(self, clock, period=None, frequency=None):
+        # TODO(amaranth-0.7): remove frequency argument
+        super().add_clock_constraint(clock, period, frequency)
         clock.attrs["keep"] = "true"
 
     @property
