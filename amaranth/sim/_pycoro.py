@@ -102,10 +102,10 @@ def coro_wrapper(process, *, testbench, default_cmd=None):
                     raise TypeError(f"Command {command!r} is not allowed in testbenches")
 
                 elif type(command) is Settle:
-                    await context.delay(0)
+                    await context.delay(Period())
 
                 elif type(command) is Delay:
-                    await context.delay(command.interval or 0)
+                    await context.delay(Period(s=command.interval or 0))
 
                 elif type(command) is Passive:
                     context._process.critical = False

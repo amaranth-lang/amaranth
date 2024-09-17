@@ -22,7 +22,7 @@ class FFSynchronizerTestCase(FHDLTestCase):
         frag = FFSynchronizer(i, o)
 
         sim = Simulator(frag)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             self.assertEqual(ctx.get(o), 0)
             ctx.set(i, 1)
@@ -39,7 +39,7 @@ class FFSynchronizerTestCase(FHDLTestCase):
         frag = FFSynchronizer(i, o, init=1)
 
         sim = Simulator(frag)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             self.assertEqual(ctx.get(o), 1)
             ctx.set(i, 0)
@@ -58,7 +58,7 @@ class FFSynchronizerTestCase(FHDLTestCase):
             frag = FFSynchronizer(i, o, reset=1)
 
         sim = Simulator(frag)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             self.assertEqual(ctx.get(o), 1)
             ctx.set(i, 0)
@@ -107,7 +107,7 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
         m.submodules += AsyncFFSynchronizer(i, o)
 
         sim = Simulator(m)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             # initial reset
             self.assertEqual(ctx.get(i), 0)
@@ -144,7 +144,7 @@ class AsyncFFSynchronizerTestCase(FHDLTestCase):
         m.submodules += AsyncFFSynchronizer(i, o, async_edge="neg")
 
         sim = Simulator(m)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             # initial reset
             self.assertEqual(ctx.get(i), 1)
@@ -192,7 +192,7 @@ class ResetSynchronizerTestCase(FHDLTestCase):
         m.d.sync += s.eq(0)
 
         sim = Simulator(m)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             # initial reset
             self.assertEqual(ctx.get(s), 1)
@@ -237,7 +237,7 @@ class PulseSynchronizerTestCase(FHDLTestCase):
         ps = m.submodules.dut = PulseSynchronizer("sync", "sync")
 
         sim = Simulator(m)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         async def testbench(ctx):
             ctx.set(ps.i, 0)
             # TODO: think about reset

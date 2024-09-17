@@ -551,8 +551,8 @@ class _PyTriggerState:
                 return
             self._triggers_hit.add(trigger)
             self.activate()
-        self._engine.state.set_delay_waker(trigger.interval_fs, waker)
-        self._delay_wakers[waker] = trigger.interval_fs
+        self._engine.state.set_delay_waker(trigger.interval.femtoseconds, waker)
+        self._delay_wakers[waker] = trigger.interval.femtoseconds
 
     def activate(self):
         if self._combination._process.waits_on is self:
