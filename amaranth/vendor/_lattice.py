@@ -894,15 +894,15 @@ class LatticePlatform(TemplatedPlatform):
     def default_clk_constraint(self):
         if self.default_clk == "OSCG":
             # Internal high-speed oscillator on ECP5 devices.
-            return Clock(310e6 / self.oscg_div)
+            return Clock(Period(MHz=310 / self.oscg_div))
         if self.default_clk == "OSCH":
             # Internal high-speed oscillator on MachXO2/MachXO3L devices.
             # It can have a range of frequencies.
             assert self.osch_frequency in self._supported_osch_freqs
-            return Clock(int(self.osch_frequency * 1e6))
+            return Clock(Period(MHz=self.osch_frequency))
         if self.default_clk == "OSCA":
             # Internal high-speed oscillator on Nexus devices.
-            return Clock(450e6 / self.osca_div)
+            return Clock(Period(MHz=450 / self.osca_div))
         # Otherwise, use the defined Clock resource.
         return super().default_clk_constraint
 
