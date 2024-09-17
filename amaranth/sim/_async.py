@@ -691,6 +691,11 @@ class SimulatorContext:
         """
         return TriggerCombination(self._engine, self._process).negedge(signal)
 
+    def elapsed_time(self) -> Period:
+        """Return the currently elapsed simulation time."""
+
+        return Period(fs = self._engine.now)
+
 
 class ProcessContext(SimulatorContext):
     def get(self, expr: ValueLike) -> 'typing.Never':

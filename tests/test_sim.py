@@ -810,6 +810,20 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                     r"Per RFC 66, the `period` argument of `add_clock\(\)` will only accept a `Period` in the future."):
                 sim.add_clock(1)
 
+    def test_elapsed_time(self):
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertSimulation(m) as sim:
+            sim.add_clock(Period(us=1))
+            async def process(ctx):
+                self.assertEqual(ctx.elapsed_time(), Period(ns=0))
+                await ctx.tick()
+                self.assertEqual(ctx.elapsed_time(), Period(ns=500))
+                await ctx.tick()
+                self.assertEqual(ctx.elapsed_time(), Period(ns=1500))
+            sim.add_testbench(process)
+
     def test_command_wrong(self):
         survived = False
         with self.assertSimulation(Module()) as sim:
