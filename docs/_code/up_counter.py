@@ -43,7 +43,7 @@ class UpCounter(wiring.Component):
 
         return m
 # --- TEST ---
-from amaranth.sim import Simulator
+from amaranth.sim import Simulator, Period
 
 
 dut = UpCounter(25)
@@ -68,7 +68,7 @@ async def bench(ctx):
 
 
 sim = Simulator(dut)
-sim.add_clock(1e-6) # 1 MHz
+sim.add_clock(Period(MHz=1))
 sim.add_testbench(bench)
 with sim.write_vcd("up_counter.vcd"):
     sim.run()

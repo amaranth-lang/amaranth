@@ -506,7 +506,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_counter_clock_and_sync_process(self):
         self.setUp_counter()
         with self.assertSimulation(self.m) as sim:
-            sim.add_clock(1e-6, domain="sync")
+            sim.add_clock(Period(MHz=1), domain="sync")
             def process():
                 self.assertEqual((yield self.count), 4)
                 self.assertEqual((yield self.sync.clk), 1)
@@ -522,7 +522,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_reset(self):
         self.setUp_counter()
         sim = Simulator(self.m)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         times = 0
         async def testbench(ctx):
             nonlocal times
@@ -564,7 +564,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_alu(self):
         self.setUp_alu()
         with self.assertSimulation(self.m) as sim:
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             def process():
                 yield self.a.eq(5)
                 yield self.b.eq(1)
@@ -586,7 +586,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_alu_bench(self):
         self.setUp_alu()
         with self.assertSimulation(self.m) as sim:
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             async def testbench(ctx):
                 ctx.set(self.a, 5)
                 ctx.set(self.b, 1)
@@ -619,8 +619,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_clock_phase(self):
         self.setUp_clock_phase()
         with self.assertSimulation(self.m) as sim:
-            period=1
-            sim.add_clock(period/8, phase=0,          domain="check")
+            period=Period(s=1)
+            sim.add_clock(period/8, phase=Period(),   domain="check")
             sim.add_clock(period,   phase=0*period/4, domain="phase0")
             sim.add_clock(period,   phase=1*period/4, domain="phase90")
             sim.add_clock(period,   phase=2*period/4, domain="phase180")
@@ -650,8 +650,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
     def test_multiclock(self):
         self.setUp_multiclock()
         with self.assertSimulation(self.m) as sim:
-            sim.add_clock(1e-6, domain="sys")
-            sim.add_clock(0.3e-6, domain="pix")
+            sim.add_clock(Period(us=1), domain="sys")
+            sim.add_clock(Period(us=0.3), domain="pix")
 
             async def sys_process(ctx):
                 await ctx.tick("sys")
@@ -685,11 +685,11 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         m = Module()
         s = Signal()
         m.d.sync += s.eq(0)
-        with self.assertSimulation(m, deadline=100e-6) as sim:
-            sim.add_clock(1e-6)
+        with self.assertSimulation(m, deadline=Period(us=100)) as sim:
+            sim.add_clock(Period(us=1))
             async def process(ctx):
                 for _ in range(101):
-                    await ctx.delay(1e-6)
+                    await ctx.delay(Period(us=1))
                 self.fail()
             sim.add_testbench(process)
 
@@ -698,11 +698,25 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         s = Signal()
         m.d.sync += s.eq(0)
         with self.assertRaises(AssertionError):
-            with self.assertSimulation(m, deadline=100e-6) as sim:
-                sim.add_clock(1e-6)
+            with self.assertSimulation(m, deadline=Period(us=100)) as sim:
+                sim.add_clock(Period(us=1))
                 async def process(ctx):
                     for _ in range(99):
-                        await ctx.delay(1e-6)
+                        await ctx.delay(Period(us=1))
+                    self.fail()
+                sim.add_testbench(process)
+
+    def test_run_until_deprecated(self):
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"Per RFC 66, the `deadline` argument of `run_until\(\)` will only accept a `Period` in the future."):
+            with self.assertSimulation(m, deadline=100e-6) as sim:
+                sim.add_clock(Period(us=1))
+                async def process(ctx):
+                    for _ in range(101):
+                        await ctx.delay(Period(us=1))
                     self.fail()
                 sim.add_testbench(process)
 
@@ -770,22 +784,31 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         s = Signal()
         m.d.sync += s.eq(0)
         with self.assertSimulation(m) as sim:
-            sim.add_clock(1)
+            sim.add_clock(Period(s=1))
             with self.assertRaisesRegex(DriverConflict,
                     r"^Domain 'sync' already has a clock driving it$"):
-                sim.add_clock(1)
+                sim.add_clock(Period(s=1))
 
     def test_add_clock_wrong_missing(self):
         m = Module()
         with self.assertSimulation(m) as sim:
             with self.assertRaisesRegex(NameError,
                     r"^Domain 'sync' is not present in simulation$"):
-                sim.add_clock(1)
+                sim.add_clock(Period(s=1))
 
     def test_add_clock_if_exists(self):
         m = Module()
         with self.assertSimulation(m) as sim:
-            sim.add_clock(1, if_exists=True)
+            sim.add_clock(Period(s=1), if_exists=True)
+
+    def test_add_clock_deprecated(self):
+        m = Module()
+        s = Signal()
+        m.d.sync += s.eq(0)
+        with self.assertSimulation(m) as sim:
+            with self.assertWarnsRegex(DeprecationWarning,
+                    r"Per RFC 66, the `period` argument of `add_clock\(\)` will only accept a `Period` in the future."):
+                sim.add_clock(1)
 
     def test_command_wrong(self):
         survived = False
@@ -814,7 +837,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 survived = True
             with _ignore_deprecated():
                 sim.add_sync_process(process)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
         self.assertTrue(survived)
 
     def test_value_castable(self):
@@ -861,7 +884,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(self.rdport.addr, 2)
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.rdport.data), 0x00)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_write(self):
@@ -876,7 +899,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(self.rdport.addr, 4)
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.rdport.data), 0x33)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_write_granularity(self):
@@ -900,7 +923,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(self.wrport.en, 0)
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.rdport.data), 0x53)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_read_before_write(self):
@@ -913,7 +936,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual(ctx.get(self.rdport.data), 0xaa)
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.rdport.data), 0x33)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_write_through(self):
@@ -929,7 +952,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 await ctx.tick()
                 ctx.set(self.rdport.addr, 1)
                 self.assertEqual(ctx.get(self.rdport.data), 0x33)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_async_read_write(self):
@@ -947,7 +970,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 self.assertEqual(ctx.get(self.rdport.data), 0xaa)
                 await ctx.tick("sync")
                 self.assertEqual(ctx.get(self.rdport.data), 0x33)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_read_only(self):
@@ -961,7 +984,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(self.rdport.addr, 1)
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.rdport.data), 0x55)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_comb_bench_process(self):
@@ -1004,7 +1027,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 await ctx.tick()
                 self.assertEqual(ctx.get(a), 0)
                 self.assertEqual(ctx.get(b), 0)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_transparency_simple(self):
@@ -1043,7 +1066,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(rdport.en, 1)
                 await ctx.tick()
                 self.assertEqual(ctx.get(rdport.data), 0x66)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_transparency_multibit(self):
@@ -1082,7 +1105,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 ctx.set(rdport.en, 1)
                 await ctx.tick()
                 self.assertEqual(ctx.get(rdport.data), 0x22776655)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_access(self):
@@ -1103,7 +1126,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 await ctx.tick()
                 self.assertEqual(ctx.get(self.memory.data[3]), 0x22)
 
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.add_testbench(testbench)
 
     def test_memory_access_sync(self):
@@ -1118,7 +1141,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
                 yield Tick()
                 self.assertEqual((yield self.memory.data[1]), 0x33)
 
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             with _ignore_deprecated():
                 sim.add_process(process)
 
@@ -1127,8 +1150,8 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         m = Module()
         m.d.sync += s.eq(s)
         sim = Simulator(m)
-        sim.add_clock(1e-6)
-        sim.run_until(1e-5)
+        sim.add_clock(Period(MHz=1))
+        sim.run_until(Period(us=10))
         with self.assertRaisesRegex(ValueError,
                 r"^Cannot start writing waveforms after advancing simulation time$"):
             with open(os.path.devnull, "w") as f:
@@ -1193,9 +1216,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         output = StringIO()
         with redirect_stdout(output):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
-                    await ctx.delay(1e-5)
+                    await ctx.delay(Period(us=10))
                 sim.add_testbench(testbench)
         self.assertEqual(output.getvalue(), dedent("""\
             Counter: 000
@@ -1224,9 +1247,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         output = StringIO()
         with redirect_stdout(output):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
-                    await ctx.delay(1e-5)
+                    await ctx.delay(Period(us=10))
                 sim.add_testbench(testbench)
         self.assertEqual(output.getvalue(), dedent("""\
             Counter:     zero
@@ -1252,7 +1275,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         output = StringIO()
         with redirect_stdout(output):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
                     await ctx.tick().repeat(4)
                 sim.add_testbench(testbench)
@@ -1280,7 +1303,7 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         output = StringIO()
         with redirect_stdout(output):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
                     await ctx.tick().repeat(4)
                 sim.add_testbench(testbench)
@@ -1299,9 +1322,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertRaisesRegex(AssertionError,
                 r"^Assertion violated: Counter too large: 4$"):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
-                    await ctx.delay(1e-5)
+                    await ctx.delay(Period(us=10))
                 sim.add_testbench(testbench)
 
     def test_assume(self):
@@ -1312,9 +1335,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         with self.assertRaisesRegex(AssertionError,
                 r"^Assumption violated$"):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
-                    await ctx.delay(1e-5)
+                    await ctx.delay(Period(us=10))
                 sim.add_testbench(testbench)
 
     def test_cover(self):
@@ -1327,9 +1350,9 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         output = StringIO()
         with redirect_stdout(output):
             with self.assertSimulation(m) as sim:
-                sim.add_clock(1e-6, domain="sync")
+                sim.add_clock(Period(MHz=1), domain="sync")
                 async def testbench(ctx):
-                    await ctx.delay(1e-5)
+                    await ctx.delay(Period(us=10))
                 sim.add_testbench(testbench)
         self.assertRegex(output.getvalue(), dedent(r"""
             Coverage hit at .*test_sim\.py:\d+: Counter: 000
@@ -1400,11 +1423,11 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         sig = Signal(2, decoder=decoder)
 
         async def testbench(ctx):
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
             ctx.set(sig, 1)
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
             ctx.set(sig, 2)
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
 
         with self.assertSimulation(Module(), traces=[sig]) as sim:
             sim.add_testbench(testbench)
@@ -1421,13 +1444,13 @@ class SimulatorIntegrationTestCase(FHDLTestCase):
         mem4 = MemoryData(shape=signed(8), depth=4, init=[1, -2, 3])
 
         async def testbench(ctx):
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
             ctx.set(mem1[0], 4)
             ctx.set(mem2[3], MyEnum.C)
             ctx.set(mem3[2], {"a": -1, "b": 2})
             ctx.set(mem4[1][4:], 0)
             ctx.set(mem4[3][7], 1)
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
             self.assertEqual(ctx.get(mem4[1]), 0xe)
             self.assertEqual(ctx.get(mem4[3]), -128)
 
@@ -1462,7 +1485,7 @@ class SimulatorTracesTestCase(FHDLTestCase):
         frag = Fragment()
 
         async def testbench(ctx):
-            await ctx.delay(1e-6)
+            await ctx.delay(Period(us=1))
 
         sim = Simulator(frag)
         sim.add_testbench(testbench)
@@ -1548,7 +1571,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         with self.assertWarnsRegex(UserWarning,
                 r"^Adding a clock that drives a clock domain object named 'sync', which is "
                 r"distinct from an identically named domain in the simulated design$"):
-            sim.add_clock(1e-6, domain=ClockDomain("sync"))
+            sim.add_clock(Period(MHz=1), domain=ClockDomain("sync"))
 
     def test_bug_826(self):
         sim = Simulator(Module())
@@ -1578,7 +1601,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim = Simulator(m)
         with self.assertRaisesRegex(DriverConflict,
                 r"^Clock signal is already driven by combinational logic$"):
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
 
     def test_initial(self):
         a = Signal(4, init=3)
@@ -1696,11 +1719,11 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         log = []
 
         async def monitor(ctx):
-            async for res in ctx.delay(1).delay(2).delay(1):
+            async for res in ctx.delay(Period(s=1)).delay(Period(s=2)).delay(Period(s=1)):
                 log.append(res)
 
         async def testbench(ctx):
-            await ctx.delay(4)
+            await ctx.delay(Period(s=4))
 
         sim = Simulator(Module())
         sim.add_process(monitor)
@@ -1721,19 +1744,19 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         log = []
 
         async def monitor(ctx):
-            async for res in ctx.posedge(a).delay(1.5):
+            async for res in ctx.posedge(a).delay(Period(s=1.5)):
                 log.append(res)
 
         async def testbench(ctx):
-            await ctx.delay(0.5)
+            await ctx.delay(Period(s=0.5))
             ctx.set(a, 1)
-            await ctx.delay(0.5)
+            await ctx.delay(Period(s=0.5))
             ctx.set(a, 0)
-            await ctx.delay(0.5)
+            await ctx.delay(Period(s=0.5))
             ctx.set(a, 1)
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 0)
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 1)
 
         sim = Simulator(Module())
@@ -1786,7 +1809,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim.add_process(adder)
         sim.add_process(monitor)
         sim.add_testbench(testbench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
         self.assertEqual(log, [
@@ -1837,7 +1860,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_testbench(testbench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
     def test_critical(self):
@@ -1862,7 +1885,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim = Simulator(m)
         sim.add_testbench(testbench)
         sim.add_testbench(bgbench, background=True)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
         self.assertEqual(last_ctr, 9)
@@ -1902,7 +1925,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim.add_testbench(testbench)
         sim.add_testbench(repeat_bench)
         sim.add_testbench(until_bench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
         self.assertEqual(log, [
@@ -1939,7 +1962,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim = Simulator(m)
         sim.add_process(monitor)
         sim.add_testbench(testbench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
         self.assertEqual(log, [
@@ -1956,12 +1979,12 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         broken_trigger_hit = False
 
         async def testbench(ctx):
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 1)
             ctx.set(a, 0)
             ctx.set(a, 1)
             ctx.set(a, 0)
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
 
         async def monitor(ctx):
             nonlocal broken_trigger_hit
@@ -1985,11 +2008,11 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         async def testbench(ctx):
             with self.assertRaises(BrokenTrigger):
                 async for _ in ctx.tick():
-                    await ctx.delay(2)
+                    await ctx.delay(Period(s=2))
 
         sim = Simulator(m)
         sim.add_testbench(testbench)
-        sim.add_clock(1)
+        sim.add_clock(Period(s=1))
         sim.run()
 
     def test_abandon_delay(self):
@@ -1999,7 +2022,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         m.d.sync += ctr.eq(ctr + 1)
 
         async def testbench(ctx):
-            async for _ in ctx.delay(1).delay(1):
+            async for _ in ctx.delay(Period(s=1)).delay(Period(s=1)):
                 break
 
             await ctx.tick()
@@ -2008,7 +2031,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
 
         sim = Simulator(m)
         sim.add_testbench(testbench)
-        sim.add_clock(4)
+        sim.add_clock(Period(s=4))
         sim.run()
 
     def test_abandon_changed(self):
@@ -2027,17 +2050,17 @@ class SimulatorRegressionTestCase(FHDLTestCase):
             self.assertEqual(ctx.get(ctr), 2)
 
         async def change(ctx):
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 1)
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 0)
-            await ctx.delay(1)
+            await ctx.delay(Period(s=1))
             ctx.set(a, 1)
 
         sim = Simulator(m)
         sim.add_testbench(testbench)
         sim.add_testbench(change)
-        sim.add_clock(4)
+        sim.add_clock(Period(s=4))
         sim.run()
 
     def test_trigger_wrong(self):
@@ -2085,7 +2108,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
                 await ctx.tick(cd_sync, context=m)
             with self.assertRaisesRegex(ValueError,
                     r"^Delay cannot be negative$"):
-                await ctx.delay(-1)
+                await ctx.delay(Period(s=-1))
             s = Signal(data.StructLayout({"a": unsigned(1)}))
             with self.assertRaisesRegex(TypeError,
                     r"^The shape of a condition may only be `signed` or `unsigned`, not StructLayout.*$"):
@@ -2103,7 +2126,7 @@ class SimulatorRegressionTestCase(FHDLTestCase):
     def test_issue_1368(self):
         sim = Simulator(Module())
         async def testbench(ctx):
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench)
         with self.assertRaisesRegex(RuntimeError,
                 r"^Cannot add a clock to a running simulation$"):

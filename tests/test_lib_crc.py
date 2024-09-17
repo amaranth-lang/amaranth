@@ -253,7 +253,7 @@ class CRCTestCase(unittest.TestCase):
 
         sim = Simulator(crc)
         sim.add_testbench(testbench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
     def test_crc_bytes(self):
@@ -301,7 +301,7 @@ class CRCTestCase(unittest.TestCase):
 
             sim = Simulator(crc)
             sim.add_testbench(testbench)
-            sim.add_clock(1e-6)
+            sim.add_clock(Period(MHz=1))
             sim.run()
 
     def test_crc_words(self):
@@ -358,7 +358,7 @@ class CRCTestCase(unittest.TestCase):
 
         sim = Simulator(crc)
         sim.add_testbench(testbench)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.run()
 
     def test_crc_match(self):

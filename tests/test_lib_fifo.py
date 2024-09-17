@@ -350,7 +350,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
                     self.assertEqual(r_level, 0)
 
         simulator = Simulator(fifo)
-        simulator.add_clock(100e-6)
+        simulator.add_clock(Period(us=100))
         simulator.add_testbench(testbench)
         simulator.run()
 
@@ -375,9 +375,9 @@ class AsyncFIFOSimCase(FHDLTestCase):
             self.assertEqual(ctx.get(fifo.r_level), expected_level)
 
         simulator = Simulator(fifo)
-        simulator.add_clock(100e-6, domain="write")
+        simulator.add_clock(Period(us=100), domain="write")
         simulator.add_testbench(testbench_write)
-        simulator.add_clock(50e-6, domain="read")
+        simulator.add_clock(Period(us=50), domain="read")
         simulator.add_testbench(testbench_read)
         with simulator.write_vcd("test.vcd"):
             simulator.run()

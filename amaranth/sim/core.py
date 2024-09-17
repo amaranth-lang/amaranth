@@ -2,7 +2,7 @@ import inspect
 import warnings
 
 from .._utils import deprecated
-from ..hdl import Value, ValueLike, MemoryData, ClockDomain, Fragment
+from ..hdl import Value, ValueLike, MemoryData, ClockDomain, Fragment, Period
 from ..hdl._ir import DriverConflict
 from ._base import BaseEngine
 from ._async import DomainReset, BrokenTrigger
@@ -35,8 +35,8 @@ class Simulator:
 
     2. Processes, clocks, and testbenches are added as necessary: ::
 
-        sim.add_clock(1e-6)
-        sim.add_clock(1e-7, domain="fast")
+        sim.add_clock(Period(MHz=1))
+        sim.add_clock(Period(MHz=10), domain="fast")
         sim.add_process(process_instr_decoder)
         sim.add_testbench(testbench_cpu_execute)
 
@@ -118,12 +118,25 @@ class Simulator:
         if domain in self._clocked:
             raise DriverConflict(f"Domain {domain.name!r} already has a clock driving it")
 
-        period_fs = _seconds_to_femtos(period)
+        if not isinstance(period, Period):
+            # TODO(amaranth-0.7): remove
+            warnings.warn(
+                f"Per RFC 66, the `period` argument of `add_clock()` will only accept a `Period`"
+                f" in the future.",
+                DeprecationWarning, stacklevel=1)
+            period = Period(s=period)
+
         if phase is None:
-            phase_fs = _seconds_to_femtos(period / 2)
-        else:
-            phase_fs = _seconds_to_femtos(phase)
-        self._engine.add_clock_process(domain.clk, phase=phase_fs, period=period_fs)
+            phase = period / 2
+        elif not isinstance(phase, Period):
+            # TODO(amaranth-0.7): remove
+            warnings.warn(
+                f"Per RFC 66, the `phase` argument of `add_clock()` will only accept a `Period`"
+                f" (or `None`) in the future.",
+                DeprecationWarning, stacklevel=1)
+            phase = Period(s=phase)
+
+        self._engine.add_clock_process(domain.clk, phase=phase.femtoseconds, period=period.femtoseconds)
         self._clocked.add(domain)
 
     @staticmethod
@@ -315,9 +328,17 @@ class Simulator:
                 f"The `run_passive` argument of `run_until()` has been removed as a part of "
                 f"transition to RFC 36.",
                 DeprecationWarning, stacklevel=1)
-        deadline_fs = _seconds_to_femtos(deadline)
-        assert self._engine.now <= deadline_fs
-        while self._engine.now < deadline_fs:
+
+        if not isinstance(deadline, Period):
+            # TODO(amaranth-0.7): remove
+            warnings.warn(
+                f"Per RFC 66, the `deadline` argument of `run_until()` will only accept a `Period`"
+                f" in the future.",
+                DeprecationWarning, stacklevel=1)
+            deadline = Period(s=deadline)
+
+        assert self._engine.now <= deadline.femtoseconds
+        while self._engine.now < deadline.femtoseconds:
             self.advance()
 
     def advance(self):

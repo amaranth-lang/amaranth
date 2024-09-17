@@ -60,7 +60,7 @@ All of the following examples assume that one of the built-in FPGA platforms is 
 
 .. testcode::
 
-    from amaranth.sim import Simulator
+    from amaranth.sim import Simulator, Period
     from amaranth.lib import io, wiring, stream
     from amaranth.lib.wiring import In, Out
 
@@ -249,7 +249,7 @@ For example, consider a simple serializer that accepts a stream of multi-bit dat
                 assert dout_value == bit, "DUT drives the wrong value on data output"
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench_write_data)
         sim.add_testbench(testbench_sample_output)
         sim.run()

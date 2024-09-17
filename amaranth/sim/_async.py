@@ -2,6 +2,7 @@
 # Annoyingly, this means that the `sphinxcontrib.napoleon` style docstrings cannot be used, and
 # the Sphinx style docstrings must be used instead. I'm sorry.
 
+import warnings
 import typing
 import operator
 from contextlib import contextmanager
@@ -72,9 +73,18 @@ class DelayTrigger:
         # Note: even though it is likely to be a bad idea, ``await ctx.delay(0)`` is accepted.
         # This is because, if disallowed, people are likely to do even worse things, such as
         # `await ctx.delay(1e-15)` instead.
-        if interval < 0:
+
+        if not isinstance(interval, Period):
+            # TODO(amaranth-0.7): remove
+            warnings.warn(
+                f"Per RFC 66, the `interval` argument of `DelayTrigger()` will only accept a `Period`"
+                f" in the future.",
+                DeprecationWarning, stacklevel=1)
+            interval = Period(s=interval)
+
+        if interval < Period():
             raise ValueError(f"Delay cannot be negative")
-        self.interval_fs = round(float(interval) * 1e15)
+        self.interval = interval
 
 
 class TriggerCombination:

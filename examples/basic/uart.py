@@ -104,10 +104,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.action == "simulate":
-        from amaranth.sim import Simulator, Passive
+        from amaranth.sim import Simulator, Passive, Period
 
         sim = Simulator(uart)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
 
         async def testbench_loopback(ctx):
             async for val in ctx.changed(uart.tx_o):

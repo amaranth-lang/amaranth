@@ -48,7 +48,7 @@ Simulating a design always requires the three basic steps: constructing the :abb
 
 .. testcode::
 
-    from amaranth.sim import Simulator
+    from amaranth.sim import Simulator, Period
 
     dut = Counter()
     sim = Simulator(dut)
@@ -69,9 +69,9 @@ The following code simulates a design and capture the values of all the signals 
 
     dut = Counter()
     sim = Simulator(dut)
-    sim.add_clock(1e-6) # 1 µs period, or 1 MHz
+    sim.add_clock(Period(MHz=1)) # 1 µs period, or 1 MHz
     with sim.write_vcd("example1.vcd"):
-        sim.run_until(1e-6 * 15) # 15 periods of the clock
+        sim.run_until(Period(MHz=1) * 15) # 15 periods of the clock
 
 The captured data is saved to a :abbr:`VCD` file :file:`example1.vcd`, which can be displayed with a *waveform viewer* such as Surfer_ or GTKWave_:
 
@@ -122,10 +122,10 @@ The following example simulates a counter and verifies that it can be stopped us
         ctx.set(dut.en, True)          # assert `dut.en`, enabling the counter again
 
     sim = Simulator(dut)
-    sim.add_clock(1e-6)
+    sim.add_clock(Period(MHz=1))
     sim.add_testbench(testbench_example2) # add the testbench; run_until() calls the function
     with sim.write_vcd("example2.vcd"):
-        sim.run_until(1e-6 * 15)
+        sim.run_until(Period(MHz=1) * 15)
 
 Since this circuit is synchronous, and the :meth:`ctx.tick() <SimulatorContext.tick>` method waits until after the circuit has reacted to the clock edge, the change to the :py:`en` input affects the behavior of the circuit on the next clock cycle after the change:
 
@@ -155,17 +155,17 @@ The following example simulates an adder:
     dut = Adder()
 
     async def testbench_example3(ctx):
-        await ctx.delay(1e-6)
+        await ctx.delay(Period(us=1))
         ctx.set(dut.a, 2)
         ctx.set(dut.b, 2)
         assert ctx.get(dut.o) == 4
 
-        await ctx.delay(1e-6)
+        await ctx.delay(Period(us=1))
         ctx.set(dut.a, 1717)
         ctx.set(dut.b, 420)
         assert ctx.get(dut.o) == 2137
 
-        await ctx.delay(2e-6)
+        await ctx.delay(Period(us=2))
 
     sim = Simulator(dut)
     sim.add_testbench(testbench_example3)
@@ -234,7 +234,7 @@ The following code replaces the :py:`Counter` elaboratable with the equivalent P
         ctx.set(en, True)
 
     sim = Simulator(m)
-    sim.add_clock(1e-6)
+    sim.add_clock(Period(MHz=1))
     sim.add_process(process_example4)
     sim.add_testbench(testbench_example4)
     with sim.write_vcd("example4.vcd", traces=(cd_sync.clk, cd_sync.rst, en, count)):
@@ -262,17 +262,17 @@ The following code replaces the :py:`Adder` elaboratable with the equivalent Pyt
             ctx.set(o, a_value + b_value)
 
     async def testbench_example5(ctx):
-        await ctx.delay(1e-6)
+        await ctx.delay(Period(us=1))
         ctx.set(a, 2)
         ctx.set(b, 2)
         assert ctx.get(o) == 4
 
-        await ctx.delay(1e-6)
+        await ctx.delay(Period(us=1))
         ctx.set(a, 1717)
         ctx.set(b, 420)
         assert ctx.get(o) == 2137
 
-        await ctx.delay(2e-6)
+        await ctx.delay(Period(us=2))
 
     sim = Simulator(m)
     sim.add_process(process_example5)

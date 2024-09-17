@@ -59,7 +59,7 @@ The pipeline is tested using the :doc:`built-in simulator </simulator>` and the 
 
 .. testcode::
 
-    from amaranth.sim import Simulator
+    from amaranth.sim import Simulator, Period
 
     async def stream_get(ctx, stream):
         ctx.set(stream.ready, 1)
@@ -150,7 +150,7 @@ In this example, the external device does not provide a way to pause data transm
                 f"{payload & 0xff:08b} != {expected_word & 0xff:08b} (expected)"
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench_input)
         sim.add_testbench(testbench_output)
         with sim.write_vcd("stream_serial_receiver.vcd"):
@@ -244,7 +244,7 @@ The serial transmitter accepts a stream of words and provides it to the serial i
             await ctx.tick()
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench_input)
         sim.add_testbench(testbench_output)
         with sim.write_vcd("stream_serial_transmitter.vcd"):
@@ -293,7 +293,7 @@ The value negator accepts a stream of words, negates the 2's complement value of
             assert await stream_get(ctx, dut.o_stream) == -17
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench_input)
         sim.add_testbench(testbench_output)
         with sim.write_vcd("stream_value_negator.vcd"):
@@ -388,7 +388,7 @@ The complete pipeline consists of a serial receiver, a value negator, a FIFO que
             ctx.set(dut.o_ssel, 0)
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(Period(MHz=1))
         sim.add_testbench(testbench_input)
         sim.add_testbench(testbench_output)
         with sim.write_vcd("stream_example_pipeline.vcd"):
