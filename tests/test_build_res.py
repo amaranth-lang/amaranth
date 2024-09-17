@@ -13,8 +13,8 @@ from .utils import *
 class ResourceManagerTestCase(FHDLTestCase):
     def setUp(self):
         self.resources = [
-            Resource("clk100", 0, DiffPairs("H1", "H2", dir="i"), Clock(100e6)),
-            Resource("clk50", 0, Pins("K1"), Clock(50e6)),
+            Resource("clk100", 0, DiffPairs("H1", "H2", dir="i"), Clock(Period(MHz=100))),
+            Resource("clk50", 0, Pins("K1"), Clock(Period(MHz=50))),
             Resource("user_led", 0, Pins("A0", dir="o")),
             Resource("i2c", 0,
                 Subsignal("scl", Pins("N10", dir="o")),

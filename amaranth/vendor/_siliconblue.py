@@ -339,10 +339,10 @@ class SiliconBluePlatform(TemplatedPlatform):
     def default_clk_constraint(self):
         # Internal high-speed oscillator: 48 MHz / (2 ^ div)
         if self.default_clk == "SB_HFOSC":
-            return Clock(48e6 / 2 ** self.hfosc_div)
+            return Clock(Period(MHz=48 / 2 ** self.hfosc_div))
         # Internal low-speed oscillator: 10 KHz
         elif self.default_clk == "SB_LFOSC":
-            return Clock(10e3)
+            return Clock(Period(kHz=10))
         # Otherwise, use the defined Clock resource.
         return super().default_clk_constraint
 

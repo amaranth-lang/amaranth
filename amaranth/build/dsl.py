@@ -1,8 +1,11 @@
+import warnings
+
 from collections import OrderedDict
+from ..hdl import Period
 
 
 __all__ = ["Pins", "PinsN", "DiffPairs", "DiffPairsN",
-           "Attrs", "Clock", "Subsignal", "Resource", "Connector"]
+           "Attrs", "Clock", "Subsignal", "Resource", "Connector", "Period"]
 
 
 class Pins:
@@ -107,18 +110,39 @@ class Attrs(OrderedDict):
 
 
 class Clock:
-    def __init__(self, frequency):
-        if not isinstance(frequency, (float, int)):
-            raise TypeError("Clock frequency must be a number")
+    def __init__(self, period=None, frequency=None):
+        # TODO(amaranth-0.7): remove
+        if (period is None) == (frequency is None):
+            raise TypeError("Exactly one of the `period` or `frequency` arguments must be specified.")
+        
+        if frequency is not None:
+            warnings.warn(
+                f"`frequency=` is deprecated, use `period=` instead",
+                DeprecationWarning, stacklevel=1)
+            period = Period(Hz=frequency)
 
-        self.frequency = float(frequency)
+        if not isinstance(period, Period):
+            warnings.warn(
+                f"Per RFC 66, `Clock()` will only accept a `Period` in the future.",
+                DeprecationWarning, stacklevel=1)
+            period = Period(Hz=period)
+
+        self._period = period
 
     @property
     def period(self):
-        return 1 / self.frequency
+        return self._period
+
+    # TODO(amaranth-0.7): remove
+    @property
+    def frequency(self):
+        warnings.warn(
+            f"Per RFC 66, `Clock.frequency` is deprecated.  Use `Clock.period` instead.",
+            DeprecationWarning, stacklevel=1)
+        return self._period.hertz
 
     def __repr__(self):
-        return f"(clock {self.frequency})"
+        return f"(clock {self._period.hertz})"
 
 
 class Subsignal:

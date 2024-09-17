@@ -149,10 +149,18 @@ class AttrsTestCase(FHDLTestCase):
 
 class ClockTestCase(FHDLTestCase):
     def test_basic(self):
-        c = Clock(1_000_000)
-        self.assertEqual(c.frequency, 1e6)
-        self.assertEqual(c.period, 1e-6)
+        c = Clock(Period(MHz=1))
+        self.assertEqual(c.period, Period(MHz=1))
         self.assertEqual(repr(c), "(clock 1000000.0)")
+
+    def test_deprecated(self):
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"Per RFC 66, `Clock\(\)` will only accept a `Period` in the future."):
+            Clock(1e6)
+
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"`frequency=` is deprecated, use `period=` instead"):
+            Clock(frequency=1e6)
 
 
 class SubsignalTestCase(FHDLTestCase):
@@ -188,8 +196,8 @@ class SubsignalTestCase(FHDLTestCase):
         self.assertEqual(s.attrs, {"SLEW": "FAST", "PULLUP": "1"})
 
     def test_clock(self):
-        s = Subsignal("a", Pins("A0"), Clock(1e6))
-        self.assertEqual(s.clock.frequency, 1e6)
+        s = Subsignal("a", Pins("A0"), Clock(Period(MHz=1)))
+        self.assertEqual(s.clock.period, Period(MHz=1))
 
     def test_wrong_empty_io(self):
         with self.assertRaisesRegex(ValueError, r"^Missing I\/O constraints$"):
@@ -223,12 +231,12 @@ class SubsignalTestCase(FHDLTestCase):
         with self.assertRaisesRegex(TypeError,
                 (r"^Clock constraint can only be applied to Pins or DiffPairs, not "
                     r"\(subsignal b \(pins io A0\)\)$")):
-            s = Subsignal("a", Subsignal("b", Pins("A0")), Clock(1e6))
+            s = Subsignal("a", Subsignal("b", Pins("A0")), Clock(Period(MHz=1)))
 
     def test_wrong_clock_many(self):
         with self.assertRaisesRegex(ValueError,
                 r"^Clock constraint can be applied only once$"):
-            s = Subsignal("a", Pins("A0"), Clock(1e6), Clock(1e7))
+            s = Subsignal("a", Pins("A0"), Clock(Period(MHz=1)), Clock(Period(MHz=10)))
 
 
 class ResourceTestCase(FHDLTestCase):

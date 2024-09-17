@@ -140,7 +140,7 @@ class QuicklogicPlatform(TemplatedPlatform):
     @property
     def default_clk_constraint(self):
         if self.default_clk == "sys_clk0":
-            return Clock(self.osc_freq / self.osc_div)
+            return Clock(Period(Hz=self.osc_freq / self.osc_div))
         return super().default_clk_constraint
 
     def add_clock_constraint(self, clock, frequency):

@@ -456,7 +456,7 @@ class AlteraPlatform(TemplatedPlatform):
         # of 78 to 84 MHz have been observed.
         if self.default_clk == "cyclonev_oscillator":
             assert self.device.startswith("5C")
-            return Clock(100e6)
+            return Clock(Period(MHz=100))
         # Otherwise, use the defined Clock resource.
         return super().default_clk_constraint
 

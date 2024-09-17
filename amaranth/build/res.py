@@ -222,7 +222,7 @@ class ResourceManager:
                     ])
                     port = io.SingleEndedPort(iop, invert=phys.invert, direction=direction)
                     if resource.clock is not None:
-                        self.add_clock_constraint(iop, resource.clock.frequency)
+                        self.add_clock_constraint(iop, resource.clock.period.hertz)
                 if isinstance(phys, DiffPairs):
                     phys_names_p = phys.p.map_names(self._conn_pins, resource)
                     phys_names_n = phys.n.map_names(self._conn_pins, resource)
@@ -237,7 +237,7 @@ class ResourceManager:
                     ])
                     port = io.DifferentialPort(p, n, invert=phys.invert, direction=direction)
                     if resource.clock is not None:
-                        self.add_clock_constraint(p, resource.clock.frequency)
+                        self.add_clock_constraint(p, resource.clock.period.hertz)
                 for phys_name in phys_names:
                     if phys_name in self._phys_reqd:
                         raise ResourceError("Resource component {} uses physical pin {}, but it "

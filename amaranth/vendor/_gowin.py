@@ -501,7 +501,7 @@ class GowinPlatform(TemplatedPlatform):
                 raise AttributeError(
                     "Using the on-chip oscillator as the default clock source requires "
                     "the platform.osc_frequency attribute to be set")
-            return Clock(self.osc_frequency)
+            return Clock(Period(Hz=self.osc_frequency))
 
         # Use the defined Clock resource.
         return super().default_clk_constraint
