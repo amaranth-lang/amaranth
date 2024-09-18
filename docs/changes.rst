@@ -26,8 +26,10 @@ Version 0.6.0 (unreleased)
 Implemented RFCs
 ----------------
 
+.. _RFC 66: https://amaranth-lang.org/rfcs/0066-simulation-time.html
 .. _RFC 71: https://amaranth-lang.org/rfcs/0071-enumview-matches.html
 
+* `RFC 66`_: Simulation time
 * `RFC 71`_: ``EnumView.matches``
 
 
@@ -36,6 +38,7 @@ Language changes
 
 .. currentmodule:: amaranth.hdl
 
+* Added: :class:`Period` for representing time periods. (`RFC 66`_)
 * Changed: overriding :meth:`ValueCastable.from_bits` is now mandatory. (`RFC 51`_)
 * Deprecated: the :py:`local=` argument to :class:`ClockDomain`. (`RFC 59`_)
 * Removed: (deprecated in 0.4.0) :class:`Record`.
@@ -56,6 +59,24 @@ Standard library changes
 * Added: :meth:`enum.EnumView.matches`. (`RFC 71`_)
 * Changed: (deprecated in 0.5.1) providing :meth:`io.PortLike.__add__` is now mandatory. (`RFC 69`_)
 * Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
+
+
+Toolchain changes
+-----------------
+
+* Added: :meth:`SimulatorContext.elapsed_time <amaranth.sim._async.SimulatorContext.elapsed_time>` for getting elapsed simulation time. (`RFC 66`_)
+* Added: :meth:`Platform.default_clk_period <amaranth.build.plat.Platform.default_clk_period>`. (`RFC 66`_)
+* Changed: :meth:`Simulator.add_clock <amaranth.sim.Simulator.add_clock>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`period` and :py:`phase`. (`RFC 66`_)
+* Changed: :meth:`Simulator.run_until <amaranth.sim.Simulator.run_until>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`deadline`. (`RFC 66`_)
+* Changed: :meth:`SimulatorContext.delay <amaranth.sim._async.SimulatorContext.delay>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`interval`. (`RFC 66`_)
+* Changed: :meth:`ResourceManager.add_clock_constraint <amaranth.build.res.ResourceManager.add_clock_constraint>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`period`. (`RFC 66`_)
+* Changed: :class:`Clock <amaranth.build.dsl.Clock>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`period`. (`RFC 66`_)
+* Changed: :attr:`Clock.period <amaranth.build.dsl.Clock.period>` now returns a :class:`Period <amaranth.hdl.Period>`. (`RFC 66`_)
+* Deprecated: Passing a :class:`float` of seconds or hertz to any of the methods/arguments now accepting a :class:`Period <amaranth.hdl.Period>`. (`RFC 66`_)
+* Deprecated: Passing :py:`frequency=` to :meth:`ResourceManager.add_clock_constraint <amaranth.build.res.ResourceManager.add_clock_constraint>`. (`RFC 66`_)
+* Deprecated: Passing :py:`frequency=` to :class:`Clock <amaranth.build.dsl.Clock>`. (`RFC 66`_)
+* Deprecated: :attr:`Clock.frequency <amaranth.build.dsl.Clock.frequency>`. (`RFC 66`_)
+* Deprecated: :meth:`Platform.default_clk_frequency <amaranth.build.plat.Platform.default_clk_frequency>`. (`RFC 66`_)
 
 
 Platform integration changes
