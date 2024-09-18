@@ -7,7 +7,7 @@ class LEDBlinker(Elaboratable):
 
         led = platform.request("led")
 
-        half_freq = int(platform.default_clk_frequency // 2)
+        half_freq = int(platform.default_clk_period.hertz // 2)
         timer = Signal(range(half_freq + 1))
 
         with m.If(timer == half_freq):

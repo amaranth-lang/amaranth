@@ -5,6 +5,7 @@ import os
 import textwrap
 import re
 import jinja2
+import warnings
 
 from .. import __version__
 from .._toolchain import *
@@ -45,11 +46,25 @@ class Platform(ResourceManager, metaclass=ABCMeta):
 
     @property
     def default_clk_frequency(self):
+        # TODO(amaranth-0.7): remove
+        warnings.warn(
+            f"Per RFC 66, `default_clk_frequency` is deprecated. Use `default_clk_period` instead."
+            f" instead.",
+            DeprecationWarning, stacklevel=1)
+
         constraint = self.default_clk_constraint
         if constraint is None:
             raise AttributeError("Platform '{}' does not constrain its default clock"
                                  .format(type(self).__qualname__))
-        return constraint.frequency
+        return constraint.period.hertz
+
+    @property
+    def default_clk_period(self):
+        constraint = self.default_clk_constraint
+        if constraint is None:
+            raise AttributeError("Platform '{}' does not constrain its default clock"
+                                 .format(type(self).__qualname__))
+        return constraint.period
 
     def add_file(self, filename, content):
         if not isinstance(filename, str):
