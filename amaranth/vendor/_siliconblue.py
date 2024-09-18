@@ -1,6 +1,7 @@
 # Currently owned by Lattice, originally designed and built by a startup called SiliconBlue, which
 # was acquired by Lattice. The primitives are prefixed with `SB_` for that reason.
 
+import math
 from abc import abstractmethod
 
 from ..hdl import *
@@ -382,7 +383,7 @@ class SiliconBluePlatform(TemplatedPlatform):
                                          i_CLKHFPU=1,
                                          p_CLKHF_DIV=f"0b{self.hfosc_div:02b}",
                                          o_CLKHF=clk_i)
-                delay = int(100e-6 * self.default_clk_frequency)
+                delay = 1 + math.ceil(Period(us=100) / self.default_clk_period)
             # Internal low-speed clock: 10 KHz.
             elif self.default_clk == "SB_LFOSC":
                 clk_i = Signal()
@@ -390,13 +391,13 @@ class SiliconBluePlatform(TemplatedPlatform):
                                          i_CLKLFEN=1,
                                          i_CLKLFPU=1,
                                          o_CLKLF=clk_i)
-                delay = int(100e-6 * self.default_clk_frequency)
+                delay = 1 + math.ceil(Period(us=100) / self.default_clk_period)
             # User-defined clock signal.
             else:
                 clk_io = self.request(self.default_clk, dir="-")
                 m.submodules.clk_buf = clk_buf = io.Buffer("i", clk_io)
                 clk_i = clk_buf.i
-                delay = int(15e-6 * self.default_clk_frequency)
+                delay = 1 + math.ceil(Period(us=15) / self.default_clk_period)
 
             if self.default_rst is not None:
                 rst_io = self.request(self.default_rst, dir="-")
