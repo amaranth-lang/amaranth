@@ -3571,6 +3571,30 @@ class CycleTestCase(FHDLTestCase):
                 r"$"):
             build_netlist(Fragment.get(m, None), [])
 
+    def test_assignment_cycle(self):
+        a = Signal(2)
+        m = Module()
+
+        with m.If(a[0]):
+            m.d.comb += a[0].eq(1)
+
+        with self.assertRaisesRegex(CombinationalCycle,
+                r"^Combinational cycle detected, path:\n"
+                r".*test_hdl_ir.py:\d+: cell Matches bit 0\n"
+                r".*test_hdl_ir.py:\d+: signal a bit 0\n"
+                r".*test_hdl_ir.py:\d+: cell AssignmentList bit 0\n"
+                r".*test_hdl_ir.py:\d+: cell PriorityMatch bit 0\n"
+                r"$"):
+            build_netlist(Fragment.get(m, None), [])
+
+        m = Module()
+
+        with m.If(a[0]):
+            m.d.comb += a[1].eq(1)
+
+        # no cycle here, a[1] gets assigned and a[0] gets checked
+        build_netlist(Fragment.get(m, None), [])
+
 
 class DomainLookupTestCase(FHDLTestCase):
     def test_domain_lookup(self):
