@@ -921,8 +921,8 @@ class AssignmentList(Cell):
     def comb_edges_to(self, bit):
         yield (self.default[bit], self.src_loc)
         for assign in self.assignments:
-            yield (assign.cond, assign.src_loc)
             if bit >= assign.start and bit < assign.start + len(assign.value):
+                yield (assign.cond, assign.src_loc)
                 yield (assign.value[bit - assign.start], assign.src_loc)
 
 
