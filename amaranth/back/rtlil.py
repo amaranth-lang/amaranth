@@ -1132,7 +1132,7 @@ class ModuleEmitter:
         if cell.format is not None:
             for chunk in cell.format.chunks:
                 if isinstance(chunk, str):
-                    format.append(chunk)
+                    format.append(chunk.replace("{", "{{").replace("}", "}}"))
                 else:
                     spec = _ast.Format._parse_format_spec(chunk.format_desc, _ast.Shape(len(chunk.value), chunk.signed))
                     type = spec["type"]
