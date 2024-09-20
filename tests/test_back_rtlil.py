@@ -2008,6 +2008,51 @@ class PrintTestCase(RTLILTestCase):
         end
         """)
 
+    def test_escape_curly(self):
+        m = Module()
+        m.d.comb += [
+            Print("{"),
+            Print("}"),
+        ]
+        self.assertRTLIL(m, [], R"""
+        attribute \generator "Amaranth"
+        attribute \top 1
+        module \top
+            wire width 1 $1
+            wire width 1 $2
+            process $3
+                assign $1 [0] 1'0
+                assign $1 [0] 1'1
+            end
+            cell $print $4
+                parameter \FORMAT "{{\n"
+                parameter \ARGS_WIDTH 0
+                parameter signed \PRIORITY 32'11111111111111111111111111111110
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $1 [0]
+                connect \ARGS { }
+                connect \TRG { }
+            end
+            process $5
+                assign $2 [0] 1'0
+                assign $2 [0] 1'1
+            end
+            cell $print $6
+                parameter \FORMAT "}}\n"
+                parameter \ARGS_WIDTH 0
+                parameter signed \PRIORITY 32'11111111111111111111111111111100
+                parameter \TRG_ENABLE 0
+                parameter \TRG_WIDTH 0
+                parameter \TRG_POLARITY 0
+                connect \EN $2 [0]
+                connect \ARGS { }
+                connect \TRG { }
+            end
+        end
+        """)
+
 
 class DetailTestCase(RTLILTestCase):
     def test_enum(self):
