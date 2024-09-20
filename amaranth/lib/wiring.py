@@ -1648,6 +1648,9 @@ class Component(Elaboratable):
     constructor creates attributes corresponding to all of the members defined in the signature.
     If an attribute with the same name as that of a member already exists, an error is raied.
 
+    By default all members defined in the signature are created with a :py:`path` of :py:`()`.
+    This can be overwritten using the :py:`path` keyword argument of the superclass constructor.
+
     Raises
     ------
     :exc:`TypeError`
@@ -1658,7 +1661,7 @@ class Component(Elaboratable):
         If a name conflict is detected between two variable annotations, or between a member
         and an existing attribute.
     """
-    def __init__(self, signature=None, *, src_loc_at=0):
+    def __init__(self, signature=None, *, path=(), src_loc_at=0):
         cls = type(self)
         members = {}
         for base in reversed(cls.mro()[:cls.mro().index(Component)]):
@@ -1692,7 +1695,7 @@ class Component(Elaboratable):
             if hasattr(self, name):
                 raise NameError(f"Cannot initialize attribute for signature member {name!r} "
                                 f"because an attribute with the same name already exists")
-        self.__dict__.update(signature.members.create(path=(), src_loc_at=src_loc_at + 1))
+        self.__dict__.update(signature.members.create(path=path, src_loc_at=src_loc_at + 1))
 
     @property
     def signature(self):
