@@ -3,6 +3,8 @@ import json
 import argparse
 import importlib
 
+from amaranth.lib.wiring import Signature
+
 from .hdl import Signal, Elaboratable
 from .back import rtlil
 
@@ -68,11 +70,13 @@ def _serve_yosys(modules):
 
             try:
                 elaboratable = modules[module_name](*args, **kwargs)
-                ports = []
-                # By convention, any public attribute that is a Signal is considered a port.
-                for port_name, port in vars(elaboratable).items():
-                    if not port_name.startswith("_") and isinstance(port, Signal):
-                        ports += port._lhs_signals()
+                ports = None
+                if not (hasattr(elaboratable, "signature") and isinstance(elaboratable.signature, Signature)):
+                    ports = []
+                    # By convention, any public attribute that is a Signal is considered a port.
+                    for port_name, port in vars(elaboratable).items():
+                        if not port_name.startswith("_") and isinstance(port, Signal):
+                            ports += port._lhs_signals()
                 rtlil_text = rtlil.convert(elaboratable, name=module_name, ports=ports)
                 response = {"frontend": "ilang", "source": rtlil_text}
             except Exception as error:
