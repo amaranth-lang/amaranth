@@ -62,11 +62,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project:
-          - amaranth-lang/amaranth-boards
-          - amaranth-lang/amaranth-stdio
-          - amaranth-lang/amaranth-soc
-    name: 'smoke (${{ matrix.project }})'
+        project: # test the last commit before dropping py3.8
+          - { name: amaranth-lang/amaranth-boards, ref: 19b97324ecf9111c5d16377af79f82aad761c476 }
+          - { name: amaranth-lang/amaranth-stdio, ref: 2da45b8e75421879d1096495a4fb438de705f567 }
+          - { name: amaranth-lang/amaranth-soc, ref: 746709e1e992bccf6e2362450243cafd00d72a14 }
+    name: 'smoke (${{ matrix.project.name }})'
     steps:
     - name: Check out Amaranth source code
       uses: actions/checkout@v4
@@ -76,7 +76,8 @@ jobs:
     - name: Check out source code
       uses: actions/checkout@v4
       with:
-        repository: ${{ matrix.project }}
+        repository: ${{ matrix.project.name }}
+        ref: ${{ matrix.project.ref }}
         path: project
         fetch-depth: 0
     - name: Set up PDM

@@ -81,7 +81,8 @@ docs = [
   "sphinx-autobuild",
 ]
 examples = [
-  "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git"
+  # pin to last commit with py3.8 support
+  "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git@19b97324ecf9111c5d16377af79f82aad761c476"
 ]
 
 [tool.pdm.scripts]
