@@ -9,6 +9,7 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.3 <https://amaranth-lang.org/docs/amaranth/v0.5.3/>`_
 * `Amaranth 0.5.2 <https://amaranth-lang.org/docs/amaranth/v0.5.2/>`_
 * `Amaranth 0.5.1 <https://amaranth-lang.org/docs/amaranth/v0.5.1/>`_
 * `Amaranth 0.5.0 <https://amaranth-lang.org/docs/amaranth/v0.5.0/>`_
@@ -21,14 +22,20 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
 
 
-Version 0.5.3 (unreleased)
-==========================
+Version 0.5.3
+=============
 
 
 Language changes
 ----------------
 
 * Added: individual bits of the same signal can now be assigned from different modules or domains.
+
+
+Toolchain changes
+-----------------
+
+* Added: the Amaranth RPC server can now elaborate :class:`amaranth.lib.wiring.Component` objects on demand.
 
 
 Version 0.5.2
