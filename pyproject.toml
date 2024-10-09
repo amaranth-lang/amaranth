@@ -12,9 +12,8 @@ readme = "README.md"
 authors = [{name = "Amaranth HDL contributors"}]
 license = {file = "LICENSE.txt"}
 
-requires-python = "~=3.8"
+requires-python = "~=3.9"
 dependencies = [
-  "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
   "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
 ]
