@@ -682,7 +682,7 @@ class NetlistEmitter:
         self.all_undef_to_ff = all_undef_to_ff
         self.drivers = _ast.SignalDict()
         self.io_ports: dict[_ast.IOPort, int] = {}
-        self.rhs_cache: dict[int, Tuple[_nir.Value, bool, _ast.Value]] = {}
+        self.rhs_cache: dict[int, tuple[_nir.Value, bool, _ast.Value]] = {}
         self.matches_cache = {}
         self.priority_match_cache = {}
         self.fragment_module_idx: dict[Fragment, int] = {}
@@ -793,7 +793,7 @@ class NetlistEmitter:
         operand_b = self.extend(operand_b, signed_b, shape.width)
         return (operand_a, operand_b, shape.signed)
 
-    def emit_rhs(self, module_idx: int, value: _ast.Value) -> Tuple[_nir.Value, bool]:
+    def emit_rhs(self, module_idx: int, value: _ast.Value) -> tuple[_nir.Value, bool]:
         """Emits a RHS value, returns a tuple of (value, is_signed)"""
         try:
             result, signed, value = self.rhs_cache[id(value)]

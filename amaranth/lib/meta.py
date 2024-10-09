@@ -141,6 +141,6 @@ def _extract_schemas(package, *, base_uri, path="schema/"):
             f"Schema $id {schema['$id']} must be {base_uri}/{relative_path}"
 
         schema_filename.parent.mkdir(parents=True, exist_ok=True)
-        with open(pathlib.Path(path) / relative_path, "wt") as schema_file:
+        with open(pathlib.Path(path) / relative_path, "w") as schema_file:
             json.dump(schema, schema_file, indent=2)
         print(f"Extracted {schema['$id']} to {schema_filename}")

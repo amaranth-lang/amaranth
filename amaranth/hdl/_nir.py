@@ -1,4 +1,5 @@
-from typing import Iterable, Any
+from typing import Any
+from collections.abc import Iterable
 import enum
 
 from ._ast import SignalDict

@@ -297,9 +297,7 @@ class ResourceManager:
             clocks[clock] = frequency
 
     def iter_signal_clock_constraints(self):
-        for signal, frequency in self._clocks.items():
-            yield signal, frequency
+        yield from self._clocks.items()
 
     def iter_port_clock_constraints(self):
-        for port, frequency in self._io_clocks.items():
-            yield port, frequency
+        yield from self._io_clocks.items()
