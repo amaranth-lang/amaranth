@@ -4,15 +4,8 @@ import re
 import subprocess
 import warnings
 import pathlib
-from importlib import metadata as importlib_metadata
-try:
-    from importlib import resources as importlib_resources
-    try:
-        importlib_resources.files # py3.9+ stdlib
-    except AttributeError:
-        import importlib_resources # py3.8- shim
-except ImportError:
-    importlib_resources = None
+import importlib.metadata
+import importlib.resources
 
 from . import has_tool, require_tool
 
@@ -109,23 +102,21 @@ class _BuiltinYosys(YosysBinary):
 
     @classmethod
     def available(cls):
-        if importlib_metadata is None or importlib_resources is None:
-            return False
         try:
-            importlib_metadata.version(cls.YOSYS_PACKAGE)
+            importlib.metadata.version(cls.YOSYS_PACKAGE)
             return True
-        except importlib_metadata.PackageNotFoundError:
+        except importlib.metadata.PackageNotFoundError:
             return False
 
     @classmethod
     def version(cls):
-        version = importlib_metadata.version(cls.YOSYS_PACKAGE)
+        version = importlib.metadata.version(cls.YOSYS_PACKAGE)
         match = re.match(r"^(\d+)\.(\d+)\.(?:\d+)(?:\.(\d+))?(?:\.post(\d+))?", version)
         return (int(match[1]), int(match[2]), int(match[3] or 0), int(match[4] or 0))
 
     @classmethod
     def data_dir(cls):
-        return importlib_resources.files(cls.YOSYS_PACKAGE) / "share"
+        return importlib.resources.files(cls.YOSYS_PACKAGE) / "share"
 
     @classmethod
     def run(cls, args, stdin="", *, ignore_warnings=False, src_loc_at=0):

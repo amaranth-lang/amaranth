@@ -13,9 +13,8 @@ readme = "README.md"
 authors = [{name = "Amaranth HDL contributors"}]
 license = { text = "BSD-2-clause" }
 
-requires-python = "~=3.8"
+requires-python = "~=3.9"
 dependencies = [
-  "importlib_resources; python_version<'3.9'", # for amaranth._toolchain.yosys
   "jschon~=0.11.1", # for amaranth.lib.meta
   "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
@@ -46,10 +45,6 @@ amaranth-rpc = "amaranth.rpc:main"
 [build-system]
 requires = ["pdm-backend~=2.3.0"]
 build-backend = "pdm.backend"
-
-[tool.pdm]
-# Remove this once we no longer support Python 3.8.
-ignore_package_warnings = ["sphinx*", "alabaster"]
 
 [tool.pdm.build]
 # If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or

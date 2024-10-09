@@ -29,11 +29,6 @@ class EnumType(ShapeCastable, py_enum.EnumMeta):
     can be specified by passing the ``view_class=`` keyword argument when creating the enum class.
     """
 
-    # TODO: remove this shim once py3.8 support is dropped
-    @classmethod
-    def __prepare__(metacls, name, bases, shape=None, view_class=None, **kwargs):
-        return super().__prepare__(name, bases, **kwargs)
-
     def __new__(metacls, name, bases, namespace, shape=None, view_class=None, **kwargs):
         if shape is not None:
             shape = Shape.cast(shape)
