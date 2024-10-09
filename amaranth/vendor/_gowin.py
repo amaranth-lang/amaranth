@@ -175,6 +175,9 @@ class GowinPlatform(TemplatedPlatform):
     The environment is populated by running the script specified in the environment variable
     ``AMARANTH_ENV_APICULA``, if present.
 
+    Available overrides:
+        * ``add_preferences``: inserts commands at the end of the CST file.
+
     Build products:
         * ``{{name}}.fs``: binary bitstream.
 
@@ -185,6 +188,9 @@ class GowinPlatform(TemplatedPlatform):
 
     The environment is populated by running the script specified in the environment variable
     ``AMARANTH_ENV_GOWIN``, if present.
+
+    Available overrides:
+        * ``add_preferences``: inserts commands at the end of the CST file.
 
     Build products:
         * ``{{name}}.fs``: binary bitstream.
@@ -346,6 +352,7 @@ class GowinPlatform(TemplatedPlatform):
                     IO_PORT "{{port_name}}" {{attr_name}}={{attr_value}};
                 {% endfor %}
             {% endfor %}
+            {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
         """,
     }
 
