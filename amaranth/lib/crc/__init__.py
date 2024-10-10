@@ -346,8 +346,12 @@ class Processor(Elaboratable):
                     if self._matrix_g[j][i]:
                         bit ^= data_in[j]
                 m.d.sync += crc_reg[i].eq(bit)
+            m.d.sync += self.valid.eq(0)
         with m.Elif(self.start):
-            m.d.sync += crc_reg.eq(self._initial_crc)
+            m.d.sync += [
+                crc_reg.eq(self._initial_crc),
+                self.start.eq(0)
+            ]
 
         # Check for residue match, indicating a valid codeword.
         if self._reflect_output:
