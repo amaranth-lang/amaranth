@@ -581,7 +581,7 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 data["name"], data["init"], data["encoding"], data["decoding"], data["states"], data["ongoing"]
             fsm_state_src_locs = data["state_src_locs"]
             if not fsm_states:
-                data["signal"] = Signal(0, name=f"{fsm_name}_state", src_loc_at=2)
+                data["signal"] = Signal(0, name=f"{fsm_name}_state", src_loc_at=3)
                 return
             if fsm_init is None:
                 init = fsm_encoding[next(iter(fsm_states))]
@@ -589,9 +589,9 @@ class Module(_ModuleBuilderRoot, Elaboratable):
                 init = fsm_encoding[fsm_init]
             # The FSM is encoded such that the state with encoding 0 is always the init state.
             fsm_decoding.update((n, s) for s, n in fsm_encoding.items())
-            data["signal"] = fsm_signal = Signal(range(len(fsm_encoding)), init=init,
-                                                 name=f"{fsm_name}_state", src_loc_at=2,
-                                                 decoder=lambda n: f"{fsm_decoding[n]}/{n}")
+            data["signal"] = fsm_signal = Signal(
+                Enum(f"{fsm_name}State", [(f"{fsm_decoding[n]}/{n}", n) for n in range(len(fsm_decoding))]),
+                init=init, name=f"{fsm_name}_state", src_loc_at=3)
 
             for name, sig in fsm_ongoing.items():
                 self._top_comb_statements.append(
