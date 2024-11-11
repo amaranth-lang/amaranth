@@ -79,7 +79,7 @@ def _serve_yosys(modules):
                         if not port_name.startswith("_") and isinstance(port, (Signal, Record)):
                             ports += port._lhs_signals()
                 rtlil_text = rtlil.convert(elaboratable, name=module_name, ports=ports)
-                response = {"frontend": "ilang", "source": rtlil_text}
+                response = {"frontend": "rtlil", "source": rtlil_text}
             except Exception as error:
                 response = {"error": f"{type(error).__qualname__}: {str(error)}"}
 
