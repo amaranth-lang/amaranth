@@ -9,6 +9,7 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.4 <https://amaranth-lang.org/docs/amaranth/v0.5.3/>`_
 * `Amaranth 0.5.3 <https://amaranth-lang.org/docs/amaranth/v0.5.3/>`_
 * `Amaranth 0.5.2 <https://amaranth-lang.org/docs/amaranth/v0.5.2/>`_
 * `Amaranth 0.5.1 <https://amaranth-lang.org/docs/amaranth/v0.5.1/>`_
@@ -20,6 +21,12 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
 * `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
+
+
+Version 0.5.4
+=============
+
+Updated to address deprecations in Yosys 0.48.
 
 
 Version 0.5.3
