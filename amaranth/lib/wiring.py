@@ -1002,7 +1002,7 @@ class Signature(metaclass=SignatureMeta):
         return tuple()
 
     def __repr__(self):
-        if type(self) is Signature:
+        if isinstance(self, Signature):
             return f"Signature({dict(self.members.items())})"
         return super().__repr__()
 
