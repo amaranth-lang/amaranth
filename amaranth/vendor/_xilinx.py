@@ -1240,9 +1240,9 @@ class XilinxPlatform(TemplatedPlatform):
                  for index in range(ff_sync._stages)]
         if self.toolchain == "Vivado":
             if ff_sync._max_input_delay is None:
-                flops[0].attrs["amaranth.vivado.false_path"] = "TRUE"
+                Value.cast(flops[0]).attrs["amaranth.vivado.false_path"] = "TRUE"
             else:
-                flops[0].attrs["amaranth.vivado.max_delay"] = str(ff_sync._max_input_delay * 1e9)
+                Value.cast(flops[0]).attrs["amaranth.vivado.max_delay"] = str(ff_sync._max_input_delay * 1e9)
         elif ff_sync._max_input_delay is not None:
             raise NotImplementedError("Platform '{}' does not support constraining input delay "
                                       "for FFSynchronizer"
