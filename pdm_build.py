@@ -5,7 +5,14 @@ from pdm.backend._vendor.packaging.version import Version
 
 
 def format_version(version: SCMVersion) -> str:
-    major, minor, patch = (int(n) for n in str(version.version).split(".")[:3])
+
+    # SCMVersion
+    # Note: There are cases where `Version('0.0')` is obtained when specified via git.
+    semver_tokens =list([int(n) for n in str(version.version).split(".")])
+    if len(semver_tokens) < 3:
+        semver_tokens += [0] * (3 - len(semver_tokens))
+    major, minor, patch = semver_tokens
+
     dirty = f"+{datetime.utcnow():%Y%m%d.%H%M%S}" if version.dirty else ""
     if version.distance is None:
         return f"{major}.{minor}.{patch}{dirty}"
