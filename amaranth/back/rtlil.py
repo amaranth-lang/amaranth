@@ -585,7 +585,7 @@ class ModuleEmitter:
                     wire = self.emit_driven_wire(_nir.Value(nets))
                     self.instance_wires[cell_idx, name] = wire
                 continue # Instances use one wire per output, not per cell.
-            elif isinstance(cell, (_nir.PriorityMatch, _nir.Matches)):
+            elif isinstance(cell, _nir.Match):
                 continue # Inlined into assignment lists.
             elif isinstance(cell, (_nir.SyncPrint, _nir.AsyncPrint, _nir.SyncProperty,
                                    _nir.AsyncProperty, _nir.Memory, _nir.SyncWritePort)):
@@ -737,41 +737,25 @@ class ModuleEmitter:
                     search_cond = assign.cond
                     while True:
                         if search_cond == cond:
-                            # We have found the PriorityMatch cell that we should enter.
+                            # We have found the Match cell that we should enter.
                             break
                         if search_cond == _nir.Net.from_const(1):
                             # If this isn't nested condition, go back to parent invocation.
                             return
-                        # Grab the PriorityMatch cell that is on the next level of nesting.
-                        priority_cell_idx = search_cond.cell
-                        priority_cell = self.netlist.cells[priority_cell_idx]
-                        assert isinstance(priority_cell, _nir.PriorityMatch)
-                        search_cond = priority_cell.en
-                    # We assume that:
-                    # 1. PriorityMatch inputs can only be Match cell outputs, or constant 1.
-                    # 2. All Match cells driving a given PriorityMatch cell test the same value.
-                    # Grab the tested value from a random Match cell.
-                    test = _nir.Value()
-                    for net in priority_cell.inputs:
-                        if net != _nir.Net.from_const(1):
-                            matches_cell = self.netlist.cells[net.cell]
-                            assert isinstance(matches_cell, _nir.Matches)
-                            test = matches_cell.value
-                            break
+                        # Grab the Match cell that is on the next level of nesting.
+                        match_cell_idx = search_cond.cell
+                        match_cell = self.netlist.cells[match_cell_idx]
+                        assert isinstance(match_cell, _nir.Match)
+                        search_cond = match_cell.en
                     # Now emit cases for all PriorityMatch inputs, in sequence. Consume as many
                     # assignments as possible along the way.
-                    switch = case.switch(self.sigspec(test))
-                    for bit, net in enumerate(priority_cell.inputs):
-                        subcond = _nir.Net.from_cell(priority_cell_idx, bit)
-                        if net == _nir.Net.from_const(1):
+                    switch = case.switch(self.sigspec(match_cell.value))
+                    for bit, pattern_list in enumerate(match_cell.patterns):
+                        subcond = _nir.Net.from_cell(match_cell_idx, bit)
+                        if pattern_list == ("-" * len(match_cell.value),):
                             emit_assignments(switch.default(), subcond)
                         else:
-                            # Validate the above assumptions.
-                            matches_cell = self.netlist.cells[net.cell]
-                            assert isinstance(matches_cell, _nir.Matches)
-                            assert test == matches_cell.value
-                            patterns = matches_cell.patterns
-                            emit_assignments(switch.case(patterns), subcond)
+                            emit_assignments(switch.case(pattern_list), subcond)
 
         lhs = _nir.Value(_nir.Net.from_cell(cell_idx, bit) for bit in range(len(cell.default)))
         proc = self.builder.process(src_loc=cell.src_loc)
@@ -1235,10 +1219,8 @@ class ModuleEmitter:
             cell = self.netlist.cells[cell_idx]
             if isinstance(cell, _nir.Top):
                 pass
-            elif isinstance(cell, _nir.Matches):
-                pass # Matches is only referenced from PriorityMatch cells and inlined there
-            elif isinstance(cell, _nir.PriorityMatch):
-                pass # PriorityMatch is only referenced from AssignmentList cells and inlined there
+            elif isinstance(cell, _nir.Match):
+                pass # Match is only referenced from AssignmentList cells and inlined there
             elif isinstance(cell, _nir.AssignmentList):
                 self.emit_assignment_list(cell_idx, cell)
             elif isinstance(cell, _nir.Operator):

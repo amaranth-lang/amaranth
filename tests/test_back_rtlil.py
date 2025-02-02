@@ -1413,7 +1413,7 @@ class SwitchTestCase(RTLILTestCase):
             wire width 4 output 1 \out
             process $1
                 assign \out [3:0] 4'0000
-                switch { }
+                switch \sel [3:0]
                     case
                         assign \out [3:0] 4'0001
                 end
@@ -1838,7 +1838,7 @@ class PrintTestCase(RTLILTestCase):
             cell $check $3
                 parameter \FORMAT ""
                 parameter \ARGS_WIDTH 0
-                parameter signed \PRIORITY 32'11111111111111111111111111111100
+                parameter signed \PRIORITY 32'11111111111111111111111111111101
                 parameter \TRG_ENABLE 0
                 parameter \TRG_WIDTH 0
                 parameter \TRG_POLARITY 0
