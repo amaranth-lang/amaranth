@@ -15,7 +15,7 @@ __all__ = [
     # Computation cells
     "Operator", "Part",
     # Decision tree cells
-    "Matches", "PriorityMatch", "Assignment", "AssignmentList",
+    "Match", "Assignment", "AssignmentList",
     # Storage cells
     "FlipFlop", "Memory", "SyncWritePort", "AsyncReadPort", "SyncReadPort",
     # Print cells
@@ -768,79 +768,48 @@ class Part(Cell):
             yield (net, self.src_loc)
 
 
-class Matches(Cell):
-    """A combinational cell performing a comparison like ``Value.matches``
-    (or, equivalently, a case condition).
-
-    Attributes
-    ----------
-
-    value: Value
-    patterns: tuple of str, each str contains '0', '1', '-'
-    """
-    def __init__(self, module_idx, *, value, patterns, src_loc):
-        super().__init__(module_idx, src_loc=src_loc)
-
-        for pattern in patterns:
-            assert len(pattern) == len(value)
-        self.value = Value(value)
-        self.patterns = tuple(patterns)
-
-    def input_nets(self):
-        return set(self.value)
-
-    def output_nets(self, self_idx: int):
-        return {Net.from_cell(self_idx, 0)}
-
-    def resolve_nets(self, netlist: Netlist):
-        self.value = netlist.resolve_value(self.value)
-
-    def __repr__(self):
-        patterns = " ".join(self.patterns)
-        return f"(matches {self.value} {patterns})"
-
-    def comb_edges_to(self, bit):
-        for net in self.value:
-            yield (net, self.src_loc)
-
-
-class PriorityMatch(Cell):
+class Match(Cell):
     """Used to represent a single switch on the control plane of processes.
 
-    The output is the same length as ``inputs``. If ``en`` is ``0``, the output
-    is all-0. Otherwise, output keeps the lowest-numbered ``1`` bit in the input
-    (if any) and masks all other bits to ``0``.
-
-    Note: the RTLIL backend requires all bits of ``inputs`` to be driven
-    by a ``Match`` cell within the same module.
+    The output is the same length as ``patterns``. If ``en`` is ``0``, the output
+    is all-0. Otherwise, the ``value`` is matched against all pattern sets
+    in ``patterns``. The output has a ``1`` bit for the first pattern set that
+    matches ``value``, and ``0`` for all other bits. If no pattern set matches
+    the value, the output is all-``0``.
 
     Attributes
     ----------
     en: Net
-    inputs: Value
+    value: Value
+    patterns: tuple of tuple of str, each str contains '0', '1', '-'
     """
-    def __init__(self, module_idx, *, en, inputs, src_loc):
+    def __init__(self, module_idx, *, en, value, patterns, src_loc):
         super().__init__(module_idx, src_loc=src_loc)
 
+        for pattern_list in patterns:
+            for pattern in pattern_list:
+                assert len(pattern) == len(value)
         self.en = Net.ensure(en)
-        self.inputs = Value(inputs)
+        self.value = Value(value)
+        self.patterns = patterns
 
     def input_nets(self):
-        return set(self.inputs) | {self.en}
+        return set(self.value) | {self.en}
 
     def output_nets(self, self_idx: int):
-        return {Net.from_cell(self_idx, bit) for bit in range(len(self.inputs))}
+        return {Net.from_cell(self_idx, bit) for bit in range(len(self.patterns))}
 
     def resolve_nets(self, netlist: Netlist):
         self.en = netlist.resolve_net(self.en)
-        self.inputs = netlist.resolve_value(self.inputs)
+        self.value = netlist.resolve_value(self.value)
 
     def __repr__(self):
-        return f"(priority_match {self.en} {self.inputs})"
+        patterns = " ".join("{" + " ".join(pattern_list) + "}" if len(pattern_list) != 1 else pattern_list[0] for pattern_list in self.patterns)
+        return f"(match {self.en} {self.value} {patterns})"
 
     def comb_edges_to(self, bit):
         yield (self.en, self.src_loc)
-        for net in self.inputs[:bit + 1]:
+        for net in self.value:
             yield (net, self.src_loc)
 
 
@@ -883,7 +852,7 @@ class AssignmentList(Cell):
     then executing each assignment in sequence.
 
     Note: the RTLIL backend requires all ``cond`` inputs of assignments to be driven
-    by a ``PriorityMatch`` cell within the same module.
+    by a ``Match`` cell within the same module.
 
     Attributes
     ----------
