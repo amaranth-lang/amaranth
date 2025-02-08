@@ -352,7 +352,7 @@ class GowinPlatform(TemplatedPlatform):
                     IO_PORT "{{port_name}}" {{attr_name}}={{attr_value}};
                 {% endfor %}
             {% endfor %}
-            {{get_override("add_preferences")|default("# (add_preferences placeholder)")}}
+            {{get_override("add_preferences")|default("// (add_preferences placeholder)")}}
         """,
     }
 
