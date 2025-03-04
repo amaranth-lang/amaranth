@@ -569,6 +569,10 @@ class SiliconBluePlatform(TemplatedPlatform):
                 raise TypeError("iCE40 does not support bidirectional differential ports")
             elif buffer.direction is io.Direction.Output:
                 m = Module()
+                # Note that the non-inverting output pin is not driven the same way as a regular
+                # output pin. The inverter introduces a delay, so for a non-inverting output pin,
+                # an identical delay is introduced by instantiating a LUT. This makes the waveform
+                # perfectly symmetric in the xdr=0 case.
                 invert_lut = isinstance(buffer, io.Buffer)
                 m.submodules.p = self._get_io_buffer_single(buffer, port_p, invert_lut=invert_lut)
                 m.submodules.n = self._get_io_buffer_single(buffer, port_n, invert_lut=invert_lut)
@@ -579,7 +583,7 @@ class SiliconBluePlatform(TemplatedPlatform):
                 # differs between LP/HX and UP series:
                 #  * for LP/HX, z=0 is DPxxB   (B is non-inverting, A is inverting)
                 #  * for UP,    z=0 is IOB_xxA (A is non-inverting, B is inverting)
-                return self._get_io_buffer_single(buffer, port_p, invert_lut=invert_lut)
+                return self._get_io_buffer_single(buffer, port_p)
             else:
                 assert False # :nocov:
         elif isinstance(buffer.port, io.SingleEndedPort):
