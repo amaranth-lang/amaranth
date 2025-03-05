@@ -49,8 +49,8 @@ class DomainRequirementFailed(Exception):
 class Fragment:
     @staticmethod
     def get(obj, platform):
-        code = None
         origins = []
+        returned_by = ""
         while True:
             if isinstance(obj, Fragment):
                 if hasattr(obj, "origins"):
@@ -58,19 +58,15 @@ class Fragment:
                 return obj
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
+                returned_by = f", returned by {code.co_filename}:{code.co_firstlineno}"
                 UnusedElaboratable._MustUse__silence = False
                 obj._MustUse__used = True
                 new_obj = obj.elaborate(platform)
             else:
-                raise TypeError(f"Object {obj!r} is not an 'Elaboratable' nor 'Fragment'")
+                raise TypeError(
+                    f"Object {obj!r} is not an 'Elaboratable' nor 'Fragment'{returned_by}")
             if new_obj is obj:
-                raise RecursionError(f"Object {obj!r} elaborates to itself")
-            if new_obj is None and code is not None:
-                warnings.warn_explicit(
-                    message=".elaborate() returned None; missing return statement?",
-                    category=UserWarning,
-                    filename=code.co_filename,
-                    lineno=code.co_firstlineno)
+                raise RecursionError(f"Object {obj!r} elaborates to itself{returned_by}")
             origins.append(obj)
             obj = new_obj
 

@@ -31,15 +31,13 @@ class FragmentGetTestCase(FHDLTestCase):
                 r"^Object None is not an 'Elaboratable' nor 'Fragment'$"):
             Fragment.get(None, platform=None)
 
-        with self.assertWarnsRegex(UserWarning,
-                r"^\.elaborate\(\) returned None; missing return statement\?$"):
-            with self.assertRaisesRegex(TypeError,
-                    r"^Object None is not an 'Elaboratable' nor 'Fragment'$"):
-                Fragment.get(ElaboratesToNone(), platform=None)
+        with self.assertRaisesRegex(TypeError,
+                r"^Object None is not an 'Elaboratable' nor 'Fragment', returned by .+?:19$"):
+            Fragment.get(ElaboratesToNone(), platform=None)
 
     def test_get_wrong_self(self):
         with self.assertRaisesRegex(RecursionError,
-                r"^Object <.+?ElaboratesToSelf.+?> elaborates to itself$"):
+                r"^Object <.+?ElaboratesToSelf.+?> elaborates to itself, returned by .+?:24$"):
             Fragment.get(ElaboratesToSelf(), platform=None)
 
 
