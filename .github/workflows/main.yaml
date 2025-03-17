@@ -23,6 +23,8 @@ jobs:
         include:
         - python-version: '3.14-dev'
           allow-failure: true
+          env: 
+            PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
     continue-on-error: ${{ matrix.allow-failure }}
     name: 'test (${{ matrix.python-version }})'
     steps:
@@ -41,6 +43,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install yices2
         pip install codecov build
+        export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=${{ matrix.env.PYO3_USE_ABI3_FORWARD_COMPATIBILITY }}
         pdm install --dev
     - name: Cache YoWASP build products
       uses: actions/cache@v4
