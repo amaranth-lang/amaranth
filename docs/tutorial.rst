@@ -9,12 +9,12 @@ Introduction to Amaranth HDL
 Amaranth is a Python-based hardware description language (HDL) that allows you to design digital circuits using Python's object-oriented features. It provides a more modern and productive alternative to traditional HDLs like Verilog or VHDL.
 
 What is HDL?
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 A Hardware Description Language is a specialized programming language used to describe the structure and behavior of electronic circuits. Unlike software programming, HDL code describes actual physical hardware structures that will be created on an FPGA or ASIC.
 
 Why Amaranth?
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 - **Python-based** - Use a familiar language with modern features
 - **Object-oriented** - Create reusable components
@@ -25,7 +25,7 @@ Setting Up
 ----------
 
 Prerequisites
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 Before starting, you'll need:
 
@@ -34,7 +34,7 @@ Before starting, you'll need:
 - For synthesis to hardware: Yosys (optional, installed automatically with PDM)
 
 Installation
-~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 Install Amaranth using PDM (Python Development Master), which will handle creating a virtual environment for you:
 
@@ -80,7 +80,7 @@ Signals are the fundamental elements in digital circuits - they represent wires 
    m.d.comb += c.eq(b + 1)  # c will always equal b + 1
 
 Clock Domains
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 Digital circuits operate based on clock signals. Amaranth uses clock domains to organize logic:
 
@@ -125,7 +125,7 @@ Now let's create a more practical circuit that blinks an LED:
    :linenos:
 
 Understanding the Code
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **Elaboratable**: Base class for all Amaranth circuits
 - **elaborate(self, platform)**: Method that builds the actual circuit
@@ -135,7 +135,7 @@ Understanding the Code
 - **led.o.eq()**: Connects the output pin of the LED to our signal
 
 Running on Hardware
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To run on actual FPGA hardware, you'd need to specify a platform and call the build method:
 
@@ -149,7 +149,7 @@ To run on actual FPGA hardware, you'd need to specify a platform and call the bu
        platform.build(Blinky(), do_program=True)
 
 Viewing Simulation Results
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The simulation generates a VCD (Value Change Dump) file that you can view with waveform viewer software:
 
@@ -168,7 +168,7 @@ Now let's create a reusable component with a well-defined interface:
    :end-before: # --- TEST ---
 
 Understanding Component Interfaces
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``wiring.Component`` base class provides a structured way to define interfaces:
 
@@ -196,7 +196,7 @@ Understanding the Simulation
 - **sim.write_vcd("file.vcd")**: Generates a waveform file for visualization
 
 Viewing Waveforms
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 The VCD file contains all signal changes during simulation. To view it:
 
@@ -214,7 +214,7 @@ Now let's implement something more complex - a UART receiver using a Finite Stat
    :linenos:
 
 Understanding FSMs in Amaranth
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **with m.FSM() as fsm**: Creates a finite state machine
 - **with m.State("NAME")**: Defines a state
@@ -241,7 +241,7 @@ Now let's build a system combining multiple components - a blinker that uses our
    :linenos:
 
 Understanding The System Architecture
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **Submodules**: ``m.submodules.name = module`` adds a submodule to your design
 - **Clock Frequency**: Real hardware platforms provide clock frequency info
@@ -264,7 +264,7 @@ Here's an example for an iCEStick FPGA board:
    :linenos:
 
 For Other Boards
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 The process is similar for other boards:
 
@@ -292,7 +292,7 @@ TypeErrors or AttributeErrors
 - You probably wrote ``m.domain.sync`` instead of ``m.d.sync``
 
 Runtime or Logic Errors
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block::
 
@@ -309,7 +309,7 @@ Runtime or Logic Errors
 - Check for typos or unused signals
 
 Hardware Deployment Errors
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block::
 
