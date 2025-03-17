@@ -236,12 +236,29 @@ jobs:
           
           chmod +x execute_tutorial.js
 
+      - name: Check ANTHROPIC_API_KEY is set
+        id: check_api_key
+        run: |
+          if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "API key is set, proceeding with Claude execution test"
+            echo "has_api_key=true" >> $GITHUB_OUTPUT
+          else
+            echo "ANTHROPIC_API_KEY is not set. Skipping Claude-based execution."
+            echo "has_api_key=false" >> $GITHUB_OUTPUT
+            echo "## ⚠️ Warning - Claude Execution Test Skipped" >> $GITHUB_STEP_SUMMARY
+            echo "* ANTHROPIC_API_KEY secret is not configured in this repository" >> $GITHUB_STEP_SUMMARY
+            echo "* Execution test will be skipped for now" >> $GITHUB_STEP_SUMMARY
+            echo "* This test will run automatically once the secret is configured" >> $GITHUB_STEP_SUMMARY
+          fi
+            
       - name: Execute tutorial with Claude
+        if: steps.check_api_key.outputs.has_api_key == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node execute_tutorial.js
         
       - name: Archive execution results
+        if: steps.check_api_key.outputs.has_api_key == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tutorial-execution-results
