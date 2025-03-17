@@ -1,0 +1,143 @@
+name: Tutorial Code Test
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - 'docs/_code/**'
+      - '.github/workflows/tutorial-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - 'docs/_code/**'
+      - '.github/workflows/tutorial-test.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  validate-tutorial:
+    name: Validate Tutorial Content
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Check tutorial refers to existing files
+        run: |
+          # Extract code filename references from tutorial.md
+          TUTORIAL_FILES=$(grep -o "```python.*\.py" tutorial.md | grep -o "[a-zA-Z_]*\.py" | sort | uniq)
+          
+          echo "Files mentioned in tutorial.md:"
+          echo "$TUTORIAL_FILES"
+          
+          # Check if each mentioned file exists in docs/_code/
+          for file in $TUTORIAL_FILES; do
+            if [ ! -f "docs/_code/$file" ]; then
+              echo "Error: $file mentioned in tutorial.md but missing from docs/_code/"
+              exit 1
+            else
+              echo "✓ Found docs/_code/$file"
+            fi
+          done
+  
+  test-tutorial:
+    name: Test Tutorial Code
+    runs-on: ubuntu-latest
+    needs: validate-tutorial
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install PDM
+        run: |
+          pip install pdm
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gtkwave
+          pdm install
+
+      - name: Run and_gate.py example
+        run: |
+          pdm run python docs/_code/and_gate.py
+          ls -la and_gate.v && head -n 10 and_gate.v
+
+      - name: Run blinky.py example
+        run: |
+          pdm run python docs/_code/blinky.py
+          ls -la blinky.vcd
+
+      - name: Run up_counter.py example
+        run: |
+          pdm run python docs/_code/up_counter.py
+          ls -la counter.v && head -n 10 counter.v
+
+      - name: Run uart_receiver.py example
+        run: |
+          pdm run python docs/_code/uart_receiver.py
+          ls -la uart_rx.v && head -n 10 uart_rx.v
+
+      - name: Run uart_sim.py example
+        run: |
+          pdm run python docs/_code/uart_sim.py
+          ls -la uart_sim.vcd
+
+      - name: Run controlled_blinker.py example
+        run: |
+          pdm run python docs/_code/controlled_blinker.py
+          ls -la blinker_system.v && head -n 10 blinker_system.v
+          ls -la blinker_system.vcd
+
+      - name: Verify waveform files with GTKWave
+        run: |
+          gtkwave -V
+          for vcd_file in *.vcd; do
+            if [ -f "$vcd_file" ]; then
+              echo "Verifying $vcd_file with GTKWave..."
+              gtkwave -V "$vcd_file" || true
+            fi
+          done
+          
+      - name: Generate test summary
+        run: |
+          echo "## Tutorial Code Test Results" > summary.md
+          echo "| Example | Status |" >> summary.md
+          echo "|---------|--------|" >> summary.md
+          
+          check_file() {
+            if [ -f "$1" ]; then
+              echo "| $2 | ✅ Pass |" >> summary.md
+            else
+              echo "| $2 | ❌ Fail |" >> summary.md
+              EXIT_CODE=1
+            fi
+          }
+          
+          EXIT_CODE=0
+          check_file "and_gate.v" "AND Gate"
+          check_file "blinky.vcd" "LED Blinker"
+          check_file "counter.v" "Up Counter"
+          check_file "uart_rx.v" "UART Receiver"
+          check_file "uart_sim.vcd" "UART Simulation"
+          check_file "blinker_system.v" "Controlled Blinker"
+          check_file "blinker_system.vcd" "Blinker Simulation"
+          
+          cat summary.md
+          exit $EXIT_CODE
+
+      - name: Archive generated files
+        uses: actions/upload-artifact@v3
+        with:
+          name: tutorial-outputs
+          path: |
+            *.v
+            *.vcd
+            summary.md
