@@ -1,0 +1,115 @@
+name: Tutorial Comprehension Test
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - '.github/workflows/tutorial-comprehension-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - '.github/workflows/tutorial-comprehension-test.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  analyze-tutorial:
+    name: Analyze Tutorial with Claude
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install Anthropic SDK
+        run: npm install @anthropic-ai/sdk
+
+      - name: Create tutorial analysis script
+        run: |
+          cat > analyze_tutorial.js << 'EOF'
+          const fs = require('fs');
+          const Anthropic = require('@anthropic-ai/sdk');
+
+          // Initialize Anthropic client
+          const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+          });
+
+          async function analyzeTutorial() {
+            // Read the tutorial content
+            const tutorialContent = fs.readFileSync('tutorial.md', 'utf8');
+            
+            // Create the prompt for Claude
+            const prompt = `<tutorial>
+          ${tutorialContent}
+          </tutorial>
+
+          You are an expert in hardware design, HDLs, and educational content. Please analyze the above Amaranth HDL tutorial and perform the following tasks:
+
+          1. Consistency check: 
+             - Are all code examples syntactically correct? 
+             - Do the examples align with the explanations?
+             - Are there any missing dependencies or imports?
+             - Would a beginner be able to run these examples without errors?
+
+          2. Comprehensibility assessment:
+             - How well does the tutorial explain hardware concepts to beginners?
+             - Are there any concepts that need better explanation?
+             - Is the progression of examples logical?
+             - Are there any gaps in the learning journey?
+
+          3. Identify any potential improvements:
+             - What could make this tutorial more effective?
+             - Are there missing explanations for important concepts?
+             - What additional examples might be helpful?
+
+          Provide your assessment in a structured format with clear headings and bullet points.`;
+
+            try {
+              console.log("Sending request to Claude...");
+              
+              // Call Claude with the prompt
+              const response = await anthropic.messages.create({
+                model: "claude-3-opus-20240229",
+                max_tokens: 4000,
+                messages: [
+                  { role: "user", content: prompt }
+                ],
+                temperature: 0.2,
+              });
+              
+              // Write Claude's analysis to a file
+              fs.writeFileSync('tutorial_analysis.md', response.content[0].text);
+              console.log("Analysis complete. Results written to tutorial_analysis.md");
+              
+              // Also print a summary to the console
+              console.log("\n=== SUMMARY OF ANALYSIS ===\n");
+              console.log(response.content[0].text.substring(0, 1000) + "...");
+              
+            } catch (error) {
+              console.error("Error calling Claude API:", error);
+              process.exit(1);
+            }
+          }
+
+          analyzeTutorial();
+          EOF
+          
+          chmod +x analyze_tutorial.js
+
+      - name: Analyze tutorial with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node analyze_tutorial.js
+        
+      - name: Archive analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: tutorial-analysis
+          path: tutorial_analysis.md

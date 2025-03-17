@@ -1,0 +1,229 @@
+name: Tutorial Execution Test with Claude
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - '.github/workflows/tutorial-execution-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tutorial.md'
+      - '.github/workflows/tutorial-execution-test.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  execute-tutorial:
+    name: Execute Tutorial with Claude
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python and Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install Anthropic SDK
+        run: npm install @anthropic-ai/sdk
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Install PDM
+        run: |
+          pip install pdm
+          
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gtkwave
+          pdm install
+
+      - name: Create tutorial execution script
+        run: |
+          cat > execute_tutorial.js << 'EOF'
+          const fs = require('fs');
+          const { exec, execSync } = require('child_process');
+          const Anthropic = require('@anthropic-ai/sdk');
+          const util = require('util');
+          const execAsync = util.promisify(exec);
+
+          // Initialize Anthropic client
+          const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+          });
+
+          async function executeTutorial() {
+            // Read the tutorial content
+            const tutorialContent = fs.readFileSync('tutorial.md', 'utf8');
+            
+            // First, have Claude analyze the tutorial and extract executable steps
+            const analysisPrompt = `<tutorial>
+          ${tutorialContent}
+          </tutorial>
+
+          You are an expert in hardware design, HDLs, and Python. Please analyze the above Amaranth HDL tutorial and extract a step-by-step execution plan.
+
+          For each code example in the tutorial:
+          1. Identify the filename it should be saved as
+          2. Extract the exact code as shown in the tutorial
+          3. Identify any dependencies or prerequisites needed to run this code
+          4. Describe what the expected output or result should be
+
+          Format your response in JSON like this:
+          {
+            "steps": [
+              {
+                "name": "Step description",
+                "file": "filename.py",
+                "code": "Python code goes here",
+                "dependencies": ["list", "of", "dependencies"],
+                "expected_result": "Description of expected output",
+                "validation": "How to verify it worked correctly"
+              }
+            ]
+          }
+
+          Only include steps that involve executing code. Focus on extracting the examples exactly as shown.`;
+
+            try {
+              console.log("Analyzing tutorial to extract executable steps...");
+              
+              // Call Claude to analyze the tutorial
+              const analysisResponse = await anthropic.messages.create({
+                model: "claude-3-sonnet-20240229",
+                max_tokens: 4000,
+                messages: [
+                  { role: "user", content: analysisPrompt }
+                ],
+                temperature: 0.2,
+              });
+              
+              // Parse Claude's response to get the execution plan
+              const analysisText = analysisResponse.content[0].text;
+              
+              // Extract JSON from Claude's response
+              const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) {
+                throw new Error("Could not extract JSON execution plan from Claude's response");
+              }
+              
+              const executionPlan = JSON.parse(jsonMatch[0]);
+              fs.writeFileSync('execution_plan.json', JSON.stringify(executionPlan, null, 2));
+              console.log(`Extracted ${executionPlan.steps.length} executable steps from tutorial`);
+              
+              // Execute each step in the plan
+              const results = [];
+              
+              for (let i = 0; i < executionPlan.steps.length; i++) {
+                const step = executionPlan.steps[i];
+                console.log(`\n==== Executing Step ${i+1}: ${step.name} ====`);
+                
+                // Save the code to a file
+                fs.writeFileSync(step.file, step.code);
+                console.log(`Created file: ${step.file}`);
+                
+                // Execute the code
+                try {
+                  console.log(`Running: pdm run python ${step.file}`);
+                  const { stdout, stderr } = await execAsync(`pdm run python ${step.file}`, { timeout: 60000 });
+                  
+                  // Record the result
+                  results.push({
+                    step: i+1,
+                    name: step.name,
+                    file: step.file,
+                    success: true,
+                    stdout,
+                    stderr,
+                    error: null
+                  });
+                  
+                  console.log("Output:", stdout);
+                  if (stderr) console.error("Errors:", stderr);
+                  
+                } catch (error) {
+                  console.error(`Error executing ${step.file}:`, error.message);
+                  
+                  // Record the failure
+                  results.push({
+                    step: i+1,
+                    name: step.name,
+                    file: step.file,
+                    success: false,
+                    stdout: error.stdout || "",
+                    stderr: error.stderr || "",
+                    error: error.message
+                  });
+                }
+              }
+              
+              // Save the execution results
+              fs.writeFileSync('execution_results.json', JSON.stringify(results, null, 2));
+              
+              // Have Claude analyze the results
+              const resultsPrompt = `
+          I've executed the code examples from an Amaranth HDL tutorial. Here are the results:
+          
+          ${JSON.stringify(results, null, 2)}
+          
+          Please analyze these results and provide:
+          
+          1. A summary of which examples worked and which failed
+          2. For failed examples, analyze what might have gone wrong based on error messages
+          3. Suggest possible improvements to the tutorial based on execution results
+          4. Overall assessment of the tutorial's executability for beginners
+          
+          Format your response with clear headings and bullet points.`;
+              
+              console.log("\nAnalyzing execution results with Claude...");
+              
+              const resultsAnalysisResponse = await anthropic.messages.create({
+                model: "claude-3-sonnet-20240229",
+                max_tokens: 4000,
+                messages: [
+                  { role: "user", content: resultsPrompt }
+                ],
+                temperature: 0.2,
+              });
+              
+              // Save Claude's analysis of the results
+              fs.writeFileSync('tutorial_execution_analysis.md', resultsAnalysisResponse.content[0].text);
+              console.log("Analysis complete. Results written to tutorial_execution_analysis.md");
+              
+              console.log("\n=== SUMMARY OF EXECUTION ANALYSIS ===\n");
+              console.log(resultsAnalysisResponse.content[0].text.substring(0, 1000) + "...");
+              
+            } catch (error) {
+              console.error("Error during execution:", error);
+              process.exit(1);
+            }
+          }
+
+          executeTutorial();
+          EOF
+          
+          chmod +x execute_tutorial.js
+
+      - name: Execute tutorial with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node execute_tutorial.js
+        
+      - name: Archive execution results
+        uses: actions/upload-artifact@v3
+        with:
+          name: tutorial-execution-results
+          path: |
+            *.py
+            *.v
+            *.vcd
+            execution_plan.json
+            execution_results.json
+            tutorial_execution_analysis.md
