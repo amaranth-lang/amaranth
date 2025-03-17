@@ -32,14 +32,11 @@ jobs:
       - name: Install Anthropic SDK
         run: npm install @anthropic-ai/sdk
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python and PDM
+        uses: pdm-project/setup-pdm@v3
         with:
           python-version: '3.9'
-          
-      - name: Install PDM
-        run: |
-          pip install pdm
+          cache: true
           
       - name: Install dependencies
         run: |
