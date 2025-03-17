@@ -55,6 +55,7 @@ jobs:
         with:
           python-version: '3.9'
           cache: true
+          cache-dependency-path: "**/pyproject.toml"
 
       - name: Install dependencies
         run: |
