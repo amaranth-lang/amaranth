@@ -4,12 +4,14 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
+      - 'docs/_code/**'
       - '.github/workflows/tutorial-execution-test.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
+      - 'docs/_code/**'
       - '.github/workflows/tutorial-execution-test.yml'
   workflow_dispatch:  # Allow manual trigger
 
@@ -49,10 +51,20 @@ jobs:
         run: |
           cat > execute_tutorial.js << 'EOF'
           const fs = require('fs');
+          const path = require('path');
           const { exec, execSync } = require('child_process');
           const Anthropic = require('@anthropic-ai/sdk');
           const util = require('util');
           const execAsync = util.promisify(exec);
+          
+          // Helper function to get code from a file reference
+          function getCodeFromFileRef(fileRef) {
+            const filePath = path.join('docs', fileRef);
+            if (fs.existsSync(filePath)) {
+              return fs.readFileSync(filePath, 'utf8');
+            }
+            return null;
+          }
 
           // Initialize Anthropic client
           const anthropic = new Anthropic({
@@ -61,18 +73,22 @@ jobs:
 
           async function executeTutorial() {
             // Read the tutorial content
-            const tutorialContent = fs.readFileSync('tutorial.md', 'utf8');
+            const tutorialContent = fs.readFileSync('docs/tutorial.rst', 'utf8');
             
             // First, have Claude analyze the tutorial and extract executable steps
             const analysisPrompt = `<tutorial>
           ${tutorialContent}
           </tutorial>
 
-          You are an expert in hardware design, HDLs, and Python. Please analyze the above Amaranth HDL tutorial and extract a step-by-step execution plan.
+          You are an expert in hardware design, HDLs, and Python. Please analyze the above Amaranth HDL tutorial (in RST format) and extract a step-by-step execution plan.
 
-          For each code example in the tutorial:
-          1. Identify the filename it should be saved as
-          2. Extract the exact code as shown in the tutorial
+          Note that this is a Sphinx RST file, with code examples in these forms:
+          1. Inline code blocks (marked with .. code-block:: python)
+          2. File includes (marked with .. literalinclude:: _code/filename.py)
+          
+          For each executable code example in the tutorial:
+          1. Identify the filename it should be saved as (from literalinclude or reasonable name for code blocks)
+          2. Extract the exact code needed for execution
           3. Identify any dependencies or prerequisites needed to run this code
           4. Describe what the expected output or result should be
 
@@ -125,9 +141,18 @@ jobs:
                 const step = executionPlan.steps[i];
                 console.log(`\n==== Executing Step ${i+1}: ${step.name} ====`);
                 
-                // Save the code to a file
-                fs.writeFileSync(step.file, step.code);
-                console.log(`Created file: ${step.file}`);
+                // Check if we have this file already in docs/_code
+                const docFilePath = path.join('docs', '_code', step.file);
+                if (fs.existsSync(docFilePath)) {
+                  // Use the existing file from docs/_code
+                  const codeFromFile = fs.readFileSync(docFilePath, 'utf8');
+                  fs.writeFileSync(step.file, codeFromFile);
+                  console.log(`Using existing file from docs/_code/${step.file}`);
+                } else {
+                  // Save the code to a file as extracted by Claude
+                  fs.writeFileSync(step.file, step.code);
+                  console.log(`Created file from extraction: ${step.file}`);
+                }
                 
                 // Execute the code
                 try {

@@ -4,13 +4,13 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
       - 'docs/_code/**'
       - '.github/workflows/tutorial-test.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
       - 'docs/_code/**'
       - '.github/workflows/tutorial-test.yml'
   workflow_dispatch:  # Allow manual trigger
@@ -25,16 +25,16 @@ jobs:
         
       - name: Check tutorial refers to existing files
         run: |
-          # Extract code filename references from tutorial.md
-          TUTORIAL_FILES=$(grep -o "```python.*\.py" tutorial.md | grep -o "[a-zA-Z_]*\.py" | sort | uniq)
+          # Extract code filename references from tutorial.rst
+          TUTORIAL_FILES=$(grep -o "_code/[a-zA-Z_]*\.py" docs/tutorial.rst | cut -d'/' -f2 | sort | uniq)
           
-          echo "Files mentioned in tutorial.md:"
+          echo "Files mentioned in tutorial.rst:"
           echo "$TUTORIAL_FILES"
           
           # Check if each mentioned file exists in docs/_code/
           for file in $TUTORIAL_FILES; do
             if [ ! -f "docs/_code/$file" ]; then
-              echo "Error: $file mentioned in tutorial.md but missing from docs/_code/"
+              echo "Error: $file mentioned in tutorial.rst but missing from docs/_code/"
               exit 1
             else
               echo "✓ Found docs/_code/$file"

@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
       - '.github/workflows/tutorial-comprehension-test.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'tutorial.md'
+      - 'docs/tutorial.rst'
       - '.github/workflows/tutorial-comprehension-test.yml'
   workflow_dispatch:  # Allow manual trigger
 
@@ -43,7 +43,7 @@ jobs:
 
           async function analyzeTutorial() {
             // Read the tutorial content
-            const tutorialContent = fs.readFileSync('tutorial.md', 'utf8');
+            const tutorialContent = fs.readFileSync('docs/tutorial.rst', 'utf8');
             
             // Create the prompt for Claude
             const prompt = `<tutorial>
