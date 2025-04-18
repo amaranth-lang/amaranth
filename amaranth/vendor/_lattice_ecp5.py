@@ -20,7 +20,7 @@ class LatticeECP5Platform(TemplatedPlatform):
         * ``verbose``: enables logging of informational messages to standard error.
         * ``read_verilog_opts``: adds options for ``read_verilog`` Yosys command.
         * ``synth_opts``: adds options for ``synth_ecp5`` Yosys command.
-        * ``script_after_read``: inserts commands after ``read_ilang`` in Yosys script.
+        * ``script_after_read``: inserts commands after ``read_rtlil`` in Yosys script.
         * ``script_after_synth``: inserts commands after ``synth_ecp5`` in Yosys script.
         * ``yosys_opts``: adds extra options for ``yosys``.
         * ``nextpnr_opts``: adds extra options for ``nextpnr-ecp5``.
@@ -114,9 +114,9 @@ class LatticeECP5Platform(TemplatedPlatform):
                 read_verilog -sv {{get_override("read_verilog_opts")|options}} {{file}}
             {% endfor %}
             {% for file in platform.iter_files(".il") -%}
-                read_ilang {{file}}
+                read_rtlil {{file}}
             {% endfor %}
-            read_ilang {{name}}.il
+            read_rtlil {{name}}.il
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
             synth_ecp5 {{get_override("synth_opts")|options}} -top {{name}}
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}

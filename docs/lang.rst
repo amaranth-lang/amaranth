@@ -173,6 +173,14 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
    Python ranges are *exclusive* or *half-open*, meaning they do not contain their ``.stop`` element. Because of this, values with shapes cast from a ``range(stop)`` where ``stop`` is a power of 2 are not wide enough to represent ``stop`` itself:
 
    .. doctest::
+      :hide:
+
+      >>> import warnings
+      >>> _warning_filters_backup = warnings.catch_warnings()
+      >>> _warning_filters_backup.__enter__() # have to do this horrific hack to make it work with `PYTHONWARNINGS=error` :(
+      >>> warnings.simplefilter("default", amaranth.hdl.dsl.SyntaxWarning)
+
+   .. doctest::
 
       >>> fencepost = C(256, range(256))
       <...>:1: SyntaxWarning: Value 256 equals the non-inclusive end of the constant shape range(0, 256); this is likely an off-by-one error
@@ -181,6 +189,11 @@ Specifying a shape with a range is convenient for counters, indexes, and all oth
       unsigned(8)
       >>> fencepost.value
       0
+
+   .. doctest::
+      :hide:
+
+      >>> _warning_filters_backup.__exit__()
 
    Amaranth detects uses of :class:`Const` and :class:`Signal` that invoke such an off-by-one error, and emits a diagnostic message.
 

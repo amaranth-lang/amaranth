@@ -12,7 +12,7 @@ def _convert_rtlil_text(rtlil_text, *, strip_internal_attrs=False, write_verilog
     yosys = find_yosys(lambda ver: ver >= (0, 38))
 
     script = []
-    script.append(f"read_ilang <<rtlil\n{rtlil_text}\nrtlil")
+    script.append(f"read_rtlil <<rtlil\n{rtlil_text}\nrtlil")
     script.append("proc -nomux -norom")
     script.append("memory_collect")
 
