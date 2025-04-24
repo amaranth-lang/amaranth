@@ -1277,6 +1277,9 @@ class FlippedInterface:
         """
         return type(self) is type(other) and self.__unflipped == other.__unflipped
 
+    def __hash__(self):
+        return hash(self.__unflipped)
+
     # See the note in `FlippedSignature`. In addition, these accessors also handle flipping of
     # an interface member.
 
