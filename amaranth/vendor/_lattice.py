@@ -498,7 +498,7 @@ class LatticePlatform(TemplatedPlatform):
                 {% endif %}
             {% endfor %}
             {% for signal, frequency in platform.iter_signal_clock_constraints() -%}
-                FREQUENCY NET "{{signals|hierarchy(".")}}" {{frequency}} HZ;
+                FREQUENCY NET "{{signal|hierarchy(".")}}" {{frequency}} HZ;
             {% endfor %}
             {% for port, frequency in platform.iter_port_clock_constraints() -%}
                 FREQUENCY PORT "{{port.name}}" {{frequency}} HZ;
