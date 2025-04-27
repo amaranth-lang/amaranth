@@ -18,6 +18,7 @@ jobs:
         - '3.13'
         - 'pypy-3.9'
         - 'pypy-3.10'
+        - 'pypy-3.11'
         allow-failure:
         - false
         include:
