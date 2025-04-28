@@ -1,4 +1,25 @@
-__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState", "BaseEngine"]
+from abc import ABCMeta, abstractmethod
+
+__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState", "BaseEngine", "Observer"]
+
+
+class Observer(metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def fs_per_delta(self) -> int:
+        return 0
+
+    @abstractmethod
+    def update_signal(self, timestamp, signal):
+       ...
+
+    @abstractmethod
+    def update_memory(self, timestamp, memory, addr):
+        ...
+
+    @abstractmethod
+    def close(self, timestamp):
+       assert False
 
 
 class BaseProcess:
@@ -97,5 +118,5 @@ class BaseEngine:
     def advance(self):
         raise NotImplementedError # :nocov:
 
-    def write_vcd(self, *, vcd_file, gtkw_file, traces, fs_per_delta):
+    def observe(self, observer: Observer):
         raise NotImplementedError # :nocov:
