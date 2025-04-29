@@ -1408,6 +1408,8 @@ def connect(m, *args, **kwargs):
     if not isinstance(m, Module):
         raise TypeError(f"The initial argument must be a module, not {m!r}")
 
+    src_loc_at = 1
+
     objects = {
         **{index:   arg for index,   arg in enumerate(args)},
         **{keyword: arg for keyword, arg in kwargs.items()}
@@ -1555,7 +1557,7 @@ def connect(m, *args, **kwargs):
         # at the beginning of `connect()` passed, and so should casting the result to a Value.
         (out_path, out_member), = out_kind
         for (in_path, in_member) in in_kind:
-            def connect_value(*, out_path, in_path):
+            def connect_value(*, out_path, in_path, src_loc_at):
                 in_value = Value.cast(_traverse_path(in_path, objects))
                 out_value = Value.cast(_traverse_path(out_path, objects))
                 assert type(in_value) in (Const, Signal)
@@ -1581,16 +1583,18 @@ def connect(m, *args, **kwargs):
                     # been made.
                     return
                 # A connection that is made at this point is guaranteed to be valid.
-                connections.append(in_value.eq(out_value))
-            def connect_dimensions(dimensions, *, out_path, in_path):
+                connections.append(in_value.eq(out_value, src_loc_at=src_loc_at + 1))
+            def connect_dimensions(dimensions, *, out_path, in_path, src_loc_at):
                 if not dimensions:
-                    return connect_value(out_path=out_path, in_path=in_path)
+                    return connect_value(out_path=out_path, in_path=in_path, src_loc_at=src_loc_at)
                 dimension, *rest_of_dimensions = dimensions
                 for index in range(dimension):
                     connect_dimensions(rest_of_dimensions,
-                                       out_path=(*out_path, index), in_path=(*in_path, index))
+                        out_path=(*out_path, index), in_path=(*in_path, index),
+                        src_loc_at=src_loc_at + 1)
             assert out_member.dimensions == in_member.dimensions
-            connect_dimensions(out_member.dimensions, out_path=out_path, in_path=in_path)
+            connect_dimensions(out_member.dimensions,
+                out_path=out_path, in_path=in_path, src_loc_at=src_loc_at + 1)
 
     # If no connections were made, and there were inputs but no outputs in the
     # signatures, issue a diagnostic as this is most likely in error.
