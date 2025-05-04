@@ -67,7 +67,7 @@ class Shape(hdl.ShapeCastable):
         return c
 
     def __repr__(self):
-        return f"fixed.Shape({self._storage_shape}, f_bits={self.f_bits})"
+        return f"{'SQ' if self.signed else 'UQ'}({self.i_bits}, {self.f_bits})"
 
 
 class SQ(Shape):
@@ -260,7 +260,7 @@ class Value(hdl.ValueCastable):
         return self._binary_compare(other, '__eq__')
 
     def __repr__(self):
-        return f"fixed.{'SQ' if self.signed else 'UQ'}({self.i_bits}, {self.f_bits}) {self._target!r}"
+        return f"fixed.Value({self._shape!r}, {self._target!r})"
 
 
 class Const(Value):
@@ -326,3 +326,7 @@ class Const(Value):
 
     def as_float(self):
         return self._value / 2**self.f_bits
+
+    def __repr__(self):
+        return f"fixed.Const({self.as_float()}, {self._shape!r})"
+
