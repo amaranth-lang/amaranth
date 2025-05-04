@@ -130,8 +130,10 @@ class Value(hdl.ValueCastable):
         shape = hdl.Shape(self.i_bits + f_bits, signed=self.signed)
         if f_bits > self.f_bits:
             result = Shape(shape, f_bits)(hdl.Cat(hdl.Const(0, f_bits - self.f_bits), self.as_value()))
-        else:
+        elif f_bits < self.f_bits:
             result = Shape(shape, f_bits)(self.as_value()[self.f_bits - f_bits:])
+        else:
+            result = Shape(shape, f_bits)(self.as_value())
         return result
 
     def truncate(self, f_bits=0):
