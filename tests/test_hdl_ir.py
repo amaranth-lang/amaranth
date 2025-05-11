@@ -968,12 +968,31 @@ class OriginsTestCase(FHDLTestCase):
         self.assertIs(frag.origins[1], elab2)
         self.assertIs(frag.origins[2], m)
 
+    def test_origins_transformed_elaboratable(self):
+        renamed = DomainRenamer("sync")(elab1 := ElaboratesTo(elab2 := ElaboratesTo(m := Module())))
+        frag = Fragment.get(renamed, platform=None)
+        self.assertEqual(len(frag.origins), 4)
+        self.assertIsInstance(frag.origins, tuple)
+        self.assertIs(frag.origins[0], renamed)
+        self.assertIs(frag.origins[1], elab1)
+        self.assertIs(frag.origins[2], elab2)
+        self.assertIs(frag.origins[3], m)
+
+        renamed_nested = ElaboratesTo(elab2 := ElaboratesTo(renamed := DomainRenamer("sync")(m := Module())))
+        frag = Fragment.get(renamed_nested, platform=None)
+        self.assertEqual(len(frag.origins), 4)
+        self.assertIsInstance(frag.origins, tuple)
+        self.assertIs(frag.origins[0], renamed_nested)
+        self.assertIs(frag.origins[1], elab2)
+        self.assertIs(frag.origins[2], renamed)
+        self.assertIs(frag.origins[3], m)
+
     def test_origins_disable(self):
         inst = Instance("test")
         del inst.origins
         elab = ElaboratesTo(inst)
         frag = Fragment.get(elab, platform=None)
-        self.assertFalse(hasattr(frag, "_origins"))
+        self.assertFalse(hasattr(frag, "origins"))
 
 
 class IOBufferTestCase(FHDLTestCase):
