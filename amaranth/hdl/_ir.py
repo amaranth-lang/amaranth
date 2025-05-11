@@ -54,7 +54,7 @@ class Fragment:
         while True:
             if isinstance(obj, Fragment):
                 if hasattr(obj, "origins"):
-                    obj.origins = tuple(origins)
+                    obj.origins = tuple(origins) + (obj.origins or ())
                 return obj
             elif isinstance(obj, Elaboratable):
                 code = obj.elaborate.__code__
