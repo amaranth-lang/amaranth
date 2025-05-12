@@ -9,6 +9,11 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.5 <https://amaranth-lang.org/docs/amaranth/v0.5.5/>`_
+* `Amaranth 0.5.4 <https://amaranth-lang.org/docs/amaranth/v0.5.4/>`_
+* `Amaranth 0.5.3 <https://amaranth-lang.org/docs/amaranth/v0.5.3/>`_
+* `Amaranth 0.5.2 <https://amaranth-lang.org/docs/amaranth/v0.5.2/>`_
+* `Amaranth 0.5.1 <https://amaranth-lang.org/docs/amaranth/v0.5.1/>`_
 * `Amaranth 0.5.0 <https://amaranth-lang.org/docs/amaranth/v0.5.0/>`_
 * `Amaranth 0.4.5 <https://amaranth-lang.org/docs/amaranth/v0.4.5/>`_
 * `Amaranth 0.4.4 <https://amaranth-lang.org/docs/amaranth/v0.4.4/>`_
@@ -87,8 +92,25 @@ Platform integration changes
 * Changed: the Gowin platform now uses ``nextpnr-himbaechel`` rather than ``nextpnr-gowin``.
 
 
-Version 0.5.3 (unreleased)
-==========================
+Version 0.5.5
+=============
+
+Standard library changes
+------------------------
+
+.. currentmodule:: amaranth.lib
+
+* Added: :class:`amaranth.lib.wiring.FlippedInterface` is hashable.
+
+
+Version 0.5.4
+=============
+
+Updated to address deprecations in Yosys 0.48.
+
+
+Version 0.5.3
+=============
 
 
 Language changes
