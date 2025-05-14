@@ -1,7 +1,5 @@
-from typing import Tuple
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 import enum
-import warnings
 
 from .._utils import flatten, to_binary, final
 from .. import tracer, _unused

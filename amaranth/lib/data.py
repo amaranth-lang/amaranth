@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 from collections.abc import Mapping, Sequence
 import warnings
 import operator

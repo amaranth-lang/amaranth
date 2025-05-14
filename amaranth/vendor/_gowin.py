@@ -1,6 +1,5 @@
 from abc import abstractproperty
 from fractions import Fraction
-import math
 import re
 
 from ..hdl import *

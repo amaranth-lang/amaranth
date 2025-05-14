@@ -10,7 +10,7 @@ import warnings
 from .. import __version__
 from .._toolchain import *
 from ..hdl import *
-from ..hdl._ir import IOBufferInstance, Design
+from ..hdl._ir import Design
 from ..hdl._xfrm import DomainLowerer
 from ..lib.cdc import ResetSynchronizer
 from ..lib import io

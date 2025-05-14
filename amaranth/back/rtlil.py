@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from contextlib import contextmanager
-import io
 
 from ..utils import bits_for
 from .._utils import to_binary

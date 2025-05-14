@@ -1,7 +1,5 @@
 import operator
 
-from ._utils import deprecated
-
 
 __all__ = ["ceil_log2", "exact_log2", "bits_for"]
 
