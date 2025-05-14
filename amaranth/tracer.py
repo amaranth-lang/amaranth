@@ -1,4 +1,5 @@
 import sys
+import platform
 from opcode import opname
 
 
@@ -44,13 +45,13 @@ def get_var_name(depth=2, default=_raise_exception):
             return code.co_names[imm]
         elif opc == "STORE_FAST":
             imm |= int(code.co_code[index + 1])
-            if sys.version_info >= (3, 11):
+            if sys.version_info >= (3, 11) and platform.python_implementation() == 'CPython':
                 return code._varname_from_oparg(imm)
             else:
                 return code.co_varnames[imm]
         elif opc == "STORE_DEREF":
             imm |= int(code.co_code[index + 1])
-            if sys.version_info >= (3, 11):
+            if sys.version_info >= (3, 11) and platform.python_implementation() == 'CPython':
                 return code._varname_from_oparg(imm)
             else:
                 if imm < len(code.co_cellvars):
