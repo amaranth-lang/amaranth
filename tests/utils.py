@@ -1,7 +1,9 @@
 import os
+import platform
 import re
 import shutil
 import subprocess
+import sys
 import textwrap
 import traceback
 import unittest
@@ -69,6 +71,9 @@ class FHDLTestCase(unittest.TestCase):
         self.assertEqual(format_repr(squish_repr(repr(obj))), format_repr(squish_repr(repr_str)))
 
     def assertFormal(self, spec, ports=None, mode="bmc", depth=1):
+        if sys.version_info >= (3, 11) and platform.python_implementation() == 'PyPy':
+            self.skipTest("sby is broken with pypy-3.11 without https://github.com/YosysHQ/sby/pull/323")
+
         stack = traceback.extract_stack()
         for frame in reversed(stack):
             if os.path.dirname(__file__) not in frame.filename:
