@@ -6,7 +6,6 @@ import warnings
 import sys
 
 from .._utils import flatten
-from ..utils import bits_for
 from .. import tracer
 from ._ast import *
 from ._ast import _StatementList, _LateBoundStatement, _normalize_patterns

@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 import itertools
 import re
-import os.path
 import enum as py_enum
 
 from ..hdl import *

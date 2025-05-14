@@ -4,7 +4,6 @@ import warnings
 import linecache
 import operator
 import re
-from collections import OrderedDict
 from collections.abc import Iterable
 
 

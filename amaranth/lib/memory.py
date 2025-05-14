@@ -1,7 +1,3 @@
-import operator
-from collections import OrderedDict
-from collections.abc import MutableSequence
-
 from ..hdl import MemoryData, MemoryInstance, Shape, ShapeCastable, Const, AlreadyElaborated
 from ..utils import ceil_log2
 from .._utils import final

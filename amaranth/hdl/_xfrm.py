@@ -1,4 +1,3 @@
-import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from collections.abc import Iterable
