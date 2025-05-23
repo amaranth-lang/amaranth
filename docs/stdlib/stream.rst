@@ -121,7 +121,9 @@ In this example, the external device does not provide a way to pause data transm
                 m.d.sync += done.eq(0)
             with m.Elif(self.stream.ready):
                 m.d.sync += self.stream.valid.eq(0)
-            # Payload is discarded if `done & self.stream.valid & ~self.stream.ready`.
+            # Pending payload in `data` is discarded if:
+            # `done & self.stream.valid & ~self.stream.ready`,
+            # and a new serial transaction begins
 
             return m
 
