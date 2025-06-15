@@ -220,8 +220,8 @@ class ResetSynchronizer(Elaboratable):
 
     Platform overrides
     ------------------
-    Define the ``get_reset_sync`` platform method to override the implementation of
-    :class:`ResetSynchronizer`, e.g. to instantiate library cells directly.
+    This uses :class:`AsyncFFSynchronizer` internally and can be overridden
+    with ``get_async_ff_sync``.
     """
     def __init__(self, arst, *, domain="sync", stages=2, max_input_delay=None):
         _check_stages(stages)
