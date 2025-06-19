@@ -73,7 +73,7 @@ class Shape:
                             f"not {width}")
         if signed and width <= 0:
             raise TypeError(f"Width of a signed value must be a positive integer, not {width}")
-        self._width = width
+        self._width = operator.index(width)
         self._signed = bool(signed)
 
     @property
