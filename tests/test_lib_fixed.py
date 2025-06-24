@@ -504,3 +504,28 @@ class TestFixedValue(FHDLTestCase):
             fixed.Const(-10),
             fixed.Const(-10, fixed.SQ(5, 0))
         )
+
+        self.assertFixedEqual(
+            fixed.Const(0),
+            fixed.Const(0, fixed.UQ(1, 0))
+        )
+
+        self.assertFixedEqual(
+            fixed.Const(-1.0),
+            fixed.Const(-1.0, fixed.SQ(1, 0))
+        )
+
+        self.assertFixedEqual(
+            fixed.Const(-2.0),
+            fixed.Const(-2.0, fixed.SQ(2, 0))
+        )
+
+        self.assertFixedEqual(
+            fixed.Const(-2),
+            fixed.Const(-2, fixed.SQ(2, 0))
+        )
+
+        self.assertFixedEqual(
+            fixed.Const(2),
+            fixed.Const(2, fixed.UQ(2, 0))
+        )

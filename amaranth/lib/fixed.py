@@ -282,8 +282,8 @@ class Const(Value):
         if shape is None:
             signed = num < 0
             f_bits = bits_for(den) - 1
-            i_bits = max(0, bits_for(abs(num)) - f_bits)
-            shape = SQ(i_bits+1, f_bits) if signed else UQ(i_bits, f_bits)
+            i_bits = max(1 if signed else 0, bits_for(num) - f_bits)
+            shape = SQ(i_bits, f_bits) if signed else UQ(i_bits, f_bits)
 
         # Scale value to given precision.
         if 2**shape.f_bits > den:
