@@ -587,6 +587,8 @@ class Buffer(wiring.Component):
     def elaborate(self, platform):
         if hasattr(platform, "get_io_buffer"):
             return platform.get_io_buffer(self)
+        elif not isinstance(self._port, (SingleEndedPort, DifferentialPort, SimulationPort)):
+            raise TypeError("Cannot elaborate generic 'Buffer' with port {self._port!r}") # :nocov:
 
         m = Module()
 
@@ -632,8 +634,6 @@ class Buffer(wiring.Component):
             if self.direction in (Direction.Output, Direction.Bidir):
                 m.d.comb += self._port.o.eq(o_inv)
                 m.d.comb += self._port.oe.eq(self.oe.replicate(len(self._port)))
-        else:
-            raise TypeError("Cannot elaborate generic 'Buffer' with port {self._port!r}") # :nocov:
 
         return m
 
