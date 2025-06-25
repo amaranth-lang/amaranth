@@ -518,6 +518,11 @@ class Buffer(wiring.Component):
     ----------
     signature : :class:`Buffer.Signature`
         :py:`Signature(direction, len(port)).flip()`.
+
+    Platform overrides
+    ------------------
+    Define the :py:`get_io_buffer()` platform method to override the implementation of
+    :class:`Buffer`, e.g. to instantiate library cells directly.
     """
     class Signature(wiring.Signature):
         """Signature of a combinational I/O buffer.
@@ -690,6 +695,11 @@ class FFBuffer(wiring.Component):
     ----------
     signature : :class:`FFBuffer.Signature`
         :py:`Signature(direction, len(port)).flip()`.
+
+    Platform overrides
+    ------------------
+    Define the :py:`get_io_buffer()` platform method to override the implementation of
+    :class:`FFBuffer`, e.g. to instantiate library cells directly.
     """
     class Signature(wiring.Signature):
         """Signature of a registered I/O buffer.
@@ -898,6 +908,11 @@ class DDRBuffer(wiring.Component):
     ----------
     signature : :class:`DDRBuffer.Signature`
         :py:`Signature(direction, len(port)).flip()`.
+
+    Platform overrides
+    ------------------
+    Define the :py:`get_io_buffer()` platform method to override the implementation of
+    :class:`DDRBuffer`, e.g. to instantiate library cells directly.
     """
     class Signature(wiring.Signature):
         """Signature of a double data rate I/O buffer.
