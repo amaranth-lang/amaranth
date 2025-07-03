@@ -41,7 +41,6 @@ jobs:
         sudo add-apt-repository 'deb http://ppa.launchpad.net/sri-csl/formal-methods/ubuntu bionic main'
         sudo apt-get update
         sudo apt-get install yices2
-        pip install codecov build
         pdm install --dev
     - name: Cache YoWASP build products
       uses: actions/cache@v4
@@ -54,8 +53,7 @@ jobs:
       run: |
         pdm run test
     - name: Submit code coverage
-      run: |
-        codecov
+      uses: codecov/codecov-action@v5
 
   smoketest: # If we plug this into downstream projects, does magic smoke escape?
     runs-on: ubuntu-latest
