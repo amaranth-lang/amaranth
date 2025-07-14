@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState", "BaseEngine", "Observer"]
+__all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState", "BaseEngine", "Observer", "DummyEngine", "PrintObserver"]
 
 
 class Observer(metaclass=ABCMeta):
@@ -65,7 +65,9 @@ class BaseEngineState:
         raise NotImplementedError # :nocov:
 
     def get_signal(self, signal):
-        raise NotImplementedError # :nocov:
+        val = self._sim.read_signal(signal)
+        print(f"[DEBUG] Raw value read: {val} for signal: {signal}")
+        return int(val)
 
     def get_memory(self, memory):
         raise NotImplementedError # :nocov:
@@ -83,6 +85,26 @@ class BaseEngineState:
 
 
 class BaseEngine:
+    # add storage for observers
+    def __init__(self):
+        self._observers = []
+
+    # append observer to list
+    def add_observer(self, observer: Observer):
+        self._observers.append(observer)
+
+    def notify_signal_change(self, signal):
+        for observer in self._observers:
+            observer.update_signal(self.now, signal)
+
+    def notify_memory_change(self, memory, addr):
+        for observer in self._observers:
+            observer.update_memory(self.now, memory, addr)
+
+    def notify_close(self):
+        for observer in self._observers:
+            observer.close(self.now)
+
     @property
     def state(self) -> BaseEngineState:
         raise NotImplementedError # :nocov:
@@ -120,3 +142,39 @@ class BaseEngine:
 
     def observe(self, observer: Observer):
         raise NotImplementedError # :nocov:
+
+class DummyEngine(BaseEngine):
+    def __init__(self):
+        super().__init__()
+        self._now = 0  
+
+    @property
+    def now(self):
+        return self._now
+
+    def notify_signal_change(self, signal):
+        for obs in self._observers:
+            obs.update_signal(self.now, signal)
+
+    def notify_memory_change(self, memory, addr):
+        for obs in self._observers:
+            obs.update_memory(self.now, memory, addr)
+
+    def notify_close(self):
+        for obs in self._observers:
+            obs.close(self.now)
+
+
+class PrintObserver(Observer):
+    @property
+    def fs_per_delta(self) -> int:
+        return 1
+
+    def update_signal(self, timestamp, signal):
+        print(f"[{timestamp}] Signal changed: {signal}")
+
+    def update_memory(self, timestamp, memory, addr):
+        print(f"[{timestamp}] Memory write at {addr}")
+
+    def close(self, timestamp):
+        print(f"[{timestamp}] Simulation ended")
