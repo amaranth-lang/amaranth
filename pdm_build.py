@@ -4,14 +4,24 @@ from pdm.backend.hooks.version import SCMVersion
 from pdm.backend._vendor.packaging.version import Version
 
 
+# def format_version(version: SCMVersion) -> str:
+#     major, minor, patch = (int(n) for n in str(version.version).split(".")[:3])
+#     dirty = f"+{datetime.utcnow():%Y%m%d.%H%M%S}" if version.dirty else ""
+#     if version.distance is None:
+#         return f"{major}.{minor}.{patch}{dirty}"
+#     else:
+#         return f"{major}.{minor}.{patch}.dev{version.distance}{dirty}"
+
 def format_version(version: SCMVersion) -> str:
-    major, minor, patch = (int(n) for n in str(version.version).split(".")[:3])
+    parts = str(version.version).split(".")
+    major = int(parts[0])
+    minor = int(parts[1]) if len(parts) > 1 else 0
+    patch = int(parts[2]) if len(parts) > 2 else 0
     dirty = f"+{datetime.utcnow():%Y%m%d.%H%M%S}" if version.dirty else ""
     if version.distance is None:
         return f"{major}.{minor}.{patch}{dirty}"
     else:
         return f"{major}.{minor}.{patch}.dev{version.distance}{dirty}"
-
 
 def pdm_build_initialize(context):
     version = Version(context.config.metadata["version"])

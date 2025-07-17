@@ -15,10 +15,11 @@ license = { text = "BSD-2-clause" }
 
 requires-python = "~=3.9"
 dependencies = [
-  "jschon~=0.11.1", # for amaranth.lib.meta
+  "jschon>=0.11.1", # for amaranth.lib.meta
   "pyvcd>=0.2.2,<0.5", # for amaranth.sim.pysim
   "Jinja2~=3.0", # for amaranth.build
   "pystore>=0.1.24",
+  "pytest>=8.4.1",
 ]
 
 [project.optional-dependencies]
