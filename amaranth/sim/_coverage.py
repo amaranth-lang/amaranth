@@ -1,20 +1,17 @@
 from ._base import Observer
 
 class ToggleCoverageObserver(Observer):
-    def __init__(self, state):
+    def __init__(self, state, **kwargs):
         self.state = state
         self._prev_values = {}
-        self._toggles = {}  
+        self._toggles = {}
         self._signal_names = {}
-
-    @property
-    def fs_per_delta(self) -> int:
-        return 0
+        super().__init__(**kwargs)
 
     def update_signal(self, timestamp, signal):
         if getattr(signal, "name", "") != "out":
             return
-        
+
         sig_id = id(signal)
         curr_val = int(self.state.get_signal(signal)) #FIX???
         print(f"[DEBUG] Signal {getattr(signal, 'name', signal)} = {curr_val}")

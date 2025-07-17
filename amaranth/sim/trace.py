@@ -2,7 +2,7 @@ import itertools
 import re
 import enum as py_enum
 
-import pystore
+import nanots
 
 from ..hdl import *
 from ..hdl._mem import MemoryInstance
@@ -12,8 +12,10 @@ from ._base import *
 from ._async import *
 
 
-class TimeSeriesWriter:
-    def __init__(self, state, design, *, pystore_path, collection_name, traces=()):
+class TimeSeriesWriter(Observer):
+    def __init__(self, state, design, *, db_filename, traces=(), **kwargs):
+        super().__init__(**kwargs)
+
         self.state = state
 
         self._signal_vars = SignalDict()
@@ -21,9 +23,8 @@ class TimeSeriesWriter:
 
         self.traces = traces
 
-        pystore.set_path(pystore_path)  # ugh api fail
-        store = pystore.store('amaranth')
-        self._collection = store.collection(collection_name)
+        self.writer = nanots.Writer(db_filename, auto_reclaim=False)
+
         signal_names = SignalDict()
         memories = {}
         for fragment, fragment_info in design.fragments.items():
@@ -52,7 +53,7 @@ class TimeSeriesWriter:
                         assigned_names.add(name)
                 else:
                     for trace_signal in trace._rhs_signals():
-                        if trace_signal not in signal_names:
+                        if trace_signal and trace_signal not in signal_names:
                             if trace_signal.name not in assigned_names:
                                 name = trace_signal.name
                             else:
@@ -102,7 +103,7 @@ class TimeSeriesWriter:
                         field_name = "\\" + field_name
 
                     if vcd_var is None:
-                        self.register_var(
+                        context = writer.create_context(f"{var_scope}@{field_name}"
                             scope=var_scope, name=field_name,
                             var_type=var_type, size=var_size, init=var_init)
                         if var_size > 1:

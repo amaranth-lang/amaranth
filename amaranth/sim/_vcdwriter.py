@@ -23,9 +23,9 @@ class _VCDWriter(Observer):
     def decode_to_vcd(format, value):
         return format.format(value).expandtabs().replace(" ", "_")
 
-    def __init__(self, state, design, *, vcd_file, gtkw_file=None, traces=(), fs_per_delta=0):
+    def __init__(self, state, design, *, vcd_file, gtkw_file=None, traces=(), **kwargs):
+        super.__init__(**kwargs)
         self.state = state
-        self._fs_per_delta = fs_per_delta
 
         # Although pyvcd is a mandatory dependency, be resilient and import it as needed, so that
         # the simulator is still usable if it's not installed for some reason.

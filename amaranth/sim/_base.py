@@ -4,10 +4,12 @@ __all__ = ["BaseProcess", "BaseSignalState", "BaseMemoryState", "BaseEngineState
 
 
 class Observer(metaclass=ABCMeta):
+    def __init__(self, fs_per_delta=0):
+        self._fs_per_delta = fs_per_delta
+
     @property
-    @abstractmethod
     def fs_per_delta(self) -> int:
-        return 0
+        return self._fs_per_delta
 
     @abstractmethod
     def update_signal(self, timestamp, signal):
@@ -166,6 +168,10 @@ class DummyEngine(BaseEngine):
 
 
 class PrintObserver(Observer):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @property
     def fs_per_delta(self) -> int:
         return 1
