@@ -68,6 +68,8 @@ linkcheck_ignore = [
     r"^http://127\.0\.0\.1:8000$",
     # Picked up automatically by ReST and doesn't have an index.
     r"^https://amaranth-lang\.org/schema/$",
+    # Rejects requests from GHA infra.
+    r"^https://.+\.sourceforge\.net/"
 ]
 
 linkcheck_anchors_ignore_for_url = [
