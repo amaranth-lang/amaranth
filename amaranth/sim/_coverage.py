@@ -1,4 +1,5 @@
 from ._base import Observer
+from amaranth.sim._vcdwriter import eval_value, eval_format
 
 class ToggleCoverageObserver(Observer):
     def __init__(self, state, **kwargs):
@@ -13,21 +14,28 @@ class ToggleCoverageObserver(Observer):
             return
 
         sig_id = id(signal)
-        curr_val = int(self.state.get_signal(signal)) #FIX???
+        try:
+            val = eval_value(self.state, signal)
+        except Exception:
+            val = int(self.state.get_signal(signal))
+        try:
+            curr_val = int(val)
+        except TypeError:
+            curr_val = val
         print(f"[DEBUG] Signal {getattr(signal, 'name', signal)} = {curr_val}")
 
         if sig_id not in self._prev_values:
             self._prev_values[sig_id] = curr_val
-            self._toggles[sig_id] = {"0->1": False, "1->0": False}
+            self._toggles[sig_id] = {"0->1": 0, "1->0": 0}
             self._signal_names[sig_id] = signal.name  
             return
 
         prev_val = self._prev_values[sig_id]
 
         if prev_val == 0 and curr_val == 1:
-            self._toggles[sig_id]["0->1"] = True
+            self._toggles[sig_id]["0->1"] += 1
         elif prev_val == 1 and curr_val == 0:
-            self._toggles[sig_id]["1->0"] = True
+            self._toggles[sig_id]["1->0"] += 1
 
         self._prev_values[sig_id] = curr_val
 

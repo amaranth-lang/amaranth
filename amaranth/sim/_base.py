@@ -67,9 +67,7 @@ class BaseEngineState:
         raise NotImplementedError # :nocov:
 
     def get_signal(self, signal):
-        val = self._sim.read_signal(signal)
-        print(f"[DEBUG] Raw value read: {val} for signal: {signal}")
-        return int(val)
+        raise NotImplementedError # :nocov:
 
     def get_memory(self, memory):
         raise NotImplementedError # :nocov:

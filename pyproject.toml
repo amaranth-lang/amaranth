@@ -1,9 +1,56 @@
 # Project metadata
 
+
 [tool.pdm.version]
 source = "scm"
 version_format = "pdm_build:format_version"
 
+[tool.pdm.build]
+# If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
+# a git worktree cached by tools like poetry), it can have an empty `nmigen` directory left over,
+# which causes a hard error because setuptools cannot determine the top-level package.
+# Add a workaround to improve experience for people upgrading from old checkouts.
+includes = ["amaranth/"]
+
+source-includes = [
+  ".gitignore",
+  ".coveragerc",
+  ".env.toolchain",
+  "CONTRIBUTING.txt",
+]
+
+# Development workflow configuration
+
+[tool.pdm.dev-dependencies]
+# This version requirement needs to be synchronized with the one in pyproject.toml above!
+docs = [
+  "sphinx~=7.1",
+  "sphinxcontrib-platformpicker~=1.4",
+  "sphinxcontrib-yowasp-wavedrom==1.8", # exact version to avoid changes in rendering
+  "sphinx-rtd-theme~=2.0",
+  "sphinx-autobuild",
+]
+examples = [
+  "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git"
+]
+
+[tool.pdm.scripts]
+_.env_file = ".env.toolchain"
+
+test.composite = ["test-code", "test-docs", "coverage-xml"]
+test-code.env = {PYTHONWARNINGS = "error"}
+test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"
+test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
+
+document.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
+document-live.cmd = "sphinx-autobuild docs/ docs/_build/ --watch amaranth"
+document-linkcheck.cmd = "sphinx-build docs/ docs/_linkcheck/ -b linkcheck"
+
+coverage-text.cmd = "python -m coverage report"
+coverage-html.cmd = "python -m coverage html"
+coverage-xml.cmd  = "python -m coverage xml"
+
+extract-schemas.call = "amaranth.lib.meta:_extract_schemas('amaranth', base_uri='https://amaranth-lang.org/schema/amaranth')"
 [project]
 dynamic = ["version"]
 
@@ -48,53 +95,10 @@ amaranth-rpc = "amaranth.rpc:main"
 requires = ["pdm-backend~=2.3.0"]
 build-backend = "pdm.backend"
 
-[tool.pdm.build]
-# If amaranth 0.3 is checked out with git (e.g. as a part of a persistent editable install or
-# a git worktree cached by tools like poetry), it can have an empty `nmigen` directory left over,
-# which causes a hard error because setuptools cannot determine the top-level package.
-# Add a workaround to improve experience for people upgrading from old checkouts.
-includes = ["amaranth/"]
 
-source-includes = [
-  ".gitignore",
-  ".coveragerc",
-  ".env.toolchain",
-  "CONTRIBUTING.txt",
-]
-
-# Development workflow configuration
-
-[tool.pdm.dev-dependencies]
-# This version requirement needs to be synchronized with the one in pyproject.toml above!
+[dependency-groups]
 test = [
-  "yowasp-yosys>=0.40",
-  "coverage",
+    "yowasp-yosys>=0.40",
+    "coverage",
+    "pytest>=8.4.1",
 ]
-docs = [
-  "sphinx~=7.1",
-  "sphinxcontrib-platformpicker~=1.4",
-  "sphinxcontrib-yowasp-wavedrom==1.8", # exact version to avoid changes in rendering
-  "sphinx-rtd-theme~=2.0",
-  "sphinx-autobuild",
-]
-examples = [
-  "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git"
-]
-
-[tool.pdm.scripts]
-_.env_file = ".env.toolchain"
-
-test.composite = ["test-code", "test-docs", "coverage-xml"]
-test-code.env = {PYTHONWARNINGS = "error"}
-test-code.cmd = "python -m coverage run -m unittest discover -t . -s tests -v"
-test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
-
-document.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
-document-live.cmd = "sphinx-autobuild docs/ docs/_build/ --watch amaranth"
-document-linkcheck.cmd = "sphinx-build docs/ docs/_linkcheck/ -b linkcheck"
-
-coverage-text.cmd = "python -m coverage report"
-coverage-html.cmd = "python -m coverage html"
-coverage-xml.cmd  = "python -m coverage xml"
-
-extract-schemas.call = "amaranth.lib.meta:_extract_schemas('amaranth', base_uri='https://amaranth-lang.org/schema/amaranth')"
