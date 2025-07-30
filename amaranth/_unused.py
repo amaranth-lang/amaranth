@@ -18,7 +18,9 @@ class MustUse:
     def __new__(cls, *args, src_loc_at=0, **kwargs):
         frame = sys._getframe(1 + src_loc_at)
         self = super().__new__(cls)
-        self._MustUse__used    = False
+
+        self._MustUse__used  = False
+        self._MustUse__frame = frame
         self._MustUse__context = dict(
             filename=frame.f_code.co_filename,
             lineno=frame.f_lineno,
@@ -31,7 +33,7 @@ class MustUse:
         if getattr(self._MustUse__warning, "_MustUse__silence", False):
             return
         if hasattr(self, "_MustUse__used") and not self._MustUse__used:
-            if get_linter_option(self._MustUse__context["filename"],
+            if get_linter_option(self._MustUse__frame,
                                  self._MustUse__warning.__qualname__, bool, True):
                 warnings.warn_explicit(
                     f"{self!r} created but never used", self._MustUse__warning,
