@@ -64,6 +64,7 @@ Standard library changes
 
 * Added: :py:`payload_init=` argument in :class:`amaranth.lib.stream.Signature`.
 * Added: :meth:`enum.EnumView.matches`. (`RFC 71`_)
+* Added: :class:`data.Field`, :class:`data.Layout` and :class:`data.Const` are hashable.
 * Changed: (deprecated in 0.5.1) providing :meth:`io.PortLike.__add__` is now mandatory. (`RFC 69`_)
 * Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
