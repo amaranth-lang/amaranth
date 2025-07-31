@@ -65,6 +65,9 @@ class Field:
         """
         return Shape.cast(self.shape).width
 
+    def __hash__(self):
+        return hash((self.shape, self.offset))
+
     def __eq__(self, other):
         """Compare fields.
 
@@ -165,6 +168,11 @@ class Layout(ShapeCastable, metaclass=ABCMeta):
             :py:`unsigned(self.size)`
         """
         return unsigned(self.size)
+
+    def __hash__(self):
+        if not hasattr(self, "_Layout__hash"):
+            setattr(self, "_Layout__hash", hash((self.size, frozenset(iter(self)))))
+        return self.__hash
 
     def __eq__(self, other):
         """Compare layouts.
@@ -1122,6 +1130,9 @@ class Const(ValueCastable):
             raise TypeError(
                 f"`len()` can only be used on constants of array layout, not {self.__layout!r}")
         return self.__layout.length
+
+    def __hash__(self):
+        return hash((self.__target, self.__layout))
 
     def __eq__(self, other):
         if isinstance(other, View) and self.__layout == other._View__layout:

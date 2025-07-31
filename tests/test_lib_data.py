@@ -74,6 +74,9 @@ class FieldTestCase(TestCase):
         with self.assertRaises(AttributeError):
             data.Field(1, 0).offset = 1
 
+    def test_hash(self):
+        hash(data.Field(unsigned(2), 1))
+
 
 class StructLayoutTestCase(FHDLTestCase):
     def test_construct(self):
@@ -519,6 +522,9 @@ class LayoutTestCase(FHDLTestCase):
         })
         self.assertEqual(Signal(sl).as_value().init, 0)
         self.assertEqual(Signal(sl, init={"a": 0b1, "b": 0b10}).as_value().init, 5)
+
+    def test_hash(self):
+        hash(data.StructLayout({}))
 
 
 class ViewTestCase(FHDLTestCase):
@@ -1166,6 +1172,9 @@ class ConstTestCase(FHDLTestCase):
     def test_repr(self):
         s1 = data.Const(data.StructLayout({"a": unsigned(2)}), 2)
         self.assertRepr(s1, "Const(StructLayout({'a': unsigned(2)}), 2)")
+
+    def test_hash(self):
+        hash(data.Const(data.StructLayout({"a": unsigned(2)}), 2))
 
 
 class StructTestCase(FHDLTestCase):
