@@ -85,9 +85,9 @@ def get_linter_options(filename):
     return dict()
 
 
-def get_linter_option(frame, name, type, default):
+def collate_linter_options(frame):
     """
-    Get given linter option for a given stack frame. This iterates down the frames, collating options of the form:
+    Get all linter options for a given stack frame. This iterates down the frames, collating options of the form:
 
     .. code::
         # amaranth: {name}=value
@@ -108,7 +108,10 @@ def get_linter_option(frame, name, type, default):
             break
         else:
             frame = frame.f_back
+    return options
 
+
+def get_linter_option(options, name, type, default):
     if name not in options:
         return default
 

@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-from ._utils import get_linter_option
+from ._utils import get_linter_option, collate_linter_options
 
 
 __all__ = ["UnusedMustUse", "MustUse"]
@@ -20,7 +20,7 @@ class MustUse:
         self = super().__new__(cls)
 
         self._MustUse__used  = False
-        self._MustUse__frame = frame
+        self._MustUse__options = collate_linter_options(frame)
         self._MustUse__context = dict(
             filename=frame.f_code.co_filename,
             lineno=frame.f_lineno,
@@ -33,7 +33,7 @@ class MustUse:
         if getattr(self._MustUse__warning, "_MustUse__silence", False):
             return
         if hasattr(self, "_MustUse__used") and not self._MustUse__used:
-            if get_linter_option(self._MustUse__frame,
+            if get_linter_option(self._MustUse__options,
                                  self._MustUse__warning.__qualname__, bool, True):
                 warnings.warn_explicit(
                     f"{self!r} created but never used", self._MustUse__warning,
