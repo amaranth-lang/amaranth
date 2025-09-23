@@ -45,9 +45,9 @@ class GowinPlatform(TemplatedPlatform):
 
     def parse_part(self):
         # These regular expressions match all >900 parts of Gowin device_info.csv
-        reg_series    = r"(GW[12]{1}[AN]{1}[EFNRSZ]{0,3})-"
+        reg_series    = r"(GW[125]{1}[AN]{1}[EFNRSZT]{0,3})-"
         reg_voltage   = r"(ZV|EV|LV|LX|UV|UX)"
-        reg_size      = r"(1|2|4|9|18|55)"
+        reg_size      = r"(1|2|4|9|18|55|138)"
         reg_subseries = r"(?:(B|C|S|X|P5)?)"
         reg_package   = r"((?:PG|UG|EQ|LQ|MG|M|QN|CS|FN)(?:\d+)(?:P?)(?:A|E|M|CF|C|D|G|H|F|S|T|U|X)?)"
         reg_speed     = r"((?:C\d{1}/I\d{1})|ES|A\d{1}|I\d{1})"
