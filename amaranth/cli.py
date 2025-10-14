@@ -22,16 +22,16 @@ def main_parser(parser=None):
     p_generate.add_argument("--no-src", dest="emit_src", default=True, action="store_false",
         help="suppress generation of source location attributes")
     p_generate.add_argument("generate_file",
-        metavar="FILE", type=argparse.FileType("w"), nargs="?",
+        metavar="FILE", type=str, nargs="?",
         help="write generated code to FILE")
 
     p_simulate = p_action.add_parser(
         "simulate", help="simulate the design")
     p_simulate.add_argument("-v", "--vcd-file",
-        metavar="VCD-FILE", type=argparse.FileType("w"),
+        metavar="VCD-FILE", type=str,
         help="write execution trace to VCD-FILE")
     p_simulate.add_argument("-w", "--gtkw-file",
-        metavar="GTKW-FILE", type=argparse.FileType("w"),
+        metavar="GTKW-FILE", type=str,
         help="write GTKWave configuration to GTKW-FILE")
     p_simulate.add_argument("-p", "--period", dest="sync_period",
         metavar="TIME", type=float, default=1e-6,
@@ -47,11 +47,11 @@ def main_runner(parser, args, design, platform=None, name="top", ports=None):
     if args.action == "generate":
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
-            if args.generate_file.name.endswith(".il"):
+            if args.generate_file.endswith(".il"):
                 generate_type = "il"
-            if args.generate_file.name.endswith(".cc"):
+            if args.generate_file.endswith(".cc"):
                 generate_type = "cc"
-            if args.generate_file.name.endswith(".v"):
+            if args.generate_file.endswith(".v"):
                 generate_type = "v"
         if generate_type is None:
             parser.error("Unable to auto-detect language, specify explicitly with -t/--type")
@@ -62,7 +62,8 @@ def main_runner(parser, args, design, platform=None, name="top", ports=None):
         if generate_type == "v":
             output = verilog.convert(design, platform=platform, name=name, ports=ports, emit_src=args.emit_src)
         if args.generate_file:
-            args.generate_file.write(output)
+            with open(args.generate_file, "w") as f:
+                f.write(output)
         else:
             print(output)
 
