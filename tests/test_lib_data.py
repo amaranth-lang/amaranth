@@ -1,6 +1,10 @@
 from enum import Enum
 import operator
 from unittest import TestCase
+try:
+    import annotationlib # py3.14+
+except ImportError:
+    annotationlib = None # py3.13-
 
 from amaranth.hdl import *
 from amaranth.lib import data
@@ -1319,7 +1323,11 @@ class StructTestCase(FHDLTestCase):
             c: str = "x"
 
         self.assertEqual(data.Layout.cast(S), data.StructLayout({"a": unsigned(1)}))
-        self.assertEqual(S.__annotations__, {"b": int, "c": str})
+        if annotationlib is not None:
+            annotations = annotationlib.get_annotations(S, format=annotationlib.Format.VALUE)
+        else:
+            annotations = S.__annotations__
+        self.assertEqual(annotations, {"b": int, "c": str})
         self.assertEqual(S.c, "x")
 
     def test_signal_like(self):
