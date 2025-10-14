@@ -2,6 +2,10 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence
 import warnings
 import operator
+try:
+    import annotationlib # py3.14+
+except ImportError:
+    annotationlib = None # py3.13-
 
 from amaranth._utils import final
 from amaranth.hdl import *
@@ -1208,7 +1212,19 @@ class Const(ValueCastable):
 
 class _AggregateMeta(ShapeCastable, type):
     def __new__(metacls, name, bases, namespace):
-        if "__annotations__" not in namespace:
+        annotations = None
+        skipped_annotations = set()
+        wrapped_annotate = None
+        if annotationlib is not None:
+            if annotate := annotationlib.get_annotate_from_class_namespace(namespace):
+                annotations = annotationlib.call_annotate_function(
+                    annotate, format=annotationlib.Format.VALUE)
+                def wrapped_annotate(format):
+                    annos = annotationlib.call_annotate_function(annotate, format, owner=cls)
+                    return {k: v for k, v in annos.items() if k not in skipped_annotations}
+        else:
+            annotations = namespace.get("__annotations__")
+        if annotations is None:
             # This is a base class without its own layout. It is not shape-castable, and cannot
             # be instantiated. It can be used to share behavior.
             return type.__new__(metacls, name, bases, namespace)
@@ -1217,13 +1233,14 @@ class _AggregateMeta(ShapeCastable, type):
             # be instantiated. It can also be subclassed, and used to share layout and behavior.
             layout  = dict()
             default = dict()
-            for field_name in {**namespace["__annotations__"]}:
+            for field_name in {**annotations}:
                 try:
-                    Shape.cast(namespace["__annotations__"][field_name])
+                    Shape.cast(annotations[field_name])
                 except TypeError:
                     # Not a shape-castable annotation; leave as-is.
                     continue
-                layout[field_name] = namespace["__annotations__"].pop(field_name)
+                skipped_annotations.add(field_name)
+                layout[field_name] = annotations.pop(field_name)
                 if field_name in namespace:
                     default[field_name] = namespace.pop(field_name)
             cls = type.__new__(metacls, name, bases, namespace)
@@ -1234,6 +1251,8 @@ class _AggregateMeta(ShapeCastable, type):
                                      .format(", ".join(default.keys())))
             cls.__layout  = cls.__layout_cls(layout)
             cls.__default = default
+            if wrapped_annotate is not None:
+                cls.__annotate__ = wrapped_annotate
             return cls
         else:
             # This is a class that has a base class with a layout and annotations. Such a class
