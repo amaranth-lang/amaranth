@@ -16,14 +16,13 @@ jobs:
         - '3.11'
         - '3.12'
         - '3.13'
+        - '3.14'
         - 'pypy-3.9'
         - 'pypy-3.10'
         - 'pypy-3.11'
         allow-failure:
         - false
         include:
-        - python-version: '3.14'
-          allow-failure: true
         - python-version: '3.15-dev'
           allow-failure: true
     continue-on-error: ${{ matrix.allow-failure }}
