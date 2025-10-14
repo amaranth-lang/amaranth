@@ -2,6 +2,10 @@ from collections.abc import Mapping
 import enum
 import re
 import warnings
+try:
+    import annotationlib # py3.14+
+except ImportError:
+    annotationlib = None # py3.13-
 
 from .. import tracer
 from ..hdl._ast import Shape, ShapeCastable, Const, Signal, Value
@@ -1669,7 +1673,14 @@ class Component(Elaboratable):
         cls = type(self)
         members = {}
         for base in reversed(cls.mro()[:cls.mro().index(Component)]):
-            for name, annot in base.__dict__.get("__annotations__", {}).items():
+            annotations = None
+            if annotationlib is not None:
+                if annotate := annotationlib.get_annotate_from_class_namespace(base.__dict__):
+                    annotations = annotationlib.call_annotate_function(
+                        annotate, format=annotationlib.Format.VALUE)
+            if annotations is None:
+                annotations = base.__dict__.get("__annotations__", {})
+            for name, annot in annotations.items():
                 if name.startswith("_"):
                     continue
                 if type(annot) is Member:
