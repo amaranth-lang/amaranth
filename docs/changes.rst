@@ -9,6 +9,7 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.8 <https://amaranth-lang.org/docs/amaranth/v0.5.8/>`_
 * `Amaranth 0.5.7 <https://amaranth-lang.org/docs/amaranth/v0.5.7/>`_
 * `Amaranth 0.5.6 <https://amaranth-lang.org/docs/amaranth/v0.5.6/>`_
 * `Amaranth 0.5.5 <https://amaranth-lang.org/docs/amaranth/v0.5.5/>`_
@@ -93,6 +94,12 @@ Platform integration changes
 .. currentmodule:: amaranth.vendor
 
 * Changed: the Gowin platform now uses ``nextpnr-himbaechel`` rather than ``nextpnr-gowin``.
+
+
+Version 0.5.8
+=============
+
+Updated to address compatibility with Python 3.14.
 
 
 Version 0.5.7
