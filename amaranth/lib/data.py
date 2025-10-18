@@ -775,6 +775,9 @@ class View(ValueCastable):
         :class:`.Assign`
             :py:`self.as_value().eq(other)`
         """
+        if isinstance(other, ValueCastable):
+            if not self.shape() == Layout.cast(other.shape()):
+                raise TypeError(f"Cannot assign value with shape {other.shape()} to view with layout {self.shape()}")
         return self.as_value().eq(other)
 
     def __getitem__(self, key):

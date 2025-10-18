@@ -248,6 +248,9 @@ class EnumView(ValueCastable):
         :class:`Assign`
             ``self.as_value().eq(other)``
         """
+        if isinstance(other, ValueCastable):
+            if not self.shape() == other.shape():
+                raise TypeError(f"Cannot assign value with shape {other.shape()} to value with shape {self.shape()}")
         return self.as_value().eq(other)
 
     def __add__(self, other):
