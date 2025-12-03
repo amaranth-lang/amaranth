@@ -193,6 +193,38 @@ jobs:
           branch: main
           folder: docs/
           target-folder: docs/amaranth/${{ github.ref_name }}/
+      - name: Generate list of versions
+        if: ${{ github.event_name == 'push' && (github.event.ref == 'refs/heads/main' || startsWith(github.event.ref, 'refs/tags/v') && !contains(github.event.ref, 'dev')) }}
+        run: |
+          git clone --depth=1 git@github.com:amaranth-lang/amaranth-lang.github.io.git ~/amaranth-lang.github.io
+          cd ~/amaranth-lang.github.io/docs/amaranth/
+
+          (
+          venv_path=$(mktemp -d)
+          python3 -m venv "$venv_path"
+          source "$venv_path"/bin/activate
+          pip install packaging
+          python >versions.json <<EOF
+          import json
+          from pathlib import Path
+          from packaging.version import Version
+
+          versions = Path('.').glob('v*')
+          versions = (path.name[1:] for path in versions if path.is_dir())
+          versions = sorted(versions, key=Version, reverse=True)
+          versions = ({"name": version, "root_url": f"/docs/amaranth/v{version}/"} for version in versions)
+          print(json.dumps(list(versions), indent=2))
+          EOF
+          )
+
+          git add versions.json
+          if ! git diff-index --quiet --cached HEAD; then
+            git \
+              -c user.name="$GITHUB_ACTOR" \
+              -c user.email="$GITHUB_ACTOR@users.noreply.github.com" \
+              commit -m "Update docs/amaranth/versions.json"
+            git push
+          fi
 
   publish-docs-dev:
     needs: document
