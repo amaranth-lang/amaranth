@@ -199,25 +199,41 @@ jobs:
           git clone --depth=1 git@github.com:amaranth-lang/amaranth-lang.github.io.git ~/amaranth-lang.github.io
           cd ~/amaranth-lang.github.io/docs/amaranth/
 
-          (
-          venv_path=$(mktemp -d)
+          venv_path=~/.generate-versions-json-venv
           python3 -m venv "$venv_path"
           source "$venv_path"/bin/activate
           pip install packaging
-          python >versions.json <<EOF
+
+          python <<EOF
+          import re
           import json
           from pathlib import Path
           from packaging.version import Version
 
-          versions = Path('.').glob('v*')
-          versions = (path.name[1:] for path in versions if path.is_dir())
-          versions = sorted(versions, key=Version, reverse=True)
-          versions = ({"name": version, "root_url": f"/docs/amaranth/v{version}/"} for version in versions)
-          print(json.dumps(list(versions), indent=2))
-          EOF
-          )
+          versions = []
+          for version_dir in [Path("latest"), *Path(".").glob("v*")]:
+            if not version_dir.is_dir():
+              continue
+            with open(version_dir / "_static" / "documentation_options.js", "r") as f:
+              doc_options = f.read()
+            match = re.search(r"""VERSION:\s+(['"])(.+?)\1""", doc_options)
+            if match is None:
+              continue
+            versions.append({
+              "name": match.group(2),
+              "root_url": f"/docs/amaranth/{version_dir.name}/",
+            })
 
-          git add versions.json
+          versions.sort(key=lambda x: Version(x["name"]), reverse=True)
+
+          if len(versions) > 0:
+            with open("versions.json", "w") as f:
+              json.dump(versions, f, indent=2)
+          else:
+            Path("versions.json").unlink()
+          EOF
+
+          [[ -f versions.json ]] && git add versions.json || git rm versions.json || true
           if ! git diff-index --quiet --cached HEAD; then
             git \
               -c user.name="$GITHUB_ACTOR" \

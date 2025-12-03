@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   function insertVersionSwitch(versions) {
+    let currentVersion = DOCUMENTATION_OPTIONS.VERSION;
+    if (!versions.some(({ name }) => name === currentVersion)) {
+      return;
+    }
+
     let versionElement = document.querySelector('.wy-side-nav-search > .version');
     if (!versionElement) return;
 
@@ -71,14 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     `);
     document.adoptedStyleSheets.push(cssStyleSheet);
-
-    let currentVersion = DOCUMENTATION_OPTIONS.VERSION;
-    if (!versions.some(({ name }) => name === currentVersion)) {
-      versions = [
-        { name: currentVersion, root_url: contentRoot },
-        ...versions,
-      ];
-    }
 
     for (let { name, root_url: rootURL } of versions) {
       rootURL = new URL(rootURL, window.location.href);
