@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.adoptedStyleSheets.push(cssStyleSheet);
 
     let currentVersion = DOCUMENTATION_OPTIONS.VERSION;
-    if (!versions.includes(currentVersion)) {
+    if (!versions.some(({ name }) => name === currentVersion)) {
       versions = [
         { name: currentVersion, root_url: contentRoot },
         ...versions,
