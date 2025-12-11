@@ -1,4 +1,6 @@
+from contextlib import contextmanager
 import inspect
+import sys
 import warnings
 
 from .._utils import deprecated
@@ -341,6 +343,33 @@ class Simulator:
         while self._engine.now < deadline.femtoseconds:
             self.advance()
 
+    @contextmanager
+    def _replace_asyncgen_hooks(self):
+        # Async generators require hooks for lifetime management. Replace existing hooks with ours
+        # for the duration of this context manager.
+
+        def firstiter(agen):
+            # Prevent any outer event loop from seeing this generator.
+            pass
+
+        def finalizer(agen):
+            # Generators can't be closed if they are currently running.
+            if not agen.ag_running:
+                # Try to run aclose() once, but skip it if it awaits anything.
+                try:
+                    coroutine = agen.aclose()
+                    coroutine.send(None)
+                except StopIteration:
+                    # Success
+                    return
+
+        old_hooks = sys.get_asyncgen_hooks()
+        sys.set_asyncgen_hooks(firstiter=firstiter, finalizer=finalizer)
+        try:
+            yield
+        finally:
+            sys.set_asyncgen_hooks(*old_hooks)
+
     def advance(self):
         """Advance the simulation.
 
@@ -356,7 +385,8 @@ class Simulator:
         :py:`False` otherwise.
         """
         self._running = True
-        return self._engine.advance()
+        with self._replace_asyncgen_hooks():
+            return self._engine.advance()
 
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=(), fs_per_delta=0):
         # `fs_per_delta`` is not currently documented; it is not clear if we want to expose
