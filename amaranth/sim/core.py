@@ -191,6 +191,15 @@ class Simulator:
         which they were added. If two testbenches share state, or must manipulate the design in
         a coordinated way, they may rely on this execution order for correctness.
 
+        .. warning::
+
+            On Python 3.12 and earlier, async generators (:py:`async` functions that also
+            :py:`yield`) are not cleaned up reliably when the simulator exits. To make sure context
+            managers or :py:`finally` blocks inside async generators run properly, use Python 3.13
+            or later. See `PEP-525`_ for more information on async generator finalization.
+
+            .. _PEP-525: https://peps.python.org/pep-0525/#finalization
+
         Raises
         ------
         :exc:`RuntimeError`
@@ -247,6 +256,15 @@ class Simulator:
             if it is not intended to be a part of a circuit), with access to it synchronized using
             :py:`await ctx.tick().sample(...)`. Such state is visible in a waveform viewer,
             simplifying debugging.
+
+        .. warning::
+
+            On Python 3.12 and earlier, async generators (:py:`async` functions that also
+            :py:`yield`) are not cleaned up reliably when the simulator exits. To make sure context
+            managers or :py:`finally` blocks inside async generators run properly, use Python 3.13
+            or later. See `PEP-525`_ for more information on async generator finalization.
+
+            .. _PEP-525: https://peps.python.org/pep-0525/#finalization
 
         Raises
         ------
