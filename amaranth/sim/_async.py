@@ -362,15 +362,12 @@ class TickTrigger:
                 raise TypeError(f"The shape of a condition may only be `signed` or `unsigned`, "
                                 f"not {shape!r}")
         tick = self.sample(condition).__aiter__()
-        try:
-            done = False
-            while not done:
-                clk, rst, *values, done = await tick.__anext__()
-                if rst:
-                    raise DomainReset
-            return tuple(values)
-        finally:
-            await tick.aclose()
+        done = False
+        while not done:
+            clk, rst, *values, done = await tick.__anext__()
+            if rst:
+                raise DomainReset
+        return tuple(values)
 
     async def repeat(self, count: int):
         """Repeat this trigger a specific number of times.
@@ -403,15 +400,12 @@ class TickTrigger:
         if count <= 0:
             raise ValueError(f"Repeat count must be a positive integer, not {count!r}")
         tick = self.__aiter__()
-        try:
-            for _ in range(count):
-                clk, rst, *values = await tick.__anext__()
-                if rst:
-                    raise DomainReset
-                assert clk
-            return tuple(values)
-        finally:
-            await tick.aclose()
+        for _ in range(count):
+            clk, rst, *values = await tick.__anext__()
+            if rst:
+                raise DomainReset
+            assert clk
+        return tuple(values)
 
     def _collect_trigger(self):
         clk_polarity = (1 if self._domain.clk_edge == "pos" else 0)
