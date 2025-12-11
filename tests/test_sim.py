@@ -2077,6 +2077,16 @@ class SimulatorRegressionTestCase(FHDLTestCase):
         sim.add_clock(Period(s=4))
         sim.run()
 
+    def test_abandon_repeat(self):
+        m = Module()
+        toggle = Signal(1)
+        m.d.sync += toggle.eq(~toggle)
+        sim = Simulator(m)
+        async def process(ctx):
+            await ctx.tick().repeat(100)
+        sim.add_process(process)
+        sim.run()
+
     def test_trigger_wrong(self):
         a = Signal(4)
         m = Module()
