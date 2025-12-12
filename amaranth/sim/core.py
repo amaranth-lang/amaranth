@@ -1,4 +1,6 @@
+from contextlib import contextmanager
 import inspect
+import sys
 import warnings
 
 from .._utils import deprecated
@@ -189,6 +191,15 @@ class Simulator:
         which they were added. If two testbenches share state, or must manipulate the design in
         a coordinated way, they may rely on this execution order for correctness.
 
+        .. warning::
+
+            On Python 3.12 and earlier, async generators (:py:`async` functions that also
+            :py:`yield`) are not cleaned up reliably when the simulator exits. To make sure context
+            managers or :py:`finally` blocks inside async generators run properly, use Python 3.13
+            or later. See `PEP-525`_ for more information on async generator finalization.
+
+            .. _PEP-525: https://peps.python.org/pep-0525/#finalization
+
         Raises
         ------
         :exc:`RuntimeError`
@@ -245,6 +256,15 @@ class Simulator:
             if it is not intended to be a part of a circuit), with access to it synchronized using
             :py:`await ctx.tick().sample(...)`. Such state is visible in a waveform viewer,
             simplifying debugging.
+
+        .. warning::
+
+            On Python 3.12 and earlier, async generators (:py:`async` functions that also
+            :py:`yield`) are not cleaned up reliably when the simulator exits. To make sure context
+            managers or :py:`finally` blocks inside async generators run properly, use Python 3.13
+            or later. See `PEP-525`_ for more information on async generator finalization.
+
+            .. _PEP-525: https://peps.python.org/pep-0525/#finalization
 
         Raises
         ------
@@ -341,6 +361,33 @@ class Simulator:
         while self._engine.now < deadline.femtoseconds:
             self.advance()
 
+    @contextmanager
+    def _replace_asyncgen_hooks(self):
+        # Async generators require hooks for lifetime management. Replace existing hooks with ours
+        # for the duration of this context manager.
+
+        def firstiter(agen):
+            # Prevent any outer event loop from seeing this generator.
+            pass
+
+        def finalizer(agen):
+            # Generators can't be closed if they are currently running.
+            if not agen.ag_running:
+                # Try to run aclose() once, but skip it if it awaits anything.
+                try:
+                    coroutine = agen.aclose()
+                    coroutine.send(None)
+                except StopIteration:
+                    # Success
+                    return
+
+        old_hooks = sys.get_asyncgen_hooks()
+        sys.set_asyncgen_hooks(firstiter=firstiter, finalizer=finalizer)
+        try:
+            yield
+        finally:
+            sys.set_asyncgen_hooks(*old_hooks)
+
     def advance(self):
         """Advance the simulation.
 
@@ -356,7 +403,8 @@ class Simulator:
         :py:`False` otherwise.
         """
         self._running = True
-        return self._engine.advance()
+        with self._replace_asyncgen_hooks():
+            return self._engine.advance()
 
     def write_vcd(self, vcd_file, gtkw_file=None, *, traces=(), fs_per_delta=0):
         # `fs_per_delta`` is not currently documented; it is not clear if we want to expose
