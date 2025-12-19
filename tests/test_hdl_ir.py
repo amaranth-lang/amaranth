@@ -787,7 +787,7 @@ class InstanceTestCase(FHDLTestCase):
                 (output 'o1' 1.0:4)
                 (output 'o2' 1.4:8)
             ))
-            (cell 1 0 (instance 'test' 'U$0'
+            (cell 1 0 (instance 'test' 'test$0'
                 (output 'o' 0:8)
             ))
         )
@@ -831,7 +831,7 @@ class InstanceTestCase(FHDLTestCase):
                 (io inout 'io2' 1.0:4)
             )
             (cell 0 0 (top))
-            (cell 1 0 (instance 'test' 'U$0'
+            (cell 1 0 (instance 'test' 'test$0'
                 (io inout 'io' (io-cat 0.0:4 1.0:4))
             ))
         )
@@ -948,6 +948,30 @@ class NamesTestCase(FHDLTestCase):
         self.assertEqual(design.fragments[f].name, ("top",))
         self.assertEqual(design.fragments[a1_f].name, ("top", "a"))
         self.assertEqual(design.fragments[a2_f].name, ("top", "a$1"))
+
+    def test_assign_names_to_fragments_type_name(self):
+        f = Fragment()
+        f.add_subfragment(a1_f := Fragment.get(ElaboratesTo(Fragment()), None))
+        f.add_subfragment(a2_f := Fragment.get(Instance("inst"), None))
+
+        design = Design(f, ports=[], hierarchy=("top",))
+        self.assertEqual(design.fragments[f].name, ("top",))
+        self.assertEqual(design.fragments[a1_f].name, ("top", "ElaboratesTo$0"))
+        self.assertEqual(design.fragments[a2_f].name, ("top", "inst$1"))
+
+    def test_assign_names_to_fragments_type_name_duplicate(self):
+        f = Fragment()
+        f.add_subfragment(a1_f := Fragment.get(ElaboratesTo(Fragment()), None))
+        f.add_subfragment(a2_f := Fragment.get(ElaboratesTo(Fragment()), None))
+        f.add_subfragment(a3_f := Fragment.get(Instance("inst"), None))
+        f.add_subfragment(a4_f := Fragment.get(Instance("inst"), None))
+
+        design = Design(f, ports=[], hierarchy=("top",))
+        self.assertEqual(design.fragments[f].name, ("top",))
+        self.assertEqual(design.fragments[a1_f].name, ("top", "ElaboratesTo$0"))
+        self.assertEqual(design.fragments[a2_f].name, ("top", "ElaboratesTo$1"))
+        self.assertEqual(design.fragments[a3_f].name, ("top", "inst$2"))
+        self.assertEqual(design.fragments[a4_f].name, ("top", "inst$3"))
 
 
 class ElaboratesTo(Elaboratable):

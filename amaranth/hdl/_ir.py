@@ -240,6 +240,22 @@ class Fragment:
         # Create design and let it do the rest.
         return Design(fragment, ports, hierarchy=hierarchy)
 
+    def name_from_type(self):
+        """Derive a name for this ``Fragment`` from its type or that of the Elaboratable it originates from
+
+        Falls back to "U" if no name can be derived.
+        """
+        outermost_type_name = "U"
+
+        # If our fragment has been created via elaboration,
+        # obtain the name of the outermost Elaboratable
+        # (i.e. the first in origins)
+        # If it weren't created via elaboration, self.origins would be None
+        if self.origins is not None and len(self.origins) >= 1:
+            outermost_type_name = type(self.origins[0]).__name__
+
+        return outermost_type_name
+
 
 class Instance(Fragment):
     def __init__(self, type, *args, src_loc=None, src_loc_at=0, **kwargs):
@@ -285,6 +301,10 @@ class Instance(Fragment):
                 raise NameError("Instance keyword argument {}={!r} does not start with one of "
                                 "\"a_\", \"p_\", \"i_\", \"o_\", or \"io_\""
                                 .format(kw, arg))
+
+
+    def name_from_type(self):
+        return self.type
 
 
 class IOBufferInstance(Fragment):
@@ -565,7 +585,11 @@ class Design:
         the same signal used in a different fragment may get a different name.
 
         Subfragments may not necessarily have a name. This method assigns every such subfragment
-        a name, ``U$<number>``, where ``<number>`` is based on its location in the hierarchy.
+        a name based on its type if possible. For subfragments derived from an
+        ``Elaboratable``, the type name of the outermost ``Elaboratable`` of the
+        subfragment. For ``Instance`` subfragments, the type name of the ``Instance``.
+        If a name cannot be derived this way, a name ``U$<number>``, where ``<number>``
+        is based on its location in the hierarchy, will be assigned.
 
         Subfragment names may collide with signal names safely in Amaranth, but this may confuse
         backends. This method assigns every such subfragment a new name.
@@ -606,7 +630,7 @@ class Design:
 
         for subfragment_index, (subfragment, subfragment_name, subfragment_src_loc) in enumerate(fragment.subfragments):
             if subfragment_name is None:
-                subfragment_name = f"U${subfragment_index}"
+                subfragment_name = f"{subfragment.name_from_type()}${subfragment_index}"
             subfragment_name = _add_name(frag_info.assigned_names, subfragment_name)
             self._assign_names(subfragment, hierarchy=(*hierarchy, subfragment_name))
 
