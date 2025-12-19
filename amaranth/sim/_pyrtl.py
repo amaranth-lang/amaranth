@@ -622,7 +622,7 @@ class _FragmentCompiler:
 
         for subfragment_index, (subfragment, subfragment_name, _src_loc) in enumerate(fragment.subfragments):
             if subfragment_name is None:
-                subfragment_name = f"U${subfragment_index}"
+                subfragment_name = f"{subfragment.name_from_type()}${subfragment_index}"
             processes.update(self(subfragment))
 
         return processes
