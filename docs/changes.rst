@@ -81,6 +81,7 @@ Toolchain changes
 * Changed: :meth:`ResourceManager.add_clock_constraint <amaranth.build.res.ResourceManager.add_clock_constraint>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`period`. (`RFC 66`_)
 * Changed: :class:`Clock <amaranth.build.dsl.Clock>` now accepts a :class:`Period <amaranth.hdl.Period>` for :py:`period`. (`RFC 66`_)
 * Changed: :attr:`Clock.period <amaranth.build.dsl.Clock.period>` now returns a :class:`Period <amaranth.hdl.Period>`. (`RFC 66`_)
+* Changed: Anonymous sub-:class:`Module`\ s/sub-:class:`Fragment`\ s are now assigned a name like ``<type_name>$<number>`` based on their type (outermost :class:`Elaboratable`, :attr:`Instance.type`, falling back to ``U$<number>``)
 * Deprecated: Passing a :class:`float` of seconds or hertz to any of the methods/arguments now accepting a :class:`Period <amaranth.hdl.Period>`. (`RFC 66`_)
 * Deprecated: Passing :py:`frequency=` to :meth:`ResourceManager.add_clock_constraint <amaranth.build.res.ResourceManager.add_clock_constraint>`. (`RFC 66`_)
 * Deprecated: Passing :py:`frequency=` to :class:`Clock <amaranth.build.dsl.Clock>`. (`RFC 66`_)
