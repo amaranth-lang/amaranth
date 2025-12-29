@@ -408,7 +408,7 @@ class SiliconBluePlatform(TemplatedPlatform):
 
             # Power-on-reset domain
             m.domains += ClockDomain("por", reset_less=True, local=True)
-            timer = Signal(range(delay))
+            timer = Signal(range(delay + 1))
             ready = Signal()
             m.d.comb += ClockSignal("por").eq(clk_i)
             with m.If(timer == delay):
