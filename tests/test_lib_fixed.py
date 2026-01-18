@@ -329,6 +329,16 @@ class TestFixedValue(FHDLTestCase):
             fixed.Const(0.5, fixed.SQ(3, 3))
         )
 
+        self.assertFixedEqual(
+            fixed.Const(3, fixed.SQ(3, 3)).clamp(-3, -2),
+            fixed.Const(-2, fixed.SQ(3, 3))
+        )
+
+        self.assertFixedEqual(
+            fixed.Const(3, fixed.SQ(3, 3)).clamp(-0.5, 0.5),
+            fixed.Const(0.5, fixed.SQ(3, 3))
+        )
+
     def test_saturate(self):
 
         # fixed.SQ -> fixed.SQ

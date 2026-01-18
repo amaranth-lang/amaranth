@@ -145,8 +145,12 @@ class Value(hdl.ValueCastable):
         return self.reshape(f_bits)
 
     def clamp(self, lo, hi):
+        if isinstance(lo, float) or isinstance(lo, int):
+            lo = Const(lo)
+        if isinstance(hi, float) or isinstance(hi, int):
+            hi = Const(hi)
         if not isinstance(lo, Value) or not isinstance(hi, Value):
-            raise TypeError(f"Cannot `clamp` as lo, hi are not fixed.Value")
+            raise TypeError(f"Cannot `clamp` - unable to create fixed.Value from lo, hi")
         lo = lo.reshape(self.f_bits)
         hi = hi.reshape(self.f_bits)
         return Value(self.shape(), Mux(
