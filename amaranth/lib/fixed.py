@@ -261,6 +261,9 @@ class Value(hdl.ValueCastable):
     def __eq__(self, other):
         return self._binary_compare(other, '__eq__')
 
+    def __ne__(self, other):
+        return self._binary_compare(other, '__ne__')
+
     def __repr__(self):
         return f"fixed.Value({self._shape!r}, {self._target!r})"
 

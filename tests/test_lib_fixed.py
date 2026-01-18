@@ -425,6 +425,9 @@ class TestFixedValue(FHDLTestCase):
         self.assertFixedBool(fixed.Const(0.5) == fixed.Const(0.75), False)
         self.assertFixedBool(fixed.Const(0.501) == fixed.Const(0.5), False)
 
+        self.assertFixedBool(fixed.Const(0.5) != fixed.Const(0.5), False)
+        self.assertFixedBool(fixed.Const(0.5) != fixed.Const(0.75), True)
+
         with self.assertRaises(TypeError):
             self.assertFixedBool(0.5 == fixed.Const(0.5), False)
 
