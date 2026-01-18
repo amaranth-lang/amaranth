@@ -249,6 +249,9 @@ class TestFixedValue(FHDLTestCase):
             fixed.Const(1.5, fixed.UQ(3, 3)) >> -1
 
         with self.assertRaises(TypeError):
+            fixed.Const(1.5, fixed.UQ(3, 3)) << Const(-1, signed(2))
+
+        with self.assertRaises(TypeError):
             fixed.Const(1.5, fixed.UQ(3, 3)) >> Const(-1, signed(2))
 
     def test_abs(self):

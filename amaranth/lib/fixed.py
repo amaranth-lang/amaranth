@@ -215,7 +215,7 @@ class Value(hdl.ValueCastable):
                 return Value.cast(self.as_value(), self.f_bits - other)
         elif not isinstance(other, hdl.Value):
             raise TypeError("Shift amount must be an integer value")
-        if other.signed:
+        if other.shape().signed:
             raise TypeError("Shift amount must be unsigned")
         return Value.cast(self.as_value() << other, self.f_bits)
 
