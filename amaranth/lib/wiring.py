@@ -1596,9 +1596,13 @@ def connect(m, *args, **kwargs):
                 try:
                     eq = in_value.eq
                 except AttributeError:
-                    raise ConnectionError(
-                        f"Cannot connect input member {_format_path(in_path)} because the input "
-                        f"value {in_value!r} does not support assignment")
+                    #raise ConnectionError(
+                    #    f"Cannot connect input member {_format_path(in_path)} because the input "
+                    #    f"value {in_value!r} does not support assignment")
+                    # TODO(amaranth-0.7): remove
+                    warnings.warn(f"ValueCastable input value {in_value!r} does not support assignment; "
+                                "this will become an error in Amaranth 0.7", DeprecationWarning, stacklevel=2)
+                    eq = Value.cast(in_value).eq
                 # The `eq()` method may take a `src_loc_at` argument; provide it if it does.
                 if 'src_loc_at' in inspect.signature(eq).parameters:
                     kwargs = {'src_loc_at': src_loc_at + 1}
@@ -1607,9 +1611,13 @@ def connect(m, *args, **kwargs):
                 try:
                     connections.append(eq(out_value, **kwargs))
                 except Exception as e:
-                    raise ConnectionError(
-                        f"Cannot connect input member {_format_path(in_path)} to output member "
-                        f"{_format_path(out_path)} because assignment failed") from e
+                    #raise ConnectionError(
+                    #    f"Cannot connect input member {_format_path(in_path)} to output member "
+                    #    f"{_format_path(out_path)} because assignment failed") from e
+                    # TODO(amaranth-0.7): remove
+                    warnings.warn(f"Assigning to ValueCastable input value {in_value!r} failed; "
+                                "this will become an error in Amaranth 0.7", DeprecationWarning, stacklevel=2)
+                    connections.append(Value.cast(in_value).eq(out_value, src_loc_at=src_loc_at + 1))
             def connect_dimensions(dimensions, *, out_path, in_path, src_loc_at):
                 if not dimensions:
                     return connect_value(out_path=out_path, in_path=in_path, src_loc_at=src_loc_at)

@@ -777,7 +777,10 @@ class View(ValueCastable):
         """
         if isinstance(other, ValueCastable):
             if not self.shape() == Layout.cast(other.shape()):
-                raise TypeError(f"Cannot assign value with shape {other.shape()} to view with layout {self.shape()}")
+                #raise TypeError(f"Cannot assign value with shape {other.shape()} to view with layout {self.shape()}")
+                # TODO(amaranth-0.7): remove
+                warnings.warn(f"Assigning value with shape {other.shape()} to view with layout {self.shape()} will "
+                            "become an error in Amaranth 0.7", DeprecationWarning, stacklevel=2)
         return self.as_value().eq(other)
 
     def __getitem__(self, key):

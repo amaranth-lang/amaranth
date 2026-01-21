@@ -1354,8 +1354,11 @@ class StructTestCase(FHDLTestCase):
 
         s = Signal(S)
         s2 = Signal(S2)
-        with self.assertRaisesRegex(TypeError,
-                r"^Cannot assign value with shape <class '.+?\.S2'> to view with layout <class '.+?\.S'>$"):
+        #with self.assertRaisesRegex(TypeError,
+        #        r"^Cannot assign value with shape <class '.+?\.S2'> to view with layout <class '.+?\.S'>$"):
+        # TODO(amaranth-0.7): remove
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Assigning value with shape .* to view with layout .* will become an error in Amaranth 0.7$"):
             s.eq(s2)
 
 

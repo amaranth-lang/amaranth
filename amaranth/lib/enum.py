@@ -250,7 +250,10 @@ class EnumView(ValueCastable):
         """
         if isinstance(other, ValueCastable):
             if not self.shape() == other.shape():
-                raise TypeError(f"Cannot assign value with shape {other.shape()} to value with shape {self.shape()}")
+                #raise TypeError(f"Cannot assign value with shape {other.shape()} to value with shape {self.shape()}")
+                # TODO(amaranth-0.7): remove
+                warnings.warn(f"Assigning value with shape {other.shape()} to value with shape {self.shape()} will "
+                            "become an error in Amaranth 0.7", DeprecationWarning, stacklevel=2)
         return self.as_value().eq(other)
 
     def __add__(self, other):
