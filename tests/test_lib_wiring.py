@@ -860,9 +860,12 @@ class ConnectTestCase(unittest.TestCase):
             first: 1
 
         m = Module()
-        with self.assertRaisesRegex(ConnectionError,
-                r"^Cannot connect input member 'q\.a' to output member 'p\.a' because assignment "
-                r"failed$"):
+        #with self.assertRaisesRegex(ConnectionError,
+        #        r"^Cannot connect input member 'q\.a' to output member 'p\.a' because assignment "
+        #        r"failed$"):
+        # TODO(amaranth-0.7): remove
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Assigning value with shape .* to view with layout .* will become an error in Amaranth 0.7$"):
             connect(m,
                     p=NS(signature=Signature({"a": Out(LastDelimited)}),
                          a=Signal(LastDelimited)),

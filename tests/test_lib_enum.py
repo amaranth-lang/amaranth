@@ -350,6 +350,9 @@ class EnumTestCase(FHDLTestCase):
 
         s = Signal(EnumA)
         s2 = Signal(EnumB)
-        with self.assertRaisesRegex(TypeError,
-                r"^Cannot assign value with shape <enum 'EnumB'> to value with shape <enum 'EnumA'>$"):
+        #with self.assertRaisesRegex(TypeError,
+        #        r"^Cannot assign value with shape <enum 'EnumB'> to value with shape <enum 'EnumA'>$"):
+        # TODO(amaranth-0.7): remove
+        with self.assertWarnsRegex(DeprecationWarning,
+                r"^Assigning value with shape .* to value with shape .* will become an error in Amaranth 0.7$"):
             s.eq(s2)
