@@ -339,3 +339,17 @@ class EnumTestCase(FHDLTestCase):
 
         sig = Signal(EnumA)
         self.assertRepr(EnumA.format(sig, ""), f"(format-enum (sig sig) '{EnumA.__qualname__}' (0 'A') (1 'B'))")
+
+    def test_assign_mismatch_type(self):
+        class EnumA(Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+        class EnumB(Enum, shape=unsigned(2)):
+            A = 0
+            B = 1
+
+        s = Signal(EnumA)
+        s2 = Signal(EnumB)
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot assign value with shape <enum 'EnumB'> to value with shape <enum 'EnumA'>$"):
+            s.eq(s2)

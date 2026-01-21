@@ -851,6 +851,24 @@ class ConnectTestCase(unittest.TestCase):
                     q=NS(signature=Signature({"a": In(Cycle)}),
                          a=Signal(Cycle)))
 
+    def test_shape_mismatch_layout(self):
+        class LastDelimited(data.Struct):
+            data: 8
+            last: 1
+        class FirstDelimited(data.Struct):
+            data: 8
+            first: 1
+
+        m = Module()
+        with self.assertRaisesRegex(ConnectionError,
+                r"^Cannot connect input member 'q\.a' to output member 'p\.a' because assignment "
+                r"failed$"):
+            connect(m,
+                    p=NS(signature=Signature({"a": Out(LastDelimited)}),
+                         a=Signal(LastDelimited)),
+                    q=NS(signature=Signature({"a": In(FirstDelimited)}),
+                         a=Signal(FirstDelimited)))
+
     def test_init_mismatch(self):
         m = Module()
         with self.assertRaisesRegex(ConnectionError,

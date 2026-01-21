@@ -1344,6 +1344,20 @@ class StructTestCase(FHDLTestCase):
         self.assertIsInstance(c, data.Const)
         self.assertEqual(c.a, 1)
 
+    def test_assign_mismatch_layout(self):
+        class S(data.Struct):
+            a: 8
+            b: 1
+        class S2(data.Struct):
+            a: 8
+            c: 1
+
+        s = Signal(S)
+        s2 = Signal(S2)
+        with self.assertRaisesRegex(TypeError,
+                r"^Cannot assign value with shape <class '.+?\.S2'> to view with layout <class '.+?\.S'>$"):
+            s.eq(s2)
+
 
 class UnionTestCase(FHDLTestCase):
     def test_construct(self):
