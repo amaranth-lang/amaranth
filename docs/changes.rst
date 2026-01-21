@@ -36,9 +36,11 @@ Implemented RFCs
 
 .. _RFC 66: https://amaranth-lang.org/rfcs/0066-simulation-time.html
 .. _RFC 71: https://amaranth-lang.org/rfcs/0071-enumview-matches.html
+.. _RFC 73: https://amaranth-lang.org/rfcs/0073-stricter-connections.html
 
 * `RFC 66`_: Simulation time
 * `RFC 71`_: ``EnumView.matches``
+* `RFC 73`_: Stricter connections
 
 
 Language changes
@@ -67,6 +69,7 @@ Standard library changes
 * Added: :meth:`enum.EnumView.matches`. (`RFC 71`_)
 * Added: :class:`data.Field`, :class:`data.Layout` and :class:`data.Const` are hashable.
 * Changed: (deprecated in 0.5.1) providing :meth:`io.PortLike.__add__` is now mandatory. (`RFC 69`_)
+* Deprecated: :meth:`data.View.eq`, :meth:`enum.EnumView.eq` and :meth:`wiring.connect` coercing :class:`ValueCastable` arguments to plain values. (`RFC 73`_)
 * Removed: (deprecated in 0.5.0) :mod:`amaranth.lib.coding`. (`RFC 63`_)
 
 
