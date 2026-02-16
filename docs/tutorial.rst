@@ -10,3 +10,5 @@ Tutorial
       * `A tutorial for using Amaranth HDL <https://github.com/robertbaruch/amaranth-tutorial>`_ by Robert Baruch.
       * `Graded exercises for Amaranth HDL <https://github.com/robertbaruch/amaranth-exercises>`_ by Robert Baruch.
       * `My journey with the Amaranth HDL <https://medium.com/@sporniket.studio/my-journey-with-the-amaranth-hdl-226b38d0b023>`_ by David Sporn, focussed on setting up the workstation, using formal verification and setting up continuous integration.
+
+    People with electrical engineering background may find the `DigitalJS <https://digitaljs.tilk.eu/>`_ simulator by Marek Materzok helpful, as it lets you explore the circuits generated from Amaranth code as circuit diagrams. It offers more features than `the official playground <https://amaranth-lang.org/play/>`_, such as interactive I/O.
