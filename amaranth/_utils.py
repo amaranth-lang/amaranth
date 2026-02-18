@@ -75,6 +75,7 @@ def _ignore_deprecated(f=None):
         return decorator_like
 
 
+
 def get_linter_options(filename):
     first_line = linecache.getline(filename, 1)
     if first_line:
@@ -84,8 +85,33 @@ def get_linter_options(filename):
     return dict()
 
 
-def get_linter_option(filename, name, type, default):
-    options = get_linter_options(filename)
+def collate_linter_options(frame):
+    """
+    Get all linter options for a given stack frame. This iterates down the frames, collating options of the form:
+
+    .. code::
+        # amaranth: {name}=value
+
+    The earliest option value in the stack takes precedence
+
+    Returns
+    -------
+    :class:`bool` or :class:`int`
+        Option value
+    """
+
+    options = {}
+    while frame:
+        f_opts = get_linter_options(frame.f_code.co_filename)
+        options = f_opts | options
+        if frame.f_back is None:
+            break
+        else:
+            frame = frame.f_back
+    return options
+
+
+def get_linter_option(options, name, type, default):
     if name not in options:
         return default
 
