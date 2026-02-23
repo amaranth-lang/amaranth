@@ -81,11 +81,23 @@ While this implementation works, it is repetitive, error-prone, hard to read, an
 
     m.d.comb += o_gray.eq((i_color.red + i_color.green + i_color.blue) << 1)
 
-The :class:`View` is :ref:`value-like <lang-valuelike>` and can be used anywhere a plain value can be used. For example, it can be assigned to in the usual way:
+Signals with a layout based shape are automatically wrapped in the :class:`View` :ref:`value-like <lang-valuelike>` wrapper, and can be used in many places where a plain value can be used. For example, it can be assigned to in the usual way:
 
 .. testcode::
 
     m.d.comb += i_color.eq(0) # everything is black
+
+They can be compared for equality with other value-like objects of the same layout, however they cannot be compared with value-like objects of other shapes, and most operators are also not supported:
+
+.. testcode::
+
+    other_color = Signal(rgb565_layout)
+
+    i_color == other_color
+
+    # The following expressions would raise a TypeError:
+    # i_color == 0
+    # i_color | 1
 
 
 Composing layouts
