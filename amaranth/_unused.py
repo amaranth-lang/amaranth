@@ -1,4 +1,5 @@
 import sys
+from typing import Any
 import warnings
 
 from ._utils import get_linter_option
@@ -15,7 +16,13 @@ class MustUse:
     _MustUse__silence = False
     _MustUse__warning = UnusedMustUse
 
-    def __new__(cls, *args, src_loc_at=0, **kwargs):
+    _MustUse__used: bool
+    _MustUse__context: dict[str, Any]
+    _MustUse__stack_summary: traceback.StackSummary
+
+    def __new__(cls, *_args: list[Any], src_loc_at: int = 0, **_kwargs: dict[str, Any]):
+        # capture and ignore arbitrary args/kwargs to prevent errors with mixins
+
         frame = sys._getframe(1 + src_loc_at)
         self = super().__new__(cls)
         self._MustUse__used    = False
@@ -31,8 +38,13 @@ class MustUse:
         if getattr(self._MustUse__warning, "_MustUse__silence", False):
             return
         if hasattr(self, "_MustUse__used") and not self._MustUse__used:
-            if get_linter_option(self._MustUse__context["filename"],
-                                 self._MustUse__warning.__qualname__, bool, True):
+            # allow suppression via amaranth file level linter option
+            if get_linter_option(
+                self._MustUse__context["filename"],
+                self._MustUse__warning.__qualname__,
+                type=bool,
+                default=True,
+            ):
                 warnings.warn_explicit(
                     f"{self!r} created but never used", self._MustUse__warning,
                     **self._MustUse__context)
