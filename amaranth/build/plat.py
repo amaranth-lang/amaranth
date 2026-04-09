@@ -178,9 +178,13 @@ class Platform(ResourceManager, metaclass=ABCMeta):
     def iter_port_constraints_bits(self):
         for (name, port, _dir) in self._design.ports:
             if len(port) == 1:
+                if port.metadata[0] is None:
+                    continue
                 yield name, port.metadata[0].name, port.metadata[0].attrs
             else:
                 for bit, meta in enumerate(port.metadata):
+                    if meta is None:
+                        continue
                     yield f"{name}[{bit}]", meta.name, meta.attrs
 
     @abstractmethod
