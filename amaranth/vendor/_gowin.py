@@ -202,7 +202,7 @@ class GowinPlatform(TemplatedPlatform):
 
     def parse_part(self):
         # These regular expressions match all >900 parts of Gowin device_info.csv
-        reg_series    = r"(GW[125]{1}[AN]{1}[EFNRSZT]{0,3})-"
+        reg_series    = r"(GW[1235]{1}[AN]{1}[EFNRSZT]{0,3})-"
         reg_voltage   = r"(ZV|EV|LV|LX|UV|UX)"
         reg_size      = r"(1|2|3|4|5|9|15|18|20|25|55|60|75|138)"
         reg_subseries = r"(?:(A|B|C|S|X|P5)?)"
