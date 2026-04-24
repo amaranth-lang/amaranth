@@ -207,7 +207,7 @@ class GowinPlatform(TemplatedPlatform):
         reg_size      = r"(1|2|3|4|5|9|15|18|20|25|55|60|75|138)"
         reg_subseries = r"(?:(A|B|C|D|ES|P5|P5B|P5C|S|SA|X)?)"
         reg_package   = r"((?:FPG|PG|UG|EQ|LQ|MG|M|QN|CS|FN)(?:\d+)(?:P?)(?:A|E|M|CF|C|D|G|H|F|S|T|U|X)?)"
-        reg_speed     = r"((?:C\d{1}/I\d{1})|ES|A\d{1}|I\d{1})"
+        reg_speed     = r"((?:C\d{1}/I\d{1})|ES|A\d{1}|C\d{1}|I\d{1})"
 
         match = re.match(reg_series+reg_voltage+reg_size+reg_subseries+reg_package+reg_speed+"$",
                          self.part)
