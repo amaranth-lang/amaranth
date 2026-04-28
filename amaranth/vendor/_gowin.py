@@ -434,6 +434,9 @@ class GowinPlatform(TemplatedPlatform):
             {% for file in platform.iter_files(".v",".sv",".vhd",".vhdl") -%}
                 add_file {{file}}
             {% endfor %}
+            {% for file in platform.iter_files(".csr") -%}
+                set_csr {{file}}
+            {% endfor %}
             add_file -type verilog {{name}}.v
             add_file -type cst {{name}}.cst
             add_file -type sdc {{name}}.sdc
