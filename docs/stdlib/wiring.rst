@@ -132,7 +132,7 @@ The :ref:`shapes <lang-shapes>` of the ports need not be static. The :py:`Compon
     >>> GenericCounter(16).signature
     Signature({'en': In(1), 'count': Out(16), 'limit': In(16), 'overflow': Out(1)})
 
-Instances of the :class:`ComponentCounter` and :class:`GenericCounter` class are two examples of *interface objects*. An interface object is a Python object of any type whose a :py:`signature` attribute contains a :class:`Signature` with which the interface object is compliant (as determined by the :meth:`is_compliant <Signature.is_compliant>` method of the signature).
+Instances of the :class:`ComponentCounter` and :class:`GenericCounter` class are two examples of *interface objects*. An interface object is a Python object of any type whose :py:`signature` attribute contains a :class:`Signature` with which the interface object is compliant (as determined by the :meth:`is_compliant <Signature.is_compliant>` method of the signature).
 
 The next section introduces the concepts of directionality and connection, and discusses interface objects in more detail.
 
