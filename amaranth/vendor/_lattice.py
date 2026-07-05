@@ -78,7 +78,15 @@ class IOBuffer(io.Buffer):
         return m
 
 
-def _make_oereg_ecp5_machxo2(m, domain, oe, q):
+def _make_oereg_ecp5_machxo2(m, domain, oe, q, *, delay=0):
+    for stage in range(delay):
+        oe_delay = Signal(name=f"oe_delay{stage}")
+        m.submodules[f"oe_delayff{stage}"] = Instance("FD1S3AX",
+            i_CK=ClockSignal(domain),
+            i_D=oe,
+            o_Q=oe_delay,
+        )
+        oe = oe_delay
     for bit in range(len(q)):
         m.submodules[f"oe_ff{bit}"] = Instance("OFS1P3DX",
             i_SCLK=ClockSignal(domain),
@@ -212,7 +220,9 @@ class DDRBufferECP5(io.DDRBuffer):
                     i_D1=o1_inv[bit],
                     o_Q=buf.o[bit],
                 )
-            _make_oereg_ecp5_machxo2(m, self.o_domain, ~self.oe, buf.t)
+            # The ODDRX1F buffer has two additional pipeline stages, so we need to shift
+            # the phase of the OE signal to compensate.
+            _make_oereg_ecp5_machxo2(m, self.o_domain, ~self.oe, buf.t, delay=2)
 
         return m
 
