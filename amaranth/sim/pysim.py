@@ -5,7 +5,7 @@ import enum as py_enum
 
 from ..hdl import *
 from ..hdl._mem import MemoryInstance
-from ..hdl._ast import SignalDict
+from ..hdl._ast import SignalDict, Slice
 from ..lib import data, wiring
 from ._base import *
 from ._async import *
@@ -65,8 +65,17 @@ class _VCDWriter:
 
         trace_names = SignalDict()
         assigned_names = set()
-        def traverse_traces(traces):
-            if isinstance(traces, ValueLike):
+        def traverse_traces(path, traces):
+            if isinstance(traces, data.View):
+                val = traces.shape()
+                tr = traces.as_value()
+                if not isinstance(tr, Slice):
+                    trace_name = tr.name
+                    if issubclass(val.__class__, data.Layout):
+                        for name, _ in traces.shape().members.items():
+                            traverse_traces((*path,), traces[name])
+
+            elif isinstance(traces, ValueLike):
                 trace = Value.cast(traces)
                 if isinstance(trace, MemoryData._Row):
                     memory = trace._memory
@@ -76,7 +85,7 @@ class _VCDWriter:
                         else:
                             name = f"{memory.name}${len(assigned_names)}"
                             assert name not in assigned_names
-                        memories[memory] = ("bench", name)
+                        memories[memory] = (*path, name)
                         assigned_names.add(name)
                 else:
                     for trace_signal in trace._rhs_signals():
@@ -86,7 +95,8 @@ class _VCDWriter:
                             else:
                                 name = f"{trace_signal.name}${len(assigned_names)}"
                                 assert name not in assigned_names
-                            trace_names[trace_signal] = {("bench", name)}
+
+                            trace_names[trace_signal] = {(*path, name)}
                             assigned_names.add(name)
             elif isinstance(traces, MemoryData):
                 if not traces in memories:
@@ -95,20 +105,20 @@ class _VCDWriter:
                     else:
                         name = f"{traces.name}${len(assigned_names)}"
                         assert name not in assigned_names
-                    memories[traces] = ("bench", name)
+                    memories[traces] = (*path, name)
                     assigned_names.add(name)
             elif hasattr(traces, "signature") and isinstance(traces.signature, wiring.Signature):
                 for name in traces.signature.members:
-                    traverse_traces(getattr(traces, name))
+                    traverse_traces(path, getattr(traces, name))
             elif isinstance(traces, list) or isinstance(traces, tuple):
                 for trace in traces:
-                    traverse_traces(trace)
+                    traverse_traces(path, trace)
             elif isinstance(traces, dict):
                 for trace in traces.values():
-                    traverse_traces(trace)
+                    traverse_traces(path, trace)
             else:
                 raise TypeError(f"{traces!r} is not a traceable object")
-        traverse_traces(traces)
+        traverse_traces(("bench",), traces)
 
         if self.vcd_writer is None:
             return
@@ -117,66 +127,59 @@ class _VCDWriter:
             self.vcd_signal_vars[signal] = []
             self.gtkw_signal_names[signal] = []
 
-            def add_var(path, var_type, var_size, var_init, value):
+            def add_var(scope, var_name, var_type, var_size, var_init, value):
                 vcd_var = None
-                for (*var_scope, var_name) in names:
-                    if re.search(r"[ \t\r\n]", var_name):
-                        raise NameError("Signal '{}.{}' contains a whitespace character"
-                                        .format(".".join(var_scope), var_name))
+                if isinstance(var_name, int):
+                    var_name = str(var_name)
+                if re.search(r"[ \t\r\n]", var_name):
+                    raise NameError("Signal '{}.{}' contains a whitespace character"
+                                    .format(".".join(scope), var_name))
 
-                    field_name = var_name
-                    for item in path:
-                        if isinstance(item, int):
-                            field_name += f"[{item}]"
-                        else:
-                            field_name += f".{item}"
-                    if path:
-                        field_name = "\\" + field_name
-
-                    if vcd_var is None:
-                        vcd_var = self.vcd_writer.register_var(
-                            scope=var_scope, name=field_name,
-                            var_type=var_type, size=var_size, init=var_init)
-                        if var_size > 1:
-                            suffix = f"[{var_size - 1}:0]"
-                        else:
-                            suffix = ""
-                        self.gtkw_signal_names[signal].append(
-                            ".".join((*var_scope, field_name)) + suffix)
+                if vcd_var is None:
+                    vcd_var = self.vcd_writer.register_var(
+                        scope=scope, name=var_name,
+                        var_type=var_type, size=var_size, init=var_init)
+                    if var_size > 1:
+                        suffix = f"[{var_size - 1}:0]"
                     else:
-                        self.vcd_writer.register_alias(
-                            scope=var_scope, name=field_name,
-                            var=vcd_var)
+                        suffix = ""
+                    self.gtkw_signal_names[signal].append(
+                        ".".join((*var_scope, var_name)) + suffix)
+                else:
+                    self.vcd_writer.register_alias(
+                        scope=scope, name=var_name,
+                        var=vcd_var)
 
                 self.vcd_signal_vars[signal].append((vcd_var, value))
 
-            def add_wire_var(path, value):
-                add_var(path, "wire", len(value), eval_value(self.state, value), value)
+            def add_wire_var(path, name, value):
+                add_var(path, name, "wire", len(value), eval_value(self.state, value), value)
 
-            def add_format_var(path, fmt):
-                add_var(path, "string", 1, eval_format(self.state, fmt), fmt)
+            def add_format_var(path, name, fmt):
+                add_var(path, name, "string", 1, eval_format(self.state, fmt), fmt)
 
-            def add_format(path, fmt):
+            def add_format(path, name, fmt):
                 if isinstance(fmt, Format.Struct):
-                    add_wire_var(path, fmt._value)
-                    for name, subfmt in fmt._fields.items():
-                        add_format(path + (name,), subfmt)
+                    self.vcd_writer.set_scope_type((*path, name,), "vhdl_record")
+                    for subname, subfmt in fmt._fields.items():
+                        add_format((*path, name,), subname, subfmt)
                 elif isinstance(fmt, Format.Array):
-                    add_wire_var(path, fmt._value)
+                    self.vcd_writer.set_scope_type((*path, name,), "vhdl_array")
                     for idx, subfmt in enumerate(fmt._fields):
-                        add_format(path + (idx,), subfmt)
+                        add_format((*path, name,), idx, subfmt)
                 elif (isinstance(fmt, Format) and
                         len(fmt._chunks) == 1 and
                         isinstance(fmt._chunks[0], tuple) and
                         fmt._chunks[0][1] == ""):
-                    add_wire_var(path, fmt._chunks[0][0])
+                    add_wire_var(path, name, fmt._chunks[0][0])
                 else:
-                    add_format_var(path, fmt)
+                    add_format_var(path, name, fmt)
 
-            if signal._decoder is not None and not isinstance(signal._decoder, py_enum.EnumMeta):
-                add_var((), "string", 1, signal._decoder(signal._init), signal._decoder)
-            else:
-                add_format((), signal._format)
+            for (*var_scope, var_name) in names:
+                if signal._decoder is not None and not isinstance(signal._decoder, py_enum.EnumMeta):
+                    add_var(var_scope, var_name, "string", 1, signal._decoder(signal._init), signal._decoder)
+                else:
+                    add_format(var_scope, var_name, signal._format)
 
         for memory, memory_name in memories.items():
             self.vcd_memory_vars[memory] = vcd_vars = []
