@@ -151,10 +151,12 @@ class _VCDWriter:
 
             def add_format(path, name, fmt):
                 if isinstance(fmt, Format.Struct):
+                    add_wire_var(path, "\\" + name, fmt._value) # flattened value
                     self.vcd_writer.set_scope_type((*path, name,), "vhdl_record")
                     for subname, subfmt in fmt._fields.items():
                         add_format((*path, name,), subname, subfmt)
                 elif isinstance(fmt, Format.Array):
+                    add_wire_var(path, "\\" + name, fmt._value) # flattened value
                     self.vcd_writer.set_scope_type((*path, name,), "vhdl_array")
                     for idx, subfmt in enumerate(fmt._fields):
                         add_format((*path, name,), idx, subfmt)
