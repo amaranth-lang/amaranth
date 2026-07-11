@@ -66,16 +66,7 @@ class _VCDWriter:
         trace_names = SignalDict()
         assigned_names = set()
         def traverse_traces(path, traces):
-            if isinstance(traces, data.View):
-                val = traces.shape()
-                tr = traces.as_value()
-                if not isinstance(tr, Slice):
-                    trace_name = tr.name
-                    if issubclass(val.__class__, data.Layout):
-                        for name, _ in traces.shape().members.items():
-                            traverse_traces((*path,), traces[name])
-
-            elif isinstance(traces, ValueLike):
+            if isinstance(traces, ValueLike):
                 trace = Value.cast(traces)
                 if isinstance(trace, MemoryData._Row):
                     memory = trace._memory
