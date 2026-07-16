@@ -9,6 +9,7 @@ Documentation for past releases
 
 Documentation for past releases of the Amaranth language and toolchain is available online:
 
+* `Amaranth 0.5.8 <https://amaranth-lang.org/docs/amaranth/v0.5.8/>`_
 * `Amaranth 0.5.7 <https://amaranth-lang.org/docs/amaranth/v0.5.7/>`_
 * `Amaranth 0.5.6 <https://amaranth-lang.org/docs/amaranth/v0.5.6/>`_
 * `Amaranth 0.5.5 <https://amaranth-lang.org/docs/amaranth/v0.5.5/>`_
@@ -24,6 +25,15 @@ Documentation for past releases of the Amaranth language and toolchain is availa
 * `Amaranth 0.4.1 <https://amaranth-lang.org/docs/amaranth/v0.4.1/>`_
 * `Amaranth 0.4.0 <https://amaranth-lang.org/docs/amaranth/v0.4.0/>`_
 * `Amaranth 0.3 <https://amaranth-lang.org/docs/amaranth/v0.3/>`_
+
+
+Version 0.5.9
+=============
+
+Platform integration changes
+----------------------------
+
+* Fixed: ECP5 DDR buffer output enable latency to match output latency.
 
 
 Version 0.5.8
