@@ -23,8 +23,9 @@ def to_binary(n: int, width: int) -> str:
 
 
 def flatten(i):
+    from amaranth.hdl._ast import Value
     for e in i:
-        if isinstance(e, str) or not isinstance(e, Iterable):
+        if isinstance(e, (str, Value)) or not isinstance(e, Iterable):
             yield e
         else:
             yield from flatten(e)

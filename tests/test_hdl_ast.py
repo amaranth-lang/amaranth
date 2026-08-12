@@ -334,6 +334,13 @@ class ValueTestCase(FHDLTestCase):
                 r"^Cannot slice value with a value; use Value.bit_select\(\) or Value.word_select\(\) instead$"):
             Const(31)[s:s+3]
 
+    def test_iter(self):
+        val = Const(42)
+        for index, bit in zip(range(len(val)), val):
+            self.assertIsInstance(bit, Slice)
+            self.assertEqual(bit.start, index)
+            self.assertEqual(bit.stop, index + 1)
+
     def test_shift_left(self):
         self.assertRepr(Const(256, unsigned(9)).shift_left(0),
                         "(cat (const 0'd0) (const 9'd256))")

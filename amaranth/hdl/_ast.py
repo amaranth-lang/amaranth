@@ -1182,6 +1182,17 @@ class Value(metaclass=ABCMeta):
         else:
             raise TypeError(f"Cannot index value with {key!r}")
 
+    def __iter__(self):
+        """Iteration over bits, from least to most significant.
+
+        Yields
+        -------
+        :class:`Value`, :py:`unsigned(1)`, :ref:`assignable <lang-assignable>`
+            Bit of the value.
+        """
+        for index in range(len(self)):
+            yield self[index]
+
     def __contains__(self, other):
         """Forbidden membership test operator.
 
