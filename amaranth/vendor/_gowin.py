@@ -387,7 +387,7 @@ class GowinPlatform(TemplatedPlatform):
             {% endfor %}
             read_rtlil {{name}}.il
             {{get_override("script_after_read")|default("# (script_after_read placeholder)")}}
-            synth_gowin {{get_override("synth_opts")|options}} -top {{name}} -json {{name}}.syn.json
+            synth_gowin {{get_override("synth_opts")|options}} -family {{platform.series[:4].lower()}} -top {{name}} -json {{name}}.syn.json
             {{get_override("script_after_synth")|default("# (script_after_synth placeholder)")}}
         """,
     }
