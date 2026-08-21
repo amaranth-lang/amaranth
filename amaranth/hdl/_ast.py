@@ -255,6 +255,7 @@ class ShapeCastable:
         if cls.from_bits is ShapeCastable.from_bits:
             raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' must override "
                             f"the 'from_bits' method")
+        super().__init_subclass__(**kwargs)
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
@@ -1405,6 +1406,7 @@ class ValueCastable:
         if cls.shape is ValueCastable.shape:
             raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ValueCastable' must override "
                             "the 'shape' method")
+        super().__init_subclass__(**kwargs)
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
