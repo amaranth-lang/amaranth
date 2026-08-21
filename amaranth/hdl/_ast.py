@@ -256,6 +256,7 @@ class ShapeCastable:
             warnings.warn(f"Class '{cls.__qualname__}' deriving from 'ShapeCastable' does not override "
                           f"the 'from_bits' method, which will be required in Amaranth 0.6",
                           DeprecationWarning, stacklevel=2)
+        super().__init_subclass__(**kwargs)
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
@@ -1409,6 +1410,7 @@ class ValueCastable:
         if cls.shape is ValueCastable.shape:
             raise TypeError(f"Class '{cls.__qualname__}' deriving from 'ValueCastable' must override "
                             "the 'shape' method")
+        super().__init_subclass__(**kwargs)
 
     # The signatures and definitions of these methods are weird because they are present here for
     # documentation (and error checking above) purpose only and should not affect control flow.
