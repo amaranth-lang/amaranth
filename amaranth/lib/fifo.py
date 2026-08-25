@@ -60,6 +60,10 @@ class FIFOInterface:
         Does nothing if ``r_rdy`` is not asserted.
     r_level : Signal(range(depth + 1)), out
         Number of unread entries.
+    w_stream : :class:`amaranth.lib.wiring.FlippedInterface`
+        Returns a flipped :class:`amaranth.lib.stream.Interface`, which is constructed by renaming the usual FIFO write signals.
+    r_stream : :class:`amaranth.lib.stream.Interface`
+        Returns a stream interface, which is constructed by renaming the usual FIFO read signals.
     {r_attributes}
     """
 
