@@ -298,6 +298,10 @@ Editable development snapshot
 Installing board definitions
 =============================
 
-.. todo::
+This must be installed directly from github: 
 
-	 Explain how to install `<https://github.com/amaranth-lang/amaranth-boards>`_.
+.. code-block:: console
+
+    $ pip install "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git"
+
+This is not to be confused with the PyPI package `amaranth_boards <https://pypi.org/project/amaranth-boards/>`_ which is currently a placeholder.
