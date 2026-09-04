@@ -173,7 +173,7 @@ The serial protocol recognized by the receiver is illustrated with the following
                 "serial",
                 { name: "ssel",    wave: "01................0.." },
                 { name: "sclk",    wave: "0..101010101010101..." },
-                { name: "sdat",    wave: "0.=.=.=.=.=.=.=.=....", data: ["1", "0", "1", "0", "0", "0", "0", "1"] },
+                { name: "sdat",    wave: "0.=.=.=.=.=.=.=.=....", data: ["1", "0", "1", "0", "0", "1", "1", "1"] },
             ],
             {},
             [
