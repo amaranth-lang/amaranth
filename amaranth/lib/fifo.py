@@ -392,7 +392,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             depth_bits = 0
         super().__init__(width=width, depth=depth)
 
-        self.r_rst = Signal()
+        self.r_rst = Signal(init=1)
         self._r_domain = r_domain
         self._w_domain = w_domain
         self._ctr_bits = depth_bits + 1
@@ -406,7 +406,7 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
             ]
             return m
 
-        # The design of this queue is the "style #2" from Clifford E. Cummings' paper "Simulation
+        # The design of this queue is the "style #1" from Clifford E. Cummings' paper "Simulation
         # and Synthesis Techniques for Asynchronous FIFO Design":
         # http://www.sunburst-design.com/papers/CummingsSNUG2002SJ_FIFO1.pdf
 
@@ -414,24 +414,25 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         do_read  = self.r_rdy & self.r_en
 
         # TODO: extract this pattern into lib.cdc.GrayCounter
-        produce_w_bin = Signal(self._ctr_bits)
+
+        # Note: Both write-domain counters must be reset_less (see comments below)
+        produce_w_bin = Signal(self._ctr_bits, reset_less=True)
         produce_w_nxt = Signal(self._ctr_bits)
         m.d.comb += produce_w_nxt.eq(produce_w_bin + do_write)
         m.d[self._w_domain] += produce_w_bin.eq(produce_w_nxt)
 
-        # Note: Both read-domain counters must be reset_less (see comments below)
-        consume_r_bin = Signal(self._ctr_bits, reset_less=True)
+        consume_r_bin = Signal(self._ctr_bits)
         consume_r_nxt = Signal(self._ctr_bits)
         m.d.comb += consume_r_nxt.eq(consume_r_bin + do_read)
         m.d[self._r_domain] += consume_r_bin.eq(consume_r_nxt)
 
-        produce_w_gry = Signal(self._ctr_bits)
+        produce_w_gry = Signal(self._ctr_bits, reset_less=True)
         produce_r_gry = Signal(self._ctr_bits)
         produce_cdc = m.submodules.produce_cdc = \
             FFSynchronizer(produce_w_gry, produce_r_gry, o_domain=self._r_domain)
         m.d[self._w_domain] += produce_w_gry.eq(_gray_encode(produce_w_nxt))
 
-        consume_r_gry = Signal(self._ctr_bits, reset_less=True)
+        consume_r_gry = Signal(self._ctr_bits)
         consume_w_gry = Signal(self._ctr_bits)
         consume_cdc = m.submodules.consume_cdc = \
             FFSynchronizer(consume_r_gry, consume_w_gry, o_domain=self._w_domain)
@@ -477,11 +478,11 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         # are reset to 0 violate their Gray code invariant. One way to handle this is to ensure
         # that both sides of the FIFO are asynchronously reset by the same signal. We adopt a
         # slight variation on this approach - reset control rests entirely with the write domain.
-        # The write domain's reset signal is used to asynchronously reset the read domain's
-        # counters and force the FIFO to be empty when the write domain's reset is asserted.
-        # This requires the two read domain counters to be marked as "reset_less", as they are
-        # reset through another mechanism. See https://github.com/amaranth-lang/amaranth/issues/181
-        # for the full discussion.
+        # The write domain reset signal is used to asynchronously force the FIFO to be empty. The
+        # write domain counters are overwritten with the value of the read domain counters. This
+        # requires the two write domain counters to be marked as "reset_less", as they are reset
+        # through another mechanism.
+        # See https://github.com/amaranth-lang/amaranth/issues/181 for the full discussion.
         w_rst = ResetSignal(domain=self._w_domain, allow_reset_less=True)
         r_rst = Signal()
 
@@ -489,12 +490,14 @@ class AsyncFIFO(Elaboratable, FIFOInterface):
         rst_cdc = m.submodules.rst_cdc = \
             AsyncFFSynchronizer(w_rst, r_rst, o_domain=self._r_domain)
 
-        # Decode Gray code counter synchronized from write domain to overwrite binary
-        # counter in read domain.
+        # Decode Gray code counter synchronized from read domain to overwrite binary counter in
+        # write domain.
+        with m.If(w_rst):
+            m.d[self._w_domain] += produce_w_gry.eq(consume_w_gry)
+            m.d[self._w_domain] += produce_w_bin.eq(_gray_decode(consume_w_gry))
+
         with m.If(r_rst):
             m.d.comb += r_empty.eq(1)
-            m.d[self._r_domain] += consume_r_gry.eq(produce_r_gry)
-            m.d[self._r_domain] += consume_r_bin.eq(_gray_decode(produce_r_gry))
             m.d[self._r_domain] += self.r_rst.eq(1)
         with m.Else():
             m.d[self._r_domain] += self.r_rst.eq(0)
@@ -550,7 +553,7 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
             depth = (1 << depth_bits) + 1
         super().__init__(width=width, depth=depth)
 
-        self.r_rst = Signal()
+        self.r_rst = Signal(init=1)
         self._r_domain = r_domain
         self._w_domain = w_domain
 
@@ -580,14 +583,16 @@ class AsyncFIFOBuffered(Elaboratable, FIFOInterface):
         m.submodules.consume_buffered_cdc = FFSynchronizer(r_consume_buffered, w_consume_buffered, o_domain=self._w_domain, stages=4)
         m.d.comb += self.w_level.eq(fifo.w_level + w_consume_buffered)
 
-        with m.If(self.r_en | ~self.r_rdy):
+        with m.If(fifo.r_rst):
+            m.d.comb += r_consume_buffered.eq(0)
+            m.d[self._r_domain] += self.r_rdy.eq(0)
+        with m.Elif(self.r_en | ~self.r_rdy):
             m.d[self._r_domain] += [
                 self.r_data.eq(fifo.r_data),
                 self.r_rdy.eq(fifo.r_rdy),
-                self.r_rst.eq(fifo.r_rst),
             ]
-            m.d.comb += [
-                fifo.r_en.eq(1)
-            ]
+            m.d.comb += fifo.r_en.eq(1)
+
+        m.d[self._r_domain] += self.r_rst.eq(fifo.r_rst)
 
         return m

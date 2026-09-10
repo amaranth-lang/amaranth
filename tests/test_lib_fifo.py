@@ -364,6 +364,7 @@ class AsyncFIFOSimCase(FHDLTestCase):
                 await ctx.tick("write")
             ctx.set(fifo.w_en, 0)
             await ctx.tick ("write")
+
             self.assertEqual(ctx.get(fifo.w_level), expected_level)
             ctx.set(write_done, 1)
 
@@ -405,3 +406,138 @@ class AsyncFIFOSimCase(FHDLTestCase):
     def test_async_buffered_fifo_level_empty(self):
         fifo = AsyncFIFOBuffered(width=32, depth=9, r_domain="read", w_domain="write")
         self.check_async_fifo_level(fifo, fill_in=0, expected_level=0, read=True)
+
+    def check_async_fifo_reset(self, fifo, r_period, w_period, r_phase=None, w_phase=None):
+        write_rst         = Signal()
+        read_non_empty_1  = Signal()
+        read_non_empty_2  = Signal()
+        reset_write_reset = Signal()
+
+        m = Module()
+        m.submodules.fifo = fifo
+        m.d.comb += ResetSignal("write").eq(write_rst)
+
+        async def testbench_write(ctx):
+            # First refill ========================================================================
+
+            # - wait until the FIFO read interface comes out of reset:
+            await ctx.tick("write").until(~fifo.r_rst)
+
+            # - fill the FIFO:
+            ctx.set(fifo.w_en, 1)
+            for i in range(fifo.depth):
+                ctx.set(fifo.w_data, 0x5a5a5a00 | i)
+                await ctx.tick("write").until(fifo.w_rdy)
+            ctx.set(fifo.w_en, 0)
+
+            # - wait until the FIFO is readable:
+            await ctx.tick("write").until(read_non_empty_1)
+
+            # Back-to-back reset + refill =========================================================
+
+            # - reset the write domain:
+            ctx.set(write_rst, 1)
+            await ctx.tick("write")
+            ctx.set(write_rst, 0)
+            self.assertEqual(ctx.get(fifo.w_rdy), 1)
+
+            # - fill the FIFO:
+            ctx.set(fifo.w_en, 1)
+            for i in range(fifo.depth):
+                ctx.set(fifo.w_data, 0xa5a5a500 | i)
+                await ctx.tick("write").until(fifo.w_rdy)
+            ctx.set(fifo.w_en, 0)
+
+            # - wait until the FIFO is readable:
+            await ctx.tick("write").until(read_non_empty_2)
+
+            # Back-to-back reset + write + reset ==================================================
+
+            # - reset the write domain:
+            ctx.set(write_rst, 1)
+            await ctx.tick("write")
+            ctx.set(write_rst, 0)
+            self.assertEqual(ctx.get(fifo.w_rdy), 1)
+
+            # - write to the FIFO:
+            ctx.set(fifo.w_en, 1)
+            ctx.set(fifo.w_data, 0xc3c3c3c3)
+            await ctx.tick("write")
+            ctx.set(fifo.w_en, 0)
+
+            # - reset the write domain:
+            ctx.set(write_rst, 1)
+            await ctx.tick("write")
+            ctx.set(write_rst, 0)
+            await ctx.tick("write")
+            ctx.set(reset_write_reset, 1)
+
+        async def testbench_read(ctx):
+            # First refill ========================================================================
+
+            # - wait until the FIFO read interface comes out of reset:
+            self.assertEqual(ctx.get(fifo.r_rst), 1)
+            await ctx.tick("read").until(~fifo.r_rst)
+
+            # - wait until the FIFO is readable:
+            self.assertEqual(ctx.get(fifo.r_rdy), 0)
+            fifo_r_data, = await ctx.tick("read").sample(fifo.r_data).until(fifo.r_rdy)
+            ctx.set(read_non_empty_1, 1)
+            self.assertEqual(fifo_r_data, 0x5a5a5a00)
+
+            # Back-to-back reset + refill =========================================================
+
+            # - wait until the FIFO read interface comes out of reset:
+            await ctx.posedge(fifo.r_rst)
+            await ctx.tick("read").until(~fifo.r_rst)
+
+            # - wait until the FIFO is readable:
+            fifo_r_data, = await ctx.tick("read").sample(fifo.r_data).until(fifo.r_rdy)
+            ctx.set(read_non_empty_2, 1)
+            self.assertEqual(fifo_r_data, 0xa5a5a500)
+
+            # Back-to-back reset + write + reset ==================================================
+
+            # - wait until the FIFO read interface comes out of reset:
+            await ctx.tick("read").until(reset_write_reset & ~fifo.r_rst)
+            self.assertEqual(ctx.get(fifo.r_rdy), 0)
+
+        simulator = Simulator(m)
+        simulator.add_clock(w_period, phase=w_phase, domain="write")
+        simulator.add_clock(r_period, phase=r_phase, domain="read")
+        simulator.add_testbench(testbench_write)
+        simulator.add_testbench(testbench_read)
+        with simulator.write_vcd("test.vcd"):
+            simulator.run()
+
+    def test_async_fifo_reset_same_clk(self):
+        fifo = AsyncFIFO(width=32, depth=2, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=10e-9)
+
+    def test_async_fifo_reset_phase_180deg(self):
+        fifo = AsyncFIFO(width=32, depth=2, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=10e-9, r_phase=0.0, w_phase=5e-9)
+
+    def test_async_fifo_reset_faster_write_clk(self):
+        fifo = AsyncFIFO(width=32, depth=2, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=50e-9, w_period=10e-9)
+
+    def test_async_fifo_reset_faster_read_clk(self):
+        fifo = AsyncFIFO(width=32, depth=2, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=50e-9)
+
+    def test_async_buffered_fifo_reset_same_clk(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=3, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=10e-9)
+
+    def test_async_buffered_fifo_reset_phase_180deg(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=3, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=10e-9, r_phase=0.0, w_phase=5e-9)
+
+    def test_async_buffered_fifo_reset_faster_write_clk(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=3, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=50e-9, w_period=10e-9)
+
+    def test_async_buffered_fifo_reset_faster_read_clk(self):
+        fifo = AsyncFIFOBuffered(width=32, depth=3, r_domain="read", w_domain="write")
+        self.check_async_fifo_reset(fifo, r_period=10e-9, w_period=50e-9)
