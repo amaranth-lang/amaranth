@@ -1223,15 +1223,6 @@ To determine (from code that is outside the FSM definition) whether it is curren
 
 Note that in Python, assignments made using :py:`with x() as y:` syntax persist past the end of the block.
 
-.. TODO: `ongoing` currently creates a state if it doesn't exist, which seems clearly wrong but maybe some depend on it? add a diagnostic here
-.. TODO: `m.next` does the same, which is worse because adding a diagnostic is harder
-
-.. warning::
-
-    If you make a typo in the state name provided to :py:`m.next = ...` or :py:`fsm.ongoing(...)`, an empty and unreachable state with that name will be created with no diagnostic message.
-
-    This hazard will be eliminated in the future.
-
 .. warning::
 
     If a non-string object is provided as a state name to :py:`with m.State(...):`, it is cast to a string first, which may lead to surprising behavior. :py:`with m.State(...):` **does not** treat an enumeration value specially; if one is provided, it is cast to a string, and its numeric value will have no correspondence to the numeric value of the generated state signal.
