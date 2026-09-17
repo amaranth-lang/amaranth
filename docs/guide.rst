@@ -1183,7 +1183,7 @@ Simple `finite state machines <https://en.wikipedia.org/wiki/Finite-state_machin
 
     with m.FSM():
         with m.State("Set Address"):
-            m.d.sync += addr.eq(0x1234)
+            m.d.sync += bus_addr.eq(0x1234)
             m.next = "Strobe Read Enable"
 
         with m.State("Strobe Read Enable"):
