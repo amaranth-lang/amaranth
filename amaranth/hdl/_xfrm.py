@@ -121,20 +121,41 @@ class ValueTransformer(ValueVisitor):
         return value
 
     def on_Operator(self, value):
-        return Operator(value.operator, [self.on_value(o) for o in value.operands])
+        ops = [self.on_value(o) for o in value.operands]
+        if all(id(op) == id(orig) for op, orig in zip(ops, value.operands)):
+            return value
+
+        return Operator(value.operator, ops)
 
     def on_Slice(self, value):
-        return Slice(self.on_value(value.value), value.start, value.stop)
+        val = self.on_value(value.value)
+        if id(val) == id(value.value):
+            return value
+
+        return Slice(val, value.start, value.stop)
 
     def on_Part(self, value):
-        return Part(self.on_value(value.value), self.on_value(value.offset),
-                    value.width, value.stride)
+        val = self.on_value(value.value)
+        off = self.on_value(value.offset)
+        if id(val) == id(value.value) and id(off) == id(value.offset):
+            return value
+
+        return Part(val, off, value.width, value.stride)
 
     def on_Concat(self, value):
-        return Concat(self.on_value(o) for o in value.parts)
+        parts = [self.on_value(o) for o in value.parts]
+        if all(id(part) == id(orig) for part, orig in zip(parts, value.parts)):
+            return value
+
+        return Concat(parts)
 
     def on_SwitchValue(self, value):
-        return SwitchValue(self.on_value(value.test), [(patterns, self.on_value(val)) for patterns, val in value.cases])
+        test = self.on_value(value.test)
+        vals = [self.on_value(val) for _, val in value.cases]
+        if id(test) == id(value.test) and all(id(val) == id(orig) for val, orig in zip(vals, (val for _, val in value.cases))):
+            return value
+
+        return SwitchValue(test, [(patterns, val) for (patterns, _), val in zip(value.cases, vals)])
 
     def on_Initial(self, value):
         return value
